@@ -1,3 +1,4 @@
+using JobPilot.Terminal.Providers;
 using System.Text.Json;
 using JobPilot.Terminal.Contracts;
 using JobPilot.Terminal.Pilot;

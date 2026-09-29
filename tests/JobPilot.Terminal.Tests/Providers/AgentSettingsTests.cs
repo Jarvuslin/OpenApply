@@ -1,3 +1,4 @@
+using JobPilot.Terminal.Providers;
 using JobPilot.Terminal.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;

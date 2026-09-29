@@ -1,5 +1,5 @@
 using System.Runtime.InteropServices;
-using JobPilot.Terminal.Pty;
+using JobPilot.Terminal.Sessions;
 using Microsoft.Win32.SafeHandles;
 using Pty.Net;
 using Xunit;

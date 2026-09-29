@@ -1,6 +1,6 @@
 using JobPilot.Terminal.Hosting;
 
-namespace JobPilot.Terminal.Contracts;
+namespace JobPilot.Terminal.Providers;
 
 /// <summary>Provider metadata returned to the web app.</summary>
 /// <param name="Id">Stable provider id used by API requests.</param>

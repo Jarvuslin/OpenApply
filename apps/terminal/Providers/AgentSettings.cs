@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 using System.Text.Json.Serialization.Metadata;
 using JobPilot.Terminal.Common;
 
-namespace JobPilot.Terminal.Hosting;
+namespace JobPilot.Terminal.Providers;
 
 /// <summary>Shape of plugin/settings/codex.json.</summary>
 /// <param name="ConfigOverrides">Codex `-c` values, in TOML value syntax.</param>

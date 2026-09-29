@@ -4,7 +4,7 @@ using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using Pty.Net;
 
-namespace JobPilot.Terminal.Pty;
+namespace JobPilot.Terminal.Sessions;
 
 /// <summary>Raised when a PTY process cannot start.</summary>
 public sealed class PtyStartException(string command, Exception innerException)

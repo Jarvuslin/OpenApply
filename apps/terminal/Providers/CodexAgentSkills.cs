@@ -1,6 +1,6 @@
 using JobPilot.Terminal.Common;
 
-namespace JobPilot.Terminal.Hosting;
+namespace JobPilot.Terminal.Providers;
 
 /// <summary>
 /// Rebuilds the workspace .agents/skills folder, which Codex discovers, from the bundled skills. The

@@ -1,3 +1,4 @@
+using JobPilot.Terminal.Providers;
 namespace JobPilot.Terminal.Contracts;
 
 /// <summary>Terminal host and session status.</summary>

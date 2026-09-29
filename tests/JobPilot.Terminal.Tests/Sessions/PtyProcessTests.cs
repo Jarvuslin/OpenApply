@@ -1,4 +1,4 @@
-using JobPilot.Terminal.Pty;
+using JobPilot.Terminal.Sessions;
 using Pty.Net;
 using Xunit;
 

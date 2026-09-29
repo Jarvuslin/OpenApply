@@ -1,4 +1,4 @@
-namespace JobPilot.Terminal.Realtime;
+namespace JobPilot.Terminal.Sessions;
 
 /// <summary>
 /// Bounded byte-size FIFO of session output chunks, replayed to newly connected clients so a reload

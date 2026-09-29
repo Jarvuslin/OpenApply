@@ -1,7 +1,7 @@
 using System.Runtime.Versioning;
 using Microsoft.Win32;
 
-namespace JobPilot.Terminal.Pty;
+namespace JobPilot.Terminal.Sessions;
 
 /// <summary>
 /// Repairs the PATH handed to PTY children: a protocol-activated host (jobpilot://) can inherit

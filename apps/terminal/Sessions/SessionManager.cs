@@ -1,7 +1,8 @@
+using JobPilot.Terminal.Providers;
 using System.Text;
 using JobPilot.Terminal.Contracts;
 using JobPilot.Terminal.Hosting;
-using JobPilot.Terminal.Pty;
+using JobPilot.Terminal.Sessions;
 
 namespace JobPilot.Terminal.Sessions;
 

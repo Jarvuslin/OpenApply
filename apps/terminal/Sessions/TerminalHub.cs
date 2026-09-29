@@ -6,7 +6,7 @@ using System.Threading.Channels;
 using JobPilot.Terminal.Contracts;
 using JobPilot.Terminal.Sessions;
 
-namespace JobPilot.Terminal.Realtime;
+namespace JobPilot.Terminal.Sessions;
 
 /// <summary>Bridges browser WebSockets and the terminal session.</summary>
 public sealed class TerminalHub : IDisposable

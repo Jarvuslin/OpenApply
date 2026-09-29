@@ -1,7 +1,7 @@
+using JobPilot.Terminal.Providers;
 using JobPilot.Terminal.Contracts;
 using JobPilot.Terminal.Hosting;
 using JobPilot.Terminal.Pilot;
-using JobPilot.Terminal.Realtime;
 using JobPilot.Terminal.Sessions;
 using JobPilot.Terminal.Updates;
 using Microsoft.AspNetCore.Http.HttpResults;

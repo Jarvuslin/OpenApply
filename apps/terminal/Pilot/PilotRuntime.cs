@@ -1,3 +1,4 @@
+using JobPilot.Terminal.Providers;
 using System.Threading.Channels;
 using JobPilot.Terminal.Contracts;
 using JobPilot.Terminal.Sessions;

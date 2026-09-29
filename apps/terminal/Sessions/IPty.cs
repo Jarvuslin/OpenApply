@@ -1,4 +1,4 @@
-namespace JobPilot.Terminal.Pty;
+namespace JobPilot.Terminal.Sessions;
 
 /// <summary>PTY exit tagged with its process generation.</summary>
 public readonly record struct PtyExit(int Generation, int ExitCode);

@@ -1,6 +1,6 @@
-using JobPilot.Terminal.Pty;
+using JobPilot.Terminal.Sessions;
 
-namespace JobPilot.Terminal.Common;
+namespace JobPilot.Terminal.Providers;
 
 /// <summary>
 /// Resolves a bare command name to a file <c>CreateProcess</c> can start. Codex spawns stdio MCP
