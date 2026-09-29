@@ -1,17 +1,18 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
-using Microsoft.Extensions.Logging.Abstractions;
 using Pty.Net;
 
 namespace JobPilot.Terminal.Sessions;
 
-/// <summary>Raised when a PTY process cannot start.</summary>
 public sealed class PtyStartException(string command, Exception innerException)
     : Exception($"Failed to start '{command}': {innerException.Message}", innerException);
 
-/// <summary>Pty.Net-backed process using ConPTY or forkpty.</summary>
-public sealed class PtyProcess : IPty
+/// <summary>
+/// One Pty.Net process (ConPTY or forkpty). Subscribe to its events, then call <see cref="Start"/>.
+/// <see cref="Exited"/> fires at most once, and only when the process dies on its own, never after Dispose.
+/// </summary>
+public sealed class PtyProcess : IDisposable
 {
     static PtyProcess()
     {
@@ -22,81 +23,48 @@ public sealed class PtyProcess : IPty
         }
     }
 
-    private static IntPtr ResolveConPty(string libraryName, Assembly assembly, DllImportSearchPath? searchPath) =>
-        libraryName is "os64\\conpty.dll" or "os86\\conpty.dll"
-            ? NativeLibrary.Load("kernel32.dll")
-            : IntPtr.Zero;
-
     // Give Pty.Net's exit event a chance to deliver the real code before the EOF fallback reports one.
     private static readonly TimeSpan EofExitGrace = TimeSpan.FromMilliseconds(500);
 
-    private readonly Lock connectionLock = new();
-    private readonly Func<PtyOptions, IPtyConnection> spawner;
-    private readonly ILogger<PtyProcess> logger;
+    private readonly PtyOptions options;
+    private readonly Func<PtyOptions, IPtyConnection> spawn;
+    private readonly ILogger logger;
 
     private IPtyConnection? connection;
-    private int generation;
-    private int exitRaisedGeneration;
+    private volatile bool disposed;
+    private int exitRaised;
 
-    public PtyProcess(ILogger<PtyProcess> logger)
-        : this(SpawnWithPtyNet, logger)
+    public PtyProcess(PtyOptions options, Func<PtyOptions, IPtyConnection> spawn, ILogger logger)
     {
+        this.options = options;
+        this.spawn = spawn;
+        this.logger = logger;
     }
 
-    // Test seam: production spawning goes through Pty.Net's static provider.
-    internal PtyProcess(Func<PtyOptions, IPtyConnection> spawner, ILogger<PtyProcess>? logger = null)
+    public event Action<byte[]>? Output;
+
+    public event Action<int>? Exited;
+
+    /// <exception cref="PtyStartException">The process could not be spawned.</exception>
+    public void Start()
     {
-        this.spawner = spawner;
-        this.logger = logger ?? NullLogger<PtyProcess>.Instance;
-    }
-
-    /// <inheritdoc />
-    public event Action<byte[]>? OutputReceived;
-
-    /// <inheritdoc />
-    public event Action<PtyExit>? ProcessExited;
-
-    /// <inheritdoc />
-    public int Start(
-        string command,
-        string[] args,
-        string workingDirectory,
-        int cols,
-        int rows,
-        IReadOnlyDictionary<string, string>? environment = null)
-    {
-        Stop();
-
-        var gen = Interlocked.Increment(ref generation);
-
-        IPtyConnection spawned;
         try
         {
-            spawned = spawner(BuildOptions(command, args, workingDirectory, cols, rows, environment));
+            connection = spawn(options);
         }
         catch (Exception ex)
         {
-            OutputReceived?.Invoke(Encoding.UTF8.GetBytes($"\e[31mFailed to start '{command}': {ex.Message}\e[0m\r\n"));
-            throw new PtyStartException(command, ex);
+            Output?.Invoke(Encoding.UTF8.GetBytes($"\e[31mFailed to start '{options.App}': {ex.Message}\e[0m\r\n"));
+            throw new PtyStartException(options.App, ex);
         }
 
-        // Do not suppress killed-process exits; their generation lets SessionManager discard stale ones.
-        spawned.ProcessExited += (_, e) => NotifyExit(gen, e.ExitCode);
-
-        lock (connectionLock)
-        {
-            connection = spawned;
-        }
-
-        new Thread(() => ReadLoop(spawned, gen)) { IsBackground = true, Name = "PTY-Read" }.Start();
-        return gen;
+        connection.ProcessExited += (_, e) => RaiseExit(e.ExitCode);
+        new Thread(() => ReadLoop(connection)) { IsBackground = true, Name = "PTY-Read" }.Start();
     }
 
-    /// <inheritdoc />
     public void Write(byte[] data)
     {
-        var active = CurrentConnection();
-        if (active is null)
+        if (disposed || connection is not { } active)
         {
             return;
         }
@@ -108,15 +76,13 @@ public sealed class PtyProcess : IPty
         }
         catch
         {
-            // The pty died (Unix reports EIO) or was replaced mid-write; the exit event owns the state.
+            // The pty died (Unix reports EIO) or was disposed mid-write; the exit path owns the state.
         }
     }
 
-    /// <inheritdoc />
     public void Resize(int cols, int rows)
     {
-        var active = CurrentConnection();
-        if (active is null)
+        if (disposed || connection is not { } active)
         {
             return;
         }
@@ -134,130 +100,41 @@ public sealed class PtyProcess : IPty
         }
         catch (Exception ex)
         {
-            // Usually a pty whose child just exited. Logged because a failing TIOCSWINSZ garbles the
-            // panel and leaves no other trace.
+            // Usually a child that just exited. Logged because a failing TIOCSWINSZ garbles the panel silently.
             logger.LogWarning(ex, "Resize to {Cols}x{Rows} failed.", cols, rows);
         }
     }
 
-    /// <inheritdoc />
-    public void Stop()
+    public void Dispose()
     {
-        IPtyConnection? oldConnection;
-        lock (connectionLock)
-        {
-            // Invalidate the read loop before closing its stream.
-            Interlocked.Increment(ref generation);
-            oldConnection = connection;
-            connection = null;
-        }
-
-        if (oldConnection is null)
+        if (disposed)
         {
             return;
         }
 
-        // On Unix, Kill and Dispose throw ESRCH for a child that already exited. That is still a
-        // successful stop, so both run regardless. Kill raises ProcessExited with its own generation.
-        BestEffort(oldConnection.Kill);
-        BestEffort(oldConnection.Dispose);
-    }
-
-    public void Dispose() => Stop();
-
-    private static void BestEffort(Action action)
-    {
-        try
-        {
-            action();
-        }
-        catch
-        {
-        }
-    }
-
-    private IPtyConnection? CurrentConnection()
-    {
-        lock (connectionLock)
-        {
-            return connection;
-        }
-    }
-
-    private void ReadLoop(IPtyConnection active, int gen)
-    {
-        var buffer = new byte[4096];
-        try
-        {
-            while (Volatile.Read(ref generation) == gen)
-            {
-                var bytesRead = active.ReaderStream.Read(buffer, 0, buffer.Length);
-                if (bytesRead <= 0)
-                {
-                    RaiseFallbackExit(active, gen);
-                    break;
-                }
-
-                if (Volatile.Read(ref generation) != gen) break;
-
-                OutputReceived?.Invoke(buffer.AsSpan(0, bytesRead).ToArray());
-            }
-        }
-        catch when (Volatile.Read(ref generation) != gen)
-        {
-            // Stop closed this generation's stream.
-        }
-        catch
-        {
-            // Unix pty reads fail with EIO instead of EOF once the child exits; escaping would kill the host.
-            RaiseFallbackExit(active, gen);
-        }
-    }
-
-    // Pty.Net's exit event can be missed when the process dies before Start subscribes; NotifyExit dedupes.
-    private void RaiseFallbackExit(IPtyConnection active, int gen)
-    {
-        Thread.Sleep(EofExitGrace);
-        if (Volatile.Read(ref generation) == gen)
-        {
-            NotifyExit(gen, TryGetExitCode(active));
-        }
-    }
-
-    /// <summary>Raises at most one exit per generation; the real event and the EOF fallback both call it.</summary>
-    private void NotifyExit(int gen, int exitCode)
-    {
-        if (Interlocked.Exchange(ref exitRaisedGeneration, gen) == gen)
+        disposed = true;
+        if (connection is not { } active)
         {
             return;
         }
-        ProcessExited?.Invoke(new PtyExit(gen, exitCode));
+
+        // On Unix, Kill and Dispose throw ESRCH for a child that already exited. That is still a stop.
+        BestEffort(active.Kill);
+        BestEffort(active.Dispose);
     }
 
-    private static int TryGetExitCode(IPtyConnection connection)
-    {
-        try
-        {
-            return connection.ExitCode;
-        }
-        catch
-        {
-            return -1;
-        }
-    }
-
-    private static IPtyConnection SpawnWithPtyNet(PtyOptions options) =>
+    public static IPtyConnection SpawnWithPtyNet(PtyOptions options) =>
         Task.Run(() => PtyProvider.SpawnAsync(options, CancellationToken.None)).GetAwaiter().GetResult();
 
-    private static PtyOptions BuildOptions(
+    public static PtyOptions BuildOptions(
         string command,
         string[] args,
         string workingDirectory,
         int cols,
         int rows,
-        IReadOnlyDictionary<string, string>? environment)
+        IReadOnlyDictionary<string, string> environment)
     {
-        // UTF-8 locale so spawned tools don't mangle non-ASCII; macOS ships en_US.UTF-8, not C.UTF-8.
+        // macOS ships en_US.UTF-8, not C.UTF-8; without a UTF-8 locale spawned tools mangle non-ASCII.
         var utf8Locale = OperatingSystem.IsMacOS() ? "en_US.UTF-8" : "C.UTF-8";
         var env = new Dictionary<string, string>(StringComparer.Ordinal)
         {
@@ -266,17 +143,16 @@ public sealed class PtyProcess : IPty
             ["LC_ALL"] = utf8Locale,
             ["PYTHONUTF8"] = "1",
         };
-        // Pty.Net merges this dict over the host's own env, so a stripped host PATH needs repair here.
-        foreach (var kvp in PtyEnvironment.BuildOverrides())
+
+        // Pty.Net merges this over the host's own env, so a stripped host PATH is repaired here.
+        foreach (var (key, value) in PtyEnvironment.BuildOverrides())
         {
-            env[kvp.Key] = kvp.Value;
+            env[key] = value;
         }
-        if (environment is not null)
+
+        foreach (var (key, value) in environment)
         {
-            foreach (var kvp in environment)
-            {
-                env[kvp.Key] = kvp.Value;
-            }
+            env[key] = value;
         }
 
         return new PtyOptions
@@ -290,4 +166,73 @@ public sealed class PtyProcess : IPty
             Environment = env,
         };
     }
+
+    private void ReadLoop(IPtyConnection active)
+    {
+        var buffer = new byte[4096];
+        try
+        {
+            while (!disposed)
+            {
+                var bytesRead = active.ReaderStream.Read(buffer, 0, buffer.Length);
+                if (bytesRead <= 0 || disposed)
+                {
+                    break;
+                }
+
+                Output?.Invoke(buffer.AsSpan(0, bytesRead).ToArray());
+            }
+        }
+        catch
+        {
+            // Unix pty reads fail with EIO instead of EOF once the child exits; escaping would kill the host.
+        }
+
+        if (disposed)
+        {
+            return;
+        }
+
+        // Pty.Net's exit event is missed when the child dies before Start subscribes; RaiseExit dedupes.
+        Thread.Sleep(EofExitGrace);
+        RaiseExit(ExitCodeOf(active));
+    }
+
+    private void RaiseExit(int exitCode)
+    {
+        if (disposed || Interlocked.Exchange(ref exitRaised, 1) == 1)
+        {
+            return;
+        }
+
+        Exited?.Invoke(exitCode);
+    }
+
+    private static int ExitCodeOf(IPtyConnection connection)
+    {
+        try
+        {
+            return connection.ExitCode;
+        }
+        catch
+        {
+            return -1;
+        }
+    }
+
+    private static void BestEffort(Action action)
+    {
+        try
+        {
+            action();
+        }
+        catch
+        {
+        }
+    }
+
+    private static IntPtr ResolveConPty(string libraryName, Assembly assembly, DllImportSearchPath? searchPath) =>
+        libraryName is "os64\\conpty.dll" or "os86\\conpty.dll"
+            ? NativeLibrary.Load("kernel32.dll")
+            : IntPtr.Zero;
 }

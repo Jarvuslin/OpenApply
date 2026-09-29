@@ -141,6 +141,6 @@ public sealed class ReleaseInstaller(GitHubReleaseClient releases, ILogger<Relea
             }
         }
 
-        DirectoryPrune.DeleteEmptyDirectories(installedPlugin);
+        FileTree.DeleteEmptyDirectories(installedPlugin);
     }
 }

@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace JobPilot.Terminal.Contracts;
 
 /// <summary>Request to start a terminal session.</summary>
@@ -43,24 +41,4 @@ public sealed record PilotStartRequest
 
     /// <summary>Web origin injected as JOBPILOT_WEB.</summary>
     public string? WebUrl { get; init; }
-}
-
-/// <summary>Browser control message sent over <c>/ws</c>.</summary>
-public sealed record TerminalClientMessage
-{
-    /// <summary>Message kind: <c>input</c> or <c>resize</c>. Anything else is ignored.</summary>
-    [JsonPropertyName("type")]
-    public string? Type { get; init; }
-
-    /// <summary>For <c>input</c>: base64-encoded raw terminal bytes.</summary>
-    [JsonPropertyName("data")]
-    public string? Data { get; init; }
-
-    /// <summary>For <c>resize</c>: new column count.</summary>
-    [JsonPropertyName("cols")]
-    public int? Cols { get; init; }
-
-    /// <summary>For <c>resize</c>: new row count.</summary>
-    [JsonPropertyName("rows")]
-    public int? Rows { get; init; }
 }

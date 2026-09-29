@@ -26,11 +26,10 @@ public static class HostingExtensions
         services.AddSingleton<GitHubReleaseClient>();
         services.AddSingleton<ReleaseInstaller>();
         services.AddSingleton<HostUpdateService>();
-        services.AddSingleton<IPty, PtyProcess>();
         services.AddSingleton<ScratchCleaner>();
         services.AddHostedService(sp => sp.GetRequiredService<ScratchCleaner>());
-        services.AddSingleton<SessionManager>();
-        services.AddSingleton<TerminalHub>();
+        services.AddSingleton<TerminalSession>();
+        services.AddSingleton<TerminalRelay>();
         services.AddSingleton(sp => new PilotStore(
             PilotStore.ResolvePath(sp.GetRequiredService<HostInstall>()),
             sp.GetRequiredService<ILogger<PilotStore>>()));
@@ -82,11 +81,11 @@ public static class HostingExtensions
         app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(30) });
 
         // Resolve the hub before the first /ws request so pre-connect output reaches its replay buffer.
-        var hub = app.Services.GetRequiredService<TerminalHub>();
+        var hub = app.Services.GetRequiredService<TerminalRelay>();
 
         app.Lifetime.ApplicationStopping.Register(() =>
         {
-            app.Services.GetRequiredService<SessionManager>().Stop();
+            app.Services.GetRequiredService<TerminalSession>().Stop();
             // Open sockets otherwise hold Kestrel's graceful stop for the full shutdown timeout.
             hub.AbortAll();
         });

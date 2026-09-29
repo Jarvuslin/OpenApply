@@ -29,7 +29,7 @@ public sealed class PilotRuntime : IPilotRuntime, IDisposable
     private const string SkipCommand =
         "Stop the current action. Fail the claimed task, " + ErrorExitDirective;
 
-    private readonly SessionManager session;
+    private readonly TerminalSession session;
     private readonly PilotStore store;
     private readonly PilotApiClient api;
     private readonly ILogger<PilotRuntime> logger;
@@ -41,7 +41,7 @@ public sealed class PilotRuntime : IPilotRuntime, IDisposable
     private readonly Channel<WaitSignal> signals = Channel.CreateUnbounded<WaitSignal>(
         new UnboundedChannelOptions { SingleReader = true });
 
-    public PilotRuntime(SessionManager session, PilotStore store, PilotApiClient api, ILogger<PilotRuntime> logger)
+    public PilotRuntime(TerminalSession session, PilotStore store, PilotApiClient api, ILogger<PilotRuntime> logger)
     {
         this.session = session;
         this.store = store;
@@ -50,15 +50,10 @@ public sealed class PilotRuntime : IPilotRuntime, IDisposable
         session.Output += OnOutput;
     }
 
-    public string? RunningProvider => session.State == SessionState.Running ? session.ActiveProvider : null;
+    public string? RunningProvider => session.IsRunning ? session.ActiveProvider : null;
 
-    public void StartSession(PilotPairing pairing) => session.Start(new SessionStartOptions(
-        pairing.Provider,
-        PilotCols,
-        PilotRows,
-        pairing.ApiToken,
-        pairing.ApiUrl,
-        pairing.WebUrl));
+    public void StartSession(PilotPairing pairing) => session.Start(
+        pairing.Provider, PilotCols, PilotRows, pairing.ApiToken, pairing.ApiUrl, pairing.WebUrl);
 
     public Task WaitStartupGraceAsync(CancellationToken ct) => Task.Delay(StartupGrace, ct);
 
@@ -66,12 +61,12 @@ public sealed class PilotRuntime : IPilotRuntime, IDisposable
     {
         // Cycles are stateless (state lives in the API): clearing first prevents mid-cycle auto-compaction
         // and keeps untrusted page content from lingering across cycles.
-        await InjectAsync(TerminalProviders.ClearCommand, pairing.Provider, "clear", ct);
+        await InjectAsync("/clear", pairing.Provider, "clear", ct);
         await Task.Delay(ClearSettle, ct);
 
         DrainSignals();  // Discard signals buffered before this injection
         stuck.Reset();
-        var command = TerminalProviders.FormatSkillCommand(pairing.Provider, PilotSkill);
+        var command = Provider.Find(pairing.Provider).SkillCommand(PilotSkill);
         await InjectAsync(command, pairing.Provider, "cycle", ct);
     }
 
@@ -91,8 +86,8 @@ public sealed class PilotRuntime : IPilotRuntime, IDisposable
 
     private async Task InjectAsync(string command, string provider, string what, CancellationToken ct)
     {
-        var result = await session.Inject(command, provider, ct);
-        if (result != InjectResult.Injected)
+        var result = await session.SendCommandAsync(command, provider, ct);
+        if (result != SendResult.Sent)
         {
             logger.LogWarning("Pilot {What} inject was rejected ({Result}).", what, result);
         }
@@ -113,7 +108,7 @@ public sealed class PilotRuntime : IPilotRuntime, IDisposable
         session.Exited += OnExit;
         try
         {
-            if (session.State != SessionState.Running)
+            if (!session.IsRunning)
             {
                 return PilotWaitResult.Exited;
             }
@@ -145,9 +140,9 @@ public sealed class PilotRuntime : IPilotRuntime, IDisposable
     // Esc is the interrupt key in both provider TUIs; at an idle prompt it is a harmless no-op.
     public void InterruptSession()
     {
-        if (session.State == SessionState.Running)
+        if (session.IsRunning)
         {
-            session.WriteInput([0x1b]);
+            session.Write([0x1b]);
         }
     }
 

@@ -28,8 +28,7 @@ public sealed class PtyWindowSizeTests
         }
 
         var connection = new FakePtyConnection();
-        using var pty = new PtyProcess(_ => connection);
-        pty.Start("claude", [], ".", 80, 24);
+        using var pty = Builders.StartedPty(connection);
 
         pty.Resize(Cols, Rows);
 
@@ -46,8 +45,7 @@ public sealed class PtyWindowSizeTests
         }
 
         var connection = new FakePtyConnection();
-        using var pty = new PtyProcess(_ => connection);
-        pty.Start("claude", [], ".", 80, 24);
+        using var pty = Builders.StartedPty(connection);
 
         pty.Resize(Cols, Rows);
 

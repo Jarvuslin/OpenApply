@@ -1,73 +1,49 @@
 using JobPilot.Terminal.Sessions;
-using Pty.Net;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using static JobPilot.Terminal.Tests.Builders;
 
 namespace JobPilot.Terminal.Tests;
 
-/// <summary>
-/// Regression tests for issue #17: on Unix, Pty.Net's Kill/Dispose throw for an already-exited child
-/// and pty reads fail with EIO instead of EOF - neither may crash the host or wedge the Pilot loop.
-/// </summary>
+/// <summary>On Unix, Pty.Net's Kill/Dispose throw for an exited child and reads fail with EIO; neither may crash the host.</summary>
 public sealed class PtyProcessTests
 {
-    private static PtyProcess CreatePty(params IPtyConnection[] connections)
-    {
-        var remaining = new Queue<IPtyConnection>(connections);
-        return new PtyProcess(_ => remaining.Dequeue());
-    }
-
     [Fact]
-    public void Stop_ToleratesKillAndDisposeOfDeadProcess()
+    public void Dispose_ToleratesKillAndDisposeOfADeadProcess()
     {
         var connection = new FakePtyConnection { KillThrows = true, DisposeThrows = true };
-        using var pty = CreatePty(connection);
-        pty.Start("claude", [], ".", 80, 24);
+        var pty = StartedPty(connection);
 
-        pty.Stop();
+        pty.Dispose();
 
         Assert.Equal(1, connection.DisposeCalls);
     }
 
     [Fact]
-    public void Start_ReplacesConnectionWhoseKillThrows()
-    {
-        var dead = new FakePtyConnection { KillThrows = true, DisposeThrows = true };
-        var replacement = new FakePtyConnection();
-        using var pty = CreatePty(dead, replacement);
-
-        var first = pty.Start("claude", [], ".", 80, 24);
-        var second = pty.Start("claude", [], ".", 80, 24);
-
-        Assert.NotEqual(first, second);
-        Assert.Equal(1, dead.DisposeCalls);
-    }
-
-    [Fact]
-    public async Task ReadFailure_RaisesExit_InsteadOfCrashing()
+    public async Task ReadFailure_RaisesExitOnce_WithTheRealCode()
     {
         var connection = new FakePtyConnection { ExitCode = 42 };
-        using var pty = CreatePty(connection);
-        PtyExit? exit = null;
-        pty.ProcessExited += e => exit = e;
+        using var pty = StartedPty(connection);
+        var exits = new List<int>();
+        pty.Exited += exits.Add;
 
-        var generation = pty.Start("claude", [], ".", 80, 24);
         connection.Reader.FailNextRead(new IOException("Input/output error"));
+        await TestWait.Until(() => exits.Count > 0);
+        connection.RaiseExit(42);
 
-        await TestWait.Until(() => exit is not null);
-        Assert.Equal(generation, exit!.Value.Generation);
-        Assert.Equal(42, exit.Value.ExitCode);
+        Assert.Equal([42], exits);
     }
 
     [Fact]
-    public async Task ReadFailure_AfterStop_StaysSilent()
+    public async Task NoExitIsRaised_AfterDispose()
     {
         var connection = new FakePtyConnection();
-        using var pty = CreatePty(connection);
+        var pty = StartedPty(connection);
         var exits = 0;
-        pty.ProcessExited += _ => Interlocked.Increment(ref exits);
+        pty.Exited += _ => Interlocked.Increment(ref exits);
 
-        pty.Start("claude", [], ".", 80, 24);
-        pty.Stop();
+        pty.Dispose();
+        connection.RaiseExit();
         connection.Reader.FailNextRead(new IOException("Input/output error"));
 
         // Longer than the EOF grace, so a wrongly raised fallback exit would have landed by now.
@@ -76,22 +52,24 @@ public sealed class PtyProcessTests
     }
 
     [Fact]
-    public void Write_ToleratesDeadPty()
+    public void Start_ShowsTheFailure_AndThrows_WhenTheProcessCannotSpawn()
     {
-        var connection = new FakePtyConnection { Writer = new DeadWriteStream() };
-        using var pty = CreatePty(connection);
-        pty.Start("claude", [], ".", 80, 24);
+        var options = PtyProcess.BuildOptions("claude", [], ".", 80, 24, new Dictionary<string, string>());
+        var pty = new PtyProcess(options, _ => throw new FileNotFoundException("not on PATH"), NullLogger.Instance);
+        var output = new List<byte[]>();
+        pty.Output += output.Add;
 
-        pty.Write("hello"u8.ToArray());
+        Assert.Throws<PtyStartException>(pty.Start);
+        Assert.Contains("not on PATH", System.Text.Encoding.UTF8.GetString(Assert.Single(output)));
     }
 
     [Fact]
-    public void Resize_ToleratesDeadPty()
+    public void WriteAndResize_TolerateADeadPty()
     {
-        var connection = new FakePtyConnection { ResizeThrows = true };
-        using var pty = CreatePty(connection);
-        pty.Start("claude", [], ".", 80, 24);
+        var connection = new FakePtyConnection { Writer = new DeadWriteStream(), ResizeThrows = true };
+        using var pty = StartedPty(connection);
 
+        pty.Write("hello"u8.ToArray());
         pty.Resize(120, 40);
     }
 }

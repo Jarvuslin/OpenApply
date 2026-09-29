@@ -23,7 +23,7 @@ public sealed record SessionStatus
     public required string Provider { get; init; }
 
     /// <summary>Supported provider metadata for clients.</summary>
-    public required TerminalProviderInfo[] Providers { get; init; }
+    public required ProviderInfo[] Providers { get; init; }
 
     /// <summary>Host binary version.</summary>
     public required string HostVersion { get; init; }

@@ -2,6 +2,7 @@ using JobPilot.Terminal.Providers;
 using System.Text.Json;
 using JobPilot.Terminal.Contracts;
 using JobPilot.Terminal.Pilot;
+using JobPilot.Terminal.Sessions;
 using Xunit;
 
 namespace JobPilot.Terminal.Tests;
@@ -35,46 +36,15 @@ public class AppJsonContextTests
     }
 
     [Fact]
-    public void TerminalClientMessage_DeserializesTheInputEnvelopeTheBrowserSends()
+    public void BrowserMessage_ReadsTheEnvelopesTheBrowserSends()
     {
-        var message = JsonSerializer.Deserialize(
-            """{"type":"input","data":"aGVsbG8="}""", AppJsonContext.Default.TerminalClientMessage);
+        var input = JsonSerializer.Deserialize("""{"type":"input","data":"aGk="}""", AppJsonContext.Default.BrowserMessage);
+        var resize = JsonSerializer.Deserialize("""{"type":"resize","cols":120,"rows":40}""", AppJsonContext.Default.BrowserMessage);
+        var partial = JsonSerializer.Deserialize("""{"type":"resize"}""", AppJsonContext.Default.BrowserMessage);
 
-        Assert.NotNull(message);
-        Assert.Equal("input", message!.Type);
-        Assert.Equal("aGVsbG8=", message.Data);
-        Assert.Equal("hello"u8.ToArray(), Convert.FromBase64String(message.Data!));
-    }
-
-    [Fact]
-    public void TerminalClientMessage_DeserializesTheResizeEnvelopeTheBrowserSends()
-    {
-        var message = JsonSerializer.Deserialize(
-            """{"type":"resize","cols":120,"rows":40}""", AppJsonContext.Default.TerminalClientMessage);
-
-        Assert.NotNull(message);
-        Assert.Equal("resize", message!.Type);
-        Assert.Equal(120, message.Cols);
-        Assert.Equal(40, message.Rows);
-    }
-
-    [Fact]
-    public void TerminalClientMessage_LeavesAbsentFieldsNull_SoAMalformedResizeCannotThrow()
-    {
-        var message = JsonSerializer.Deserialize(
-            """{"type":"resize"}""", AppJsonContext.Default.TerminalClientMessage);
-
-        Assert.Null(message!.Cols);
-        Assert.Null(message.Rows);
-    }
-
-    [Fact]
-    public void TerminalClientMessage_IgnoresUnknownProperties()
-    {
-        var message = JsonSerializer.Deserialize(
-            """{"type":"input","data":"aGk=","nonsense":42}""", AppJsonContext.Default.TerminalClientMessage);
-
-        Assert.Equal("input", message!.Type);
+        Assert.Equal(new BrowserMessage("input", "aGk=", null, null), input);
+        Assert.Equal(new BrowserMessage("resize", null, 120, 40), resize);
+        Assert.Equal(new BrowserMessage("resize", null, null, null), partial);
     }
 
     [Fact]
@@ -86,7 +56,7 @@ public class AppJsonContextTests
                 Status = "ok",
                 Session = "stopped",
                 Provider = "claude",
-                Providers = [new TerminalProviderInfo("claude", "Claude Code")],
+                Providers = [new ProviderInfo("claude", "Claude Code")],
                 HostVersion = "2.0.8",
                 CanRelaunch = true,
                 CanUpdate = false,

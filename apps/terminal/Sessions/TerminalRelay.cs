@@ -4,31 +4,30 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
 using JobPilot.Terminal.Contracts;
-using JobPilot.Terminal.Sessions;
 
 namespace JobPilot.Terminal.Sessions;
 
-/// <summary>Bridges browser WebSockets and the terminal session.</summary>
-public sealed class TerminalHub : IDisposable
+/// <summary>A browser control message on <c>/ws</c>: <c>input</c> (base64 bytes) or <c>resize</c>.</summary>
+public sealed record BrowserMessage(string? Type, string? Data, int? Cols, int? Rows);
+
+/// <summary>Relays session output to every browser WebSocket and browser input back to the session.</summary>
+public sealed class TerminalRelay : IDisposable
 {
-    // Disconnect clients that fall this far behind rather than corrupting the stream.
+    // Disconnect clients that fall this far behind rather than dropping bytes and corrupting the screen.
     private const int OutboxCapacity = 1024;
-
     private const int ReceiveBufferSize = 8192;
-
     private const int MaxMessageBytes = 1024 * 1024;
-
     private const int ReplayCapacityBytes = 512 * 1024;
 
-    private readonly SessionManager session;
-    private readonly ILogger<TerminalHub> logger;
+    private readonly TerminalSession session;
+    private readonly ILogger<TerminalRelay> logger;
 
-    // Guards the client registry and replay buffer, ordering registration against broadcasts (no gap, no duplication).
-    private readonly Lock replayLock = new();
+    // Orders replay writes against client registration, so a new client sees no gap and no duplicate.
+    private readonly Lock sync = new();
     private readonly Dictionary<WebSocket, Channel<byte[]>> clients = [];
     private readonly ReplayBuffer replay = new(ReplayCapacityBytes);
 
-    public TerminalHub(SessionManager session, ILogger<TerminalHub> logger)
+    public TerminalRelay(TerminalSession session, ILogger<TerminalRelay> logger)
     {
         this.session = session;
         this.logger = logger;
@@ -38,30 +37,29 @@ public sealed class TerminalHub : IDisposable
         session.Starting += OnSessionStarting;
     }
 
-    /// <summary>Serves one terminal WebSocket connection until it closes.</summary>
-    public async Task ServeConnectionAsync(WebSocket socket, CancellationToken ct)
+    /// <summary>Serves one WebSocket until it closes.</summary>
+    public async Task ServeAsync(WebSocket socket, CancellationToken ct)
     {
-        // Wait mode makes TryWrite fail when full; dropping terminal bytes would corrupt the screen.
         var outbox = Channel.CreateBounded<byte[]>(new BoundedChannelOptions(OutboxCapacity)
         {
             SingleReader = true,
-            SingleWriter = false,
-            FullMode = BoundedChannelFullMode.Wait,
+            FullMode = BoundedChannelFullMode.Wait, // so TryWrite fails when full instead of dropping bytes
         });
 
-        lock (replayLock)
+        lock (sync)
         {
             foreach (var chunk in replay.Chunks)
             {
                 outbox.Writer.TryWrite(chunk);
             }
+
             clients[socket] = outbox;
         }
+
         logger.LogInformation("WebSocket client connected.");
 
         using var connectionEnded = CancellationTokenSource.CreateLinkedTokenSource(ct);
         var sender = SendLoopAsync(socket, outbox, connectionEnded.Token);
-
         try
         {
             await ReceiveLoopAsync(socket, ct);
@@ -70,19 +68,42 @@ public sealed class TerminalHub : IDisposable
         {
             Unregister(socket);
             await connectionEnded.CancelAsync();
-            await sender; // never faults; SendLoopAsync swallows its own transport errors
+            await sender;
             logger.LogInformation("WebSocket client disconnected.");
         }
     }
 
-    /// <summary>Buffers output for replay and queues it for every connected client.</summary>
+    /// <summary>Aborts every client so an open socket cannot stall host shutdown.</summary>
+    public void AbortAll()
+    {
+        foreach (var socket in Snapshot())
+        {
+            Drop(socket);
+        }
+    }
+
+    public void Dispose()
+    {
+        session.Output -= Broadcast;
+        session.Exited -= OnSessionExited;
+        session.Starting -= OnSessionStarting;
+
+        foreach (var socket in Snapshot())
+        {
+            Unregister(socket);
+        }
+    }
+
+    internal static string? ExitBanner(SessionExit exit) => exit.Requested
+        ? null
+        : $"\r\n\e[31m[JobPilot.Terminal] {exit.ProviderDisplayName} exited with code {exit.ExitCode}. Use Restart to reopen.\e[0m\r\n";
+
     private void Broadcast(byte[] data)
     {
         List<WebSocket>? lagging = null;
-        lock (replayLock)
+        lock (sync)
         {
             replay.Append(data);
-
             foreach (var (socket, outbox) in clients)
             {
                 if (!outbox.Writer.TryWrite(data))
@@ -92,30 +113,33 @@ public sealed class TerminalHub : IDisposable
             }
         }
 
-        // Abort outside the lock: tearing down a socket must not stall the PTY reader or new connections.
-        if (lagging is null)
-        {
-            return;
-        }
-        foreach (var socket in lagging)
+        // Outside the lock: tearing down a socket must not stall the PTY reader or new connections.
+        foreach (var socket in lagging ?? [])
         {
             logger.LogWarning("Dropping a WebSocket client that fell {Capacity} chunks behind.", OutboxCapacity);
             Drop(socket);
         }
     }
 
-    /// <summary>Aborts every client so an open socket cannot stall host shutdown.</summary>
-    public void AbortAll()
+    private void OnSessionStarting()
     {
-        foreach (var socket in SnapshotClients())
+        lock (sync)
         {
-            Drop(socket);
+            replay.Clear();
         }
     }
 
-    private WebSocket[] SnapshotClients()
+    private void OnSessionExited(SessionExit exit)
     {
-        lock (replayLock)
+        if (ExitBanner(exit) is { } banner)
+        {
+            Broadcast(Encoding.UTF8.GetBytes(banner));
+        }
+    }
+
+    private WebSocket[] Snapshot()
+    {
+        lock (sync)
         {
             return [.. clients.Keys];
         }
@@ -127,36 +151,16 @@ public sealed class TerminalHub : IDisposable
         socket.Abort();
     }
 
-    private void OnSessionStarting()
-    {
-        lock (replayLock)
-        {
-            replay.Clear();
-        }
-    }
-
     private void Unregister(WebSocket socket)
     {
         Channel<byte[]>? outbox;
-        lock (replayLock)
+        lock (sync)
         {
             clients.Remove(socket, out outbox);
         }
+
         outbox?.Writer.TryComplete();
     }
-
-    private void OnSessionExited(SessionExit exit)
-    {
-        var message = FormatExitMessage(exit);
-        if (message is not null)
-        {
-            Broadcast(Encoding.UTF8.GetBytes(message));
-        }
-    }
-
-    internal static string? FormatExitMessage(SessionExit exit) => exit.Requested
-        ? null
-        : $"\r\n\e[31m[JobPilot.Terminal] {exit.ProviderDisplayName} exited with code {exit.ExitCode}. Use Restart to reopen.\e[0m\r\n";
 
     private async Task SendLoopAsync(WebSocket socket, Channel<byte[]> outbox, CancellationToken ct)
     {
@@ -210,7 +214,6 @@ public sealed class TerminalHub : IDisposable
                 }
 
                 message.Write(buffer.AsSpan(0, result.Count));
-
                 if (!result.EndOfMessage)
                 {
                     continue;
@@ -218,7 +221,7 @@ public sealed class TerminalHub : IDisposable
 
                 Dispatch(message.WrittenSpan);
 
-                // Do not retain an oversized paste buffer for the connection lifetime.
+                // Do not hold an oversized paste buffer for the connection's lifetime.
                 if (message.Capacity > ReceiveBufferSize)
                 {
                     message = new ArrayBufferWriter<byte>(ReceiveBufferSize);
@@ -240,10 +243,10 @@ public sealed class TerminalHub : IDisposable
 
     private void Dispatch(ReadOnlySpan<byte> utf8Json)
     {
-        TerminalClientMessage? message;
+        BrowserMessage? message;
         try
         {
-            message = JsonSerializer.Deserialize(utf8Json, AppJsonContext.Default.TerminalClientMessage);
+            message = JsonSerializer.Deserialize(utf8Json, AppJsonContext.Default.BrowserMessage);
         }
         catch (JsonException ex)
         {
@@ -254,10 +257,11 @@ public sealed class TerminalHub : IDisposable
         switch (message?.Type)
         {
             case "input":
-                if (TryDecodeInput(message.Data, out var bytes))
+                if (DecodeInput(message.Data) is { } bytes)
                 {
-                    session.WriteInput(bytes);
+                    session.Write(bytes);
                 }
+
                 break;
 
             case "resize":
@@ -269,39 +273,52 @@ public sealed class TerminalHub : IDisposable
                 {
                     logger.LogWarning("Ignoring a resize with cols={Cols} rows={Rows}.", message.Cols, message.Rows);
                 }
+
                 break;
         }
     }
 
-    private bool TryDecodeInput(string? data, out byte[] bytes)
+    private byte[]? DecodeInput(string? data)
     {
-        bytes = [];
         if (string.IsNullOrEmpty(data))
         {
-            return false;
+            return null;
         }
 
         try
         {
-            bytes = Convert.FromBase64String(data);
-            return true;
+            return Convert.FromBase64String(data);
         }
         catch (FormatException ex)
         {
             logger.LogWarning(ex, "Ignoring WebSocket input that is not valid base64.");
-            return false;
+            return null;
         }
     }
 
-    public void Dispose()
+    /// <summary>Byte-bounded FIFO of recent output, replayed to a new client so a reload restores the screen.</summary>
+    private sealed class ReplayBuffer(int capacityBytes)
     {
-        session.Output -= Broadcast;
-        session.Exited -= OnSessionExited;
-        session.Starting -= OnSessionStarting;
+        private readonly Queue<byte[]> chunks = new();
+        private int bytes;
 
-        foreach (var socket in SnapshotClients())
+        public IReadOnlyCollection<byte[]> Chunks => chunks;
+
+        public void Append(byte[] data)
         {
-            Unregister(socket);
+            while (bytes + data.Length > capacityBytes && chunks.Count > 0)
+            {
+                bytes -= chunks.Dequeue().Length;
+            }
+
+            chunks.Enqueue(data);
+            bytes += data.Length;
+        }
+
+        public void Clear()
+        {
+            chunks.Clear();
+            bytes = 0;
         }
     }
 }

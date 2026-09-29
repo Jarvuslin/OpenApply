@@ -16,9 +16,9 @@ public static class TerminalEndpoints
     /// <summary>Maps health, session, update, and WebSocket endpoints.</summary>
     public static WebApplication MapTerminalEndpoints(this WebApplication app)
     {
-        app.MapGet("/healthz", (SessionManager session, HostInstall install, ProtocolRegistrar registrar, PilotCoordinator pilot) => TypedResults.Ok(CurrentStatus(session, install, registrar, pilot)));
+        app.MapGet("/healthz", (TerminalSession session, HostInstall install, ProtocolRegistrar registrar, PilotCoordinator pilot) => TypedResults.Ok(CurrentStatus(session, install, registrar, pilot)));
 
-        app.MapPost("/sessions/start", Results<Ok<SessionStatus>, ProblemHttpResult> (StartSessionRequest request, SessionManager session, HostInstall install, ProtocolRegistrar registrar, PilotCoordinator pilot) =>
+        app.MapPost("/sessions/start", Results<Ok<SessionStatus>, ProblemHttpResult> (StartSessionRequest request, TerminalSession session, HostInstall install, ProtocolRegistrar registrar, PilotCoordinator pilot) =>
         {
             if (!Viewport.IsValid(request.Cols, request.Rows))
             {
@@ -27,13 +27,7 @@ public static class TerminalEndpoints
 
             try
             {
-                session.Start(new SessionStartOptions(
-                    request.Provider,
-                    request.Cols,
-                    request.Rows,
-                    request.ApiToken,
-                    request.ApiUrl,
-                    request.WebUrl));
+                session.Start(request.Provider, request.Cols, request.Rows, request.ApiToken, request.ApiUrl, request.WebUrl);
             }
             catch (ArgumentException ex)
             {
@@ -50,7 +44,7 @@ public static class TerminalEndpoints
         });
 
         app.MapPost("/sessions/inject", async Task<Results<Ok, ProblemHttpResult>> (
-            InjectRequest request, SessionManager session, CancellationToken ct) =>
+            InjectRequest request, TerminalSession session, CancellationToken ct) =>
         {
             if (string.IsNullOrWhiteSpace(request.Command))
             {
@@ -62,10 +56,10 @@ public static class TerminalEndpoints
                 return BadRequest($"command must be at most {MaxCommandLength} characters.");
             }
 
-            InjectResult result;
+            SendResult result;
             try
             {
-                result = await session.Inject(request.Command, request.Provider, ct);
+                result = await session.SendCommandAsync(request.Command, request.Provider, ct);
             }
             catch (ArgumentException ex)
             {
@@ -74,25 +68,25 @@ public static class TerminalEndpoints
 
             return result switch
             {
-                InjectResult.Injected => TypedResults.Ok(),
-                InjectResult.ProviderMismatch => Conflict("The active provider does not match the requested provider."),
+                SendResult.Sent => TypedResults.Ok(),
+                SendResult.ProviderMismatch => Conflict("The active provider does not match the requested provider."),
                 _ => Conflict("The terminal session is not running."),
             };
         });
 
-        app.MapDelete("/sessions/current", (SessionManager session, HostInstall install, ProtocolRegistrar registrar, PilotCoordinator pilot) =>
+        app.MapDelete("/sessions/current", (TerminalSession session, HostInstall install, ProtocolRegistrar registrar, PilotCoordinator pilot) =>
         {
             session.Stop();
             return TypedResults.Ok(CurrentStatus(session, install, registrar, pilot));
         });
 
         app.MapPost("/pilot/start", Results<Ok<SessionStatus>, ProblemHttpResult> (
-            PilotStartRequest request, PilotStore store, PilotCoordinator pilot, SessionManager session, HostInstall install, ProtocolRegistrar registrar) =>
+            PilotStartRequest request, PilotStore store, PilotCoordinator pilot, TerminalSession session, HostInstall install, ProtocolRegistrar registrar) =>
         {
             string provider;
             try
             {
-                provider = TerminalProviders.Normalize(request.Provider);
+                provider = Provider.Find(request.Provider).Id;
             }
             catch (ArgumentException ex)
             {
@@ -126,7 +120,7 @@ public static class TerminalEndpoints
             return TypedResults.Ok(CurrentStatus(session, install, registrar, pilot));
         });
 
-        app.MapPost("/pilot/stop", (PilotStore store, PilotCoordinator pilot, SessionManager session, HostInstall install, ProtocolRegistrar registrar) =>
+        app.MapPost("/pilot/stop", (PilotStore store, PilotCoordinator pilot, TerminalSession session, HostInstall install, ProtocolRegistrar registrar) =>
         {
             // Keep the pairing and the session; the coordinator interrupts a mid-cycle turn and stops driving.
             store.SetRunning(false);
@@ -155,7 +149,7 @@ public static class TerminalEndpoints
             }
         });
 
-        app.MapPost("/shutdown", (SessionManager session, IHostApplicationLifetime lifetime) =>
+        app.MapPost("/shutdown", (TerminalSession session, IHostApplicationLifetime lifetime) =>
         {
             // Stop the PTY now; StopApplication then cancels the Pilot coordinator. pilot.json's Running flag is
             // deliberately left as-is so a later start resumes the pilot via ResumeIfRunningAsync.
@@ -164,7 +158,7 @@ public static class TerminalEndpoints
             return TypedResults.Ok(new ShutdownResult { Ok = true });
         });
 
-        app.MapGet("/ws", async (HttpContext ctx, TerminalHub hub) =>
+        app.MapGet("/ws", async (HttpContext ctx, TerminalRelay relay) =>
         {
             if (!ctx.WebSockets.IsWebSocketRequest)
             {
@@ -173,7 +167,7 @@ public static class TerminalEndpoints
             }
 
             using var socket = await ctx.WebSockets.AcceptWebSocketAsync();
-            await hub.ServeConnectionAsync(socket, ctx.RequestAborted);
+            await relay.ServeAsync(socket, ctx.RequestAborted);
         });
 
         return app;
@@ -189,12 +183,12 @@ public static class TerminalEndpoints
         Uri.TryCreate(value, UriKind.Absolute, out var uri)
         && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 
-    private static SessionStatus CurrentStatus(SessionManager session, HostInstall install, ProtocolRegistrar registrar, PilotCoordinator pilot) => new()
+    private static SessionStatus CurrentStatus(TerminalSession session, HostInstall install, ProtocolRegistrar registrar, PilotCoordinator pilot) => new()
     {
         Status = install.PathsError is null ? SessionStatus.StatusOk : SessionStatus.StatusDegraded,
-        Session = session.State == SessionState.Running ? SessionStatus.SessionRunning : SessionStatus.SessionStopped,
+        Session = session.IsRunning ? SessionStatus.SessionRunning : SessionStatus.SessionStopped,
         Provider = session.ActiveProvider,
-        Providers = TerminalProviders.Supported(),
+        Providers = Provider.All,
         HostVersion = HostInstall.HostVersion,
         Detail = install.PathsError,
         CanRelaunch = registrar.IsRegistered,

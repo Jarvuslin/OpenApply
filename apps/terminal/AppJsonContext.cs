@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using JobPilot.Terminal.Contracts;
 using JobPilot.Terminal.Hosting;
 using JobPilot.Terminal.Pilot;
+using JobPilot.Terminal.Sessions;
 using JobPilot.Terminal.Updates;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,7 +20,7 @@ namespace JobPilot.Terminal;
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(InjectRequest))]
 [JsonSerializable(typeof(PilotStartRequest))]
-[JsonSerializable(typeof(TerminalClientMessage))]
+[JsonSerializable(typeof(BrowserMessage))]
 [JsonSerializable(typeof(SessionStatus))]
 [JsonSerializable(typeof(PilotStatus))]
 [JsonSerializable(typeof(PilotStateFile))]
@@ -29,7 +30,7 @@ namespace JobPilot.Terminal;
 [JsonSerializable(typeof(PilotSseEnvelope))]
 [JsonSerializable(typeof(UpdateResult))]
 [JsonSerializable(typeof(ShutdownResult))]
-[JsonSerializable(typeof(TerminalProviderInfo[]))]
+[JsonSerializable(typeof(ProviderInfo[]))]
 [JsonSerializable(typeof(ProblemDetails))]
 [JsonSerializable(typeof(GitHubRelease[]))]
 internal sealed partial class AppJsonContext : JsonSerializerContext;
