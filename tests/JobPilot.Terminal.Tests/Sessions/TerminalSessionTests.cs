@@ -1,4 +1,5 @@
 using JobPilot.Terminal.Hosting;
+using JobPilot.Terminal.Providers;
 using JobPilot.Terminal.Sessions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Pty.Net;
@@ -50,15 +51,15 @@ public sealed class TerminalSessionTests : IDisposable
         return connection;
     }
 
-    private void Start(string? provider = null) => session.Start(provider, 80, 24);
+    private void Start(Provider? provider = null) => session.Start(provider ?? Provider.Claude, 80, 24);
 
     [Fact]
     public void Start_RunsTheRequestedProvider_AndPreparesItsWorkspace()
     {
-        Start("codex");
+        Start(Provider.Codex);
 
         Assert.True(session.IsRunning);
-        Assert.Equal("codex", session.ActiveProvider);
+        Assert.Same(Provider.Codex, session.ActiveProvider);
         Assert.Equal("codex", lastOptions!.App);
         Assert.True(File.Exists(Path.Combine(temp.Root, ".agents", "skills", "auto-apply", "SKILL.md")));
     }
@@ -66,8 +67,8 @@ public sealed class TerminalSessionTests : IDisposable
     [Fact]
     public void Start_IsANoOp_WhenTheSameProviderIsAlreadyRunning()
     {
-        Start("claude");
-        Start("claude");
+        Start(Provider.Claude);
+        Start(Provider.Claude);
 
         Assert.Single(spawned);
     }
@@ -75,20 +76,20 @@ public sealed class TerminalSessionTests : IDisposable
     [Fact]
     public void Start_ReplacesAnotherProvider_AndKillsItsProcess()
     {
-        Start("claude");
+        Start(Provider.Claude);
         var replaced = Live;
 
-        Start("codex");
+        Start(Provider.Codex);
 
         Assert.Equal(2, spawned.Count);
         Assert.Equal(1, replaced.KillCalls);
-        Assert.Equal("codex", session.ActiveProvider);
+        Assert.Same(Provider.Codex, session.ActiveProvider);
     }
 
     [Fact]
     public void Start_GivesTheAgentItsEnvironment()
     {
-        session.Start("claude", 80, 24, apiToken: "tok", apiUrl: "https://api", webUrl: "https://web");
+        session.Start(Provider.Claude, 80, 24, apiToken: "tok", apiUrl: "https://api", webUrl: "https://web");
 
         var env = lastOptions!.Environment;
         Assert.Equal(Path.Combine(temp.Root, "plugin", "skills"), env["JOBPILOT_SKILLS_ROOT"]);
@@ -102,10 +103,8 @@ public sealed class TerminalSessionTests : IDisposable
     }
 
     [Fact]
-    public void Start_LeavesTheSessionStopped_WhenTheProviderIsUnknownOrCannotSpawn()
+    public void Start_LeavesTheSessionStopped_WhenTheProviderCannotSpawn()
     {
-        Assert.Throws<ArgumentException>(() => Start("gemini"));
-
         spawnFailure = new FileNotFoundException("claude not on PATH");
         Assert.Throws<PtyStartException>(() => Start());
         Assert.False(session.IsRunning);
@@ -116,7 +115,7 @@ public sealed class TerminalSessionTests : IDisposable
     {
         using var broken = Create(new HostInstall(paths: null, pathsError: "no plugin tree"));
 
-        var ex = Assert.Throws<InvalidOperationException>(() => broken.Start(null, 80, 24));
+        var ex = Assert.Throws<InvalidOperationException>(() => broken.Start(Provider.Claude, 80, 24));
         Assert.Contains("no plugin tree", ex.Message);
     }
 
@@ -138,14 +137,14 @@ public sealed class TerminalSessionTests : IDisposable
     [Fact]
     public void ExitOfAReplacedProcess_IsIgnored()
     {
-        Start("claude");
+        Start(Provider.Claude);
         var replaced = Live;
-        Start("codex");
+        Start(Provider.Codex);
 
         replaced.RaiseExit();
 
         Assert.True(session.IsRunning);
-        Assert.Equal("codex", session.ActiveProvider);
+        Assert.Same(Provider.Codex, session.ActiveProvider);
     }
 
     [Fact]
@@ -179,7 +178,7 @@ public sealed class TerminalSessionTests : IDisposable
     [Fact]
     public async Task SendCommand_PressesEnterTwice_ForACodexSkill()
     {
-        Start("codex");
+        Start(Provider.Codex);
 
         await session.SendCommandAsync("$pilot", ct: TestContext.Current.CancellationToken);
 
@@ -192,21 +191,20 @@ public sealed class TerminalSessionTests : IDisposable
         var ct = TestContext.Current.CancellationToken;
         Assert.Equal(SendResult.NotRunning, await session.SendCommandAsync("x", ct: ct));
 
-        Start("claude");
-        Assert.Equal(SendResult.ProviderMismatch, await session.SendCommandAsync("x", "codex", ct));
+        Start(Provider.Claude);
+        Assert.Equal(SendResult.ProviderMismatch, await session.SendCommandAsync("x", Provider.Codex, ct));
         Assert.Empty(Live.Writes);
-        await Assert.ThrowsAsync<ArgumentException>(() => session.SendCommandAsync("x", "gemini", ct));
     }
 
     [Fact]
     public async Task SendCommand_DoesNotPressEnter_WhenTheSessionIsReplacedDuringTheDelay()
     {
-        Start("claude");
+        Start(Provider.Claude);
         var original = Live;
 
         var send = session.SendCommandAsync("rm -rf /", ct: TestContext.Current.CancellationToken);
         await Task.Delay(15, TestContext.Current.CancellationToken);
-        Start("codex");
+        Start(Provider.Codex);
 
         Assert.Equal(SendResult.NotRunning, await send);
         Assert.DoesNotContain(original.Writes, w => w.AsSpan().SequenceEqual(Enter));

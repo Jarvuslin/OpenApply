@@ -1,4 +1,5 @@
 using JobPilot.Terminal.Pilot;
+using JobPilot.Terminal.Providers;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -20,7 +21,7 @@ public sealed class PilotStoreTests : IDisposable
 
     private static PilotSettings SavedSettings(bool running = true) => new()
     {
-        Provider = "codex",
+        Provider = Provider.Codex,
         ApiToken = "secret-token",
         ApiUrl = "https://api.example",
         WebUrl = "https://web.example",
@@ -41,7 +42,7 @@ public sealed class PilotStoreTests : IDisposable
         var reloaded = NewStore().Current;
 
         Assert.NotNull(reloaded);
-        Assert.Equal("codex", reloaded!.Provider);
+        Assert.Same(Provider.Codex, reloaded!.Provider);
         Assert.Equal("secret-token", reloaded.ApiToken);
         Assert.Equal("https://api.example", reloaded.ApiUrl);
         Assert.Equal("https://web.example", reloaded.WebUrl);
@@ -87,11 +88,13 @@ public sealed class PilotStoreTests : IDisposable
         Assert.False(File.Exists(path));
     }
 
-    [Fact]
-    public void Load_TreatsACorruptFileAsNothingSaved()
+    [Theory]
+    [InlineData("{ this is not valid json ")]
+    [InlineData("""{"provider":"gemini","token":"t","protected":false,"apiUrl":"https://a","webUrl":"https://w","running":true}""")]
+    public void Load_TreatsACorruptFileOrUnknownProviderAsNothingSaved(string json)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        File.WriteAllText(path, "{ this is not valid json ");
+        File.WriteAllText(path, json);
 
         Assert.Null(NewStore().Current);
     }

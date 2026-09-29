@@ -1,4 +1,5 @@
 using JobPilot.Terminal.Pilot;
+using JobPilot.Terminal.Providers;
 using Xunit;
 using static JobPilot.Terminal.Tests.Builders;
 using Reports = JobPilot.Terminal.Pilot.CycleRunner.Reports;
@@ -35,7 +36,7 @@ public class CycleRunnerTests
     [Fact]
     public async Task Run_ClampsTheSleep_AndReusesARunningSession()
     {
-        var session = new FakePilotSession { RunningProvider = "claude" };
+        var session = new FakePilotSession { RunningProvider = Provider.Claude };
         var runner = Runner(session);
 
         session.Signals.Enqueue(WaitResult.Sentinel(Cycle(5)));
@@ -49,7 +50,7 @@ public class CycleRunnerTests
     [Fact]
     public async Task Run_Pauses_WhenTheUserRunsTheOtherProvider()
     {
-        var session = new FakePilotSession { RunningProvider = "codex" };
+        var session = new FakePilotSession { RunningProvider = Provider.Codex };
         var runner = Runner(session);
 
         var sleep = await RunAsync(runner, session);
@@ -62,7 +63,7 @@ public class CycleRunnerTests
     [Fact]
     public async Task Run_EndsWithoutIntervening_WhenTheSessionExitsMidWait()
     {
-        var session = new FakePilotSession { RunningProvider = "claude" };
+        var session = new FakePilotSession { RunningProvider = Provider.Claude };
         session.Signals.Enqueue(WaitResult.Exited);
         var runner = Runner(session);
 
@@ -76,7 +77,7 @@ public class CycleRunnerTests
     [Fact]
     public async Task Run_BacksOff_OnlyAfterThreeExitsInARow()
     {
-        var session = new FakePilotSession { RunningProvider = "claude" };
+        var session = new FakePilotSession { RunningProvider = Provider.Claude };
         var runner = Runner(session);
 
         async Task Exit()
@@ -106,7 +107,7 @@ public class CycleRunnerTests
     [InlineData(WaitOutcome.Timeout, WaitOutcome.Stuck, WaitOutcome.Timeout)]
     public async Task Run_ChecksInThenSkipsThenRestarts_WhenTheCycleStaysStuck(params WaitOutcome[] outcomes)
     {
-        var session = new FakePilotSession { RunningProvider = "claude" };
+        var session = new FakePilotSession { RunningProvider = Provider.Claude };
         foreach (var outcome in outcomes)
         {
             session.Signals.Enqueue(new WaitResult(outcome));
@@ -125,7 +126,7 @@ public class CycleRunnerTests
     [Fact]
     public async Task Run_Recovers_WhenTheCheckInUnsticksTheAgent()
     {
-        var session = new FakePilotSession { RunningProvider = "claude" };
+        var session = new FakePilotSession { RunningProvider = Provider.Claude };
         session.Signals.Enqueue(WaitResult.Timeout);
         session.Signals.Enqueue(WaitResult.Sentinel(Cycle(20)));
 
@@ -139,7 +140,7 @@ public class CycleRunnerTests
     [Fact]
     public async Task Run_Recovers_WhenTheSkipUnsticksTheAgent()
     {
-        var session = new FakePilotSession { RunningProvider = "claude" };
+        var session = new FakePilotSession { RunningProvider = Provider.Claude };
         session.Signals.Enqueue(WaitResult.Stuck);
         session.Signals.Enqueue(WaitResult.Stuck);
         session.Signals.Enqueue(WaitResult.Sentinel(Cycle(45)));
@@ -154,7 +155,7 @@ public class CycleRunnerTests
     [Fact]
     public async Task Run_BacksOff_OnTheThirdRestartInARow()
     {
-        var session = new FakePilotSession { RunningProvider = "claude" };
+        var session = new FakePilotSession { RunningProvider = Provider.Claude };
         var runner = Runner(session);
 
         await RunAsync(runner, session);
@@ -172,7 +173,7 @@ public class CycleRunnerTests
     [Fact]
     public async Task Run_ResetsTheRestartCount_AfterAFinishedCycle()
     {
-        var session = new FakePilotSession { RunningProvider = "claude" };
+        var session = new FakePilotSession { RunningProvider = Provider.Claude };
         var runner = Runner(session);
 
         await RunAsync(runner, session);

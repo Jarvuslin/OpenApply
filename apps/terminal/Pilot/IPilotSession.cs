@@ -1,3 +1,5 @@
+using JobPilot.Terminal.Providers;
+
 namespace JobPilot.Terminal.Pilot;
 
 public enum WaitOutcome
@@ -33,7 +35,7 @@ public enum Directive
 public interface IPilotSession
 {
     /// <summary>Provider of the running session, or null when stopped.</summary>
-    string? RunningProvider { get; }
+    Provider? RunningProvider { get; }
 
     void Start(PilotSettings settings);
 

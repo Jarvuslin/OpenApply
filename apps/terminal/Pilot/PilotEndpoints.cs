@@ -33,7 +33,7 @@ public static class PilotEndpoints
         app.MapPost("/pilot/start", Results<Ok<StatusResponse>, ProblemHttpResult> (
             PilotStartRequest request, PilotStore store, HostStatus status) =>
         {
-            var provider = Provider.Find(request.Provider).Id;
+            var provider = Provider.Find(request.Provider);
             if (string.IsNullOrWhiteSpace(request.ApiToken))
             {
                 return Problems.BadRequest("apiToken must be a non-empty string.");

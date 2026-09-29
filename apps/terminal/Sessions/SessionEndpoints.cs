@@ -1,4 +1,5 @@
 using JobPilot.Terminal.Hosting;
+using JobPilot.Terminal.Providers;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace JobPilot.Terminal.Sessions;
@@ -30,7 +31,7 @@ public static class SessionEndpoints
                 return Problems.BadRequest($"cols and rows must each be between {Viewport.MinSize} and {Viewport.MaxSize}.");
             }
 
-            session.Start(request.Provider, request.Cols, request.Rows, request.ApiToken, request.ApiUrl, request.WebUrl);
+            session.Start(Provider.Find(request.Provider), request.Cols, request.Rows, request.ApiToken, request.ApiUrl, request.WebUrl);
             return TypedResults.Ok(status.Get());
         });
 
@@ -47,7 +48,9 @@ public static class SessionEndpoints
                 return Problems.BadRequest($"command must be at most {MaxCommandLength} characters.");
             }
 
-            var result = await session.SendCommandAsync(request.Command, request.Provider, ct);
+            // No provider means any: Find would read a blank id as Claude.
+            var expected = request.Provider is null ? null : Provider.Find(request.Provider);
+            var result = await session.SendCommandAsync(request.Command, expected, ct);
             return result switch
             {
                 SendResult.Sent => TypedResults.Ok(),

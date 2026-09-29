@@ -1,4 +1,5 @@
 using JobPilot.Terminal.Pilot;
+using JobPilot.Terminal.Providers;
 
 namespace JobPilot.Terminal.Tests;
 
@@ -40,7 +41,7 @@ internal sealed class FakePilotSession : IPilotSession
     /// <summary>Blocks a wait with nothing scripted until cancelled, instead of timing out.</summary>
     public bool BlockWhenUnscripted { get; set; }
 
-    public string? RunningProvider { get; set; }
+    public Provider? RunningProvider { get; set; }
 
     public void ClearActions()
     {

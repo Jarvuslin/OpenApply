@@ -37,7 +37,7 @@ public sealed class HostStatus(TerminalSession session, HostInstall install, Url
     {
         Status = install.PathsError is null ? "ok" : "degraded",
         Session = session.IsRunning ? "running" : "stopped",
-        Provider = session.ActiveProvider,
+        Provider = session.ActiveProvider.Id,
         Providers = Provider.All,
         HostVersion = HostInstall.HostVersion,
         Detail = install.PathsError,

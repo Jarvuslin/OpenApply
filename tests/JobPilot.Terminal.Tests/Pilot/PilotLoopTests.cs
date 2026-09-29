@@ -1,4 +1,5 @@
 using JobPilot.Terminal.Pilot;
+using JobPilot.Terminal.Providers;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 using static JobPilot.Terminal.Tests.Builders;
@@ -104,7 +105,7 @@ public sealed class PilotLoopTests : IAsyncLifetime
     [Fact]
     public async Task Stop_DoesNotInterrupt_TheUsersOwnSessionOnTheOtherProvider()
     {
-        session.RunningProvider = "codex";
+        session.RunningProvider = Provider.Codex;
         await loop.StartAsync(CancellationToken.None);
         store.Save(Settings());
         await TestWait.Until(() => session.Actions.Contains("sleep:5"));

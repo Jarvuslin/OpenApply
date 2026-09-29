@@ -43,7 +43,7 @@ public sealed class PilotSession : IPilotSession, IDisposable
         terminal.Output += OnOutput;
     }
 
-    public string? RunningProvider => terminal.IsRunning ? terminal.ActiveProvider : null;
+    public Provider? RunningProvider => terminal.IsRunning ? terminal.ActiveProvider : null;
 
     public void Start(PilotSettings settings) =>
         terminal.Start(settings.Provider, Cols, Rows, settings.ApiToken, settings.ApiUrl, settings.WebUrl);
@@ -60,7 +60,7 @@ public sealed class PilotSession : IPilotSession, IDisposable
         }
 
         stuck.Reset();
-        await SendAsync(Provider.Find(settings.Provider).SkillCommand(PilotSkill), settings.Provider, ct);
+        await SendAsync(settings.Provider.SkillCommand(PilotSkill), settings.Provider, ct);
     }
 
     public Task SendDirectiveAsync(PilotSettings settings, Directive directive, CancellationToken ct)
@@ -131,7 +131,7 @@ public sealed class PilotSession : IPilotSession, IDisposable
 
     public void Dispose() => terminal.Output -= OnOutput;
 
-    private async Task SendAsync(string command, string provider, CancellationToken ct)
+    private async Task SendAsync(string command, Provider provider, CancellationToken ct)
     {
         var result = await terminal.SendCommandAsync(command, provider, ct);
         if (result != SendResult.Sent)

@@ -107,15 +107,10 @@ internal sealed class CycleRunner
 
     private async Task<TimeSpan?> ClimbLadderAsync(PilotSettings settings, CancellationToken ct)
     {
+        // No server check between rungs: every unfinished WaitAsync has just checked for a completion.
         (Directive Directive, string Report)[] rungs = [(Directive.CheckIn, Reports.CheckIn), (Directive.Skip, Reports.Skip)];
         foreach (var (directive, report) in rungs)
         {
-            // Honor a completion that just landed instead of intervening.
-            if (await CheckServerCompletionAsync(ct) is { } done)
-            {
-                return Complete(done);
-            }
-
             await session.ReportAsync(report, ct);
             await session.SendDirectiveAsync(settings, directive, ct);
             var (finished, sleep) = await FinishAsync(await WaitAsync(CheckInGrace, ct), ct);
@@ -123,11 +118,6 @@ internal sealed class CycleRunner
             {
                 return sleep;
             }
-        }
-
-        if (await CheckServerCompletionAsync(ct) is { } completed)
-        {
-            return Complete(completed);
         }
 
         ConsecutiveRestarts++;
@@ -229,9 +219,6 @@ internal sealed class CycleRunner
         LastCycleStatus = cycle.Status;
         return TimeSpan.FromSeconds(ClampSleep(cycle.SleepSeconds));
     }
-
-    private async Task<CycleResult?> CheckServerCompletionAsync(CancellationToken ct) =>
-        await FindNewCompletionAsync(await session.GetActivityAsync(ct), ct);
 
     /// <summary>A completion newer than the baseline, as a cycle result. Compares server values only, never clocks.</summary>
     private async Task<CycleResult?> FindNewCompletionAsync(PilotActivity? activity, CancellationToken ct)

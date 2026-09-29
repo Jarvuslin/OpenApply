@@ -46,10 +46,6 @@ public sealed partial class StuckDetector
     [GeneratedRegex(@"\b(error\w*|exception\w*|failed to|econn\w*|etimedout|timed? ?out)\b", RegexOptions.IgnoreCase)]
     private static partial Regex ErrorPattern();
 
-    // CSI/OSC and two-char escapes; the rest of normalization collapses remaining whitespace.
-    [GeneratedRegex(@"\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[@-Z\\-_]")]
-    private static partial Regex AnsiPattern();
-
     [GeneratedRegex(@"\s+")]
     private static partial Regex WhitespacePattern();
 
@@ -170,7 +166,7 @@ public sealed partial class StuckDetector
 
     private static string Normalize(string line)
     {
-        var stripped = AnsiPattern().Replace(line, string.Empty);
+        var stripped = Ansi.Strip(line);
         var builder = new StringBuilder(stripped.Length);
         foreach (var c in stripped)
         {

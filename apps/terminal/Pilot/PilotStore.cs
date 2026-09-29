@@ -2,13 +2,14 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using JobPilot.Terminal.Hosting;
+using JobPilot.Terminal.Providers;
 
 namespace JobPilot.Terminal.Pilot;
 
 /// <summary>Which provider the pilot drives, the credentials it uses, and whether it is running.</summary>
 public sealed record PilotSettings
 {
-    public required string Provider { get; init; }
+    public required Provider Provider { get; init; }
     public required string ApiToken { get; init; }
     public required string ApiUrl { get; init; }
     public required string WebUrl { get; init; }
@@ -94,7 +95,7 @@ public sealed class PilotStore
         var (token, isProtected) = ProtectToken(settings.ApiToken);
         var file = new PilotSettingsFile
         {
-            Provider = settings.Provider,
+            Provider = settings.Provider.Id,
             ApiUrl = settings.ApiUrl,
             WebUrl = settings.WebUrl,
             Running = settings.Running,
@@ -162,14 +163,14 @@ public sealed class PilotStore
 
             return new PilotSettings
             {
-                Provider = file.Provider,
+                Provider = Provider.Find(file.Provider),
                 ApiToken = token,
                 ApiUrl = file.ApiUrl,
                 WebUrl = file.WebUrl,
                 Running = file.Running,
             };
         }
-        catch (Exception ex) when (ex is JsonException or IOException or FormatException)
+        catch (Exception ex) when (ex is JsonException or IOException or FormatException or ArgumentException)
         {
             logger.LogWarning(ex, "pilot.json is unreadable; treating the pilot as not set up.");
             return null;

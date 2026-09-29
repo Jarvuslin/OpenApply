@@ -1,4 +1,5 @@
 using JobPilot.Terminal.Pilot;
+using JobPilot.Terminal.Providers;
 using JobPilot.Terminal.Sessions;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -8,7 +9,7 @@ internal static class Builders
 {
     public static PilotSettings Settings(bool running = true, string apiUrl = "https://api", string apiToken = "tok") => new()
     {
-        Provider = "claude",
+        Provider = Provider.Claude,
         ApiToken = apiToken,
         ApiUrl = apiUrl,
         WebUrl = "https://web",

@@ -1,4 +1,5 @@
 using JobPilot.Terminal.Pilot;
+using JobPilot.Terminal.Providers;
 using Xunit;
 using static JobPilot.Terminal.Tests.Builders;
 using static JobPilot.Terminal.Tests.CycleRunnerTests;
@@ -16,7 +17,7 @@ public class CycleRunnerWaitTests
     [InlineData(null, CycleRunner.MinSleepSeconds)]
     public async Task Run_Finishes_WhenTheServerRecordsACompletionTheTerminalGarbled(int? sleepHint, int expectedSleep)
     {
-        var session = new FakePilotSession { RunningProvider = "claude", DefaultActivity = Activity(Stale, Completed(sleepHint)) };
+        var session = new FakePilotSession { RunningProvider = Provider.Claude, DefaultActivity = Activity(Stale, Completed(sleepHint)) };
         session.Activities.Enqueue(Activity(Stale)); // baseline: nothing finished yet
 
         var sleep = await RunAsync(Runner(session), session);
@@ -27,16 +28,14 @@ public class CycleRunnerWaitTests
     }
 
     [Fact]
-    public async Task Run_FinishesInsteadOfSkipping_WhenTheServerConfirmsACompletionFirst()
+    public async Task Run_FinishesInsteadOfSkipping_WhenTheServerRecordsACompletionAfterTheCheckIn()
     {
-        var session = new FakePilotSession { RunningProvider = "claude" };
+        var session = new FakePilotSession { RunningProvider = Provider.Claude };
         session.Signals.Enqueue(WaitResult.Stuck);
         session.Signals.Enqueue(WaitResult.Stuck);
         session.Activities.Enqueue(Activity(Stale));                // baseline
         session.Activities.Enqueue(Activity(Stale));                // after the first stuck
-        session.Activities.Enqueue(Activity(Stale));                // check-in guard
-        session.Activities.Enqueue(Activity(Stale));                // after the second stuck
-        session.Activities.Enqueue(Activity(Stale, Completed(90))); // skip guard: finished
+        session.Activities.Enqueue(Activity(Stale, Completed(90))); // after the second stuck: finished
 
         var sleep = await RunAsync(Runner(session), session);
 
@@ -50,7 +49,7 @@ public class CycleRunnerWaitTests
     {
         var baseline = new CompletedCycle(
             "11111111-1111-1111-1111-111111111111", new DateTimeOffset(2026, 7, 20, 0, 0, 0, TimeSpan.Zero), "ok", 120);
-        var session = new FakePilotSession { RunningProvider = "claude", DefaultActivity = Activity(Stale, baseline) };
+        var session = new FakePilotSession { RunningProvider = Provider.Claude, DefaultActivity = Activity(Stale, baseline) };
 
         var sleep = await RunAsync(Runner(session), session);
 
@@ -62,7 +61,7 @@ public class CycleRunnerWaitTests
     [Fact]
     public async Task Run_KeepsWaiting_WhileTheServerSeesActivity()
     {
-        var session = new FakePilotSession { RunningProvider = "claude", DefaultActivity = Activity(Fresh) };
+        var session = new FakePilotSession { RunningProvider = Provider.Claude, DefaultActivity = Activity(Fresh) };
         session.Signals.Enqueue(WaitResult.Timeout);
         session.Signals.Enqueue(WaitResult.Sentinel(Cycle(20)));
 
@@ -76,7 +75,7 @@ public class CycleRunnerWaitTests
     [Fact]
     public async Task Run_DoesNotCountStuckSignalsAsTime_WhileTheServerSeesActivity()
     {
-        var session = new FakePilotSession { RunningProvider = "claude", DefaultActivity = Activity(Fresh) };
+        var session = new FakePilotSession { RunningProvider = Provider.Claude, DefaultActivity = Activity(Fresh) };
         for (var i = 0; i < 40; i++)
         {
             session.Signals.Enqueue(WaitResult.Stuck);
@@ -95,7 +94,7 @@ public class CycleRunnerWaitTests
     [Fact]
     public async Task Run_ClimbsTheLadder_WhenActivityIsStale()
     {
-        var session = new FakePilotSession { RunningProvider = "claude", DefaultActivity = Activity(Stale) };
+        var session = new FakePilotSession { RunningProvider = Provider.Claude, DefaultActivity = Activity(Stale) };
 
         await RunAsync(Runner(session), session);
 
@@ -106,7 +105,7 @@ public class CycleRunnerWaitTests
     [Fact]
     public async Task Run_ClimbsTheLadder_WhenActiveButPastTheCycleCap()
     {
-        var session = new FakePilotSession { RunningProvider = "claude", DefaultActivity = Activity(Fresh) };
+        var session = new FakePilotSession { RunningProvider = Provider.Claude, DefaultActivity = Activity(Fresh) };
 
         var sleep = await RunAsync(Runner(session), session);
 
@@ -119,13 +118,12 @@ public class CycleRunnerWaitTests
     [Fact]
     public async Task Run_KeepsWaitingBeforeSkip_WhenActivityResumesAfterTheCheckIn()
     {
-        var session = new FakePilotSession { RunningProvider = "claude" };
+        var session = new FakePilotSession { RunningProvider = Provider.Claude };
         session.Signals.Enqueue(WaitResult.Stuck);
         session.Signals.Enqueue(WaitResult.Stuck);
         session.Signals.Enqueue(WaitResult.Sentinel(Cycle(30)));
         session.Activities.Enqueue(Activity(Stale)); // baseline
         session.Activities.Enqueue(Activity(Stale)); // after the first stuck
-        session.Activities.Enqueue(Activity(Stale)); // check-in guard
         session.Activities.Enqueue(Activity(Fresh)); // after the second stuck: active again
 
         var sleep = await RunAsync(Runner(session), session);
@@ -137,8 +135,8 @@ public class CycleRunnerWaitTests
     [Fact]
     public async Task Run_PropagatesCancellation_DuringAProbeOrAReport()
     {
-        var probing = new FakePilotSession { RunningProvider = "claude", BlockActivity = true };
-        var reporting = new FakePilotSession { RunningProvider = "claude", DefaultActivity = Activity(Stale), BlockReport = true };
+        var probing = new FakePilotSession { RunningProvider = Provider.Claude, BlockActivity = true };
+        var reporting = new FakePilotSession { RunningProvider = Provider.Claude, DefaultActivity = Activity(Stale), BlockReport = true };
 
         foreach (var (session, started) in new[] { (probing, probing.ActivityStarted), (reporting, reporting.ReportStarted) })
         {

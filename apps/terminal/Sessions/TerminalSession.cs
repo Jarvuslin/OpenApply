@@ -61,14 +61,13 @@ public sealed class TerminalSession : IDisposable
 
     public bool IsRunning => current is not null;
 
-    /// <summary>Id of the running or last started provider.</summary>
-    public string ActiveProvider => activeProvider.Id;
+    /// <summary>The running or last started provider.</summary>
+    public Provider ActiveProvider => activeProvider;
 
     /// <summary>Starts a provider unless it is already running, replacing any other one.</summary>
-    /// <exception cref="ArgumentException">Unknown provider.</exception>
     /// <exception cref="PtyStartException">The process could not be spawned.</exception>
     public void Start(
-        string? providerId,
+        Provider provider,
         int cols,
         int rows,
         string? apiToken = null,
@@ -78,7 +77,6 @@ public sealed class TerminalSession : IDisposable
         lock (sync)
         {
             var paths = install.RequirePaths();
-            var provider = Provider.Find(providerId);
             if (current is not null && provider == activeProvider)
             {
                 logger.LogInformation("{Provider} session already running; Start is a no-op.", provider.Id);
@@ -140,8 +138,7 @@ public sealed class TerminalSession : IDisposable
     }
 
     /// <summary>Types a command into the session and submits it.</summary>
-    /// <exception cref="ArgumentException">The expected provider is unknown.</exception>
-    public async Task<SendResult> SendCommandAsync(string command, string? expectedProvider = null, CancellationToken ct = default)
+    public async Task<SendResult> SendCommandAsync(string command, Provider? expectedProvider = null, CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(command);
 
@@ -154,9 +151,9 @@ public sealed class TerminalSession : IDisposable
                 return SendResult.NotRunning;
             }
 
-            if (expectedProvider is not null && Provider.Find(expectedProvider) != activeProvider)
+            if (expectedProvider is not null && expectedProvider != activeProvider)
             {
-                logger.LogWarning("Rejected a command for {Expected}: {Actual} is active.", expectedProvider, activeProvider.Id);
+                logger.LogWarning("Rejected a command for {Expected}: {Actual} is active.", expectedProvider.Id, activeProvider.Id);
                 return SendResult.ProviderMismatch;
             }
 
