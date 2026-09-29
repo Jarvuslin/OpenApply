@@ -1,9 +1,8 @@
 namespace JobPilot.Terminal.Hosting;
 
-/// <summary>Resolved host installation and update capability.</summary>
+/// <summary>The host's install layout, resolved once. A missing plugin tree degrades the host instead of stopping it.</summary>
 public sealed class HostInstall
 {
-    /// <summary>Resolves the layout without preventing a degraded host from starting.</summary>
     public HostInstall(ILogger<HostInstall> logger)
     {
         try
@@ -26,26 +25,72 @@ public sealed class HostInstall
         CanUpdate = canUpdate;
     }
 
-    /// <summary>Resolved asset locations, or null when the plugin tree could not be found.</summary>
-    public InstallPaths? Paths { get; }
-
-    /// <summary>Layout resolution error, if any.</summary>
-    public string? PathsError { get; }
-
-    /// <summary>Whether this is a published, self-updatable install.</summary>
-    public bool CanUpdate { get; }
-
-    /// <summary>Host assembly version.</summary>
-    public static string HostVersion { get; } =
-        typeof(HostInstall).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+    public static string HostVersion { get; } = typeof(HostInstall).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
 
     /// <summary>
-    /// Whether the running executable ships its own plugin tree - a published install rather than a
-    /// build output, which resolves the repo's tree from an ancestor directory.
+    /// Whether the executable ships its own plugin tree: a published install, as opposed to a build output that
+    /// finds the repo's tree in an ancestor directory.
     /// </summary>
     public static bool IsPublishedHost { get; } = InstallPaths.IsInstallRoot(AppContext.BaseDirectory);
 
-    /// <summary>Returns the paths or throws the recorded resolution error.</summary>
+    /// <summary>Null when the plugin tree could not be found; <see cref="PathsError"/> says why.</summary>
+    public InstallPaths? Paths { get; }
+
+    public string? PathsError { get; }
+
+    public bool CanUpdate { get; }
+
     public InstallPaths RequirePaths() => Paths ?? throw new InvalidOperationException(
         $"Terminal host install is incomplete - reinstall the JobPilot agent. ({PathsError})");
+}
+
+public sealed record InstallPaths
+{
+    /// <summary>The install root, which is also every session's working directory.</summary>
+    public required string WorkingDir { get; init; }
+
+    public required string PluginDir { get; init; }
+
+    /// <summary>JOBPILOT_SKILLS_ROOT; shared docs live under its _shared/.</summary>
+    public string SkillsDir => Path.Combine(PluginDir, "skills");
+
+    /// <summary>Plugin commands such as jobpilot-api, first on the session's PATH.</summary>
+    public string BinDir => Path.Combine(PluginDir, "bin");
+
+    public static InstallPaths Resolve() =>
+        ResolveFrom(CandidateRoots(AppContext.BaseDirectory, Environment.CurrentDirectory));
+
+    internal static InstallPaths ResolveFrom(IEnumerable<string> candidateRoots)
+    {
+        var root = candidateRoots.Distinct(StringComparer.OrdinalIgnoreCase).FirstOrDefault(IsInstallRoot)
+            ?? throw new DirectoryNotFoundException(
+                "Could not find JobPilot provider assets: a plugin/ directory with skills/, skills/_shared/, .mcp.json, .claude-plugin/, and .codex-plugin/.");
+        return new InstallPaths { WorkingDir = root, PluginDir = Path.Combine(root, "plugin") };
+    }
+
+    public static bool IsInstallRoot(string root)
+    {
+        var plugin = Path.Combine(root, "plugin");
+        string[] required =
+        [
+            Path.Combine("skills", "_shared", "setup.md"),
+            Path.Combine("skills", "auto-apply", "SKILL.md"),
+            ".mcp.json",
+            Path.Combine(".claude-plugin", "plugin.json"),
+            Path.Combine(".codex-plugin", "plugin.json"),
+        ];
+        return required.All(file => File.Exists(Path.Combine(plugin, file)));
+    }
+
+    /// <summary>Ancestors of the executable first, then of the launch directory.</summary>
+    internal static IEnumerable<string> CandidateRoots(string baseDirectory, string currentDirectory) =>
+        Ancestors(baseDirectory).Concat(Ancestors(currentDirectory));
+
+    private static IEnumerable<string> Ancestors(string path)
+    {
+        for (var dir = new DirectoryInfo(Path.GetFullPath(path)); dir is not null; dir = dir.Parent)
+        {
+            yield return dir.FullName;
+        }
+    }
 }

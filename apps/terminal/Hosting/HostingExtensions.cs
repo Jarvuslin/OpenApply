@@ -1,5 +1,3 @@
-using JobPilot.Terminal.Contracts;
-using JobPilot.Terminal.Hosting;
 using JobPilot.Terminal.Pilot;
 using JobPilot.Terminal.Sessions;
 using JobPilot.Terminal.Updates;
@@ -9,27 +7,30 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace JobPilot.Terminal.Hosting;
 
-/// <summary>Configures and runs the terminal host.</summary>
 public static class HostingExtensions
 {
-    /// <summary>Registers terminal host services.</summary>
     public static IServiceCollection AddTerminalHost(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddCors(options => options.AddPolicy(
             OriginPolicy.CorsPolicy,
-            policy => policy
-                .WithOrigins(OriginPolicy.Resolve(configuration))
-                .AllowAnyHeader()
-                .AllowAnyMethod()));
+            policy => policy.WithOrigins(OriginPolicy.Resolve(configuration)).AllowAnyHeader().AllowAnyMethod()));
+
+        // One long-lived client for every outbound call. Callers bound their own requests; the pooled lifetime
+        // lets a host that runs for weeks follow DNS changes.
+        services.AddSingleton(_ => new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(15) })
+        {
+            Timeout = Timeout.InfiniteTimeSpan,
+        });
+
         services.AddSingleton<HostInstall>();
-        services.AddSingleton<ProtocolRegistrar>();
-        services.AddSingleton<GitHubReleaseClient>();
-        services.AddSingleton<ReleaseInstaller>();
-        services.AddSingleton<HostUpdateService>();
+        services.AddSingleton<HostStatus>();
+        services.AddSingleton<UrlScheme>();
+
         services.AddSingleton<ScratchCleaner>();
         services.AddHostedService(sp => sp.GetRequiredService<ScratchCleaner>());
         services.AddSingleton<TerminalSession>();
         services.AddSingleton<TerminalRelay>();
+
         services.AddSingleton(sp => new PilotStore(
             PilotStore.ResolvePath(sp.GetRequiredService<HostInstall>()),
             sp.GetRequiredService<ILogger<PilotStore>>()));
@@ -43,34 +44,27 @@ public static class HostingExtensions
             sp.GetRequiredService<PilotLoop>().Wake,
             sp.GetRequiredService<ILogger<PilotEventListener>>()));
 
-        // One long-lived client for every outbound call. Callers bound their own requests; the pooled lifetime
-        // lets a host that runs for weeks follow DNS changes.
-        services.AddSingleton(_ => new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(15) })
-        {
-            Timeout = Timeout.InfiniteTimeSpan,
-        });
-        services.ConfigureHttpJsonOptions(c =>
-            c.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonContext.Default));
+        services.AddSingleton<GitHubReleaseClient>();
+        services.AddSingleton<ReleaseInstaller>();
+        services.AddSingleton<HostUpdateService>();
 
-        // Production otherwise returns an empty 400 for binding failures, while the web expects ProblemDetails.
+        services.ConfigureHttpJsonOptions(c => c.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonContext.Default));
+
+        // Production otherwise answers a binding failure with an empty 400, and the web expects ProblemDetails.
         services.Configure<RouteHandlerOptions>(o => o.ThrowOnBadRequest = true);
 
-        // Must stay below HostHandoff.MaxWait or an update's relaunched child times out and fails to bind.
+        // Must stay below HostHandoff.MaxWait, or an update's relaunched host times out and fails to bind.
         services.Configure<HostOptions>(o => o.ShutdownTimeout = TimeSpan.FromSeconds(5));
 
         return services;
     }
 
-    /// <summary>Configures middleware and session teardown.</summary>
     public static WebApplication UseTerminalPipeline(this WebApplication app)
     {
         app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
         {
             var error = context.Features.Get<IExceptionHandlerFeature>()?.Error;
-
-            var status = error is BadHttpRequestException bad
-                ? bad.StatusCode
-                : StatusCodes.Status500InternalServerError;
+            var status = error is BadHttpRequestException bad ? bad.StatusCode : StatusCodes.Status500InternalServerError;
 
             context.Response.StatusCode = status;
             context.Response.ContentType = "application/problem+json";
@@ -83,27 +77,22 @@ public static class HostingExtensions
             await context.Response.WriteAsJsonAsync(problem, AppJsonContext.Default.ProblemDetails);
         }));
 
-        // CORS hides disallowed responses but does not stop simple requests such as POST /update.
-        // The guard runs first, so it also rejects disallowed WebSocket handshakes.
-        app.Use(next => OriginPolicy.CreateGuard(app.Configuration, next));
+        app.Use(next => OriginPolicy.RejectOtherOrigins(app.Configuration, next));
         app.UseCors(OriginPolicy.CorsPolicy);
-
         app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(30) });
 
-        // Resolve the hub before the first /ws request so pre-connect output reaches its replay buffer.
-        var hub = app.Services.GetRequiredService<TerminalRelay>();
-
+        // Created before the first /ws request, so output from before a browser connects still reaches its replay.
+        var relay = app.Services.GetRequiredService<TerminalRelay>();
         app.Lifetime.ApplicationStopping.Register(() =>
         {
             app.Services.GetRequiredService<TerminalSession>().Stop();
-            // Open sockets otherwise hold Kestrel's graceful stop for the full shutdown timeout.
-            hub.AbortAll();
+            // An open socket otherwise holds Kestrel's graceful stop for the whole shutdown timeout.
+            relay.AbortAll();
         });
 
         return app;
     }
 
-    /// <summary>Runs the app with a useful port-conflict error.</summary>
     public static void RunWithPortDiagnostics(this WebApplication app)
     {
         try
@@ -114,8 +103,8 @@ public static class HostingExtensions
         {
             var url = app.Configuration["Kestrel:Endpoints:Http:Url"] ?? "http://localhost:4102";
             Console.Error.WriteLine(
-                $"JobPilot terminal: {url} is already in use - another jobpilot instance is probably running.\n" +
-                "Stop it and retry: 'Get-Process jobpilot | Stop-Process' (Windows) or 'pkill -x jobpilot' (macOS/Linux).");
+                $"JobPilot terminal: {url} is already in use - another jobpilot instance is probably running.\n"
+                + "Stop it and retry: 'Get-Process jobpilot | Stop-Process' (Windows) or 'pkill -x jobpilot' (macOS/Linux).");
             Environment.Exit(1);
         }
     }

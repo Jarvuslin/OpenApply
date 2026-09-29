@@ -3,7 +3,6 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
-using JobPilot.Terminal.Contracts;
 
 namespace JobPilot.Terminal.Sessions;
 

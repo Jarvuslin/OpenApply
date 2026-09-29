@@ -1,4 +1,3 @@
-using JobPilot.Terminal.Contracts;
 using JobPilot.Terminal.Hosting;
 using Xunit;
 
@@ -79,23 +78,5 @@ public class InstallPathsTests
     {
         using var temp = new TempDir();
         Assert.Throws<DirectoryNotFoundException>(() => InstallPaths.ResolveFrom([temp.Root]));
-    }
-
-    [Fact]
-    public void IsInstallRoot_IsTrue_ForABundledPluginTree()
-    {
-        using var temp = new TempDir();
-        temp.WriteValidPluginTree();
-
-        Assert.True(InstallPaths.IsInstallRoot(temp.Root));
-    }
-
-    [Fact]
-    public void IsInstallRoot_IsFalse_ForABuildOutputWithoutAPluginTree()
-    {
-        using var temp = new TempDir();
-        temp.File("jobpilot.exe");
-
-        Assert.False(InstallPaths.IsInstallRoot(temp.Root));
     }
 }

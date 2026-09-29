@@ -1,4 +1,3 @@
-using JobPilot.Terminal.Contracts;
 using JobPilot.Terminal.Updates;
 using Xunit;
 

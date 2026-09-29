@@ -1,5 +1,4 @@
 using JobPilot.Terminal.Hosting;
-using JobPilot.Terminal.Contracts;
 
 namespace JobPilot.Terminal.Updates;
 

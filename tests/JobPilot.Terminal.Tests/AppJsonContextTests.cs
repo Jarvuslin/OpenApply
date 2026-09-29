@@ -1,6 +1,6 @@
-using JobPilot.Terminal.Providers;
 using System.Text.Json;
-using JobPilot.Terminal.Contracts;
+using JobPilot.Terminal.Hosting;
+using JobPilot.Terminal.Providers;
 using JobPilot.Terminal.Pilot;
 using JobPilot.Terminal.Sessions;
 using Xunit;
@@ -22,10 +22,26 @@ public class AppJsonContextTests
     }
 
     [Fact]
-    public void SessionStatus_SerializesCamelCase_ThroughTheContextsOwnOptions()
+    public void Requests_BindTheBodiesTheWebSends()
+    {
+        var start = JsonSerializer.Deserialize(
+            """{"provider":"codex","cols":120,"rows":40,"apiToken":"tok","apiUrl":"https://api","webUrl":"https://web"}""",
+            AppJsonContext.Default.StartSessionRequest);
+        var pilot = JsonSerializer.Deserialize(
+            """{"provider":"claude","apiToken":"tok","apiUrl":"https://api","webUrl":"https://web"}""",
+            AppJsonContext.Default.PilotStartRequest);
+        var inject = JsonSerializer.Deserialize("""{"command":"$pilot"}""", AppJsonContext.Default.InjectRequest);
+
+        Assert.Equal(new StartSessionRequest(120, 40, "codex", "tok", "https://api", "https://web"), start);
+        Assert.Equal(new PilotStartRequest("claude", "tok", "https://api", "https://web"), pilot);
+        Assert.Equal(new InjectRequest("$pilot"), inject);
+    }
+
+    [Fact]
+    public void StatusResponse_SerializesCamelCase()
     {
         var json = JsonSerializer.Serialize(
-            new SessionStatus
+            new StatusResponse
             {
                 Status = "ok",
                 Session = "stopped",
@@ -34,8 +50,9 @@ public class AppJsonContextTests
                 HostVersion = "2.0.8",
                 CanRelaunch = true,
                 CanUpdate = false,
+                Pilot = new PilotStatus { Running = false, Paired = false, Conducting = false, ConsecutiveTimeouts = 0 },
             },
-            AppJsonContext.Default.SessionStatus);
+            AppJsonContext.Default.StatusResponse);
 
         Assert.Contains("\"hostVersion\":\"2.0.8\"", json);
         Assert.Contains("\"canRelaunch\":true", json);

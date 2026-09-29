@@ -19,9 +19,6 @@ public static class HostHandoff
     /// </summary>
     public static bool IsUpdateRelaunch => Environment.GetEnvironmentVariable(AwaitPidVar) is not null;
 
-    /// <summary>Stops the parent after its update response has flushed so the waiting child can bind the port.</summary>
-    public static void BeginRelease(IHostApplicationLifetime lifetime) => GracefulStop.Schedule(lifetime);
-
     /// <summary>Waits briefly for the predecessor to release the port.</summary>
     public static async Task WaitForParentExitAsync(ILogger logger)
     {

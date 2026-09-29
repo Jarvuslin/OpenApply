@@ -1,6 +1,5 @@
 using JobPilot.Terminal.Providers;
 using System.Text.Json.Serialization;
-using JobPilot.Terminal.Contracts;
 using JobPilot.Terminal.Hosting;
 using JobPilot.Terminal.Pilot;
 using JobPilot.Terminal.Sessions;
@@ -21,7 +20,7 @@ namespace JobPilot.Terminal;
 [JsonSerializable(typeof(InjectRequest))]
 [JsonSerializable(typeof(PilotStartRequest))]
 [JsonSerializable(typeof(BrowserMessage))]
-[JsonSerializable(typeof(SessionStatus))]
+[JsonSerializable(typeof(StatusResponse))]
 [JsonSerializable(typeof(PilotStatus))]
 [JsonSerializable(typeof(PilotSettingsFile))]
 [JsonSerializable(typeof(JournalRequest))]
