@@ -31,13 +31,16 @@ upwork.com. Say so plainly rather than implying they were applied.
    - **Overview** - written to one client skimming it. Open with what you do for clients, in a
      sentence, then two or three real projects with a concrete result each, then how to start
      working together. Short paragraphs, plain words, first person. 1000-2000 characters reads
-     better than filling the 5000 limit. Then invoke the `humanizer` skill on it in embedded mode.
+     better than filling the 5000 limit. Keep lines from the current overview that already work;
+     they're in the user's own voice. Then invoke the `humanizer` skill on it in embedded mode.
    - **Skills** - at most 20, and each must be a real Upwork ontology skill name. Unresolvable
      names are rejected at write time, so prefer the exact wording already on the profile or in
      the job market over invented labels.
    - **Portfolio** (advisory) - derive entries from resume `projects`:
      `{ title, description, url?, skills[] }`. Keep existing good ones; add or improve from the
-     resume.
+     resume. Each description says what the project is and one concrete detail, and they don't
+     all share one shape ("Built X using Y, resulting in Z" five times over). Humanize the
+     descriptions in embedded mode too.
    - **Hourly rate** (advisory) - only suggest if the resume or profile gives a basis; otherwise
      leave the current value.
 3. **Save the draft** for review. Write the body to `"$JOBPILOT_TEMP/upwork-profile.json"`:

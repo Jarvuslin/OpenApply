@@ -44,7 +44,7 @@ Choose the single project from the resume that matches their problem, not just t
 
 Under 150 words, in this order:
 
-1. **Hook (line 1, in `**bold**`).** Their problem or goal, in their words. Upwork renders the bold, so this line is what gets read. Not "Hi", "Dear client", "I'm excited to apply", or "I came across your posting".
+1. **Hook (line 1, in `**bold**`).** Why you in one line: the closest thing you've done to their problem ("I built the Stripe Connect payouts for a two-sided marketplace last year."). Upwork renders the bold, so this line is what gets read. Don't paraphrase their posting back to them; they know what they wrote. Not "Hi", "Dear client", "I'm excited to apply", or "I came across your posting".
 2. **Proof (one or two lines).** The case study: what you built, one real result, and the link. Don't narrate your career.
 3. **Question (one line).** One specific question about their project that shows you thought about it (a scope choice, an edge case, a decision they'll face). This is the call to action; don't add "Looking forward to hearing from you" after it. Use a calendar link instead only if the profile has one.
 

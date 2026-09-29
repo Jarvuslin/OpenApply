@@ -56,7 +56,7 @@ Then pick one or two proof points that fit this job, not your two best overall: 
 
 **Body.** 150-250 words in three or four paragraphs of different lengths:
 
-- **Open** with the role and your lead in one to three sentences.
+- **Open** with your lead in one to three sentences. Name the role somewhere in the letter, not necessarily first: "I'm applying for the X role at Y" is the opening every letter uses.
 - **Proof** in one or two short paragraphs. Say what you did and what happened. Don't explain why it's relevant; if you picked well, the reader sees it.
 - **Close** in one or two sentences: you'd like to talk. A thank-you is fine. No recap of fit.
 

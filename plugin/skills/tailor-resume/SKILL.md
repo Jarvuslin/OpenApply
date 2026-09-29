@@ -118,7 +118,7 @@ Send only what changes something:
 
 Leave `summary` out when the base already fits. It usually does.
 
-When one sentence of the base speaks to the wrong audience, swap that sentence and keep the rest word for word. The new sentence states one fact from the resume that this JD cares about, in the candidate's voice and plain words. Keep the base's proof: its publications, its years, its domains, its numbers. Never restate the JD, and never open with a title followed by a list of tools.
+When one sentence of the base speaks to the wrong audience, swap that sentence and keep the rest word for word. The new sentence states one fact from the resume that this JD cares about, in plain words. Match the sentences around it (person, tense, length) so it doesn't stand out as the one that was swapped in. Keep the base's proof: its publications, its years, its domains, its numbers. Never restate the JD, and never open with a title followed by a list of tools.
 
 The server rejects stock phrasing in anything you write (summary, headline, reworded bullets), so don't use: passionate, enjoys, comfortable with, hands-on, results-driven, detail-oriented, self-starter, fast-paced, track record, cutting-edge, state-of-the-art, leverage, spearheaded, seasoned, stakeholders, business requirements, production-grade, best practices, cross-functional, end-to-end, quick learner, eager to, thrives, suited to, the same, downstream.
 
@@ -130,7 +130,7 @@ Optional. A job title, nothing more. Retarget it only when the base headline nam
 
 Reordering is the default and usually suffices. Reword a bullet only when its JD-relevant fact sits mid-sentence, and reword at most two or three across the whole resume.
 
-`bulletRewrites` is `[{ entryIndex, bullets: [{ original, tailored }] }]`. Copy `original` verbatim from `experience[entryIndex].bullets`. `tailored` is the same sentence with the relevant fact first. Every noun, number, and tech name stays. Nothing is added: no audience, no consequence, no clause on why the work mattered. A concrete noun never becomes a vaguer one; "clinical notes" turning into "unstructured records" is a loss, not tailoring.
+`bulletRewrites` is `[{ entryIndex, bullets: [{ original, tailored }] }]`. Copy `original` verbatim from `experience[entryIndex].bullets`. `tailored` is the same sentence with the relevant fact first, and it still reads as a natural bullet: start with a verb, not "Using X," or "Leveraging X,". Every noun, number, and tech name stays. Nothing is added: no audience, no consequence, no clause on why the work mattered. A concrete noun never becomes a vaguer one; "clinical notes" turning into "unstructured records" is a loss, not tailoring.
 
 ### Restructure
 

@@ -33,8 +33,8 @@ A model writes the choice that fits the widest range of readers, so its prose co
 
 - Plain words: "use" not "leverage", "help" not "facilitate", "is" not "serves as".
 - A mix of short and medium sentences. Not a row of punchy fragments, and not every sentence at 25 words.
-- Contractions are fine (I'm, I've, didn't).
-- First person, active voice: "I built", not "was responsible for building".
+- Contractions are fine (I'm, I've, didn't), except in resumes.
+- First person, active voice: "I built", not "was responsible for building". Resume bullets drop the "I" by convention and start with the verb.
 - Say a thing once. Don't restate it in the next sentence or summarize at the end.
 - Specific beats impressive: "cut the nightly import from 4 hours to 20 minutes" beats "significantly improved performance".
 - A paragraph can end on a plain fact. It doesn't need a landing.

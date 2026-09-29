@@ -22,15 +22,18 @@ jobpilot-api GET /api/resumes/$RESUME_ID
 
 ## What to improve
 
-For a human screener skimming, and the ATS parsing:
+For a human screener skimming, and the ATS parsing. Change only what's weak: where the candidate's own wording already works, keep it. Rewriting every line replaces their voice with one uniform voice, and that uniformity is what reads as generated.
 
-- **`summary`** - two or three plain sentences: what they do, at what level, and their two strongest specifics. Cut anything true of every candidate ("passionate", "results-driven", "strong communicator").
+- **`summary`** - two or three plain sentences about what they actually work on and their strongest specifics. Don't open with "<Title> with N years of experience" or "Results-driven <title>"; start from the work itself. Cut anything true of every candidate ("strong communicator", "team player").
 - **`basics.headline`** - a role title people search for, not a slogan.
-- **Bullets** - past tense for past roles; a concrete verb, then what was built or changed. Replace "Responsible for" / "Worked on" / "Helped with" with what the person did. Lead with the result when there is one, but don't force every bullet into "Verb X, resulting in Y%": a resume where every line has the same shape reads as generated. Cut stock verbs (spearheaded, leveraged, utilized, streamlined) and a phrase that repeats across entries - one stock phrase in three roles flattens all three.
+- **Bullets** - past tense for past roles; a concrete verb, then what was built or changed. Replace "Responsible for" / "Worked on" / "Helped with" with what the person did. Lead with the result when there is one, but don't force every bullet into "Verb X, resulting in Y%": a resume where every line has the same shape reads as generated. Don't start most bullets with the same verb ("Developed", "Built"). Cut a phrase that repeats across entries - one stock phrase in three roles flattens all three.
+- **Projects** - the same rules for `description` and `bullets`: say what it is and what it does, without "a robust, scalable platform".
 - **Skill groups** - consolidate. Past ~5 groups it reads as a keyword dump.
 - **Ordering** - most relevant experience and projects first.
 
-Then run the `humanizer` skill in **embedded mode** on the summary and bullets.
+Avoid the phrases the server rejects in tailored resumes (listed in `../tailor-resume/SKILL.md`, "Summary"): if the user accepts this rewrite, it becomes the base every tailored variant starts from.
+
+Then run the `humanizer` skill in **embedded mode** on the summary, headline, bullets, and project descriptions you changed.
 
 ## Rules
 
