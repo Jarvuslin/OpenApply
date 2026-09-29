@@ -31,10 +31,8 @@ internal sealed class CycleRunner
     private readonly IPilotSession session;
     private readonly TimeSpan checkInterval;
 
-    // The server's newest completion before this cycle started. Unknown when that probe failed, and then only the
-    // sentinel can end the cycle: a stale baseline would read the previous cycle's completion as this one's.
+    // The server's newest completion before this cycle started, so the previous cycle's completion never ends this one.
     private CompletedCycle? baseline;
-    private bool baselineKnown;
 
     private TimeSpan totalWaited;
     private bool extensionReported;
@@ -79,7 +77,7 @@ internal sealed class CycleRunner
 
     /// <summary>Runs one cycle. Returns the sleep before the next one, or null to go again right away.</summary>
     /// <param name="activity">The server probe taken just before; the baseline for spotting a garbled finish.</param>
-    public async Task<TimeSpan?> RunAsync(PilotSettings settings, PilotActivity? activity, CancellationToken ct)
+    public async Task<TimeSpan?> RunAsync(PilotSettings settings, PilotActivity activity, CancellationToken ct)
     {
         // Never fight a user who launched the other provider by hand: pause instead of killing their session.
         var running = session.RunningProvider;
@@ -97,11 +95,7 @@ internal sealed class CycleRunner
             await session.DelayAsync(StartupGrace, ct);
         }
 
-        baselineKnown = activity is not null;
-        if (activity is not null)
-        {
-            baseline = activity.LastCycle;
-        }
+        baseline = activity.LastCycle;
 
         totalWaited = TimeSpan.Zero;
         extensionReported = false;
@@ -242,7 +236,7 @@ internal sealed class CycleRunner
     /// <summary>A completion newer than the baseline, as a cycle result. Compares server values only, never clocks.</summary>
     private async Task<CycleResult?> FindNewCompletionAsync(PilotActivity? activity, CancellationToken ct)
     {
-        if (!baselineKnown || activity?.LastCycle is not { } latest)
+        if (activity?.LastCycle is not { } latest)
         {
             return null;
         }
@@ -257,10 +251,9 @@ internal sealed class CycleRunner
 
         baseline = latest;
         await session.ReportAsync(Reports.Completion, ct);
-        var id = Guid.TryParse(latest.CycleId, out var parsed) ? parsed : Guid.Empty;
 
         // A completion with no sleep hint is a skill bug; the minimum keeps the next cycle coming soon.
-        return new CycleResult(id, SentinelParser.ParseStatus(latest.Status), latest.SleepSeconds ?? MinSleepSeconds);
+        return new CycleResult(SentinelParser.ParseStatus(latest.Status), latest.SleepSeconds ?? MinSleepSeconds);
     }
 
     private static int ClampSleep(int seconds) => Math.Clamp(seconds, MinSleepSeconds, MaxSleepSeconds);

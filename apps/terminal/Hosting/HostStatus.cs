@@ -7,16 +7,10 @@ namespace JobPilot.Terminal.Hosting;
 /// <summary>What /healthz and every control endpoint return.</summary>
 public sealed record StatusResponse
 {
-    public const string StatusOk = "ok";
-
-    /// <summary>The host runs but cannot start sessions, e.g. the plugin tree is missing.</summary>
-    public const string StatusDegraded = "degraded";
-
-    public const string SessionRunning = "running";
-    public const string SessionStopped = "stopped";
-
+    /// <summary><c>ok</c>, or <c>degraded</c> when the host runs but cannot start sessions, e.g. the plugin tree is missing.</summary>
     public required string Status { get; init; }
 
+    /// <summary><c>running</c> or <c>stopped</c>.</summary>
     public required string Session { get; init; }
 
     /// <summary>The running or last started provider.</summary>
@@ -39,13 +33,10 @@ public sealed record StatusResponse
 
 public sealed class HostStatus(TerminalSession session, HostInstall install, UrlScheme scheme, PilotLoop pilot)
 {
-    // Long enough for Kestrel to flush the caller's 200 before teardown starts.
-    private static readonly TimeSpan ResponseFlush = TimeSpan.FromMilliseconds(500);
-
     public StatusResponse Get() => new()
     {
-        Status = install.PathsError is null ? StatusResponse.StatusOk : StatusResponse.StatusDegraded,
-        Session = session.IsRunning ? StatusResponse.SessionRunning : StatusResponse.SessionStopped,
+        Status = install.PathsError is null ? "ok" : "degraded",
+        Session = session.IsRunning ? "running" : "stopped",
         Provider = session.ActiveProvider,
         Providers = Provider.All,
         HostVersion = HostInstall.HostVersion,
@@ -54,12 +45,4 @@ public sealed class HostStatus(TerminalSession session, HostInstall install, Url
         CanUpdate = install.CanUpdate,
         Pilot = pilot.GetStatus(),
     };
-
-    /// <summary>Stops the host once the caller's response has flushed. Ignores cancellation, so the port is always released.</summary>
-    public static void StopAfterResponse(IHostApplicationLifetime lifetime) =>
-        _ = Task.Run(async () =>
-        {
-            await Task.Delay(ResponseFlush, CancellationToken.None);
-            lifetime.StopApplication();
-        }, CancellationToken.None);
 }

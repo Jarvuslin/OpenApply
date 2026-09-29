@@ -11,7 +11,7 @@ public enum CycleStatus
 }
 
 /// <summary>How a cycle ended, from its <c>[[JOBPILOT_CYCLE ...]]</c> sentinel or the server's record.</summary>
-public readonly record struct CycleResult(Guid CycleId, CycleStatus Status, int SleepSeconds);
+public readonly record struct CycleResult(CycleStatus Status, int SleepSeconds);
 
 /// <summary>
 /// Detects the Pilot cycle sentinel in raw PTY output. The TUI redraws with ANSI/CSI sequences and may echo
@@ -58,7 +58,7 @@ public sealed partial class SentinelParser
                 seen.Remove(seenOrder.Dequeue());
             }
 
-            (cycles ??= []).Add(new CycleResult(cycleId, ParseStatus(match.Groups[2].ValueSpan), ParseSleep(match.Groups[3].ValueSpan)));
+            (cycles ??= []).Add(new CycleResult(ParseStatus(match.Groups[2].ValueSpan), ParseSleep(match.Groups[3].ValueSpan)));
         }
 
         return (IReadOnlyList<CycleResult>?)cycles ?? [];

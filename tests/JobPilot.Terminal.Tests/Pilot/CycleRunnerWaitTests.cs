@@ -60,28 +60,6 @@ public class CycleRunnerWaitTests
     }
 
     [Fact]
-    public async Task Run_IgnoresAnOldCompletion_WhenTheBaselineProbeFailed()
-    {
-        // A sentinel finish never refreshes the baseline, so a failed probe must not leave the next cycle
-        // comparing against the previous cycle's completion.
-        var session = new FakePilotSession { RunningProvider = "claude" };
-        var runner = Runner(session);
-        session.Activities.Enqueue(Activity(Stale, Completed(30)));
-        session.Signals.Enqueue(WaitResult.Sentinel(Cycle(30)));
-        await RunAsync(runner, session);
-
-        session.ClearActions();
-        session.Activities.Enqueue(null);
-        session.DefaultActivity = Activity(Stale, Completed(900));
-
-        var sleep = await RunAsync(runner, session);
-
-        Assert.Null(sleep);
-        Assert.DoesNotContain(Reports.Completion, session.Reports);
-        Assert.Contains("check-in", session.Actions);
-    }
-
-    [Fact]
     public async Task Run_KeepsWaiting_WhileTheServerSeesActivity()
     {
         var session = new FakePilotSession { RunningProvider = "claude", DefaultActivity = Activity(Fresh) };
@@ -114,12 +92,10 @@ public class CycleRunnerWaitTests
         Assert.Empty(session.Reports);
     }
 
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task Run_ClimbsTheLadder_WhenActivityIsStaleOrUnknown(bool probeSucceeds)
+    [Fact]
+    public async Task Run_ClimbsTheLadder_WhenActivityIsStale()
     {
-        var session = new FakePilotSession { RunningProvider = "claude", DefaultActivity = probeSucceeds ? Activity(Stale) : null };
+        var session = new FakePilotSession { RunningProvider = "claude", DefaultActivity = Activity(Stale) };
 
         await RunAsync(Runner(session), session);
 

@@ -1,5 +1,4 @@
 using JobPilot.Terminal.Hosting;
-using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace JobPilot.Terminal.Updates;
 
@@ -25,24 +24,16 @@ public static class UpdateEndpoints
 {
     public static void MapUpdateEndpoints(this WebApplication app)
     {
-        app.MapPost("/update", async Task<Results<Ok<UpdateResult>, ProblemHttpResult>> (
-            HostUpdater updates, IHostApplicationLifetime lifetime, CancellationToken ct) =>
+        app.MapPost("/update", async (HostUpdater updates, IHostApplicationLifetime lifetime, CancellationToken ct) =>
         {
-            try
+            var result = await updates.UpdateNowAsync(ct);
+            if (result.Updating)
             {
-                var result = await updates.UpdateNowAsync(ct);
-                if (result.Updating)
-                {
-                    // The replacement waits for this process to release the port.
-                    HostStatus.StopAfterResponse(lifetime);
-                }
+                // The replacement waits for this process to release the port.
+                lifetime.StopAfterResponse();
+            }
 
-                return TypedResults.Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return Problems.ServerError("Failed to update the terminal host", ex.Message);
-            }
+            return TypedResults.Ok(result);
         });
     }
 }

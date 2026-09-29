@@ -148,15 +148,14 @@ public sealed class PilotSession : IPilotSession, IDisposable
             return;
         }
 
-        var sawSentinel = false;
-        foreach (var cycle in sentinels.Feed(data))
+        var cycles = sentinels.Feed(data);
+        foreach (var cycle in cycles)
         {
-            sawSentinel = true;
             signals.Writer.TryWrite(new Signal(cycle));
         }
 
         // A finished cycle clears stuck evidence before the next one gathers its own.
-        if (sawSentinel)
+        if (cycles.Count > 0)
         {
             stuck.Reset();
             return;

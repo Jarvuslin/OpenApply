@@ -95,7 +95,7 @@ public sealed class TerminalSession : IDisposable
                 current = null;
             }
 
-            scratch.CleanSessionStart(paths.WorkingDir);
+            scratch.CleanSessionStart(paths);
             var args = provider.BuildArgs(paths.PluginDir, logger);
             logger.LogInformation(
                 "Starting {Provider}: cwd={Cwd} command={Command} args={Args} cols={Cols} rows={Rows}",
@@ -107,7 +107,7 @@ public sealed class TerminalSession : IDisposable
                 rows);
 
             // Skills write scratch files here; a shell-local TEMP would not survive between tool calls.
-            var scratchDir = Directory.CreateDirectory(Path.Combine(paths.WorkingDir, ".temp")).FullName;
+            var scratchDir = Directory.CreateDirectory(paths.ScratchDir).FullName;
             var env = new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 ["JOBPILOT_SKILLS_ROOT"] = paths.SkillsDir,
@@ -116,13 +116,12 @@ public sealed class TerminalSession : IDisposable
                 ["JOBPILOT_API"] = RequestOrEnv(apiUrl, "JOBPILOT_API", "http://localhost:4101"),
                 ["JOBPILOT_API_TOKEN"] = RequestOrEnv(apiToken, "JOBPILOT_API_TOKEN", ""),
                 ["JOBPILOT_WEB"] = RequestOrEnv(webUrl, "JOBPILOT_WEB", "http://localhost:4100"),
-                ["PATH"] = WithBinDir(paths.BinDir),
             };
 
             Starting?.Invoke();
 
             var process = new PtyProcess(
-                PtyProcess.BuildOptions(provider.Command, args, paths.WorkingDir, cols, rows, env), spawn, logger);
+                PtyProcess.BuildOptions(provider.Command, args, paths.WorkingDir, cols, rows, paths.BinDir, env), spawn, logger);
             process.Output += data => Output?.Invoke(data);
             process.Exited += exitCode => OnExited(process, exitCode);
             try
@@ -230,12 +229,4 @@ public sealed class TerminalSession : IDisposable
 
     private static string RequestOrEnv(string? value, string envKey, string fallback) =>
         !string.IsNullOrEmpty(value) ? value : Environment.GetEnvironmentVariable(envKey) ?? fallback;
-
-    // The session env replaces PATH outright, so start from the same repaired PATH the PTY would get.
-    private static string WithBinDir(string binDir)
-    {
-        var inherited = PtyEnvironment.BuildOverrides().GetValueOrDefault("PATH")
-            ?? Environment.GetEnvironmentVariable("PATH");
-        return string.IsNullOrEmpty(inherited) ? binDir : binDir + Path.PathSeparator + inherited;
-    }
 }

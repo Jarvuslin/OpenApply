@@ -21,7 +21,6 @@ public class SentinelParserTests
         var cycles = parser.Feed(Bytes($"working...\n{Sentinel()}\n"));
 
         var cycle = Assert.Single(cycles);
-        Assert.Equal(Guid.Parse(CycleId), cycle.CycleId);
         Assert.Equal(CycleStatus.Ok, cycle.Status);
         Assert.Equal(30, cycle.SleepSeconds);
     }
@@ -76,7 +75,6 @@ public class SentinelParserTests
 
         var cycle = Assert.Single(parser.Feed(Bytes(wrapped)));
 
-        Assert.Equal(Guid.Parse(CycleId), cycle.CycleId);
         Assert.Equal(30, cycle.SleepSeconds);
     }
 
@@ -93,7 +91,6 @@ public class SentinelParserTests
         parser.Feed(Bytes(styling));
         var cycle = Assert.Single(parser.Feed(Bytes(full[40..])));
 
-        Assert.Equal(Guid.Parse(CycleId), cycle.CycleId);
         Assert.Equal(300, cycle.SleepSeconds);
     }
 
@@ -125,8 +122,7 @@ public class SentinelParserTests
         var other = "abcdef01-2345-6789-abcd-ef0123456789";
 
         Assert.Single(parser.Feed(Bytes(Sentinel())));
-        var second = Assert.Single(parser.Feed(Bytes(Sentinel(cycle: other))));
-        Assert.Equal(Guid.Parse(other), second.CycleId);
+        Assert.Single(parser.Feed(Bytes(Sentinel(cycle: other))));
     }
 
     [Theory]

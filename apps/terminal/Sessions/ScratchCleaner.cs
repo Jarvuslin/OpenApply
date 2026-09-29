@@ -18,10 +18,10 @@ public sealed class ScratchCleaner(HostInstall install, ILogger<ScratchCleaner> 
         [".log", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".md", ".json", ".yml", ".yaml"];
 
     /// <summary>Removes every Playwright scratch file plus aged .temp files.</summary>
-    public void CleanSessionStart(string workingDir)
+    public void CleanSessionStart(InstallPaths paths)
     {
-        CleanPlaywright(workingDir, maxAge: null);
-        CleanTemp(workingDir);
+        CleanPlaywright(paths, maxAge: null);
+        CleanTemp(paths);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -36,8 +36,8 @@ public sealed class ScratchCleaner(HostInstall install, ILogger<ScratchCleaner> 
                 // age-gated so it can't yank a file the live browser session just wrote.
                 if (install.Paths is { } paths)
                 {
-                    CleanTemp(paths.WorkingDir);
-                    CleanPlaywright(paths.WorkingDir, Retention);
+                    CleanTemp(paths);
+                    CleanPlaywright(paths, Retention);
                 }
             }
             while (await timer.WaitForNextTickAsync(stoppingToken));
@@ -48,17 +48,17 @@ public sealed class ScratchCleaner(HostInstall install, ILogger<ScratchCleaner> 
     }
 
     // The whole .temp tree is scratch, so it has no extension allowlist.
-    internal void CleanTemp(string workingDir)
+    internal void CleanTemp(InstallPaths paths)
     {
-        var dir = Path.Combine(workingDir, ".temp");
+        var dir = paths.ScratchDir;
         DeleteFiles(dir, SearchOption.AllDirectories, extensions: null, DateTime.UtcNow - Retention);
         FileTree.DeleteEmptyDirectories(dir);
     }
 
     // Top level only: browser profiles live in subdirectories. A null maxAge ignores age.
-    internal void CleanPlaywright(string workingDir, TimeSpan? maxAge) =>
+    internal void CleanPlaywright(InstallPaths paths, TimeSpan? maxAge) =>
         DeleteFiles(
-            Path.Combine(workingDir, ".playwright-mcp"),
+            paths.PlaywrightDir,
             SearchOption.TopDirectoryOnly,
             PlaywrightScratchExtensions,
             maxAge is { } age ? DateTime.UtcNow - age : null);

@@ -14,7 +14,7 @@ public class CycleRunnerTests
     internal static CycleRunner Runner(FakePilotSession session) => new(session, TimeSpan.FromMinutes(20));
 
     internal static Task<TimeSpan?> RunAsync(CycleRunner runner, FakePilotSession session, CancellationToken? ct = null) =>
-        runner.RunAsync(Settings(), session.NextActivity(), ct ?? TestContext.Current.CancellationToken);
+        runner.RunAsync(Settings(), session.NextActivity() ?? Activity(Stale), ct ?? TestContext.Current.CancellationToken);
 
     [Fact]
     public async Task Run_StartsTheSession_ThenReturnsTheSentinelsSleep()

@@ -54,14 +54,14 @@ public class HostUpdaterTests
     }
 
     [Fact]
-    public void IsValidHost_RequiresTheBinaryAndTheClaudeManifest()
+    public void IsValidHost_RequiresTheBinaryAndACompletePluginTree()
     {
         using var temp = new TempDir();
 
         temp.File("jobpilot", "binary");
         Assert.False(HostUpdater.IsValidHost(temp.Root, "jobpilot"));
 
-        temp.File(Path.Combine("plugin", ".claude-plugin", "plugin.json"));
+        temp.WriteValidPluginTree();
         Assert.True(HostUpdater.IsValidHost(temp.Root, "jobpilot"));
     }
 }

@@ -41,25 +41,8 @@ internal sealed partial class CodexProvider : Provider
     {
         var target = Path.Combine(paths.WorkingDir, ".agents", "skills");
         FileTree.DeleteIfExists(target);
-        Directory.CreateDirectory(target);
-
-        foreach (var entry in Directory.EnumerateFileSystemEntries(paths.SkillsDir))
-        {
-            var name = Path.GetFileName(entry);
-            if (name == BootstrapSkill)
-            {
-                continue;
-            }
-
-            if (Directory.Exists(entry))
-            {
-                FileTree.Copy(entry, Path.Combine(target, name));
-            }
-            else
-            {
-                File.Copy(entry, Path.Combine(target, name));
-            }
-        }
+        FileTree.Copy(paths.SkillsDir, target);
+        FileTree.DeleteIfExists(Path.Combine(target, BootstrapSkill));
     }
 
     public override string SkillCommand(string skill) => SkillPrefix + skill;

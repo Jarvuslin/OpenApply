@@ -8,7 +8,11 @@ namespace JobPilot.Terminal.Tests;
 public sealed class ScratchCleanerTests : IDisposable
 {
     private readonly TempDir temp = new();
+    private readonly InstallPaths paths;
     private readonly ScratchCleaner cleaner = new(new HostInstall(paths: null), NullLogger<ScratchCleaner>.Instance);
+
+    public ScratchCleanerTests() =>
+        paths = new InstallPaths { WorkingDir = temp.Root, PluginDir = Path.Combine(temp.Root, "plugin") };
 
     public void Dispose()
     {
@@ -29,7 +33,7 @@ public sealed class ScratchCleanerTests : IDisposable
         var fresh = temp.File(Path.Combine(".playwright-mcp", "console-fresh.log"));
         var aged = AgedFile(Path.Combine(".playwright-mcp", "screenshot.png"));
 
-        cleaner.CleanSessionStart(temp.Root);
+        cleaner.CleanSessionStart(paths);
 
         Assert.False(File.Exists(fresh));
         Assert.False(File.Exists(aged));
@@ -41,7 +45,7 @@ public sealed class ScratchCleanerTests : IDisposable
         var db = temp.File(Path.Combine(".playwright-mcp", "first_party_sets.db"));
         var profile = temp.File(Path.Combine(".playwright-mcp", "Default", "Preferences.json"));
 
-        cleaner.CleanSessionStart(temp.Root);
+        cleaner.CleanSessionStart(paths);
 
         Assert.True(File.Exists(db));
         Assert.True(File.Exists(profile));
@@ -53,7 +57,7 @@ public sealed class ScratchCleanerTests : IDisposable
         var aged = AgedFile(Path.Combine(".temp", "old-resume.pdf"));
         var fresh = temp.File(Path.Combine(".temp", "current-job.json"));
 
-        cleaner.CleanSessionStart(temp.Root);
+        cleaner.CleanSessionStart(paths);
 
         Assert.False(File.Exists(aged));
         Assert.True(File.Exists(fresh));
@@ -62,7 +66,7 @@ public sealed class ScratchCleanerTests : IDisposable
     [Fact]
     public void CleanSessionStart_IsANoOp_WhenScratchDirectoriesAreAbsent()
     {
-        cleaner.CleanSessionStart(temp.Root);
+        cleaner.CleanSessionStart(paths);
     }
 
     [Fact]
@@ -70,7 +74,7 @@ public sealed class ScratchCleanerTests : IDisposable
     {
         var aged = AgedFile(Path.Combine(".temp", "notes.anything"));
 
-        cleaner.CleanTemp(temp.Root);
+        cleaner.CleanTemp(paths);
 
         Assert.False(File.Exists(aged));
     }
@@ -81,7 +85,7 @@ public sealed class ScratchCleanerTests : IDisposable
         AgedFile(Path.Combine(".temp", "job-a", "resume.pdf"));
         var keptDirFile = temp.File(Path.Combine(".temp", "job-b", "digest.json"));
 
-        cleaner.CleanTemp(temp.Root);
+        cleaner.CleanTemp(paths);
 
         Assert.False(Directory.Exists(Path.Combine(temp.Root, ".temp", "job-a")));
         Assert.True(File.Exists(keptDirFile));
@@ -94,7 +98,7 @@ public sealed class ScratchCleanerTests : IDisposable
         var aged = AgedFile(Path.Combine(".playwright-mcp", "console-old.log"));
         var fresh = temp.File(Path.Combine(".playwright-mcp", "console-live.log"));
 
-        cleaner.CleanPlaywright(temp.Root, ScratchCleaner.Retention);
+        cleaner.CleanPlaywright(paths, ScratchCleaner.Retention);
 
         Assert.False(File.Exists(aged));
         Assert.True(File.Exists(fresh));
@@ -105,7 +109,7 @@ public sealed class ScratchCleanerTests : IDisposable
     {
         var profileLog = AgedFile(Path.Combine(".playwright-mcp", "Default", "chrome_debug.log"));
 
-        cleaner.CleanPlaywright(temp.Root, maxAge: null);
+        cleaner.CleanPlaywright(paths, maxAge: null);
 
         Assert.True(File.Exists(profileLog));
     }

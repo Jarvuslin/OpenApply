@@ -118,7 +118,7 @@ public sealed class PilotStore
 
             using (var stream = new FileStream(tempPath, options))
             {
-                stream.Write(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(file, AppJsonContext.Default.PilotSettingsFile)));
+                JsonSerializer.Serialize(stream, file, AppJsonContext.Default.PilotSettingsFile);
                 stream.Flush(flushToDisk: true);
             }
 

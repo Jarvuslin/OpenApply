@@ -15,7 +15,7 @@ internal static class Builders
         Running = running,
     };
 
-    public static CycleResult Cycle(int sleep, CycleStatus status = CycleStatus.Ok) => new(Guid.NewGuid(), status, sleep);
+    public static CycleResult Cycle(int sleep, CycleStatus status = CycleStatus.Ok) => new(status, sleep);
 
     public static DateTimeOffset Fresh => DateTimeOffset.UtcNow;
 
@@ -30,7 +30,7 @@ internal static class Builders
     /// <summary>A started process over the given fake connection.</summary>
     public static PtyProcess StartedPty(FakePtyConnection connection)
     {
-        var options = PtyProcess.BuildOptions("claude", [], ".", 80, 24, new Dictionary<string, string>());
+        var options = PtyProcess.BuildOptions("claude", [], ".", 80, 24, binDir: null, new Dictionary<string, string>());
         var process = new PtyProcess(options, _ => connection, NullLogger.Instance);
         process.Start();
         return process;

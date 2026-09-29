@@ -10,7 +10,6 @@ public static class HostHandoff
     private const string AwaitPidVar = "JOBPILOT_AWAIT_PID";
 
     private static readonly TimeSpan MaxWait = TimeSpan.FromSeconds(15);
-    private static readonly TimeSpan Poll = TimeSpan.FromMilliseconds(150);
     private static readonly TimeSpan SocketDrain = TimeSpan.FromMilliseconds(300);
 
     /// <summary>
@@ -48,23 +47,15 @@ public static class HostHandoff
         }
 
         logger.LogInformation("Waiting for the previous host (pid {Pid}) to exit before binding.", pid);
-        var deadline = DateTime.UtcNow + MaxWait;
-        while (DateTime.UtcNow < deadline)
+        using var timeout = new CancellationTokenSource(MaxWait);
+        try
         {
-            try
-            {
-                using var previous = Process.GetProcessById(pid);
-                if (previous.HasExited)
-                {
-                    break;
-                }
-            }
-            catch (ArgumentException)
-            {
-                break;
-            }
-
-            await Task.Delay(Poll);
+            using var previous = Process.GetProcessById(pid);
+            await previous.WaitForExitAsync(timeout.Token);
+        }
+        catch (Exception ex) when (ex is ArgumentException or OperationCanceledException)
+        {
+            // Already gone, or still holding the port after MaxWait: bind anyway and let Kestrel report it.
         }
 
         await Task.Delay(SocketDrain);

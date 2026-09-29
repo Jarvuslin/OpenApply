@@ -30,19 +30,7 @@ public static class SessionEndpoints
                 return Problems.BadRequest($"cols and rows must each be between {Viewport.MinSize} and {Viewport.MaxSize}.");
             }
 
-            try
-            {
-                session.Start(request.Provider, request.Cols, request.Rows, request.ApiToken, request.ApiUrl, request.WebUrl);
-            }
-            catch (ArgumentException ex)
-            {
-                return Problems.BadRequest(ex.Message);
-            }
-            catch (Exception ex)
-            {
-                return Problems.ServerError("Failed to start terminal session", ex.Message);
-            }
-
+            session.Start(request.Provider, request.Cols, request.Rows, request.ApiToken, request.ApiUrl, request.WebUrl);
             return TypedResults.Ok(status.Get());
         });
 
@@ -59,16 +47,7 @@ public static class SessionEndpoints
                 return Problems.BadRequest($"command must be at most {MaxCommandLength} characters.");
             }
 
-            SendResult result;
-            try
-            {
-                result = await session.SendCommandAsync(request.Command, request.Provider, ct);
-            }
-            catch (ArgumentException ex)
-            {
-                return Problems.BadRequest(ex.Message);
-            }
-
+            var result = await session.SendCommandAsync(request.Command, request.Provider, ct);
             return result switch
             {
                 SendResult.Sent => TypedResults.Ok(),

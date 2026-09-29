@@ -57,6 +57,11 @@ public sealed record InstallPaths
     /// <summary>Plugin commands such as jobpilot-api, first on the session's PATH.</summary>
     public string BinDir => Path.Combine(PluginDir, "bin");
 
+    /// <summary>JOBPILOT_TEMP: skill scratch files, swept by ScratchCleaner.</summary>
+    public string ScratchDir => Path.Combine(WorkingDir, ".temp");
+
+    public string PlaywrightDir => Path.Combine(WorkingDir, ".playwright-mcp");
+
     public static InstallPaths Resolve() =>
         ResolveFrom(CandidateRoots(AppContext.BaseDirectory, Environment.CurrentDirectory));
 

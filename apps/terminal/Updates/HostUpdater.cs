@@ -33,6 +33,11 @@ public sealed class HostUpdater(HttpClient http, HostInstall install, ILogger<Ho
     /// <summary>Runs before the host binds. Returns true when a replacement was launched and this process should exit.</summary>
     public async Task<bool> UpdateAtStartupAsync()
     {
+        if (HostHandoff.IsUpdateRelaunch)
+        {
+            return false;
+        }
+
         if (!install.CanUpdate)
         {
             logger.LogInformation("Not a published install (dev checkout); skipping auto-update.");
@@ -111,7 +116,7 @@ public sealed class HostUpdater(HttpClient http, HostInstall install, ILogger<Ho
 
     internal static bool IsValidHost(string dir, string exeName) =>
         File.Exists(Path.Combine(dir, exeName))
-        && File.Exists(Path.Combine(dir, "plugin", ".claude-plugin", "plugin.json"));
+        && InstallPaths.IsInstallRoot(dir);
 
     /// <summary>Deletes plugin files the new release no longer ships. Only plugin/: the rest of the install root may be user state.</summary>
     internal static void PruneRemovedPluginFiles(string stagingDir, string installDir)
@@ -185,7 +190,7 @@ public sealed class HostUpdater(HttpClient http, HostInstall install, ILogger<Ho
     private async Task SwapAsync(string url, string exePath, CancellationToken ct)
     {
         var installDir = Path.GetDirectoryName(exePath)!;
-        var staging = installDir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + ".new";
+        var staging = Path.TrimEndingDirectorySeparator(installDir) + ".new";
         FileTree.DeleteIfExists(staging);
         Directory.CreateDirectory(staging);
         try

@@ -132,6 +132,7 @@ public sealed class PtyProcess : IDisposable
         string workingDirectory,
         int cols,
         int rows,
+        string? binDir,
         IReadOnlyDictionary<string, string> environment)
     {
         // macOS ships en_US.UTF-8, not C.UTF-8; without a UTF-8 locale spawned tools mangle non-ASCII.
@@ -148,6 +149,12 @@ public sealed class PtyProcess : IDisposable
         foreach (var (key, value) in PtyEnvironment.BuildOverrides())
         {
             env[key] = value;
+        }
+
+        if (binDir is not null)
+        {
+            var inherited = env.GetValueOrDefault("PATH") ?? Environment.GetEnvironmentVariable("PATH");
+            env["PATH"] = string.IsNullOrEmpty(inherited) ? binDir : binDir + Path.PathSeparator + inherited;
         }
 
         foreach (var (key, value) in environment)

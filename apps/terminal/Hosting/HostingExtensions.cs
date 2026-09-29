@@ -62,7 +62,12 @@ public static class HostingExtensions
         app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
         {
             var error = context.Features.Get<IExceptionHandlerFeature>()?.Error;
-            var status = error is BadHttpRequestException bad ? bad.StatusCode : StatusCodes.Status500InternalServerError;
+            var status = error switch
+            {
+                BadHttpRequestException bad => bad.StatusCode,
+                ArgumentException => StatusCodes.Status400BadRequest,
+                _ => StatusCodes.Status500InternalServerError,
+            };
 
             context.Response.StatusCode = status;
             context.Response.ContentType = "application/problem+json";
