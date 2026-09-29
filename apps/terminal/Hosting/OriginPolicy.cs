@@ -3,7 +3,7 @@ namespace JobPilot.Terminal.Hosting;
 /// <summary>
 /// Browser origins allowed to control the local terminal host. Because CORS only controls access to a
 /// response, <see cref="CreateGuard"/> also rejects disallowed requests before they reach an endpoint.
-/// Requests without an Origin header remain available to local tools such as curl.
+/// Requests without an Origin header remain available to local command-line tools.
 /// </summary>
 public static class OriginPolicy
 {

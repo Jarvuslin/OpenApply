@@ -39,14 +39,18 @@ upwork.com. Say so plainly rather than implying they were applied.
      resume.
    - **Hourly rate** (advisory) - only suggest if the resume or profile gives a basis; otherwise
      leave the current value.
-3. **Save the draft** for review:
+3. **Save the draft** for review. Write the body to `"$JOBPILOT_TEMP/upwork-profile.json"`:
+
+   ```json
+   { "currentTitle": "<current title>", "currentOverview": "<current overview>",
+     "currentPortfolio": <current portfolio json>, "currentSkills": <current skills json>,
+     "suggestedTitle": "<suggested title>", "suggestedOverview": "<suggested overview>",
+     "suggestedPortfolio": <suggested portfolio json>, "suggestedSkills": <suggested skills json>,
+     "status": "draft" }
+   ```
 
    ```bash
-   curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" -X PUT "$JOBPILOT_API/api/upwork/profile" -H 'content-type: application/json' \
-     -d "$(jq -n --arg ct "<current title>" --arg co "<current overview>" --arg st "<suggested title>" \
-       --arg so "<suggested overview>" --argjson cp '<current portfolio json>' --argjson sp '<suggested portfolio json>' \
-       --argjson cs '<current skills json>' --argjson ss '<suggested skills json>' \
-       '{currentTitle:$ct, currentOverview:$co, currentPortfolio:$cp, currentSkills:$cs, suggestedTitle:$st, suggestedOverview:$so, suggestedPortfolio:$sp, suggestedSkills:$ss, status:"draft"}')"
+   jobpilot-api PUT /api/upwork/profile --data @"$JOBPILOT_TEMP/upwork-profile.json"
    ```
 
 4. Print a short before/after summary and link to `$JOBPILOT_WEB/upwork/profile` - tell the user to
@@ -54,7 +58,7 @@ upwork.com. Say so plainly rather than implying they were applied.
 
 ## Mode: apply
 
-1. `curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" "$JOBPILOT_API/api/upwork/profile"` →
+1. `jobpilot-api GET /api/upwork/profile` →
    require `.status == "approved"`. If not, tell the user to review and approve on
    `/upwork/profile` first, then stop.
 2. Use the `suggested*` fields as the source of truth (the user may have edited them in the UI).
@@ -71,8 +75,7 @@ upwork.com. Say so plainly rather than implying they were applied.
 4. On success, mark it applied:
 
    ```bash
-   curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" -X PUT "$JOBPILOT_API/api/upwork/profile" -H 'content-type: application/json' \
-     -d '{"status":"applied"}'
+   jobpilot-api PUT /api/upwork/profile --data '{"status":"applied"}'
    ```
 
    Report what was written. Then tell the user the portfolio and hourly rate were **not** applied

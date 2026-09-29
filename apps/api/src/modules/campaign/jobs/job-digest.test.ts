@@ -18,7 +18,7 @@ describe("job digest contract", () => {
     expect(addCampaignJobSchema.parse(job(digest)).digest).toBe(digest);
   });
 
-  // `jq --arg digest "$DIGEST"` renders an unset digest as "".
+  // A skill templating `"digest":"$DIGEST"` renders an unset digest as "".
   it("drops an empty digest instead of storing it", () => {
     expect(addCampaignJobSchema.parse(job("")).digest).toBeUndefined();
     expect(addCampaignJobSchema.parse(job("   ")).digest).toBeUndefined();

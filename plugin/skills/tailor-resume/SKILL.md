@@ -54,7 +54,7 @@ Let `BASE_ID` be the chosen id.
 ## Step 3: Extract Structure if Missing
 
 ```bash
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" "$JOBPILOT_API/api/resumes/$BASE_ID"
+jobpilot-api GET "/api/resumes/$BASE_ID"
 ```
 
 If `content` is `null`, delegate to extract-resume so the logic stays in one place:
@@ -72,7 +72,7 @@ Skip this step when `hasData: true`.
 ## Step 4: Decide Reuse vs Create
 
 ```bash
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" "$JOBPILOT_API/api/resumes/$BASE_ID/variants"
+jobpilot-api GET "/api/resumes/$BASE_ID/variants"
 ```
 
 **Shortlist first.** Rank the list response by title similarity and fetch `GET /api/resumes/variants/<id>` for the **top 5** only - a base with 60 variants would otherwise cost 60 fetches per job.
@@ -154,39 +154,41 @@ The server checks that every field you wrote states only what the resume states,
 
 The response also carries non-blocking `flags`, currently only a retitle that shares no word with the original. Echo them; they are what the candidate will be asked about.
 
+Write the body to `"$JOBPILOT_TEMP/tailor.json"` (omit `jobUrl` when there is none), then:
+
 ```bash
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" -X POST "$JOBPILOT_API/api/resumes/$BASE_ID/tailor" \
-  -H 'content-type: application/json' \
-  -d "$(jq -n --arg label "<Company> - <Title>" \
-                --arg jobUrl "<job-url-or-empty>" \
-                --argjson tech '["typescript","react","next.js","aws"]' \
-    '{label:$label, jobUrl:($jobUrl|select(length>0)), emphasizedTech:$tech, jobKeywords:$tech, diffNotes:"Surfaced React/Next.js ahead of other tech."}')"
+jobpilot-api POST "/api/resumes/$BASE_ID/tailor" --data @"$JOBPILOT_TEMP/tailor.json"
+```
+
+A plain reorder:
+
+```json
+{ "label": "<Company> - <Title>", "jobUrl": "<job-url>",
+  "emphasizedTech": ["typescript", "react", "next.js", "aws"],
+  "jobKeywords": ["typescript", "react", "next.js", "aws"],
+  "diffNotes": "Surfaced React/Next.js ahead of other tech." }
 ```
 
 With a swapped summary sentence and one reword:
 
-```bash
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" -X POST "$JOBPILOT_API/api/resumes/$BASE_ID/tailor" \
-  -H 'content-type: application/json' \
-  -d "$(jq -n --arg label "<Company> - <Title>" \
-                --arg jobUrl "<job-url-or-empty>" \
-                --arg summary "<base summary with one sentence swapped>" \
-                --argjson tech '["typescript","react","next.js","aws"]' \
-                --argjson rewrites '[{"entryIndex":0,"bullets":[{"original":"<verbatim base bullet>","tailored":"<same facts, relevant one first>"}]}]' \
-    '{label:$label, jobUrl:($jobUrl|select(length>0)), emphasizedTech:$tech, jobKeywords:$tech, summary:$summary, bulletRewrites:$rewrites, diffNotes:"Swapped the summary's last sentence for the HIPAA work; led the EmTech entry with the NLP bullet."}')"
+```json
+{ "label": "<Company> - <Title>", "jobUrl": "<job-url>",
+  "emphasizedTech": ["typescript", "react", "next.js", "aws"],
+  "jobKeywords": ["typescript", "react", "next.js", "aws"],
+  "summary": "<base summary with one sentence swapped>",
+  "bulletRewrites": [{ "entryIndex": 0, "bullets": [{ "original": "<verbatim base bullet>", "tailored": "<same facts, relevant one first>" }] }],
+  "diffNotes": "Swapped the summary's last sentence for the HIPAA work; led the EmTech entry with the NLP bullet." }
 ```
 
 With a restructure:
 
-```bash
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" -X POST "$JOBPILOT_API/api/resumes/$BASE_ID/tailor" \
-  -H 'content-type: application/json' \
-  -d "$(jq -n --arg label "<Company> - <Title>" \
-                --arg headline "<job title>" \
-                --argjson tech '["pytorch","computer vision","python"]' \
-                --argjson structure '{"mergeEntries":[{"into":2,"from":[3],"company":"Independent / Contract"}],"promoteProjects":{"projects":[4]},"entryOrder":[0,1,2]}' \
-    '{label:$label, headline:$headline, emphasizedTech:$tech, jobKeywords:$tech, structure:$structure,
-      diffNotes:"Merged two overlapping 2020-21 roles; promoted the CV research project; led with ML."}')"
+```json
+{ "label": "<Company> - <Title>", "headline": "<job title>",
+  "emphasizedTech": ["pytorch", "computer vision", "python"],
+  "jobKeywords": ["pytorch", "computer vision", "python"],
+  "structure": { "mergeEntries": [{ "into": 2, "from": [3], "company": "Independent / Contract" }],
+    "promoteProjects": { "projects": [4] }, "entryOrder": [0, 1, 2] },
+  "diffNotes": "Merged two overlapping 2020-21 roles; promoted the CV research project; led with ML." }
 ```
 
 Response `{ id, pdfUrl, rewordedBullets, flags }`. Echo:

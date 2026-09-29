@@ -62,6 +62,9 @@ morning.
 
 ## Get started
 
+You need a Claude Code or Codex subscription and [Node.js](https://nodejs.org)
+22 or later.
+
 1. Install the JobPilot plugin for Claude Code or Codex (commands below).
 2. Run the `setup` skill. It installs the local terminal companion (or
    upgrades it to the latest release if you already have one), starts the
@@ -71,9 +74,9 @@ morning.
 4. Launch your first search campaign. Review the matches, then apply to the
    ones you like or let an auto-apply campaign work through them.
 
-> Claude Code sessions default to Sonnet. On Codex, pick a mid-tier model
-> yourself: GPT 5.6 Terra. Top-tier models eat your weekly usage limits far
-> faster without applying to more jobs.
+> Claude Code sessions default to the latest Sonnet and Codex sessions to GPT 6
+> Luna. Top-tier models eat your weekly usage limits far faster without applying
+> to more jobs.
 > [Why](https://jobpilot.suxrobgm.net/docs/faq).
 
 ### Install the plugin

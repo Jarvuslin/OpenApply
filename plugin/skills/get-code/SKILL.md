@@ -19,7 +19,7 @@ Set `BOARD_DOMAIN` to the skill argument (e.g. `linkedin.com`).
 ## Phase 1: Confirm Mailbox Connected
 
 ```bash
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" "$JOBPILOT_API/api/email/account"
+jobpilot-api GET /api/email/account
 ```
 
 If `.connected === false`, print exactly `{}` and exit. Caller falls back to asking the user.
@@ -27,24 +27,18 @@ If `.connected === false`, print exactly `{}` and exit. Caller falls back to ask
 ## Phase 2: Trigger Sync
 
 ```bash
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" -X POST "$JOBPILOT_API/api/email/sync"
+jobpilot-api POST /api/email/sync
 ```
 
 ## Phase 3: Poll for the Code
 
-Up to 6 attempts (~30s) looking for a verification message in the last 5 minutes:
+Look for a verification message from the last 5 minutes (`<since>` = now minus 5 minutes, ISO 8601 UTC):
 
 ```bash
-for i in 1 2 3 4 5 6; do
-  RESULT=$(curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" -G "$JOBPILOT_API/api/email/messages" \
-    --data-urlencode "classification=verification" \
-    --data-urlencode "domainHint=$BOARD_DOMAIN" \
-    --data-urlencode "since=$(date -u -d '5 minutes ago' +%FT%TZ 2>/dev/null || date -u -v-5M +%FT%TZ)")
-  COUNT=$(echo "$RESULT" | jq '.items | length')
-  if [ "$COUNT" -gt 0 ]; then break; fi
-  sleep 5
-done
+jobpilot-api GET /api/email/messages --query classification=verification --query "domainHint=$BOARD_DOMAIN" --query "since=<since>"
 ```
+
+Read `.items`. Empty → `sleep 5` and call again, up to 6 attempts (~30s).
 
 If still nothing, also look for unclassified messages whose body matches the board domain (Gmail may have arrived but `scan-inbox` hasn't classified it yet). Classify inline:
 
@@ -57,16 +51,10 @@ If still nothing, also look for unclassified messages whose body matches the boa
 5. PATCH the message:
 
    ```bash
-   curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" -X PATCH "$JOBPILOT_API/api/email/messages/<id>" \
-     -H 'content-type: application/json' \
-     -d "$(jq -n --arg code "<code>" --arg link "<link>" --arg domain "$BOARD_DOMAIN" \
-       '{classification:"verification",
-         confidence:1,
-         verificationCode:($code|select(length>0)),
-         verificationLink:($link|select(length>0)),
-         verificationDomain:$domain,
-         reasoning:"Extracted by get-code"}')"
+   jobpilot-api PATCH /api/email/messages/<id> --data '{"classification":"verification","confidence":1,"verificationCode":"<code>","verificationLink":"<link>","verificationDomain":"<board-domain>","reasoning":"Extracted by get-code"}'
    ```
+
+   Omit `verificationCode` or `verificationLink` when you have no value for it.
 
 ## Phase 4: Return
 

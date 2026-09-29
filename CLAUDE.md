@@ -5,7 +5,8 @@ all state. Each user runs the agent locally: Claude Code or Codex in a .NET PTY 
 Playwright. Dev ports: web `:4100`, API `:4101`, PTY host `:4102`.
 
 Auth: the web fetches the user's terminal token via `POST /api/auth/tokens/terminal` and hands
-it to the PTY host, which sets `JOBPILOT_API_TOKEN`. Skills send it as `Authorization: Bearer`.
+it to the PTY host, which sets `JOBPILOT_API_TOKEN`. Skills call the API through
+`plugin/bin/jobpilot-api`, which sends it as `Authorization: Bearer`.
 
 ## Layout
 

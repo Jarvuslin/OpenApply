@@ -10,7 +10,7 @@ Re-score a campaign's `skipped` jobs and set eligible ones to `approved`. **Neve
 
 ## Setup
 
-Follow `../_shared/setup.md`. Fetch the campaign: `curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" "$JOBPILOT_API/api/campaigns/<campaign-id>"`. Threshold = `config.minScore` (fallback `autoApply.minMatchScore`, else 60).
+Follow `../_shared/setup.md`. Fetch the campaign: `jobpilot-api GET /api/campaigns/<campaign-id>`. Threshold = `config.minScore` (fallback `autoApply.minMatchScore`, else 60).
 
 ## Step 1: Select Targets
 
@@ -29,13 +29,10 @@ Count the full target list up front and process every one. **Below-threshold, ze
 
 3. **Re-score** - every target gets a fresh `POST /api/score-fit` with `{digest, minScore:<threshold>}`; never reuse the stored `matchScore`. Take the returned `score` as-is when `verdict` is `trust`; on `deliberate`, reason from `strongMatches`/`partialMatches`/`gaps`. A zero/low score with no `skipReason` (common at defense/federal employers) is not a disqualifier - only a JD-stated citizenship/clearance or no-sponsorship bar is (never infer from industry).
 4. **Decide:**
-   - Eligible and `score >= threshold` → promote (no apply):
+   - Eligible and `score >= threshold` → promote (no apply). Write `{"decision":"approved","matchScore":<0-100>,"matchReason":"<one line>","digest":"<digest JSON string>","description":"<posting text or empty>"}` to `$JOBPILOT_TEMP/rescan-<key>.json`, then:
 
 ```bash
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" -X POST "$JOBPILOT_API/api/campaigns/<campaign-id>/jobs/<key>/rescan" \
-  -H 'content-type: application/json' \
-  -d "$(jq -n --argjson score <0-100> --arg reason "<one line>" --arg digest "$DIGEST" --arg desc "<posting text or empty>" \
-    '{decision:"approved", matchScore:$score, matchReason:$reason, digest:$digest, description:$desc}')"
+jobpilot-api POST /api/campaigns/<campaign-id>/jobs/<key>/rescan --data @"$JOBPILOT_TEMP/rescan-<key>.json"
 ```
 
 - Below threshold after a fair read → POST `/rescan` with `decision:"skipped"`, the new score/reason, and `skipReason:"Below minimum match score (X < Y)"`.

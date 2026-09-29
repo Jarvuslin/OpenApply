@@ -12,6 +12,9 @@ public sealed record InstallPaths
     /// <summary>Skills tree used as the JOBPILOT_SKILLS_ROOT anchor; shared docs live under its _shared/.</summary>
     public string SkillsDir => SkillsDirOf(PluginDir);
 
+    /// <summary>Plugin commands such as jobpilot-api, put first on the session's PATH.</summary>
+    public string BinDir => Path.Combine(PluginDir, "bin");
+
     /// <summary>Finds the repository or published plugin layout.</summary>
     public static InstallPaths Resolve()
     {

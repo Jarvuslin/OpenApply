@@ -35,8 +35,7 @@ Do not page for history. This mirrors what is new, not the whole account.
 ## Step 2: Push the Connects balance
 
 ```bash
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" -X PUT "$JOBPILOT_API/api/upwork/account" \
-  -H 'content-type: application/json' -d '{"connectsBalance": 74}'
+jobpilot-api PUT /api/upwork/account --data '{"connectsBalance": 74}'
 ```
 
 Report the general Connects wallet only. Product credits are a separate balance spendable on one
@@ -48,13 +47,18 @@ One call for the whole batch, up to 200 items. `upworkId` is Upwork's own id and
 so re-running the skill refreshes rows instead of duplicating them. Post even when the dashboard
 held nothing new: this call is what marks the mirror fresh, and an empty batch still counts.
 
+Write the body to `"$JOBPILOT_TEMP/upwork-inbox.json"`:
+
+```json
+{ "items": [
+  { "upworkId": "<upwork id>", "kind": "invitation", "title": "<job title>", "clientName": "<client>",
+    "jobUrl": "<url>", "body": "<message or brief>", "receivedAt": "2026-09-07T12:00:00Z",
+    "raw": {} }
+] }
+```
+
 ```bash
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" -X POST "$JOBPILOT_API/api/upwork/inbox/sync" \
-  -H 'content-type: application/json' -d "$(jq -n '{items: [
-    {upworkId:"<upwork id>", kind:"invitation", title:"<job title>", clientName:"<client>",
-     jobUrl:"<url>", body:"<message or brief>", receivedAt:"2026-09-07T12:00:00Z",
-     raw:{}}
-  ]}')"
+jobpilot-api POST /api/upwork/inbox/sync --data @"$JOBPILOT_TEMP/upwork-inbox.json"
 ```
 
 Field mapping:

@@ -18,7 +18,7 @@ conversation.
 ## Step 1: Load the draft
 
 ```bash
-PROPOSAL=$(curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" "$JOBPILOT_API/api/upwork/proposals/$ARG")
+jobpilot-api GET "/api/upwork/proposals/$ARG"
 ```
 
 Require `.status == "draft"`. Anything else → stop and say what the status is; a `submitted`
@@ -79,16 +79,14 @@ Then get an explicit yes. A silent or ambiguous reply is a no.
 On success:
 
 ```bash
-NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" -X PATCH "$JOBPILOT_API/api/upwork/proposals/$ARG" \
-  -H 'content-type: application/json' -d "$(jq -n --arg t "$NOW" '{status:"submitted", submittedAt:$t}')"
+jobpilot-api PATCH "/api/upwork/proposals/$ARG" \
+  --data '{"status":"submitted","submittedAt":"<now, UTC ISO-8601>"}'
 ```
 
 Then refresh the Connects balance so the web app shows what is left:
 
 ```bash
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" -X PUT "$JOBPILOT_API/api/upwork/account" \
-  -H 'content-type: application/json' -d '{"connectsBalance": <new balance>}'
+jobpilot-api PUT /api/upwork/account --data '{"connectsBalance": <new balance>}'
 ```
 
 Read the new balance from `get_profile` action `connects_balance`, not by subtracting.

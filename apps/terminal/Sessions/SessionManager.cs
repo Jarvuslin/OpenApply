@@ -97,13 +97,18 @@ public sealed class SessionManager : IDisposable
             static string FromRequestOrEnv(string? passed, string envKey, string fallback) =>
                 !string.IsNullOrEmpty(passed) ? passed : Environment.GetEnvironmentVariable(envKey) ?? fallback;
 
+            // Skills write scratch files here; a shell-local TEMP would not survive between tool calls.
+            var scratchDir = Directory.CreateDirectory(Path.Combine(workingDir, ".temp")).FullName;
+
             var env = new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 ["JOBPILOT_SKILLS_ROOT"] = sessionPaths.SkillsDir,
                 ["JOBPILOT_WORKSPACE_ROOT"] = workingDir,
+                ["JOBPILOT_TEMP"] = scratchDir,
                 ["JOBPILOT_API"] = FromRequestOrEnv(options.ApiUrl, "JOBPILOT_API", "http://localhost:4101"),
                 ["JOBPILOT_API_TOKEN"] = FromRequestOrEnv(options.ApiToken, "JOBPILOT_API_TOKEN", ""),
-                ["JOBPILOT_WEB"] = FromRequestOrEnv(options.WebUrl, "JOBPILOT_WEB", "http://localhost:4100")
+                ["JOBPILOT_WEB"] = FromRequestOrEnv(options.WebUrl, "JOBPILOT_WEB", "http://localhost:4100"),
+                ["PATH"] = WithBinDir(sessionPaths.BinDir),
             };
 
             Starting?.Invoke();
@@ -206,6 +211,14 @@ public sealed class SessionManager : IDisposable
             state = SessionState.Stopped;
             pty.Stop();
         }
+    }
+
+    // The session env replaces PATH outright, so start from the same repaired PATH the PTY would get.
+    private static string WithBinDir(string binDir)
+    {
+        var inherited = PtyEnvironment.BuildOverrides().GetValueOrDefault("PATH")
+            ?? Environment.GetEnvironmentVariable("PATH");
+        return string.IsNullOrEmpty(inherited) ? binDir : binDir + Path.PathSeparator + inherited;
     }
 
     private void OnPtyOutput(byte[] data) => Output?.Invoke(data);

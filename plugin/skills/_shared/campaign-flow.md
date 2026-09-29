@@ -7,10 +7,7 @@ credentials per `./setup.md` first; each skill states only its deltas from what'
 ## Applied-check (dedupe before opening a tab)
 
 ```bash
-URL_ENCODED=$(jq -rn --arg v "<job-url>" '$v|@uri')
-TITLE_ENCODED=$(jq -rn --arg v "<title>" '$v|@uri')
-COMPANY_ENCODED=$(jq -rn --arg v "<company>" '$v|@uri')
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" "$JOBPILOT_API/api/applied/check?url=$URL_ENCODED&title=$TITLE_ENCODED&company=$COMPANY_ENCODED"
+jobpilot-api GET /api/applied/check --query "url=<job-url>" --query "title=<title>" --query "company=<company>"
 ```
 
 Exact URL match plus fuzzy title+company over a 30-day window; `.match.kind` is `url` or
@@ -29,19 +26,15 @@ Move to the next item; never retry the transition or re-write the result.
 Non-terminal transitions go through `PATCH /api/campaigns/$CID/jobs/<key>`
 (`pending` → `approved` → `applying`). A terminal outcome goes through ONE call -
 `POST /api/campaigns/$CID/jobs/<key>/result` - which atomically updates the Job and creates the
-Application + initial event on `applied`. Payload shapes:
+Application + initial event on `applied`. Payload shapes (`appliedAt` is the current UTC time, ISO 8601):
 
-```bash
-NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-# applied - resumeId/resumeVariantId name the resume that was uploaded (see below)
-jq -n --arg t "$NOW" --argjson score <0-100> --arg rid "<resumeId>" --arg vid "<resumeVariantId>" \
-  '{outcome:"applied", appliedAt:$t, matchScore:$score}
-   + (if $rid == "" then {} else {resumeId:$rid} end)
-   + (if $vid == "" then {} else {resumeVariantId:$vid} end)'
-# failed (login failure, unexpected page, validation, crash)
-jq -n --arg r "<failReason>" --arg notes "<retryNotes>" '{outcome:"failed", failReason:$r, retryNotes:$notes}'
-# skipped (CAPTCHA, user cancelled, cap reached, ...)
-jq -n --arg r "<skipReason>" '{outcome:"skipped", skipReason:$r}'
+```jsonc
+// applied - resumeId/resumeVariantId name the resume that was uploaded (see below); omit either when empty
+{ "outcome": "applied", "appliedAt": "<now>", "matchScore": <0-100>, "resumeId": "<resumeId>", "resumeVariantId": "<resumeVariantId>" }
+// failed (login failure, unexpected page, validation, crash)
+{ "outcome": "failed", "failReason": "<failReason>", "retryNotes": "<retryNotes>" }
+// skipped (CAPTCHA, user cancelled, cap reached, ...)
+{ "outcome": "skipped", "skipReason": "<skipReason>" }
 ```
 
 **Always send `resumeId` on `applied`**, and `resumeVariantId` too whenever a tailored variant was

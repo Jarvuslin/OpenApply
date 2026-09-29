@@ -87,9 +87,12 @@ public sealed class SessionManagerTests : IDisposable
         var env = pty.LastEnvironment!;
         Assert.Equal(Path.Combine(temp.Root, "plugin", "skills"), env["JOBPILOT_SKILLS_ROOT"]);
         Assert.Equal(temp.Root, env["JOBPILOT_WORKSPACE_ROOT"]);
+        Assert.Equal(Path.Combine(temp.Root, ".temp"), env["JOBPILOT_TEMP"]);
+        Assert.True(Directory.Exists(env["JOBPILOT_TEMP"]));
         Assert.Equal("tok", env["JOBPILOT_API_TOKEN"]);
         Assert.Equal("https://web", env["JOBPILOT_WEB"]);
         Assert.Equal("https://api", env["JOBPILOT_API"]);
+        Assert.StartsWith(Path.Combine(temp.Root, "plugin", "bin") + Path.PathSeparator, env["PATH"]);
     }
 
     [Fact]

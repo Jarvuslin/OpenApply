@@ -18,10 +18,10 @@ Search a single board (picked by the user when launching the campaign) and rank 
 3. Resolve the board:
 
    ```bash
-   curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" "$JOBPILOT_API/api/job-boards" | jq --arg d "<domain>" '.[] | select(.domain == $d)'
+   jobpilot-api GET /api/job-boards
    ```
 
-   If no row matches, abort with: "Board `<domain>` is not configured. Add it on /boards or run again with a different `--board`." When a `--campaign` id was given, first command it to `failed` with `POST /api/campaigns/<id>/status {"status":"failed"}`.
+   Pick the entry whose `domain` is `<domain>`. If none matches, abort with: "Board `<domain>` is not configured. Add it on /boards or run again with a different `--board`." When a `--campaign` id was given, first command it to `failed` with `POST /api/campaigns/<id>/status {"status":"failed"}`.
 
 ## Phase 1: Parse Query
 
@@ -51,23 +51,16 @@ Score against the campaign's `config.resumeId` when set (`GET /api/resumes/<id>`
 
 Save every result as a `Job` on `<campaign-id>` so it appears on the campaigns detail page. **Don't offer apply/search-again commands** - the user applies from there. Use a stable, shell-safe `key` per result (slug of `company-title` + rank, no spaces).
 
-Carry the `digest` you scored from (`../_shared/digest-schema.md`).
+Carry the `digest` you scored from (`../_shared/digest-schema.md`). Per result, write `{key, title, company, location, url, board:"<domain>", matchScore, matchReason:"<one-line verdict>", status:"pending", digest}` (`digest` as a JSON string) to `$JOBPILOT_TEMP/job-<key>.json`, then:
 
 ```bash
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" -X POST "$JOBPILOT_API/api/campaigns/<campaign-id>/jobs" \
-  -H 'content-type: application/json' \
-  -d "$(jq -n --arg key "<key>" --arg title "<title>" --arg company "<company>" \
-    --arg location "<location>" --arg url "<job-url>" --arg board "<domain>" \
-    --arg matchReason "<one-line verdict>" --argjson score <0-100> --arg digest "<digest JSON>" \
-    '{key:$key, title:$title, company:$company, location:$location, url:$url, board:$board, matchScore:$score, matchReason:$matchReason, status:"pending", digest:$digest}')"
+jobpilot-api POST /api/campaigns/<campaign-id>/jobs --data @"$JOBPILOT_TEMP/job-<key>.json"
 ```
 
 Previously-applied results (Phase 3) → create as `pending`, then POST `/jobs/<key>/result` with `{outcome:"skipped",skipReason:"Already applied (<kind>)"}`. Then close the campaign:
 
 ```bash
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" -X POST "$JOBPILOT_API/api/campaigns/<campaign-id>/status" \
-  -H 'content-type: application/json' \
-  -d '{"status":"completed"}'
+jobpilot-api POST /api/campaigns/<campaign-id>/status --data '{"status":"completed"}'
 ```
 
 ## Phase 6: Hand Off

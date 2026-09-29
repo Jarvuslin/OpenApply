@@ -34,11 +34,15 @@ rsync -a --checksum "$repo_root/plugin/skills/setup/" "$codex_stage/skills/setup
 rsync -a --checksum --delete "$claude_stage/" "$claude_root/plugins/jobpilot/"
 rsync -a --checksum --delete "$codex_stage/" "$codex_root/plugins/jobpilot/"
 
-release_version="$(jq -er '.version' "$repo_root/package.json")"
-test "$(jq -er '.version' "$repo_root/plugin/.claude-plugin/plugin.json")" = "$release_version"
-test "$(jq -er '.version' "$repo_root/plugin/.codex-plugin/plugin.json")" = "$release_version"
-test "$(jq -er '.version' "$claude_root/plugins/jobpilot/.claude-plugin/plugin.json")" = "$release_version"
-test "$(jq -er '.version' "$codex_root/plugins/jobpilot/.codex-plugin/plugin.json")" = "$release_version"
+version_of() {
+  node -e 'const v = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).version; if (!v) process.exit(1); console.log(v)' "$1"
+}
+
+release_version="$(version_of "$repo_root/package.json")"
+test "$(version_of "$repo_root/plugin/.claude-plugin/plugin.json")" = "$release_version"
+test "$(version_of "$repo_root/plugin/.codex-plugin/plugin.json")" = "$release_version"
+test "$(version_of "$claude_root/plugins/jobpilot/.claude-plugin/plugin.json")" = "$release_version"
+test "$(version_of "$codex_root/plugins/jobpilot/.codex-plugin/plugin.json")" = "$release_version"
 
 cmp "$repo_root/plugin/.codex-plugin/plugin.json" "$codex_root/plugins/jobpilot/.codex-plugin/plugin.json"
 cmp "$repo_root/plugin/skills/setup/SKILL.md" "$codex_root/plugins/jobpilot/skills/setup/SKILL.md"
@@ -46,13 +50,17 @@ test ! -e "$codex_root/plugins/jobpilot/.mcp.json"
 test ! -e "$codex_root/plugins/jobpilot/skills/pilot"
 test ! -e "$codex_root/plugins/jobpilot/skills/_shared"
 
-jq -e '
-  .name == "sukhrob-codex-plugins" and
-  ([.plugins[] | select(.name == "jobpilot")] | length) == 1 and
-  (.plugins[] | select(.name == "jobpilot") |
-    .source.source == "local" and
-    .source.path == "./plugins/jobpilot" and
-    .policy.installation == "AVAILABLE" and
-    .policy.authentication == "ON_USE" and
-    .category == "Productivity")
-' "$codex_root/.agents/plugins/marketplace.json" >/dev/null
+node -e '
+  const market = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+  const entries = (market.plugins ?? []).filter((p) => p.name === "jobpilot");
+  const [p] = entries;
+  const ok =
+    market.name === "sukhrob-codex-plugins" &&
+    entries.length === 1 &&
+    p.source?.source === "local" &&
+    p.source?.path === "./plugins/jobpilot" &&
+    p.policy?.installation === "AVAILABLE" &&
+    p.policy?.authentication === "ON_USE" &&
+    p.category === "Productivity";
+  process.exit(ok ? 0 : 1);
+' "$codex_root/.agents/plugins/marketplace.json"

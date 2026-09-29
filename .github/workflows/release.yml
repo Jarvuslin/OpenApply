@@ -91,7 +91,7 @@ jobs:
       - name: Stage and verify marketplace payloads
         run: |
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            test "${GITHUB_REF_NAME#v}" = "$(jq -er '.version' package.json)"
+            test "${GITHUB_REF_NAME#v}" = "$(node -p 'require("./package.json").version')"
           fi
           bash .github/scripts/sync-marketplaces.sh . marketplace codex-marketplace
 

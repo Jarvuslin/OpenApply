@@ -28,10 +28,12 @@ owns per-job variants, guarded in `apps/api/src/modules/resume/structure.ts`.
   command tokens. Claude-only frontmatter (`allowed-tools`) is fine.
 - Imperative voice, terse.
 - Start with `GET /api/health`. Stop with a clear message if the API is down.
-- Call the API with curl. Never hard-code `localhost`. No direct DB access.
+- Call the API with `jobpilot-api` (`plugin/bin/`, on the session's PATH), never curl or
+  `Invoke-RestMethod`: Schannel fails TLS inside the Codex Windows sandbox, and the helper keeps
+  the token out of commands. Never hard-code `localhost`. No direct DB access.
 
   ```sh
-  curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" "$JOBPILOT_API/api/..."
+  jobpilot-api GET /api/...
   ```
 
   The host injects `JOBPILOT_API`, `JOBPILOT_API_TOKEN`, and `JOBPILOT_WEB` (for user-facing

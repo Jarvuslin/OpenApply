@@ -21,10 +21,10 @@ From the argument, identify: company + what they do, role title and level, key r
 Do not skip. Letters that are individually fine and collectively identical are what reads as AI - not word choice.
 
 ```bash
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" "$JOBPILOT_API/api/cover-letters?page=1&pageSize=5" | jq -r '.items[].id'
+jobpilot-api GET /api/cover-letters --query page=1 --query pageSize=5
 ```
 
-The list is metadata only, so `GET /api/cover-letters/<id>` each for the body. No history (first letter, or the call fails) → Step 3.
+The list is metadata only, so `GET /api/cover-letters/<id>` for each `.items[].id` to get the body. No history (first letter, or the call fails) → Step 3.
 
 Take three things from each and drop the rest: which experience it **led** with, its metric phrasings, and its closing sentence. Those are what rules 14-16 compare against; keeping five whole letters in context buys nothing beyond them.
 
@@ -75,12 +75,10 @@ Then re-check against Step 2's letters: no shared sentence, different lead, diff
 
 ## Step 6: Save to History
 
-Persist the final letter so it's reviewable in the web app. Best-effort - if the call fails, continue:
+Persist the final letter so it's reviewable in the web app. Best-effort - if the call fails, continue. Write `{"content":"<final letter text>","jobUrl":"<job url>","jobTitle":"<role title>","company":"<company>","source":"<source>"}` to `$JOBPILOT_TEMP/cover-letter.json` (omit `jobUrl`/`jobTitle`/`company` when empty), then:
 
 ```bash
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" -X POST "$JOBPILOT_API/api/cover-letters" -H 'content-type: application/json' \
-  -d "$(jq -n --arg c "<final letter text>" --arg u "<job url>" --arg t "<role title>" --arg co "<company>" --arg s "<source>" \
-        '{content:$c, jobUrl:($u|select(.!="")), jobTitle:($t|select(.!="")), company:($co|select(.!="")), source:$s}')"
+jobpilot-api POST /api/cover-letters --data @"$JOBPILOT_TEMP/cover-letter.json"
 ```
 
 `jobUrl`/`jobTitle`/`company` come from the JD argument (`$DIGEST` fields when present). `source` is the invoking context - `apply`, `auto_apply`, or `manual` (default `manual` when the caller didn't specify).

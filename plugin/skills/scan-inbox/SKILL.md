@@ -15,7 +15,7 @@ Follow `../_shared/setup.md`.
 ## Phase 1: Confirm Mailbox Connected
 
 ```bash
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" "$JOBPILOT_API/api/email/account"
+jobpilot-api GET /api/email/account
 ```
 
 If `.connected === false`, stop:
@@ -27,14 +27,14 @@ If `.connected === false`, stop:
 **One message** - an id was passed (a re-scan from the inbox table). Fetch just it and classify it again even if it's already classified or reviewed:
 
 ```bash
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" "$JOBPILOT_API/api/email/messages/<id>"
+jobpilot-api GET "/api/email/messages/<id>"
 ```
 
 **All pending** - no argument. Sync, then pull the unscanned queue:
 
 ```bash
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" -X POST "$JOBPILOT_API/api/email/sync"
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" "$JOBPILOT_API/api/email/messages?reviewStatus=pending&classification=null"
+jobpilot-api POST /api/email/sync
+jobpilot-api GET /api/email/messages --query reviewStatus=pending --query classification=null
 ```
 
 Both list routes answer `{items, pagination}`; read `.items`. If it is empty: **"Inbox is already reviewed. Nothing new to classify."** and exit.
@@ -69,8 +69,7 @@ For `interviewing | rejected | offer`:
 1. Pull candidates:
 
    ```bash
-   curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" --data-urlencode "search=<company-or-from-domain>" \
-     -G "$JOBPILOT_API/api/applied?limit=100"
+   jobpilot-api GET /api/applied --query "search=<company-or-from-domain>" --query limit=100
    ```
 
 2. Score each of `.items` against `fromName` / `fromDomain` / `subject`. Pick the best if score ≥ 0.7 (0–1).
@@ -90,19 +89,16 @@ For matched non-verification messages, set `appliedStatus`:
 
 ## Phase 4: Write Back
 
+Write the body to `"$JOBPILOT_TEMP/classification-<id>.json"` (`appliedStatus` is `null` when not moving):
+
+```json
+{ "classification": "<c>", "confidence": <0..1>, "reasoning": "<one line>",
+  "matchedAppId": <id-or-null>, "matchScore": <0..1-or-null>,
+  "appliedStatus": "<status-or-null>", "reviewStatus": "<pending|auto>" }
+```
+
 ```bash
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" -X PATCH "$JOBPILOT_API/api/email/messages/<id>" \
-  -H 'content-type: application/json' \
-  -d "$(jq -n --arg classification "<c>" --argjson confidence <0..1> --arg reasoning "<one line>" \
-    --argjson matchedAppId <id-or-null> --argjson matchScore <0..1-or-null> \
-    --arg appliedStatus "<status-or-empty>" --arg reviewStatus "<pending|auto>" \
-    '{classification:$classification,
-      confidence:$confidence,
-      reasoning:$reasoning,
-      matchedAppId:$matchedAppId,
-      matchScore:$matchScore,
-      appliedStatus: ($appliedStatus // null),
-      reviewStatus:$reviewStatus}')"
+jobpilot-api PATCH "/api/email/messages/<id>" --data @"$JOBPILOT_TEMP/classification-<id>.json"
 ```
 
 Rules:

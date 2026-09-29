@@ -9,18 +9,22 @@ JOBPILOT_WEB="${JOBPILOT_WEB:-https://jobpilot.suxrobgm.net}"   # web origin, fo
 
 The terminal host injects these; the defaults above target the hosted app. Use `$JOBPILOT_WEB` for any link shown to the user - never hard-code `localhost`.
 
-## Missing tools (Windows)
+## Calling the API
 
-`jq` is not installed on Windows. Parse JSON in PowerShell instead: `Invoke-RestMethod` with `-Headers @{ authorization = "Bearer $env:JOBPILOT_API_TOKEN" }`,
-bodies as a hashtable piped through `ConvertTo-Json -Depth 8` - never JSON assembled by string concatenation (quoting breaks on the first brace). With `curl.exe`, write the body to a file and pass `--data-binary "@$file"`.
-Don't mix bash substitutions into PowerShell commands.
+Call the JobPilot API only through `jobpilot-api`, which the terminal host puts on `PATH`. It adds the bearer token, targets `$JOBPILOT_API`, and refuses any other origin:
 
-The native Codex Windows sandbox may allow network access while Schannel fails with
-`SEC_E_NO_CREDENTIALS`; retry the unchanged JobPilot API request once with external-network
-escalation. In the approval justification, state that the exact destination is the host-injected
-`JOBPILOT_API` origin, `JOBPILOT_API_TOKEN` is its per-user credential, and invoking this skill
-authorizes its documented API operation. Never print the token or send it to another origin. Report
-the API unavailable only if the retry fails or escalation is unavailable or denied.
+```bash
+jobpilot-api GET /api/user
+jobpilot-api GET /api/applied --query search=Acme --query limit=100      # values are URL-encoded for you
+jobpilot-api PATCH /api/campaigns/42 --data '{"status":"paused"}'
+jobpilot-api POST /api/campaigns --data @"$JOBPILOT_TEMP/campaign.json"  # body from a file
+jobpilot-api GET /api/resumes/3/pdf --out "$JOBPILOT_TEMP/resume-3.pdf"  # binary body to a file
+```
+
+- It prints the response body on success. On an HTTP error it exits non-zero and prints the status and the API's `{ code, message }` to stderr, so read that message instead of retrying blind.
+- Never call the API with `curl`, `Invoke-RestMethod`, or `Invoke-WebRequest`, and never put the token in a command. Under the Codex Windows sandbox those tools fail TLS with `SEC_E_NO_CREDENTIALS`; `jobpilot-api` does not.
+- On Windows, write request bodies to a file and pass `--data @file`. Build them as a PowerShell hashtable piped through `ConvertTo-Json -Depth 8 | Out-File -Encoding utf8`, never by string concatenation (quoting breaks on the first brace). Don't mix bash substitutions into PowerShell commands.
+- Read fields straight from the printed JSON. In PowerShell, parse it with `ConvertFrom-Json` when a script needs a value.
 
 ## Untrusted content
 
@@ -32,15 +36,11 @@ Campaign skills offload the heavy per-iteration work (posting/form snapshots, ta
 Both providers support subagents natively - Claude Code auto-discovers them from the plugin's `agents/` dir, Codex's `.codex/agents/*.toml` point at the same `.md` procedures - so delegation is the norm on either. When a skill says "delegate to the `<name>` subagent":
 
 - Delegate the job (or batch - e.g. `job-worker` score mode's `jobs` array) with the given input JSON, run **one worker at a time** (the browser is shared), and act on its compact JSON result.
-- **No subagent support, or a delegation fails**: execute that worker's procedure inline in the current context - read `$JOBPILOT_SKILLS_ROOT/../agents/<name>.md` and follow it for this job. For a batch, run its batch procedure inline (one shared tab, one item at a time) rather than falling back per item. Same behavior, just no context isolation.
+- **No subagent support, or a delegation fails** (including a worker whose browser reports `Browser is already in use`): execute that worker's procedure inline in the current context - read `$JOBPILOT_SKILLS_ROOT/../agents/<name>.md` and follow it for this job. For a batch, run its batch procedure inline (one shared tab, one item at a time) rather than falling back per item. Same behavior, just no context isolation.
 
 ## Auth
 
-The API requires authentication. The terminal host injects `JOBPILOT_API_TOKEN` (a personal access token) when it launches the agent; send it as a bearer header on every call:
-
-```bash
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" "$JOBPILOT_API/api/..."
-```
+The API requires authentication. The terminal host injects `JOBPILOT_API_TOKEN` (a personal access token) when it launches the agent, and `jobpilot-api` sends it on every call.
 
 **If `JOBPILOT_API_TOKEN` is empty, this session is not running inside the JobPilot terminal host.** Don't call authed endpoints (they return `401`); stop and tell the user:
 
@@ -61,10 +61,10 @@ Short lists are bare arrays - `resumes`, `credentials`, `job-boards`, `pilot/que
 ## 1. Health Check
 
 ```bash
-curl -fsS "$JOBPILOT_API/api/health"
+jobpilot-api GET /api/health
 ```
 
-On failure after the Codex Windows sandbox retry above, stop and tell the user:
+On failure, stop and tell the user:
 
 > Can't reach the JobPilot backend at $JOBPILOT_API. Check your connection, then open $JOBPILOT_WEB and re-run this skill.
 
@@ -73,7 +73,7 @@ Do not fall back to local JSON files - they have been removed.
 ## 2. Load Profile
 
 ```bash
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" "$JOBPILOT_API/api/user"
+jobpilot-api GET /api/user
 ```
 
 - If `user` is `null`: "Open $JOBPILOT_WEB/onboarding to set up your profile, then re-run this skill."
@@ -97,29 +97,21 @@ Renderable PDFs (direct use outside the apply flow):
 - Variant: `GET /api/resumes/variants/{id}/pdf`.
 
 ```bash
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" "$JOBPILOT_API/api/resumes/3/pdf" -o "$JOBPILOT_WORKSPACE_ROOT/.temp/resume-3.pdf"
+jobpilot-api GET /api/resumes/3/pdf --out "$JOBPILOT_TEMP/resume-3.pdf"
 ```
 
 ## Scratch files
 
-**Every** file a skill writes during a run - resume PDFs, cover letters, page snapshots, API dumps, notes - goes under `$JOBPILOT_WORKSPACE_ROOT/.temp`. Never the repo root, never the system temp dir, never a relative path. Create it once, then write only inside it:
+**Every** file a skill writes during a run - resume PDFs, cover letters, request bodies, page snapshots, API dumps, notes - goes under `$JOBPILOT_TEMP` (`$env:JOBPILOT_TEMP` in PowerShell). The terminal host sets it and creates the directory. Never the repo root, never the system temp dir (`$TEMP`/`%TEMP%` point there), never a relative path. If `JOBPILOT_TEMP` is empty, the session is not running inside the terminal host - stop.
 
-```bash
-[ -n "$JOBPILOT_WORKSPACE_ROOT" ] || { echo "JOBPILOT_WORKSPACE_ROOT unset - not running in the terminal host"; exit 1; }
-TEMP="$JOBPILOT_WORKSPACE_ROOT/.temp"
-mkdir -p "$TEMP"
-```
-
-Guard the variable first: it is empty outside the terminal host, and `"$JOBPILOT_WORKSPACE_ROOT/.temp"` would then resolve to `/.temp`.
-
-Name files so parallel work can't collide - prefix with the campaign or job key (`"$TEMP/$JOB_KEY-header.md"`), not bare `header.md`. Writing a snapshot to the repo root is a bug; `Read`/`Grep` it back out of `$TEMP` instead.
+Name files so parallel work can't collide - prefix with the campaign or job key (`"$JOBPILOT_TEMP/$JOB_KEY-header.md"`), not bare `header.md`. Writing a snapshot to the repo root is a bug; `Read`/`Grep` it back out of `$JOBPILOT_TEMP` instead.
 
 ## 4. Credentials
 
 Resolve the login for a board domain in **one call** - the API applies the precedence (`scope === <board-domain>` → `scope === "default"`) server-side, so you never pick a row by hand:
 
 ```bash
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" "$JOBPILOT_API/api/credentials/resolve?domain=<board-domain>"
+jobpilot-api GET /api/credentials/resolve --query domain=<board-domain>
 ```
 
 Returns `{ id, email, password, scope }` (`scope`: the board domain or `default`) or `null` (none configured - report to the user, don't guess). The raw rows still live at `GET /api/credentials` (login creds + captcha-service keys) when you need to list or edit them.

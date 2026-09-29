@@ -6,13 +6,10 @@ Payload `{platform, target?}`. Compose a self-promotion post from profile + prim
 - `"reddit:<sub>"` - read the subreddit's posting rules from its sidebar/wiki **before** composing and follow its title format (e.g. r/forhire wants a `[For Hire]` title prefix).
 - `"linkedin-post"` - first-person 100-150 word post, <=3 hashtags.
 
-Run `humanizer` in embedded mode on the body, then save the draft:
+Run `humanizer` in embedded mode on the body, then write the draft to `$JOBPILOT_TEMP/promo.json` - `{"platform":"<platform>","target":<target or null>,"title":<title or null>,"body":"<body>"}` - and save it:
 
 ```bash
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" -X POST "$JOBPILOT_API/api/pilot/promotions" \
-  -H 'content-type: application/json' \
-  -d "$(jq -n --arg p "$PLATFORM" --arg t "$TARGET" --arg ti "$TITLE" --arg b "$BODY" \
-    '{platform:$p, target:(if $t=="" then null else $t end), title:(if $ti=="" then null else $ti end), body:$b}')"
+jobpilot-api POST /api/pilot/promotions --data @"$JOBPILOT_TEMP/promo.json"
 ```
 
 **Never post anywhere** - drafts await user review in the dashboard. Journal e.g. "Drafted hn-whoishiring post - awaiting your review."

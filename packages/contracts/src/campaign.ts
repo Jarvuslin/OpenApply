@@ -6,7 +6,7 @@ import { cleanReplacementChars } from "./utils/text";
 /** A free-text string with mangled replacement-char artifacts cleaned on write. */
 const reasonText = z.string().transform(cleanReplacementChars);
 
-/** The agent's job digest, as JSON text. `jq --arg` renders an unset digest as `""`, which read back
+/** The agent's job digest, as JSON text. An unset shell variable renders the digest as `""`, which read back
  *  as "has a digest" while the public index skipped the row - so empty drops to `undefined`. */
 const jobDigest = z
   .string()

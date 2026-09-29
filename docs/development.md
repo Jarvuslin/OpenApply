@@ -90,7 +90,7 @@ flowchart LR
     API --> DB
     WEB -- "xterm.js WS + POST /sessions/*" --> T
     T -- "PTY stdin/stdout" --> P
-    P -- "curl, Bearer JOBPILOT_API_TOKEN" --> API
+    P -- "jobpilot-api, Bearer JOBPILOT_API_TOKEN" --> API
     P --> B
 ```
 
@@ -110,8 +110,9 @@ flowchart LR
   `DELETE /sessions/current`, `GET /healthz`, `GET /ws`. `/sessions/start`
   takes the user's terminal token and spawns the provider with
   `JOBPILOT_API_TOKEN`, `JOBPILOT_API`, `JOBPILOT_WEB` (plus
-  `JOBPILOT_SKILLS_ROOT` / `JOBPILOT_WORKSPACE_ROOT` for wrappers), so skills
-  authenticate with zero manual setup.
+  `JOBPILOT_SKILLS_ROOT` / `JOBPILOT_WORKSPACE_ROOT` for wrappers) and
+  `plugin/bin` first on `PATH`, so skills call the API through `jobpilot-api`
+  with zero manual setup.
 
 One Terminal instance owns one PTY. It survives tab close: reopening the panel
 reattaches a WebSocket to the live session and replays the buffered tail
@@ -142,7 +143,7 @@ Claude.
 
 The terminal launches
 `claude --permission-mode auto --settings plugin/settings/claude.json --plugin-dir plugin`
-or `codex --no-alt-screen -C <root> --approve-for-me -c <override>`. Both run
+or `codex --no-alt-screen --approve-for-me -c <override>`. Both run
 under automatic approval review, so a blocked action prompts in the dashboard
 terminal. `settings/claude.json` pins Sonnet and describes the JobPilot API
 under `autoMode.environment`. Codex has no `--settings` flag, and a project

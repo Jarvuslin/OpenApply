@@ -6,7 +6,7 @@ argument-hint: "[url | ref_or_description] (optional; a URL → navigate there f
 
 # Solve CAPTCHA
 
-Clear a CAPTCHA on the **current browser tab**. Return **solved** or **unsolved** (the caller falls back). Authorized use only - the user's own applications. `$JOBPILOT_API` / `$JOBPILOT_API_TOKEN` are injected by the terminal host.
+Clear a CAPTCHA on the **current browser tab**. Return **solved** or **unsolved** (the caller falls back). Authorized use only - the user's own applications. Call the API with `jobpilot-api` (`../_shared/setup.md` "Calling the API").
 
 ## 1. Dispatch + identify
 
@@ -48,12 +48,10 @@ hCaptcha: `iframe[src*="hcaptcha"]` → `type:"hcaptcha"`. Turnstile: `.cf-turns
 Solve it server-side (the endpoint resolves the configured key + polls the provider; the skill never sees the key):
 
 ```bash
-RESP=$(curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" -X POST "$JOBPILOT_API/api/captcha/solve" -H 'content-type: application/json' \
-  -d "$(jq -n --arg s "$SITEKEY" --arg u "$PAGEURL" '{type:"recaptcha", sitekey:$s, pageurl:$u}')") || true
-TOKEN=$(echo "$RESP" | jq -r '.token // empty')
+jobpilot-api POST /api/captcha/solve --data '{"type":"recaptcha","sitekey":"<sitekey>","pageurl":"<pageurl>"}'
 ```
 
-Empty `TOKEN` (no key configured, or solver failure) → **unsolved**.
+A failed call or an empty `.token` (no key configured, or solver failure) → **unsolved**.
 
 Inject the token (sanctioned `browser_evaluate` - a real solved token, not a faked click), then `browser_click` the form's submit `ref`:
 

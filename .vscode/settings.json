@@ -39,14 +39,15 @@
     "**/.hg": true,
     "**/.DS_Store": true,
     "**/Thumbs.db": true,
-    "**/bin": true,
-    "**/obj": true,
+    "apps/terminal/bin": true,
+    "apps/terminal/obj": true,
+    "tests/*/bin": true,
+    "tests/*/obj": true,
     "**/.next": true,
     "**/node_modules": true,
     ".idea": true
   },
 
   "dotnet.formatting.organizeImportsOnFormat": true,
-  "dotnet.completion.showCompletionItemsFromUnimportedNamespaces": true,
-  "omnisharp.enableEditorConfigSupport": true
+  "dotnet.completion.showCompletionItemsFromUnimportedNamespaces": true
 }

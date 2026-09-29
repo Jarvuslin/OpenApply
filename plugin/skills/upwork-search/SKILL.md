@@ -25,8 +25,8 @@ sends it with the `upwork-submit` skill.
      `source:"search"`, `status:"in_progress"` campaign on the query, else create one (a
      `source:"search"` create requires `config.resumeId` - default to the profile's
      `primaryResumeId`).
-4. Resolve the board: `curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" "$JOBPILOT_API/api/job-boards" | jq '.[] | select(.domain=="upwork.com")'`.
-   No row → abort: "Upwork is not configured. Add it on /boards." If a `--campaign` was given,
+4. Resolve the board: `jobpilot-api GET /api/job-boards` and find the row whose `domain` is
+   `upwork.com`. No row → abort: "Upwork is not configured. Add it on /boards." If a `--campaign` was given,
    first command it to `failed` with `POST /api/campaigns/<id>/status {"status":"failed"}`.
 
 ## Phase 1: Parse Query
@@ -74,12 +74,13 @@ row field, so a client that fails one costs a single call instead of a full job 
 into context.
 
 ```bash
-CLIENT='{ "paymentVerified": true, "totalSpent": 12000, "rating": 4.9,
-  "reviewsCount": 24, "proposalsCount": 7, "postedHoursAgo": 6, "jobType": "hourly" }'
-QUALITY=$(curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" -X POST "$JOBPILOT_API/api/upwork/client-quality" \
-  -H 'content-type: application/json' -d "$(jq -n --argjson c "$CLIENT" '{client:$c}')")
-CLIENT_VERDICT=$(echo "$QUALITY" | jq -r '.verdict')   # good | caution | skip
+jobpilot-api POST /api/upwork/client-quality --data '{ "client": { "paymentVerified": true,
+  "totalSpent": 12000, "rating": 4.9, "reviewsCount": 24, "proposalsCount": 7,
+  "postedHoursAgo": 6, "jobType": "hourly" } }'
 ```
+
+Keep the `client` object as `CLIENT` and the response as `QUALITY`; its `.verdict`
+(`good | caution | skip`) is `CLIENT_VERDICT`.
 
 Field sources: `paymentVerified` from `verification_status`, `totalSpent` from `total_spent`,
 `reviewsCount` from `total_reviews`, `proposalsCount` from `proposal_count`, `postedHoursAgo`
@@ -108,14 +109,14 @@ Build the digest (`../_shared/digest-schema.md`) from the posting you already fe
 populate `skills`. Score inline - the MCP returns the full description, so there is never a thin
 card here and no need to delegate to `job-worker`:
 
+Write `{"digest": <digest>, "minScore": <minScore>}` to `"$JOBPILOT_TEMP/fit.json"`:
+
 ```bash
-FIT=$(curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" -X POST "$JOBPILOT_API/api/score-fit" \
-  -H 'content-type: application/json' -d "$(jq -n --argjson d "$DIGEST" --argjson min <minScore> '{digest:$d, minScore:$min}')")
-SCORE=$(echo "$FIT" | jq -r '.score')
+jobpilot-api POST /api/score-fit --data @"$JOBPILOT_TEMP/fit.json"
 ```
 
-Use it directly when `FIT.verdict` is `trust`; otherwise rescore from `strongMatches`,
-`partialMatches` and `gaps`. A below-level posting is **not** a skip - judge on skills fit
+Keep the response as `FIT` and its `.score` as `SCORE`. Use it directly when `FIT.verdict` is
+`trust`; otherwise rescore from `strongMatches`, `partialMatches` and `gaps`. A below-level posting is **not** a skip - judge on skills fit
 (`../_shared/eligibility.md`).
 
 ### 3.5 Save the recommendation
@@ -124,16 +125,20 @@ Stash the client signals, the quality score and the connects cost into the diges
 card can show them and `rescan-skipped` can re-evaluate. Save the description into `description`
 so "Draft proposal" can seed the proposal later.
 
+The full digest is the fit digest plus `clientStats` (`CLIENT`), `qualityScore`
+(`QUALITY.qualityScore`) and `connectsCost` (`<connects_cost>`). Write the body to
+`"$JOBPILOT_TEMP/job.json"`; `digest` is that full digest stringified, and `matchReason` joins
+`QUALITY.flags` with `, `:
+
+```json
+{ "key": "<company-title-rank slug>", "title": "<title>", "company": "<clientName>",
+  "url": "<job-url>", "board": "upwork.com", "matchScore": <SCORE>,
+  "matchReason": "Fit <SCORE> · <flags>", "status": "pending",
+  "digest": "<stringified full digest>", "description": "<description>" }
+```
+
 ```bash
-DIGEST_FULL=$(jq -n --argjson fit "$DIGEST" --argjson client "$CLIENT" --argjson q "$QUALITY" \
-  --argjson connects <connects_cost> \
-  '$fit + {clientStats:$client, qualityScore:($q.qualityScore), connectsCost:$connects}')
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" -X POST "$JOBPILOT_API/api/campaigns/<campaign-id>/jobs" \
-  -H 'content-type: application/json' \
-  -d "$(jq -n --arg key "<company-title-rank slug>" --arg title "<title>" --arg company "<clientName>" \
-    --arg url "<job-url>" --arg matchReason "Fit $SCORE · $(echo "$QUALITY" | jq -r '.flags|join(", ")')" \
-    --argjson score "$SCORE" --arg digest "$(echo "$DIGEST_FULL" | jq -c .)" --arg desc "<description>" \
-    '{key:$key, title:$title, company:$company, url:$url, board:"upwork.com", matchScore:$score, matchReason:$matchReason, status:"pending", digest:$digest, description:$desc}')"
+jobpilot-api POST "/api/campaigns/<campaign-id>/jobs" --data @"$JOBPILOT_TEMP/job.json"
 ```
 
 Use the row's `url`, which the MCP returns ready to link.
@@ -141,8 +146,7 @@ Use the row's `url`, which the MCP returns ready to link.
 ## Phase 4: Close & Hand Off
 
 ```bash
-curl -fsS -H "authorization: Bearer $JOBPILOT_API_TOKEN" -X POST "$JOBPILOT_API/api/campaigns/<campaign-id>/status" \
-  -H 'content-type: application/json' -d '{"status":"completed"}'
+jobpilot-api POST "/api/campaigns/<campaign-id>/status" --data '{"status":"completed"}'
 ```
 
 Print a compact ranked table and link to `$JOBPILOT_WEB/campaigns/<campaign-id>` - nothing else.
