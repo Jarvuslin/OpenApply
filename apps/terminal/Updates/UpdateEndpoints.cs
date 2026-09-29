@@ -26,7 +26,7 @@ public static class UpdateEndpoints
     public static void MapUpdateEndpoints(this WebApplication app)
     {
         app.MapPost("/update", async Task<Results<Ok<UpdateResult>, ProblemHttpResult>> (
-            HostUpdateService updates, IHostApplicationLifetime lifetime, CancellationToken ct) =>
+            HostUpdater updates, IHostApplicationLifetime lifetime, CancellationToken ct) =>
         {
             try
             {

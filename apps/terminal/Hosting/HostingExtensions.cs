@@ -44,9 +44,7 @@ public static class HostingExtensions
             sp.GetRequiredService<PilotLoop>().Wake,
             sp.GetRequiredService<ILogger<PilotEventListener>>()));
 
-        services.AddSingleton<GitHubReleaseClient>();
-        services.AddSingleton<ReleaseInstaller>();
-        services.AddSingleton<HostUpdateService>();
+        services.AddSingleton<HostUpdater>();
 
         services.ConfigureHttpJsonOptions(c => c.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonContext.Default));
 

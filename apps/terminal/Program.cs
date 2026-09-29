@@ -35,12 +35,12 @@ var app = builder.Build();
 app.Services.GetRequiredService<UrlScheme>().Register();
 
 // A successful startup update launches its replacement before this process binds.
-if (!HostHandoff.IsUpdateRelaunch && await app.Services.GetRequiredService<HostUpdateService>().UpdateAtStartupAsync())
+if (!HostHandoff.IsUpdateRelaunch && await app.Services.GetRequiredService<HostUpdater>().UpdateAtStartupAsync())
 {
     return;
 }
 
-await HostHandoff.WaitForParentExitAsync(app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Handoff"));
+await HostHandoff.WaitForPreviousHostAsync(app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Handoff"));
 
 app.UseTerminalPipeline();
 app.MapHostEndpoints();

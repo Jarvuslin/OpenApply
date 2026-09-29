@@ -1,26 +1,44 @@
 using System.Diagnostics;
-using JobPilot.Terminal.Hosting;
+using System.Globalization;
 
 namespace JobPilot.Terminal.Updates;
 
-/// <summary>Coordinates the listening-port handoff after a runtime update.</summary>
+/// <summary>Hands the listening port from an updated host to the one it launched.</summary>
 public static class HostHandoff
 {
-    /// <summary>Environment variable carrying the predecessor process ID.</summary>
-    public const string AwaitPidVar = "JOBPILOT_AWAIT_PID";
+    /// <summary>Carries the previous host's process id to the relaunched one.</summary>
+    private const string AwaitPidVar = "JOBPILOT_AWAIT_PID";
 
     private static readonly TimeSpan MaxWait = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan Poll = TimeSpan.FromMilliseconds(150);
     private static readonly TimeSpan SocketDrain = TimeSpan.FromMilliseconds(300);
 
     /// <summary>
-    /// Whether this process is an update relaunch. A relaunched child skips its own startup update check:
-    /// it avoids a redundant release fetch and breaks the relaunch loop a mis-versioned release would cause.
+    /// A relaunched host skips its own startup update: it saves a release fetch and breaks the relaunch loop a
+    /// mis-versioned release would cause.
     /// </summary>
     public static bool IsUpdateRelaunch => Environment.GetEnvironmentVariable(AwaitPidVar) is not null;
 
-    /// <summary>Waits briefly for the predecessor to release the port.</summary>
-    public static async Task WaitForParentExitAsync(ILogger logger)
+    /// <summary>Starts the installed binary with this process's arguments; it waits for this process to exit.</summary>
+    public static void Relaunch(string exePath)
+    {
+        var start = new ProcessStartInfo
+        {
+            FileName = exePath,
+            UseShellExecute = false,
+            WorkingDirectory = Environment.CurrentDirectory,
+        };
+        foreach (var arg in Environment.GetCommandLineArgs().Skip(1))
+        {
+            start.ArgumentList.Add(arg);
+        }
+
+        start.Environment[AwaitPidVar] = Environment.ProcessId.ToString(CultureInfo.InvariantCulture);
+        Process.Start(start);
+    }
+
+    /// <summary>After a relaunch, waits briefly for the previous host to release the port.</summary>
+    public static async Task WaitForPreviousHostAsync(ILogger logger)
     {
         var raw = Environment.GetEnvironmentVariable(AwaitPidVar);
         Environment.SetEnvironmentVariable(AwaitPidVar, null);
@@ -29,7 +47,7 @@ public static class HostHandoff
             return;
         }
 
-        logger.LogInformation("Waiting for previous host (pid {Pid}) to exit before binding.", pid);
+        logger.LogInformation("Waiting for the previous host (pid {Pid}) to exit before binding.", pid);
         var deadline = DateTime.UtcNow + MaxWait;
         while (DateTime.UtcNow < deadline)
         {
@@ -45,6 +63,7 @@ public static class HostHandoff
             {
                 break;
             }
+
             await Task.Delay(Poll);
         }
 
