@@ -51,21 +51,15 @@ Highest wins. Tie-break: primary → most recent → lowest id. If no candidate 
 
 Let `BASE_ID` be the chosen id.
 
-## Step 3: Extract Structure if Missing
+## Step 3: Load the Base
 
 ```bash
 jobpilot-api GET "/api/resumes/$BASE_ID"
 ```
 
-If `content` is `null`, delegate to extract-resume so the logic stays in one place:
+If `content` is `null`, run the `extract-resume` skill for `$BASE_ID`, wait for it, and refetch - Step 5 needs the saved `content`. If extract-resume stops because there's no `sourceFilename`, surface the same message and stop.
 
-> Run the `extract-resume` skill for `$BASE_ID` and wait for it to finish.
-
-Refetch the base row afterward - Step 5 needs the saved `content`. If extract-resume stops because there's no `sourceFilename`, surface the same message and stop.
-
-Skip this step when `hasData: true`.
-
-**Check `profileMismatches` on the base response.** Non-empty means the recruiter reads one address and the form submits another. Echo once, don't block the apply:
+**Check `profileMismatches`.** Non-empty means the recruiter reads one address and the form submits another. Echo once, don't block the apply:
 
 > ⚠ resume disagrees with your profile: {field} says "{resume}", profile says "{profile}". Fix at $JOBPILOT_WEB/resumes/{baseId}
 
@@ -124,7 +118,9 @@ Send only what changes something:
 
 Leave `summary` out when the base already fits. It usually does.
 
-When one sentence of the base speaks to the wrong audience, swap that sentence and keep the rest word for word. The new sentence states one fact from the resume that this JD cares about, in the candidate's voice. Keep the base's proof: its publications, its years, its domains, its numbers. Never restate the JD, and never open with a title followed by a list of tools.
+When one sentence of the base speaks to the wrong audience, swap that sentence and keep the rest word for word. The new sentence states one fact from the resume that this JD cares about, in the candidate's voice and plain words. Keep the base's proof: its publications, its years, its domains, its numbers. Never restate the JD, and never open with a title followed by a list of tools.
+
+The server rejects stock phrasing in anything you write (summary, headline, reworded bullets), so don't use: passionate, enjoys, comfortable with, hands-on, results-driven, detail-oriented, self-starter, fast-paced, track record, cutting-edge, state-of-the-art, leverage, spearheaded, seasoned, stakeholders, business requirements, production-grade, best practices, cross-functional, end-to-end, quick learner, eager to, thrives, suited to, the same, downstream.
 
 ### Headline
 

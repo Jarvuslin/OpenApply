@@ -45,7 +45,13 @@ record `skipped` through `/jobs/<key>/result`; do not offer them for apply.
 
 ## Phase 4: Fit Review
 
-Score against the campaign's `config.resumeId` when set (`GET /api/resumes/<id>` for its content), else the primary (from setup). For each non-applied result, score 0-100 based on: skills overlap, years vs candidate, education match, domain/industry relevance, seniority alignment.
+Score each non-applied result server-side, like every other campaign skill. Build the digest (`../_shared/digest-schema.md`) and write `{"digest": <digest>, "minScore": 0, "resumeId": "<config.resumeId>"}` to `$JOBPILOT_TEMP/fit.json` (drop `resumeId` when the campaign has none; the server uses the primary):
+
+```bash
+jobpilot-api POST /api/score-fit --data @"$JOBPILOT_TEMP/fit.json"
+```
+
+Use `.score` when `.verdict` is `trust`; on `deliberate`, adjust it from `strongMatches`/`partialMatches`/`gaps`. `minScore: 0` because search keeps every result for the user to review.
 
 ## Phase 5: Save Results to the Campaign
 

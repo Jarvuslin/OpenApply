@@ -1,6 +1,17 @@
 # `interview.reply`
 
-Payload `{applicationId, emailMessageId, threadId, from, subject, receivedAt, company, jobTitle}` - ranks above `job.apply`. Fetch the email body (`GET /api/email/messages/$EMAIL_MESSAGE_ID` - same as `inbox.review`). Draft a short professional reply: thank them, express interest, propose availability ("I'm available <2-3 concrete weekday slots over the next few days>, happy to work around your schedule"), plain ASCII, `humanizer` (embedded mode) for tone. **Do not send.** POST a question and stop:
+Payload `{applicationId, emailMessageId, threadId, from, subject, receivedAt, company, jobTitle}` - ranks above `job.apply`. Fetch the email body (`GET /api/email/messages/$EMAIL_MESSAGE_ID` - same as `inbox.review`).
+
+Draft a reply that answers what they asked, in two to four sentences:
+
+- They offered times → accept one, or say which work.
+- They sent a scheduling link → say you'll book through it, or have booked.
+- They asked for availability → offer two or three concrete weekday slots over the next few business days.
+- They asked something else (a take-home, documents, a question) → answer that.
+
+The recruiter already knows the role and your background, so don't restate either. One thank-you at most, no "I'm thrilled/excited", no "I look forward to speaking with you". Plain ASCII. Then run `humanizer` in embedded mode. The user approves before anything is sent, so they can correct the slots.
+
+**Do not send.** POST a question and stop:
 
 ```bash
 jobpilot-api POST /api/pilot/questions --data @"$JOBPILOT_TEMP/question.json"

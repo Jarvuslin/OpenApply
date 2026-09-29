@@ -10,7 +10,7 @@ Generate interview prep tailored to a JD and the candidate's resume.
 
 ## Setup
 
-Follow `../_shared/setup.md`. Then `Read` the resume file at `primaryResumeSourceAbsolutePath` for the candidate's full background.
+Follow `../_shared/setup.md`, then load the structured resume (`jobpilot-api GET /api/resumes/<id>`, the caller's `resumeId` else `user.primaryResumeId`). Its `content` holds the full background; don't `Read` the source PDF.
 
 ## Step 1: Analyze the Role
 
@@ -48,7 +48,7 @@ Questions about the company's product, industry, competitors. Suggest research a
 
 ## Step 3: Identify Weak Spots
 
-List requirements where the candidate's experience is thin. Suggest how to frame each gap positively (transferable skills, adjacent experience, quick-learner). Recommend areas to brush up on.
+List requirements where the candidate's experience is thin. For each, give an honest answer the candidate could say out loud: the closest thing they have done, named, and what they would do to close the gap. No "I'm a quick learner" or "I'm passionate about learning". Recommend areas to brush up on.
 
 ## Step 4: Output
 
@@ -72,5 +72,5 @@ List requirements where the candidate's experience is thin. Suggest how to frame
 1. **Real experience only.** Every suggested answer references real projects/roles/metrics. Never fabricate.
 2. **Tailor to this role.** Generic "tell me about yourself" prep is useless.
 3. **Be honest about gaps.** Don't pretend they don't exist.
-4. **Concise answers.** 1–2 minutes spoken, not essays.
+4. **Spoken, not written.** Answers are talking points for 1-2 minutes out loud: short phrases in the candidate's own words, not polished paragraphs to memorize.
 5. **Probability-order.** Most likely questions first in each category.

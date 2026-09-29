@@ -27,7 +27,7 @@ Count the full target list up front and process every one. **Below-threshold, ze
 1. **Digest** - parse the cached `digest`. Rich = non-empty `skills` **and** `requirements`/`responsibilities`.
 2. **Re-read only when needed** - if the digest is thin/empty, or the original `skipReason` was invalid (location/onsite, sparse JD, 1099, seniority), open the posting (`browser_navigate` + narrowed `browser_snapshot`; log in via `../_shared/auth.md` if walled) and rebuild the digest. Send that digest and posting text with the rescan command below; terminal rows cannot be PATCHed.
 
-3. **Re-score** - every target gets a fresh `POST /api/score-fit` with `{digest, minScore:<threshold>}`; never reuse the stored `matchScore`. Take the returned `score` as-is when `verdict` is `trust`; on `deliberate`, reason from `strongMatches`/`partialMatches`/`gaps`. A zero/low score with no `skipReason` (common at defense/federal employers) is not a disqualifier - only a JD-stated citizenship/clearance or no-sponsorship bar is (never infer from industry).
+3. **Re-score** - every target gets a fresh `POST /api/score-fit` with `{digest, minScore:<threshold>}`; never reuse the stored `matchScore`. Take the returned `score` as-is when `verdict` is `trust`; on `deliberate`, reason from `strongMatches`/`partialMatches`/`gaps`. A zero/low score with no `skipReason` (common at defense/federal employers) is not a disqualifier; eligibility follows `../_shared/eligibility.md`.
 4. **Decide:**
    - Eligible and `score >= threshold` → promote (no apply). Write `{"decision":"approved","matchScore":<0-100>,"matchReason":"<one line>","digest":"<digest JSON string>","description":"<posting text or empty>"}` to `$JOBPILOT_TEMP/rescan-<key>.json`, then:
 
@@ -38,11 +38,7 @@ jobpilot-api POST /api/campaigns/<campaign-id>/jobs/<key>/rescan --data @"$JOBPI
 - Below threshold after a fair read → POST `/rescan` with `decision:"skipped"`, the new score/reason, and `skipReason:"Below minimum match score (X < Y)"`.
 - JD-stated citizenship/clearance or no-sponsorship language found on re-read → POST `/rescan` with `decision:"skipped"` and that eligibility reason.
 
-## Step 3: Eligibility
-
-Follow `../_shared/eligibility.md` - seniority/below-level, location/onsite, sparse JDs, and 1099/contractor are never skips; only a JD-stated citizenship/clearance requirement - or, when the profile requires sponsorship, JD-stated no-sponsorship language - disqualifies.
-
-## Step 4: Finish
+## Step 3: Finish
 
 Process every target before finishing - `promoted + left-skipped + permanent` must equal the target count. If any are unprocessed, keep going; don't report a partial pass as complete.
 

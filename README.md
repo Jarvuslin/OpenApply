@@ -193,7 +193,7 @@ connect it.
 
 ## License
 
-MIT. The shared humanizer skill is vendored from
-[blader/humanizer](https://github.com/blader/humanizer) (MIT) under
-[plugin/skills/humanizer/](plugin/skills/humanizer/), which ships with its
-own LICENSE file.
+MIT. The humanizer skill in
+[plugin/skills/humanizer/](plugin/skills/humanizer/) is adapted from
+[blader/humanizer](https://github.com/blader/humanizer) (MIT) and ships with
+its own LICENSE file.

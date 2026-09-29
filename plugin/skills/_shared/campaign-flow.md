@@ -67,14 +67,10 @@ re-select tab 0, then map the outcome to a terminal write (above). `needs_user` 
    terminal outcomes, so SSE reflects reality.
 3. **Never process payments** - record `failed` with `"Payment required"`.
 4. **CAPTCHA is not a pause**: attempt the `solve-captcha` skill; unsolved → skip the job for a
-   later manual apply. **2FA is**: pause and ask. Email codes: fetch via the `get-code` skill
-   first (see `./auth.md`); only ask the user when it returns nothing.
-5. **Account handling** per `./auth.md` - register when no account exists (without asking),
-   forgot-password when the stored password is stale.
-6. **Eligibility** per `./eligibility.md` - location/onsite, thin JDs, 1099/contract, and
-   below-your-level are never skip reasons; only a JD-stated citizenship/clearance requirement
-   (or, when sponsorship is needed, JD-stated no-sponsorship language) disqualifies.
-7. **Pace** 3-5s between submissions on the same domain.
-8. **Be honest about match scores** - label stretches as stretches.
-9. **One worker at a time** - the browser is shared; never delegate the next job until the
+   later manual apply. **2FA is**: pause and ask. Logins, registration, and email codes follow
+   `./auth.md`.
+5. **Eligibility** follows `./eligibility.md`.
+6. **Pace** 3-5s between submissions on the same domain.
+7. **Be honest about match scores** - label stretches as stretches.
+8. **One worker at a time** - the browser is shared; never delegate the next job until the
    current worker returns.

@@ -46,10 +46,9 @@ owns per-job variants, guarded in `apps/api/src/modules/resume/structure.ts`.
   the application in one call.
 - Browser: `browser_snapshot` (with `ref` on large pages), not screenshots.
 
-## Vendored humanizer
+## Humanizer
 
-`skills/humanizer/` is from [blader/humanizer](https://github.com/blader/humanizer) (MIT). To
-sync: fetch upstream `SKILL.md`, diff against `metadata.version`, re-apply the JobPilot additions
-(`allowed-tools`, job-application paragraph, voice subsections, PTY note, `metadata.localPatterns`,
-worked example). Cite patterns by title, never number. Writing skills invoke it in embedded mode
-(final text only).
+`skills/humanizer/` is adapted from [blader/humanizer](https://github.com/blader/humanizer) (MIT,
+v3.1.0) and rewritten for job-search writing. It is not synced: port a useful upstream pattern by
+hand, with a job-writing example. Writing skills invoke it in embedded mode (final text only) and
+check repetition against the user's recent texts themselves, since the humanizer sees one text.

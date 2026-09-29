@@ -67,8 +67,6 @@ For each job where `status === "approved"`, `"pending"`, or `"applying"`, score-
    `needs_user` per `../_shared/campaign-flow.md` (on `salary`, ask once then re-delegate).
 4. **Limit** - if `MAX_APPS` set and `summary.applied >= MAX_APPS`, POST `/result` `outcome:"skipped"`, `skipReason:"Max applications limit reached"` for each remaining `approved` job and end the loop.
 
-The `/result` endpoint preserves the campaign's original `source` (`"apply"` vs `"auto_apply"`) on the created Application row automatically - no separate source-passthrough needed.
-
 ### Between jobs: honor user Stop
 
 Re-fetch the campaign between jobs and exit cleanly if the user stopped it:
@@ -94,5 +92,5 @@ Suggest re-running the `auto-apply` skill in `retry-failed <CAMPAIGN_ID>` mode i
 The shared campaign rules (`../_shared/campaign-flow.md`) apply throughout. On top of them:
 
 1. **No new confirmation gate.** The user already approved the fit when the campaign was first launched.
-2. **Preserve `source`** when recording applications - a resumed `apply` campaign still records `source:"apply"`, not `"resume"`.
+2. **`source` is automatic.** `/result` records the campaign's original `source` (`apply` or `auto_apply`) on the Application; don't pass one.
 3. **Idempotent.** Resuming the same campaign a second time should be a no-op when no `approved` jobs remain.

@@ -24,9 +24,9 @@ jobpilot-api GET /api/resumes/$RESUME_ID
 
 For a human screener skimming, and the ATS parsing:
 
-- **`summary`** - what they do, at what level, two strongest specifics. Cut anything true of every candidate.
+- **`summary`** - two or three plain sentences: what they do, at what level, and their two strongest specifics. Cut anything true of every candidate ("passionate", "results-driven", "strong communicator").
 - **`basics.headline`** - a role title people search for, not a slogan.
-- **Bullets** - outcome first, consistent tense, no "Responsible for" / "Worked on" / "Helped with". Remove phrasing repeated across entries - one stock phrase in three roles flattens all three.
+- **Bullets** - past tense for past roles; a concrete verb, then what was built or changed. Replace "Responsible for" / "Worked on" / "Helped with" with what the person did. Lead with the result when there is one, but don't force every bullet into "Verb X, resulting in Y%": a resume where every line has the same shape reads as generated. Cut stock verbs (spearheaded, leveraged, utilized, streamlined) and a phrase that repeats across entries - one stock phrase in three roles flattens all three.
 - **Skill groups** - consolidate. Past ~5 groups it reads as a keyword dump.
 - **Ordering** - most relevant experience and projects first.
 

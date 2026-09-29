@@ -1,4 +1,7 @@
-/** Stock resume phrasing that reads as machine-written. Matched whole-word, case-insensitive. */
+/**
+ * Stock resume phrasing that reads as machine-written. Matched whole-word, case-insensitive.
+ * `plugin/skills/tailor-resume/SKILL.md` lists these so the agent avoids a 422; keep it in sync.
+ */
 const STOCK_PHRASES = [
   "comfortable with",
   "comfortable moving",

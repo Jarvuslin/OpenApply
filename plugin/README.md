@@ -1,38 +1,46 @@
 # JobPilot plugin
 
-The plugin that turns Claude Code or Codex into your job-search agent. One
-provider-neutral skill tree serves both: `search`, `auto-apply`, `apply`,
-`networking`, `cover-letter`, and the rest of the commands listed in the
-[root README](../README.md#skills).
+This plugin turns Claude Code or Codex into your job-search agent. It searches
+job boards, tailors your resume for each posting, fills in applications, writes
+cover letters and outreach messages, and keeps your pipeline in the
+[JobPilot dashboard](https://jobpilot.suxrobgm.net) up to date.
 
-The agent runs on your own machine and your own Claude/Codex subscription. It
-drives a real browser, reads your profile and resumes from the
-[JobPilot dashboard](https://jobpilot.suxrobgm.net), and writes results back so
-your pipeline updates live.
+It runs on your machine, on your own Claude or Codex subscription. Your
+profile, resumes, and applications live in your JobPilot account; the agent
+reads and writes them through the JobPilot API.
 
 ## Install
 
-The marketplace commands for Claude Code and Codex live in the
-[root README](../README.md#install-the-plugin).
+Install the plugin from your provider's marketplace (commands in the
+[root README](../README.md#install-the-plugin)), then run the `setup` skill. It
+installs the local terminal host, starts it, and sends you to the dashboard.
+From then on you start and watch the agent from the dashboard.
 
-Both providers finish by running the `setup` skill, which installs the local
-terminal companion, starts the agent, and opens the dashboard. After that you
-can launch and control the agent from the dashboard's agent dock.
+The marketplace copy contains only `setup`. The terminal host ships the full
+skill tree and keeps it updated.
 
-Provider marketplaces carry only that bootstrap skill. The terminal release
-bundles the full tree and exposes it to dashboard sessions for both providers.
+## Skills
 
-## Layout
+The main ones are `search`, `auto-apply`, `apply`, `networking`, and
+`cover-letter`. The [root README](../README.md#skills) lists them all.
 
-- `skills/<name>/SKILL.md`: one workflow per directory, referenced by name so
-  the same text serves both providers.
-- `skills/_shared/*.md`: reference docs several skills pull in, by relative
-  path (`../_shared/setup.md`). No `SKILL.md`, so neither provider lists the
-  directory as a skill.
-- `agents/*.md`: worker subagents that campaign skills delegate per-job work
-  to, keeping heavy browser output out of the main session.
-- `.mcp.json`: the Playwright MCP server the skills use to drive the browser.
+## What's in here
 
-Edit skills here directly; there is no generation step. See the
-[development guide](../docs/development.md) for how the plugin is loaded and
-published.
+| Path | What it is |
+| --- | --- |
+| `skills/<name>/SKILL.md` | One skill per directory. The same file serves Claude and Codex. |
+| `skills/_shared/` | Docs several skills read: setup, login, form filling, browser tips, eligibility. No `SKILL.md`, so it isn't listed as a skill. |
+| `skills/pilot/kinds/` | One file per task type the autonomous Pilot can pick up. |
+| `skills/humanizer/` | Rewrites letters, proposals, and messages so they read like a person wrote them. Adapted from [blader/humanizer](https://github.com/blader/humanizer) (MIT). |
+| `agents/` | `job-worker` and `networking-worker`, the subagents that handle one job or one contact at a time so browser output stays out of the main session. |
+| `bin/` | `jobpilot-api`, the helper every skill uses to call the API. |
+| `settings/` | Agent settings the terminal host passes to Claude and Codex. |
+| `.mcp.json` | The Playwright browser server. |
+
+## Editing skills
+
+Edit the files here directly; there's no build step. Skills call sibling skills
+by name and shared docs by relative path (`../_shared/setup.md`), which keeps
+one text working for both providers. The
+[development guide](../docs/development.md) covers how the host loads the
+plugin and how releases ship it.

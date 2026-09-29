@@ -108,10 +108,4 @@ Name files so parallel work can't collide - prefix with the campaign or job key 
 
 ## 4. Credentials
 
-Resolve the login for a board domain in **one call** - the API applies the precedence (`scope === <board-domain>` → `scope === "default"`) server-side, so you never pick a row by hand:
-
-```bash
-jobpilot-api GET /api/credentials/resolve --query domain=<board-domain>
-```
-
-Returns `{ id, email, password, scope }` (`scope`: the board domain or `default`) or `null` (none configured - report to the user, don't guess). The raw rows still live at `GET /api/credentials` (login creds + captcha-service keys) when you need to list or edit them.
+Resolve a board login with `GET /api/credentials/resolve` per `./auth.md` ("Credential lookup"). The raw rows at `GET /api/credentials` (logins + captcha-service keys) are only for listing or editing them.

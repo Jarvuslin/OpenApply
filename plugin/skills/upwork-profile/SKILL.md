@@ -16,9 +16,9 @@ upwork.com. Say so plainly rather than implying they were applied.
 
 ## Setup
 
-1. Follow `../_shared/setup.md` (`$JOBPILOT_API` is injected by the terminal). `Read` the resume
-   at `primaryResumeSourceAbsolutePath` for identity, summary, experience, skills, and
-   **projects** (the portfolio source).
+1. Follow `../_shared/setup.md`, then load the structured resume for `user.primaryResumeId`
+   (`jobpilot-api GET /api/resumes/<id>`). Its `content` has the identity, summary, experience,
+   skills, and **projects** (the portfolio source).
 2. Follow `../_shared/upwork-mcp.md`: confirm the tools are connected and resolve `ORG_UID`.
 
 ## Mode: generate (default)
@@ -28,9 +28,10 @@ upwork.com. Say so plainly rather than implying they were applied.
    certificates already on the account.
 2. **Generate suggestions** grounded only in resume facts (no fabrication):
    - **Title** - concise, role plus top stack. Hard limit 70 characters.
-   - **Overview** - lead with the client's outcome, then proof (real projects and metrics from the
-     resume), then a clear CTA. Hard limit 5000 characters. Then invoke the `humanizer` skill on
-     it in **embedded mode** to strip AI tells.
+   - **Overview** - written to one client skimming it. Open with what you do for clients, in a
+     sentence, then two or three real projects with a concrete result each, then how to start
+     working together. Short paragraphs, plain words, first person. 1000-2000 characters reads
+     better than filling the 5000 limit. Then invoke the `humanizer` skill on it in embedded mode.
    - **Skills** - at most 20, and each must be a real Upwork ontology skill name. Unresolvable
      names are rejected at write time, so prefer the exact wording already on the profile or in
      the job market over invented labels.
@@ -87,5 +88,4 @@ upwork.com. Say so plainly rather than implying they were applied.
 1. **Approval gate.** Only `apply` writes to Upwork, and only when `status == "approved"`.
 2. **Never claim an advisory field was applied.** The portfolio and hourly rate are always manual.
 3. **No fabrication.** Every claim traces to the resume; no invented metrics, links, or experience.
-4. **Humanize the overview** via the `humanizer` skill in embedded mode - no
-   "passionate/dedicated/leverage", no AI symmetry, no functional emoji bullets.
+4. **Humanize the overview** via the `humanizer` skill in embedded mode. No emoji bullets.

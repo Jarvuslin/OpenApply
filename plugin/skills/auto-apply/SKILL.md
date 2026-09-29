@@ -1,7 +1,7 @@
 ---
 name: auto-apply
 description: Search a job board and autonomously apply to matching jobs one at a time, until paused, exhausted, or the max-applications cap is hit.
-argument-hint: "<query> --board <domain> [--min-score N] [--max-apps N] | resume | retry-failed <campaign-id>"
+argument-hint: "<query> --board <domain> [--campaign <campaign-id>] [--min-score N] [--max-apps N] | resume | retry-failed <campaign-id>"
 ---
 
 # Auto-apply - Search + Apply On Demand
@@ -29,27 +29,26 @@ Inline argument overrides take precedence. `--board <domain>` is **required** un
 
 To recover wrongly-`skipped` jobs, use the dedicated `rescan-skipped` skill (it re-scores and promotes to `approved`; apply them afterward).
 
-## Phase 0: Existing Campaign Check + Create
+## Phase 0: Resolve the Campaign
+
+**`--campaign <id>` passed** (the web UI always passes it - it created the campaign when the user submitted `/campaigns/new`): use it as `CAMPAIGN_ID` and skip the checks below.
+
+**No `--campaign`** (manual run): look for an unfinished campaign first.
 
 ```bash
-jobpilot-api GET /api/campaigns --query status=in_progress
-jobpilot-api GET /api/campaigns --query status=paused
+jobpilot-api GET /api/campaigns --query status=in_progress --query source=auto_apply
+jobpilot-api GET /api/campaigns --query status=paused --query source=auto_apply
 ```
 
-Each response is paginated; inspect its `.items` array.
-
-If any matches, ask **"Found an incomplete campaign from `<startedAt>` (status: `<status>`). Resume or start fresh?"** Resume → inject the `resume-campaign` skill with that `campaignId`.
-
-Otherwise the web UI already created the campaign row when the user submitted `/campaigns/new` - confirm it exists and use that `campaignId`. Capture its selected base resume as `RESUME_ID`: `.config.resumeId` from `jobpilot-api GET /api/campaigns/$CAMPAIGN_ID` (absent → fall back to the primary downstream). If invoked manually (rare), create one. `resumeId` is REQUIRED - default to `.user.primaryResumeId` from `jobpilot-api GET /api/user`. `maxApplications` is OPTIONAL - omit the field entirely for unlimited mode:
+A match in `.items` → ask **"Found an incomplete campaign from `<startedAt>` (status: `<status>`). Resume or start fresh?"** Resume → run the `resume-campaign` skill with that `campaignId`. Otherwise create one; `resumeId` defaults to `user.primaryResumeId`, and leave `maxApplications` out for unlimited:
 
 ```bash
-jobpilot-api POST /api/campaigns \
-  --data '{"query":"<query>","source":"auto_apply","config":{"board":"<domain>","resumeId":"<RESUME_ID>","minScore":<n>}}'
+jobpilot-api POST /api/campaigns --data '{"query":"<query>","source":"auto_apply","config":{"board":"<domain>","resumeId":"<RESUME_ID>","minScore":<n>}}'
 ```
 
-Read `.campaignId` from the response as `CAMPAIGN_ID`.
+Read `.campaignId` as `CAMPAIGN_ID`.
 
-Surface live view: `$JOBPILOT_WEB/campaigns/<CAMPAIGN_ID>`.
+Either way, read the campaign's `config.resumeId` as `RESUME_ID` (`GET /api/campaigns/$CAMPAIGN_ID`; absent → the primary) and surface the live view: `$JOBPILOT_WEB/campaigns/<CAMPAIGN_ID>`.
 
 ## Phase 1: Open the Board (tab 1)
 

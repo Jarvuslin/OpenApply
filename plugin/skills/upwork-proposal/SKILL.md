@@ -1,94 +1,80 @@
 ---
 name: upwork-proposal
-description: Write a short, targeted Upwork proposal from a job description and the user's resume, humanized for natural tone.
+description: Write a short Upwork proposal from a job description and the user's resume, in a plain human voice that doesn't repeat the user's recent proposals.
 argument-hint: "<proposal_id | job_description>"
 ---
 
-# Upwork Proposal Generator
+# Upwork Proposal
 
-Write a concise, winning Upwork proposal that directly addresses the client's needs. Clients skim proposals on mobile, between meetings - if it takes more than ~30 seconds to read, it's gone. Optimize every line for a fast skim.
+Clients skim proposals on their phones between other things. If one takes more than about 30 seconds to read, it's gone. Write for that skim: their problem first, one piece of proof, one question.
 
 ## Setup
 
-Follow `../_shared/setup.md`. Then `Read` the resume at `primaryResumeSourceAbsolutePath` for full context (identity, skills, experience, projects, research).
+Follow `../_shared/setup.md`, then load the structured resume for `user.primaryResumeId` (`jobpilot-api GET /api/resumes/<id>`) and write from its `content`. Don't `Read` the source PDF.
 
-## Step 1: Resolve the Input
+## Step 1: Resolve the input
 
-The argument is either a **proposal id** (an integer, when launched from the JobPilot UI) or a raw **job description** (manual use). Detect which:
+The argument is a **proposal id** (from the JobPilot UI) or a raw **job description** (manual use).
 
-- **Integer id** → fetch the draft row and use its stored job details as the JD:
+- **Id** → fetch the draft and use its `jobDescription` as the posting, with `jobTitle` / `clientName` / `jobUrl` for context. Keep the id for Step 6. Drafts from an Upwork search recommendation (`source:"search"`) work the same way.
 
   ```bash
   jobpilot-api GET "/api/upwork/proposals/$ARG"
   ```
 
-  Use `jobDescription` as the posting, plus `jobTitle` / `clientName` / `jobUrl` for context. Remember the id - you will `PATCH` the result back to it in Step 7. (A draft launched from an Upwork **search recommendation** already has these fields filled and `source:"search"` - same flow, no extra work.)
+- **Anything else** → the argument is the job description. There's no row yet; Step 6 creates one.
 
-- **Anything else** → treat the argument itself as the job description. There is no row yet; you will `POST` a new one in Step 7.
+## Step 2: Read the job and your recent proposals
 
-## Step 2: Analyze the JD
+From the posting, note what the client needs built or fixed, the tech, scope and timeline hints, and any direct questions they ask. Pick one detail unique to this posting to show you read it.
 
-Identify: what the client needs built/fixed, required tech and skills, scope and timeline clues, pain points/challenges, and any specific questions the client asks. Pull out one concrete detail unique to _this_ posting - you'll reference it in the hook so the client can tell the proposal isn't a mass send.
+Then read your last five proposals so this one doesn't come out the same:
 
-## Step 3: Select ONE Matching Case Study
+```bash
+jobpilot-api GET /api/upwork/proposals --query page=1 --query limit=5
+```
 
-Pick the SINGLE most relevant project from the resume - one that matches their problem, not just their tech stack. One specific, on-point case study beats five generic ones. Don't list everything. If a portfolio/GitHub/live link exists for it, keep that link ready.
+From each `.items[].proposalText`, note the first line, the project it used, and the closing question.
+
+## Step 3: Pick one case study
+
+Choose the single project from the resume that matches their problem, not just their stack. Keep its link if it has one. Prefer a different project from the last two proposals when another one fits just as well.
 
 ## Step 4: Write
 
-Order it the way it gets read - them first, you second, never the reverse.
+Under 150 words, in this order:
 
-**Hook (line 1, bolded):** Open with a bold line that names _their_ problem or goal in their words. Upwork renders `**text**` as bold - use it on this line so it stands out instantly. This is the single most important line; if it reads like "Hello, I'm excited to apply," the proposal is deleted. No "Hi" / "Dear client" / "I'm excited to apply" / "I came across your posting."
+1. **Hook (line 1, in `**bold**`).** Their problem or goal, in their words. Upwork renders the bold, so this line is what gets read. Not "Hi", "Dear client", "I'm excited to apply", or "I came across your posting".
+2. **Proof (one or two lines).** The case study: what you built, one real result, and the link. Don't narrate your career.
+3. **Question (one line).** One specific question about their project that shows you thought about it (a scope choice, an edge case, a decision they'll face). This is the call to action; don't add "Looking forward to hearing from you" after it. Use a calendar link instead only if the profile has one.
 
-**Case study (1–2 lines):** One relevant project, stated specifically - what you built, the outcome with a real metric (users, perf gain, revenue), and a link if available. Tie it directly to what they need. Don't narrate your career; the client cares about their problem, not your journey.
+Match their tone: a casual posting gets a casual reply. Don't mention Top Rated or JSS unless the posting asks; the profile already shows it. No lists, headers, or emoji in the body. Don't reuse the first line or closing question of a recent proposal.
 
-**Specific question (1 line):** Ask ONE sharp question about their project that proves you read the posting and thought about it (scope, an edge case, a decision they'll need to make). This both shows engagement and opens a conversation.
+**Screening questions.** Answer each one short and direct. "How many years with React?" → "4 years, most recently on [project]." A one-line question gets a one- or two-line answer.
 
-**CTA (1 line):** End with a real next step - the specific question above, or a calendar link if the resume/profile provides one. Never end with a dead phrase like "Looking forward to hearing from you." Create the next step.
+## Step 5: Humanize
 
-## Step 5: Answer Screening Questions
+Invoke the `humanizer` skill in embedded mode on the proposal, then on the screening answers.
 
-If the posting has screening questions, answer each one short, direct, and specific. "How many years with React?" → "4 years, including [project]." Never write a 300-word essay for a one-line question - long answers read as AI padding.
+## Step 6: Save
 
-## Step 6: Apply Humanizer
+Write the body to `"$JOBPILOT_TEMP/proposal.json"` (proposal text breaks inline quoting). `screeningAnswers` is `[{ "question", "answer" }]`, or `[]` when there were none.
 
-Invoke the `humanizer` skill on the full text in **embedded mode** (final rewrite only).
-
-## Step 7: Persist to JobPilot
-
-Save the result so it appears on the Upwork page. `screeningAnswers` is a JSON array of `{ "question", "answer" }` objects (empty `[]` if the posting had none). Write the body to `"$JOBPILOT_TEMP/proposal.json"`, since proposal text breaks inline quoting.
-
-- **Launched with an id** → `PATCH` the existing draft (status stays `draft`) with body `{ "proposalText": "...", "screeningAnswers": [] }`:
+- **Launched with an id** → `PATCH` the draft; its status stays `draft`. Body `{ "proposalText", "screeningAnswers" }`:
 
   ```bash
   jobpilot-api PATCH "/api/upwork/proposals/$ARG" --data @"$JOBPILOT_TEMP/proposal.json"
   ```
 
-- **Launched with a raw job description** → `POST` a new row with body `{ "jobTitle": "...", "clientName": "...", "jobUrl": "...", "jobDescription": "...", "proposalText": "...", "screeningAnswers": [] }`:
+- **Launched with a job description** → `POST` a new row. Body `{ "jobTitle", "clientName", "jobUrl", "jobDescription", "proposalText", "screeningAnswers" }`; `jobTitle` is required (derive it from the posting), and include `clientName` / `jobUrl` when the posting gives them:
 
   ```bash
   jobpilot-api POST /api/upwork/proposals --data @"$JOBPILOT_TEMP/proposal.json"
   ```
 
-  `jobTitle` is required; derive it from the posting. Include `clientName` / `jobUrl` when the posting provides them.
-
-Then print the proposal (and any screening answers, each labeled with its question) to the terminal so the user can paste it into Upwork.
+Then print the proposal, and each screening answer under its question, so the user can paste them into Upwork.
 
 ## Rules
 
-1. **Under 150 words for the body.** Shorter wins on mobile. Brevity reads as confidence.
-2. **Them before you.** Their problem leads; your background supports. Never open with 3 paragraphs about yourself.
-3. **No AI tells.** No "Certainly, here is..." preambles, no robotic symmetry, no functional emoji bullets (✅ 📌 🔹 ☑) - those scream AI. If an emoji appears at all, at most one, used the way a person would.
-4. **No fluff** - drop "passionate", "dedicated", "committed", "excited", "thrilled", "leverage", "utilize", "innovative", "cutting-edge", "seamless", "robust".
-5. **No generic openings** ("I came across your job posting" / "I'm a senior developer with X years").
-6. **Be specific.** Real project names, metrics, tech, and links from the resume - referencing their actual job, not a template.
-7. **One matched case study, not five.** Relevance beats volume.
-8. **One CTA**, and make it a real next step (a question or a calendar link).
-9. **Match tone.** Casual posting → casual; formal → professional.
-10. **No fabrication.** Only reference resume content. Don't invent metrics or links.
-11. **Don't mention freelance status** (Top Rated, JSS) in body - it's already on the profile. Exception: if the posting explicitly asks.
-12. **First person** as the candidate.
-
-## Output
-
-Plain text proposal that pastes into Upwork's input. Use `**bold**` only on the line-1 hook (and sparingly on one key phrase if it genuinely helps a skim) - no markdown headers, no bullet lists in the body. Output screening-question answers separately, each labeled with its question.
+1. **No fabrication.** Every project, metric, and link comes from the resume.
+2. **One case study, one question.** Relevance beats volume.

@@ -6,7 +6,7 @@ Payload `{platform, target?}`. Compose a self-promotion post from profile + prim
 - `"reddit:<sub>"` - read the subreddit's posting rules from its sidebar/wiki **before** composing and follow its title format (e.g. r/forhire wants a `[For Hire]` title prefix).
 - `"linkedin-post"` - first-person 100-150 word post, <=3 hashtags.
 
-Run `humanizer` in embedded mode on the body, then write the draft to `$JOBPILOT_TEMP/promo.json` - `{"platform":"<platform>","target":<target or null>,"title":<title or null>,"body":"<body>"}` - and save it:
+Write it the way a person posts: what you do, one or two concrete things you've built (from the resume), and what you're looking for. No "I'm thrilled to announce", "exciting new chapter", or "open to opportunities where I can make an impact". Before composing, `GET /api/pilot/promotions?page=1&limit=5` and don't reuse a previous draft's opening or pitch. Run `humanizer` in embedded mode on the body, then write the draft to `$JOBPILOT_TEMP/promo.json` - `{"platform":"<platform>","target":<target or null>,"title":<title or null>,"body":"<body>"}` - and save it:
 
 ```bash
 jobpilot-api POST /api/pilot/promotions --data @"$JOBPILOT_TEMP/promo.json"
