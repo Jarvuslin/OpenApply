@@ -4,9 +4,7 @@
   "workspaces": {
     ".": {
       "entry": [],
-      "project": [],
-      // GitHub-hosted runners ship jq; the release workflow just calls it.
-      "ignoreBinaries": ["jq"]
+      "project": []
     },
     "apps/api": {
       "entry": ["src/**/*.test.ts", "prisma.config.ts", "scripts/*.ts"],

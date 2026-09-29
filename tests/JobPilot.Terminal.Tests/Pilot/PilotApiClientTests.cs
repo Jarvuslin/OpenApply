@@ -20,7 +20,7 @@ public sealed class PilotApiClientTests
         });
         using var client = new PilotApiClient(NullLogger<PilotApiClient>.Instance, new HttpClient(handler));
 
-        await client.ReportSystemAsync("https://api.example.test/", "secret-token", "hello world");
+        await client.ReportSystemAsync("https://api.example.test/", "secret-token", "hello world", TestContext.Current.CancellationToken);
 
         Assert.NotNull(seen);
         Assert.Equal(HttpMethod.Post, seen!.Method);
@@ -41,8 +41,8 @@ public sealed class PilotApiClientTests
         });
         using var client = new PilotApiClient(NullLogger<PilotApiClient>.Instance, new HttpClient(handler));
 
-        await client.ReportSystemAsync("", "", "nobody home");
-        await client.ReportSystemAsync("https://api.example.test", "", "no token");
+        await client.ReportSystemAsync("", "", "nobody home", TestContext.Current.CancellationToken);
+        await client.ReportSystemAsync("https://api.example.test", "", "no token", TestContext.Current.CancellationToken);
 
         Assert.False(called);
     }
@@ -54,7 +54,7 @@ public sealed class PilotApiClientTests
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError)));
         using var client = new PilotApiClient(NullLogger<PilotApiClient>.Instance, new HttpClient(handler));
 
-        await client.ReportSystemAsync("https://api.example.test", "tok", "boom"); // must not throw
+        await client.ReportSystemAsync("https://api.example.test", "tok", "boom", TestContext.Current.CancellationToken); // must not throw
     }
 
     [Fact]
@@ -62,11 +62,11 @@ public sealed class PilotApiClientTests
     {
         var refused = new StubHandler((_, _) => throw new HttpRequestException("connection refused"));
         using var a = new PilotApiClient(NullLogger<PilotApiClient>.Instance, new HttpClient(refused));
-        await a.ReportSystemAsync("https://api.example.test", "tok", "unreachable"); // must not throw
+        await a.ReportSystemAsync("https://api.example.test", "tok", "unreachable", TestContext.Current.CancellationToken); // must not throw
 
         var timedOut = new StubHandler((_, ct) => throw new TaskCanceledException("timed out", null, ct));
         using var b = new PilotApiClient(NullLogger<PilotApiClient>.Instance, new HttpClient(timedOut));
-        await b.ReportSystemAsync("https://api.example.test", "tok", "slow"); // must not throw
+        await b.ReportSystemAsync("https://api.example.test", "tok", "slow", TestContext.Current.CancellationToken); // must not throw
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public sealed class PilotApiClientTests
         });
         using var client = new PilotApiClient(NullLogger<PilotApiClient>.Instance, new HttpClient(handler));
 
-        var snapshot = await client.GetActivityAsync("https://api.example.test/", "secret-token");
+        var snapshot = await client.GetActivityAsync("https://api.example.test/", "secret-token", TestContext.Current.CancellationToken);
 
         Assert.NotNull(seen);
         Assert.Equal(HttpMethod.Get, seen!.Method);
@@ -109,7 +109,7 @@ public sealed class PilotApiClientTests
         }));
         using var client = new PilotApiClient(NullLogger<PilotApiClient>.Instance, new HttpClient(handler));
 
-        var snapshot = await client.GetActivityAsync("https://api.example.test", "tok");
+        var snapshot = await client.GetActivityAsync("https://api.example.test", "tok", TestContext.Current.CancellationToken);
 
         // A successful probe with no data is a snapshot, not a failure, so the fallback stays armed.
         Assert.NotNull(snapshot);
@@ -128,8 +128,8 @@ public sealed class PilotApiClientTests
         });
         using var client = new PilotApiClient(NullLogger<PilotApiClient>.Instance, new HttpClient(handler));
 
-        Assert.Null(await client.GetActivityAsync("", ""));
-        Assert.Null(await client.GetActivityAsync("https://api.example.test", ""));
+        Assert.Null(await client.GetActivityAsync("", "", TestContext.Current.CancellationToken));
+        Assert.Null(await client.GetActivityAsync("https://api.example.test", "", TestContext.Current.CancellationToken));
         Assert.False(called);
     }
 
@@ -139,11 +139,11 @@ public sealed class PilotApiClientTests
         var rejected = new StubHandler((_, _) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError)));
         using var a = new PilotApiClient(NullLogger<PilotApiClient>.Instance, new HttpClient(rejected));
-        Assert.Null(await a.GetActivityAsync("https://api.example.test", "tok"));
+        Assert.Null(await a.GetActivityAsync("https://api.example.test", "tok", TestContext.Current.CancellationToken));
 
         var refused = new StubHandler((_, _) => throw new HttpRequestException("connection refused"));
         using var b = new PilotApiClient(NullLogger<PilotApiClient>.Instance, new HttpClient(refused));
-        Assert.Null(await b.GetActivityAsync("https://api.example.test", "tok"));
+        Assert.Null(await b.GetActivityAsync("https://api.example.test", "tok", TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -155,7 +155,7 @@ public sealed class PilotApiClientTests
         }));
         using var client = new PilotApiClient(NullLogger<PilotApiClient>.Instance, new HttpClient(handler));
 
-        Assert.Null(await client.GetActivityAsync("https://api.example.test", "tok"));
+        Assert.Null(await client.GetActivityAsync("https://api.example.test", "tok", TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -172,7 +172,7 @@ public sealed class PilotApiClientTests
         });
         using var client = new PilotApiClient(NullLogger<PilotApiClient>.Instance, new HttpClient(handler));
 
-        var running = await client.GetRunningAsync("https://api.example.test/", "secret-token");
+        var running = await client.GetRunningAsync("https://api.example.test/", "secret-token", TestContext.Current.CancellationToken);
 
         Assert.NotNull(seen);
         Assert.Equal(HttpMethod.Get, seen!.Method);
@@ -191,7 +191,7 @@ public sealed class PilotApiClientTests
         }));
         using var client = new PilotApiClient(NullLogger<PilotApiClient>.Instance, new HttpClient(handler));
 
-        Assert.False(await client.GetRunningAsync("https://api.example.test", "tok"));
+        Assert.False(await client.GetRunningAsync("https://api.example.test", "tok", TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -205,8 +205,8 @@ public sealed class PilotApiClientTests
         });
         using var client = new PilotApiClient(NullLogger<PilotApiClient>.Instance, new HttpClient(handler));
 
-        Assert.Null(await client.GetRunningAsync("", ""));
-        Assert.Null(await client.GetRunningAsync("https://api.example.test", ""));
+        Assert.Null(await client.GetRunningAsync("", "", TestContext.Current.CancellationToken));
+        Assert.Null(await client.GetRunningAsync("https://api.example.test", "", TestContext.Current.CancellationToken));
         Assert.False(called);
     }
 
@@ -216,18 +216,18 @@ public sealed class PilotApiClientTests
         var rejected = new StubHandler((_, _) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError)));
         using var a = new PilotApiClient(NullLogger<PilotApiClient>.Instance, new HttpClient(rejected));
-        Assert.Null(await a.GetRunningAsync("https://api.example.test", "tok"));
+        Assert.Null(await a.GetRunningAsync("https://api.example.test", "tok", TestContext.Current.CancellationToken));
 
         var refused = new StubHandler((_, _) => throw new HttpRequestException("connection refused"));
         using var b = new PilotApiClient(NullLogger<PilotApiClient>.Instance, new HttpClient(refused));
-        Assert.Null(await b.GetRunningAsync("https://api.example.test", "tok"));
+        Assert.Null(await b.GetRunningAsync("https://api.example.test", "tok", TestContext.Current.CancellationToken));
 
         var malformed = new StubHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new StringContent("not json at all"),
         }));
         using var c = new PilotApiClient(NullLogger<PilotApiClient>.Instance, new HttpClient(malformed));
-        Assert.Null(await c.GetRunningAsync("https://api.example.test", "tok"));
+        Assert.Null(await c.GetRunningAsync("https://api.example.test", "tok", TestContext.Current.CancellationToken));
     }
 
     [Fact]

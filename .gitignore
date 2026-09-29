@@ -17,6 +17,7 @@ node_modules/
 !/CHANGELOG.md
 /*.json
 !/package.json
+!/global.json
 
 .claude/settings.local.json
 */**/.claude/settings.local.json

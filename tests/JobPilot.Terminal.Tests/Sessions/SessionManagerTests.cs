@@ -241,7 +241,7 @@ public sealed class SessionManagerTests : IDisposable
     {
         Start();
 
-        var result = await session.Inject("/jobpilot:setup");
+        var result = await session.Inject("/jobpilot:setup", ct: TestContext.Current.CancellationToken);
 
         Assert.Equal(InjectResult.Injected, result);
         Assert.Equal(2, pty.Writes.Count);
@@ -254,7 +254,7 @@ public sealed class SessionManagerTests : IDisposable
     {
         Start(TerminalProviders.Codex);
 
-        var result = await session.Inject("$pilot");
+        var result = await session.Inject("$pilot", ct: TestContext.Current.CancellationToken);
 
         Assert.Equal(InjectResult.Injected, result);
         Assert.Equal(3, pty.Writes.Count);
@@ -268,7 +268,7 @@ public sealed class SessionManagerTests : IDisposable
     {
         Start(TerminalProviders.Codex);
 
-        var result = await session.Inject("Checking in");
+        var result = await session.Inject("Checking in", ct: TestContext.Current.CancellationToken);
 
         Assert.Equal(InjectResult.Injected, result);
         Assert.Equal(2, pty.Writes.Count);
@@ -278,7 +278,7 @@ public sealed class SessionManagerTests : IDisposable
     [Fact]
     public async Task Inject_IsRejected_WhenNoSessionIsRunning()
     {
-        Assert.Equal(InjectResult.NotRunning, await session.Inject("x"));
+        Assert.Equal(InjectResult.NotRunning, await session.Inject("x", ct: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -286,7 +286,7 @@ public sealed class SessionManagerTests : IDisposable
     {
         Start(TerminalProviders.Claude);
 
-        Assert.Equal(InjectResult.ProviderMismatch, await session.Inject("x", TerminalProviders.Codex));
+        Assert.Equal(InjectResult.ProviderMismatch, await session.Inject("x", TerminalProviders.Codex, TestContext.Current.CancellationToken));
         Assert.Empty(pty.Writes);
     }
 
@@ -295,7 +295,7 @@ public sealed class SessionManagerTests : IDisposable
     {
         Start();
 
-        await Assert.ThrowsAsync<ArgumentException>(() => session.Inject("x", "gemini"));
+        await Assert.ThrowsAsync<ArgumentException>(() => session.Inject("x", "gemini", TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -304,8 +304,8 @@ public sealed class SessionManagerTests : IDisposable
         // Enter is delayed, leaving a window in which the provider can change.
         Start(TerminalProviders.Claude);
 
-        var inject = session.Inject("rm -rf /");
-        await Task.Delay(15);
+        var inject = session.Inject("rm -rf /", ct: TestContext.Current.CancellationToken);
+        await Task.Delay(15, TestContext.Current.CancellationToken);
         Start(TerminalProviders.Codex);
 
         Assert.Equal(InjectResult.NotRunning, await inject);
@@ -317,8 +317,8 @@ public sealed class SessionManagerTests : IDisposable
     {
         Start();
 
-        var inject = session.Inject("hello");
-        await Task.Delay(15);
+        var inject = session.Inject("hello", ct: TestContext.Current.CancellationToken);
+        await Task.Delay(15, TestContext.Current.CancellationToken);
         session.Stop();
 
         Assert.Equal(InjectResult.NotRunning, await inject);
@@ -332,7 +332,7 @@ public sealed class SessionManagerTests : IDisposable
         using var cts = new CancellationTokenSource();
 
         var inject = session.Inject("hello", ct: cts.Token);
-        await Task.Delay(15);
+        await Task.Delay(15, TestContext.Current.CancellationToken);
         cts.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => inject);

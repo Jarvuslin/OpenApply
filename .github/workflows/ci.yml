@@ -117,7 +117,7 @@ jobs:
           dotnet-version: "10.0.x"
 
       - name: Test terminal host
-        run: dotnet test tests/JobPilot.Terminal.Tests -c Release
+        run: dotnet test -c Release
 
       # JIT reflection can hide missing JsonSerializable registrations, so publish one Native AOT RID.
       - name: Publish AOT (linux-x64)

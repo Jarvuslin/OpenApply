@@ -28,7 +28,7 @@ public sealed class PilotCoordinatorTests : IDisposable
     {
         await coordinator.StartAsync(CancellationToken.None);
 
-        await Task.Delay(50);
+        await Task.Delay(50, TestContext.Current.CancellationToken);
 
         Assert.Empty(env.Actions);
         Assert.False(coordinator.BuildStatus().Conducting);
@@ -56,7 +56,7 @@ public sealed class PilotCoordinatorTests : IDisposable
         var injectsAtDisable = env.Actions.Count(a => a == "inject-cycle");
 
         // The paired session is left running, but the in-flight turn is interrupted so work actually stops.
-        await Task.Delay(50);
+        await Task.Delay(50, TestContext.Current.CancellationToken);
         Assert.Equal(injectsAtDisable, env.Actions.Count(a => a == "inject-cycle"));
         Assert.Contains("interrupt", env.Actions);
         Assert.DoesNotContain("stop", env.Actions);
@@ -76,7 +76,7 @@ public sealed class PilotCoordinatorTests : IDisposable
 
         coordinator.WakeUp(); // e.g. a question was answered mid-cycle
 
-        await Task.Delay(50);
+        await Task.Delay(50, TestContext.Current.CancellationToken);
         Assert.Equal(1, env.Actions.Count(a => a == "inject-cycle")); // the live turn is neither restarted...
         Assert.DoesNotContain("interrupt", env.Actions);              // ...nor aborted
 
@@ -122,7 +122,7 @@ public sealed class PilotCoordinatorTests : IDisposable
         coordinator.WakeUp();
 
         await TestWait.Until(() => !coordinator.BuildStatus().Running);
-        await Task.Delay(50);
+        await Task.Delay(50, TestContext.Current.CancellationToken);
         Assert.DoesNotContain("interrupt", env.Actions);
 
         await coordinator.StopAsync(CancellationToken.None);
@@ -198,7 +198,7 @@ public sealed class PilotCoordinatorTests : IDisposable
         // The gate probes, mirrors the stop into the local store, and journals the stand-down - no cycle is injected.
         await TestWait.Until(() => store.Current is { Running: false });
         await TestWait.Until(() => env.Reports.Contains(PilotCoordinator.StandingDownReport));
-        await Task.Delay(50);
+        await Task.Delay(50, TestContext.Current.CancellationToken);
         Assert.DoesNotContain("inject-cycle", env.Actions);
         Assert.False(coordinator.BuildStatus().Conducting);
         Assert.True(coordinator.BuildStatus().Paired); // the pairing is kept

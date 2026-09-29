@@ -15,6 +15,6 @@ Run from the repo root, in order. Stop at the first failure and report its outpu
 6. `bun --cwd=packages/contracts run test`
 7. Only if the working tree or branch diff touches `apps/terminal/` or `tests/`
    (`git status --porcelain` + `git diff --name-only main...`):
-   `dotnet test tests/JobPilot.Terminal.Tests`
+   `dotnet test`
 
 Finish with a one-line pass/fail summary per step.

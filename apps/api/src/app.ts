@@ -4,7 +4,7 @@ import { db } from "@/common/database/prisma.client";
 import { logger } from "@/common/logger";
 import { errorMiddleware } from "@/common/middleware";
 import { corsPlugin } from "@/common/plugins/cors.plugin";
-import { swaggerPlugin } from "@/common/plugins/swagger.plugin";
+import { openapiPlugin } from "@/common/plugins/openapi.plugin";
 import { env } from "@/env";
 import { adminController } from "@/modules/admin/admin.controller";
 import { analyticsController } from "@/modules/analytics/analytics.controller";
@@ -51,7 +51,7 @@ import { httpErrorResponses } from "@/types/response";
 const app = new Elysia()
   .use(errorMiddleware)
   .use(corsPlugin)
-  .use(swaggerPlugin)
+  .use(openapiPlugin)
   .use(resumeJob)
   .use(cleanupJob)
   .onStop(async () => {

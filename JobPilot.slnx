@@ -1,3 +1,6 @@
 <Solution>
+  <Folder Name="/tests/">
+    <Project Path="tests/JobPilot.Terminal.Tests/JobPilot.Terminal.Tests.csproj" />
+  </Folder>
   <Project Path="apps/terminal/JobPilot.Terminal.csproj" />
 </Solution>

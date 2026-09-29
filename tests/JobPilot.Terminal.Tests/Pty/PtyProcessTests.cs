@@ -71,7 +71,7 @@ public sealed class PtyProcessTests
         connection.Reader.FailNextRead(new IOException("Input/output error"));
 
         // Longer than the EOF grace, so a wrongly raised fallback exit would have landed by now.
-        await Task.Delay(700);
+        await Task.Delay(700, TestContext.Current.CancellationToken);
         Assert.Equal(0, exits);
     }
 

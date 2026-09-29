@@ -12,7 +12,7 @@ Endpoints: `/ws`, `/sessions/start`, `/sessions/inject`, `/pilot/start`, `/pilot
 in the PTY as `JOBPILOT_API_TOKEN`. The host env var is a local-dev fallback only.
 
 - A C# change needs a rebuild and restart. Invoke the `restart-terminal` skill.
-- Run `dotnet test tests/JobPilot.Terminal.Tests` after every change. It asserts exact defaults,
+- Run `dotnet test` after every change. It asserts exact defaults,
   so config changes break it until updated.
 - `build:terminal` (AOT) needs `vswhere.exe` on PATH. Prepend
   `${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer` first.

@@ -91,7 +91,7 @@ public sealed class PilotEventListenerTests
         var wakes = h.Conductor.WakeCount;
 
         h.Push("event: ping\n\n");
-        await Task.Delay(50);
+        await Task.Delay(50, TestContext.Current.CancellationToken);
 
         Assert.Equal(wakes, h.Conductor.WakeCount);
     }
@@ -139,7 +139,7 @@ public sealed class PilotEventListenerTests
         await using var h = await Harness.StartAsync();
 
         h.Store.Save(TestPairing.Create(apiUrl: "https://next-api", apiToken: "next-token"));
-        await Task.Delay(25);
+        await Task.Delay(25, TestContext.Current.CancellationToken);
         Assert.Equal(1, h.Handler.Calls); // A blocked stream is intentionally heartbeat-bounded.
 
         h.Push("event: ping\n\n");
@@ -155,7 +155,7 @@ public sealed class PilotEventListenerTests
         await using var h = await Harness.StartAsync(HttpStatusCode.Unauthorized);
 
         await TestWait.Until(() => h.Handler.Calls > 0);
-        await Task.Delay(50);
+        await Task.Delay(50, TestContext.Current.CancellationToken);
 
         Assert.Equal(1, h.Handler.Calls);
     }
