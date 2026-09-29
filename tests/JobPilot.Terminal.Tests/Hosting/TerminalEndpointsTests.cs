@@ -28,7 +28,7 @@ public sealed class TerminalEndpointsTests
         var store = new PilotStore(Path.Combine(temp.Root, "pilot.json"), NullLogger<PilotStore>.Instance);
 
         // Mirror what the endpoint does on start: persist the pairing with Running=true.
-        store.Save(new PilotPairing
+        store.Save(new PilotSettings
         {
             Provider = request.Provider!,
             ApiToken = request.ApiToken!,
@@ -47,7 +47,7 @@ public sealed class TerminalEndpointsTests
     {
         using var temp = new TempDir();
         var store = new PilotStore(Path.Combine(temp.Root, "pilot.json"), NullLogger<PilotStore>.Instance);
-        store.Save(TestPairing.Create());
+        store.Save(Builders.Settings());
 
         // Mirror what the endpoint does on stop: the bodyless route flips the running flag but keeps the pairing.
         store.SetRunning(false);

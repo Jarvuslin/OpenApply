@@ -16,9 +16,9 @@ public static class TerminalEndpoints
     /// <summary>Maps health, session, update, and WebSocket endpoints.</summary>
     public static WebApplication MapTerminalEndpoints(this WebApplication app)
     {
-        app.MapGet("/healthz", (TerminalSession session, HostInstall install, ProtocolRegistrar registrar, PilotCoordinator pilot) => TypedResults.Ok(CurrentStatus(session, install, registrar, pilot)));
+        app.MapGet("/healthz", (TerminalSession session, HostInstall install, ProtocolRegistrar registrar, PilotLoop pilot) => TypedResults.Ok(CurrentStatus(session, install, registrar, pilot)));
 
-        app.MapPost("/sessions/start", Results<Ok<SessionStatus>, ProblemHttpResult> (StartSessionRequest request, TerminalSession session, HostInstall install, ProtocolRegistrar registrar, PilotCoordinator pilot) =>
+        app.MapPost("/sessions/start", Results<Ok<SessionStatus>, ProblemHttpResult> (StartSessionRequest request, TerminalSession session, HostInstall install, ProtocolRegistrar registrar, PilotLoop pilot) =>
         {
             if (!Viewport.IsValid(request.Cols, request.Rows))
             {
@@ -74,14 +74,14 @@ public static class TerminalEndpoints
             };
         });
 
-        app.MapDelete("/sessions/current", (TerminalSession session, HostInstall install, ProtocolRegistrar registrar, PilotCoordinator pilot) =>
+        app.MapDelete("/sessions/current", (TerminalSession session, HostInstall install, ProtocolRegistrar registrar, PilotLoop pilot) =>
         {
             session.Stop();
             return TypedResults.Ok(CurrentStatus(session, install, registrar, pilot));
         });
 
         app.MapPost("/pilot/start", Results<Ok<SessionStatus>, ProblemHttpResult> (
-            PilotStartRequest request, PilotStore store, PilotCoordinator pilot, TerminalSession session, HostInstall install, ProtocolRegistrar registrar) =>
+            PilotStartRequest request, PilotStore store, PilotLoop pilot, TerminalSession session, HostInstall install, ProtocolRegistrar registrar) =>
         {
             string provider;
             try
@@ -108,7 +108,7 @@ public static class TerminalEndpoints
                 return BadRequest("webUrl must be an absolute HTTP(S) URL.");
             }
 
-            store.Save(new PilotPairing
+            store.Save(new PilotSettings
             {
                 Provider = provider,
                 ApiToken = request.ApiToken,
@@ -116,15 +116,13 @@ public static class TerminalEndpoints
                 WebUrl = request.WebUrl!,
                 Running = true,
             });
-            pilot.WakeUp();
             return TypedResults.Ok(CurrentStatus(session, install, registrar, pilot));
         });
 
-        app.MapPost("/pilot/stop", (PilotStore store, PilotCoordinator pilot, TerminalSession session, HostInstall install, ProtocolRegistrar registrar) =>
+        app.MapPost("/pilot/stop", (PilotStore store, PilotLoop pilot, TerminalSession session, HostInstall install, ProtocolRegistrar registrar) =>
         {
             // Keep the pairing and the session; the coordinator interrupts a mid-cycle turn and stops driving.
             store.SetRunning(false);
-            pilot.WakeUp();
             return TypedResults.Ok(CurrentStatus(session, install, registrar, pilot));
         });
 
@@ -183,7 +181,7 @@ public static class TerminalEndpoints
         Uri.TryCreate(value, UriKind.Absolute, out var uri)
         && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 
-    private static SessionStatus CurrentStatus(TerminalSession session, HostInstall install, ProtocolRegistrar registrar, PilotCoordinator pilot) => new()
+    private static SessionStatus CurrentStatus(TerminalSession session, HostInstall install, ProtocolRegistrar registrar, PilotLoop pilot) => new()
     {
         Status = install.PathsError is null ? SessionStatus.StatusOk : SessionStatus.StatusDegraded,
         Session = session.IsRunning ? SessionStatus.SessionRunning : SessionStatus.SessionStopped,
@@ -193,6 +191,6 @@ public static class TerminalEndpoints
         Detail = install.PathsError,
         CanRelaunch = registrar.IsRegistered,
         CanUpdate = install.CanUpdate,
-        Pilot = pilot.BuildStatus(),
+        Pilot = pilot.GetStatus(),
     };
 }

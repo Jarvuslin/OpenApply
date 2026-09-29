@@ -5,8 +5,8 @@ using JobPilot.Terminal.Hosting;
 
 namespace JobPilot.Terminal.Pilot;
 
-/// <summary>Persisted Pilot pairing: which provider drives, its credentials, and whether the loop is running.</summary>
-public sealed record PilotPairing
+/// <summary>Which provider the pilot drives, the credentials it uses, and whether it is running.</summary>
+public sealed record PilotSettings
 {
     public required string Provider { get; init; }
     public required string ApiToken { get; init; }
@@ -15,8 +15,8 @@ public sealed record PilotPairing
     public bool Running { get; init; }
 }
 
-/// <summary>On-disk shape; the token is DPAPI-wrapped on Windows and 0600 plaintext elsewhere.</summary>
-internal sealed record PilotStateFile
+/// <summary>Shape of pilot.json. The token is DPAPI-wrapped on Windows and 0600 plaintext elsewhere.</summary>
+internal sealed record PilotSettingsFile
 {
     public required string Provider { get; init; }
     public required string ApiUrl { get; init; }
@@ -26,54 +26,55 @@ internal sealed record PilotStateFile
     public required bool Protected { get; init; }
 }
 
-/// <summary>Persists the Pilot pairing, protecting the agent token at rest and caching it in memory.</summary>
+/// <summary>Persists the pilot settings in pilot.json and keeps them in memory.</summary>
 public sealed class PilotStore
 {
     private readonly string filePath;
     private readonly ILogger<PilotStore> logger;
-    private readonly Lock gate = new();
-    private PilotPairing? current;
+    private readonly Lock sync = new();
+    private PilotSettings? current;
 
     public PilotStore(string filePath, ILogger<PilotStore> logger)
     {
         this.filePath = filePath;
         this.logger = logger;
-        current = LoadFromDisk();
+        current = Load();
     }
 
-    /// <summary>Resolves the pairing file under the install root, which survives updates (only plugin/ is pruned).</summary>
-    public static string ResolvePath(HostInstall install)
-    {
-        var root = install.Paths?.WorkingDir ?? AppContext.BaseDirectory;
-        return Path.Combine(root, "pilot.json");
-    }
+    /// <summary>Raised after every write, outside the lock.</summary>
+    public event Action? Changed;
 
-    /// <summary>The current pairing, or null when unpaired or the stored file is unreadable.</summary>
-    public PilotPairing? Current
+    /// <summary>The saved settings, or null when none are saved or the file is unreadable.</summary>
+    public PilotSettings? Current
     {
         get
         {
-            lock (gate)
+            lock (sync)
             {
                 return current;
             }
         }
     }
 
-    /// <summary>Stores a pairing and its enabled flag, replacing any prior pairing.</summary>
-    public void Save(PilotPairing pairing)
+    /// <summary>The install root survives updates (only plugin/ is pruned).</summary>
+    public static string ResolvePath(HostInstall install) =>
+        Path.Combine(install.Paths?.WorkingDir ?? AppContext.BaseDirectory, "pilot.json");
+
+    public void Save(PilotSettings settings)
     {
-        lock (gate)
+        lock (sync)
         {
-            Persist(pairing);
-            current = pairing;
+            Persist(settings);
+            current = settings;
         }
+
+        Changed?.Invoke();
     }
 
-    /// <summary>Flips the running flag while keeping the pairing; a no-op when unpaired.</summary>
+    /// <summary>Flips the running flag and keeps the rest; a no-op when nothing is saved.</summary>
     public void SetRunning(bool running)
     {
-        lock (gate)
+        lock (sync)
         {
             if (current is null || current.Running == running)
             {
@@ -84,43 +85,40 @@ public sealed class PilotStore
             Persist(updated);
             current = updated;
         }
+
+        Changed?.Invoke();
     }
 
-    private void Persist(PilotPairing pairing)
+    private void Persist(PilotSettings settings)
     {
-        var token = ProtectToken(pairing.ApiToken, out var isProtected);
-        var file = new PilotStateFile
+        var (token, isProtected) = ProtectToken(settings.ApiToken);
+        var file = new PilotSettingsFile
         {
-            Provider = pairing.Provider,
-            ApiUrl = pairing.ApiUrl,
-            WebUrl = pairing.WebUrl,
-            Running = pairing.Running,
+            Provider = settings.Provider,
+            ApiUrl = settings.ApiUrl,
+            WebUrl = settings.WebUrl,
+            Running = settings.Running,
             Token = token,
             Protected = isProtected,
         };
 
         var directory = Path.GetDirectoryName(filePath)
-            ?? throw new InvalidOperationException("Pilot pairing path has no parent directory.");
+            ?? throw new InvalidOperationException("The pilot settings path has no parent directory.");
         Directory.CreateDirectory(directory);
 
+        // Write a temp file and move it over, so a crash never leaves a half-written pilot.json.
         var tempPath = Path.Combine(directory, $".{Path.GetFileName(filePath)}.{Guid.NewGuid():N}.tmp");
         try
         {
-            var options = new FileStreamOptions
-            {
-                Mode = FileMode.CreateNew,
-                Access = FileAccess.Write,
-                Share = FileShare.None,
-            };
+            var options = new FileStreamOptions { Mode = FileMode.CreateNew, Access = FileAccess.Write, Share = FileShare.None };
             if (!OperatingSystem.IsWindows())
             {
                 options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
             }
 
-            var json = JsonSerializer.Serialize(file, AppJsonContext.Default.PilotStateFile);
             using (var stream = new FileStream(tempPath, options))
             {
-                stream.Write(Encoding.UTF8.GetBytes(json));
+                stream.Write(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(file, AppJsonContext.Default.PilotSettingsFile)));
                 stream.Flush(flushToDisk: true);
             }
 
@@ -128,21 +126,20 @@ public sealed class PilotStore
         }
         catch
         {
-            // A successful Move consumes the temp file, so only a failed write leaves one behind.
             try
             {
                 File.Delete(tempPath);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                logger.LogDebug(ex, "Could not remove temporary Pilot pairing file {File}.", tempPath);
+                logger.LogDebug(ex, "Could not remove temporary pilot settings file {File}.", tempPath);
             }
 
             throw;
         }
     }
 
-    private PilotPairing? LoadFromDisk()
+    private PilotSettings? Load()
     {
         if (!File.Exists(filePath))
         {
@@ -151,20 +148,19 @@ public sealed class PilotStore
 
         try
         {
-            var file = JsonSerializer.Deserialize(File.ReadAllText(filePath), AppJsonContext.Default.PilotStateFile);
+            var file = JsonSerializer.Deserialize(File.ReadAllText(filePath), AppJsonContext.Default.PilotSettingsFile);
             if (file is null)
             {
                 return null;
             }
 
-            var token = UnprotectToken(file.Token, file.Protected);
-            if (token is null)
+            if (UnprotectToken(file.Token, file.Protected) is not { } token)
             {
-                logger.LogWarning("Pilot pairing token could not be decrypted; treating as unpaired.");
+                logger.LogWarning("The pilot token could not be decrypted; treating the pilot as not set up.");
                 return null;
             }
 
-            return new PilotPairing
+            return new PilotSettings
             {
                 Provider = file.Provider,
                 ApiToken = token,
@@ -175,22 +171,20 @@ public sealed class PilotStore
         }
         catch (Exception ex) when (ex is JsonException or IOException or FormatException)
         {
-            logger.LogWarning(ex, "Pilot pairing file is unreadable; treating as unpaired.");
+            logger.LogWarning(ex, "pilot.json is unreadable; treating the pilot as not set up.");
             return null;
         }
     }
 
-    private static string ProtectToken(string token, out bool isProtected)
+    private static (string Token, bool Protected) ProtectToken(string token)
     {
-        if (OperatingSystem.IsWindows())
+        if (!OperatingSystem.IsWindows())
         {
-            var blob = ProtectedData.Protect(Encoding.UTF8.GetBytes(token), optionalEntropy: null, DataProtectionScope.CurrentUser);
-            isProtected = true;
-            return Convert.ToBase64String(blob);
+            return (token, false);
         }
 
-        isProtected = false;
-        return token;
+        var blob = ProtectedData.Protect(Encoding.UTF8.GetBytes(token), optionalEntropy: null, DataProtectionScope.CurrentUser);
+        return (Convert.ToBase64String(blob), true);
     }
 
     private static string? UnprotectToken(string stored, bool isProtected)
@@ -200,7 +194,7 @@ public sealed class PilotStore
             return stored;
         }
 
-        // A blob written on Windows is unreadable off Windows or under a different user.
+        // A blob written on Windows is unreadable off Windows or under another user.
         if (!OperatingSystem.IsWindows())
         {
             return null;

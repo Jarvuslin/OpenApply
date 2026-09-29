@@ -18,7 +18,7 @@ public sealed class PilotStoreTests : IDisposable
 
     private PilotStore NewStore() => new(path, NullLogger<PilotStore>.Instance);
 
-    private static PilotPairing Pairing(bool running = true) => new()
+    private static PilotSettings SavedSettings(bool running = true) => new()
     {
         Provider = "codex",
         ApiToken = "secret-token",
@@ -36,7 +36,7 @@ public sealed class PilotStoreTests : IDisposable
     [Fact]
     public void Save_RoundTripsThroughAFreshStore()
     {
-        NewStore().Save(Pairing());
+        NewStore().Save(SavedSettings());
 
         var reloaded = NewStore().Current;
 
@@ -49,10 +49,10 @@ public sealed class PilotStoreTests : IDisposable
     }
 
     [Fact]
-    public void SetRunning_KeepsThePairing_AndPersists()
+    public void SetRunning_KeepsTheRest_AndPersists()
     {
         var store = NewStore();
-        store.Save(Pairing());
+        store.Save(SavedSettings());
 
         store.SetRunning(false);
 
@@ -62,7 +62,22 @@ public sealed class PilotStoreTests : IDisposable
     }
 
     [Fact]
-    public void SetRunning_IsANoOp_WhenUnpaired()
+    public void Changed_IsRaisedOnlyWhenSomethingChanged()
+    {
+        var store = NewStore();
+        var changes = 0;
+        store.Changed += () => changes++;
+
+        store.SetRunning(false); // nothing saved yet
+        store.Save(SavedSettings());
+        store.SetRunning(true);  // already running
+        store.SetRunning(false);
+
+        Assert.Equal(2, changes);
+    }
+
+    [Fact]
+    public void SetRunning_IsANoOp_WhenNothingIsSaved()
     {
         var store = NewStore();
 
@@ -73,22 +88,10 @@ public sealed class PilotStoreTests : IDisposable
     }
 
     [Fact]
-    public void Load_TreatsACorruptFileAsUnpaired()
+    public void Load_TreatsACorruptFileAsNothingSaved()
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path, "{ this is not valid json ");
-
-        Assert.Null(NewStore().Current);
-    }
-
-    [Fact]
-    public void Load_TreatsALegacyEnabledFileAsUnpaired()
-    {
-        // A pre-rename pilot.json lacks "running", fails deserialize, and is treated as unpaired (accepted churn).
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        File.WriteAllText(
-            path,
-            """{"provider":"codex","apiUrl":"https://api.example","webUrl":"https://web.example","enabled":true,"token":"secret-token","protected":false}""");
 
         Assert.Null(NewStore().Current);
     }
@@ -98,10 +101,10 @@ public sealed class PilotStoreTests : IDisposable
     {
         if (!OperatingSystem.IsWindows())
         {
-            return; // DPAPI protection only applies on Windows.
+            return;
         }
 
-        NewStore().Save(Pairing());
+        NewStore().Save(SavedSettings());
 
         Assert.DoesNotContain("secret-token", File.ReadAllText(path));
     }
@@ -111,22 +114,22 @@ public sealed class PilotStoreTests : IDisposable
     {
         if (OperatingSystem.IsWindows())
         {
-            return; // Unix file mode is not meaningful on Windows.
+            return;
         }
 
-        NewStore().Save(Pairing());
+        NewStore().Save(SavedSettings());
 
         var mode = File.GetUnixFileMode(path);
         Assert.Equal(UnixFileMode.UserRead | UnixFileMode.UserWrite, mode);
     }
 
     [Fact]
-    public void Save_AtomicallyReplacesThePairing_WithoutLeavingTemporaryFiles()
+    public void Save_ReplacesTheFile_WithoutLeavingTemporaryFiles()
     {
         var store = NewStore();
-        store.Save(Pairing());
+        store.Save(SavedSettings());
 
-        store.Save(Pairing(running: false));
+        store.Save(SavedSettings(running: false));
 
         Assert.False(NewStore().Current!.Running);
         Assert.Empty(Directory.EnumerateFiles(temp.Root, ".pilot.json.*.tmp"));

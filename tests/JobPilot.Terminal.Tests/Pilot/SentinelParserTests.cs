@@ -22,7 +22,7 @@ public class SentinelParserTests
 
         var cycle = Assert.Single(cycles);
         Assert.Equal(Guid.Parse(CycleId), cycle.CycleId);
-        Assert.Equal(PilotCycleStatus.Ok, cycle.Status);
+        Assert.Equal(CycleStatus.Ok, cycle.Status);
         Assert.Equal(30, cycle.SleepSeconds);
     }
 
@@ -52,7 +52,7 @@ public class SentinelParserTests
 
         var cycle = Assert.Single(parser.Feed(Bytes(noisy)));
 
-        Assert.Equal(PilotCycleStatus.Error, cycle.Status);
+        Assert.Equal(CycleStatus.Error, cycle.Status);
         Assert.Equal(300, cycle.SleepSeconds);
     }
 
@@ -63,7 +63,7 @@ public class SentinelParserTests
 
         var cycle = Assert.Single(parser.Feed(Bytes($"\r{Sentinel(status: "empty", sleep: 3600)}\r")));
 
-        Assert.Equal(PilotCycleStatus.Empty, cycle.Status);
+        Assert.Equal(CycleStatus.Empty, cycle.Status);
         Assert.Equal(3600, cycle.SleepSeconds);
     }
 
@@ -143,7 +143,7 @@ public class SentinelParserTests
     }
 
     [Fact]
-    public void Feed_ClampingIsLeftToTheConductor_SoRawSleepIsPreserved()
+    public void Feed_KeepsTheRawSleep_ForTheRunnerToClamp()
     {
         var parser = new SentinelParser();
 

@@ -3,16 +3,15 @@ using System.Text.RegularExpressions;
 
 namespace JobPilot.Terminal.Pilot;
 
-/// <summary>Terminal outcome of one Pilot cycle, reported by the skill's sentinel line.</summary>
-public enum PilotCycleStatus
+public enum CycleStatus
 {
     Ok,
     Empty,
     Error,
 }
 
-/// <summary>A parsed <c>[[JOBPILOT_CYCLE ...]]</c> sentinel.</summary>
-public readonly record struct PilotCycle(Guid CycleId, PilotCycleStatus Status, int SleepSeconds);
+/// <summary>How a cycle ended, from its <c>[[JOBPILOT_CYCLE ...]]</c> sentinel or the server's record.</summary>
+public readonly record struct CycleResult(Guid CycleId, CycleStatus Status, int SleepSeconds);
 
 /// <summary>
 /// Detects the Pilot cycle sentinel in raw PTY output. The TUI redraws with ANSI/CSI sequences and may echo
@@ -36,7 +35,7 @@ public sealed partial class SentinelParser
     private static partial Regex SentinelPattern();
 
     /// <summary>Feeds a raw output chunk and returns any newly detected cycles (usually none).</summary>
-    public IReadOnlyList<PilotCycle> Feed(ReadOnlySpan<byte> chunk)
+    public IReadOnlyList<CycleResult> Feed(ReadOnlySpan<byte> chunk)
     {
         // The sentinel and ANSI framing are ASCII; a UTF-8 split only mangles surrounding non-ASCII text.
         tail.Append(Encoding.UTF8.GetString(chunk));
@@ -45,7 +44,7 @@ public sealed partial class SentinelParser
             tail.Remove(0, tail.Length - MaxTailChars);
         }
 
-        List<PilotCycle>? cycles = null;
+        List<CycleResult>? cycles = null;
         foreach (Match match in SentinelPattern().Matches(Condense(tail.ToString())))
         {
             if (!Guid.TryParse(match.Groups[1].ValueSpan, out var cycleId) || !seen.Add(cycleId))
@@ -59,25 +58,24 @@ public sealed partial class SentinelParser
                 seen.Remove(seenOrder.Dequeue());
             }
 
-            (cycles ??= []).Add(new PilotCycle(cycleId, ParseStatus(match.Groups[2].ValueSpan), ParseSleep(match.Groups[3].ValueSpan)));
+            (cycles ??= []).Add(new CycleResult(cycleId, ParseStatus(match.Groups[2].ValueSpan), ParseSleep(match.Groups[3].ValueSpan)));
         }
 
-        return (IReadOnlyList<PilotCycle>?)cycles ?? [];
+        return (IReadOnlyList<CycleResult>?)cycles ?? [];
     }
 
-    /// <summary>Shared by the API-confirmed completion path, which reads the same status vocabulary off the wire.</summary>
-    internal static PilotCycleStatus ParseStatus(ReadOnlySpan<char> value) => value switch
+    /// <summary>The server's completion record uses the same status words.</summary>
+    internal static CycleStatus ParseStatus(ReadOnlySpan<char> value) => value switch
     {
-        "empty" => PilotCycleStatus.Empty,
-        "error" => PilotCycleStatus.Error,
-        _ => PilotCycleStatus.Ok,
+        "empty" => CycleStatus.Empty,
+        "error" => CycleStatus.Error,
+        _ => CycleStatus.Ok,
     };
 
-    // The runner re-clamps; an overflowing count still caps at the ceiling rather than dropping the cycle.
+    // The runner clamps; an overflowing number still caps at the ceiling rather than dropping the cycle.
     private static int ParseSleep(ReadOnlySpan<char> value) => int.TryParse(value, out var seconds) ? seconds : int.MaxValue;
 
-    /// <summary>Projects the tail to the form the pattern matches: ESC sequences (CSI/OSC and two-char escapes),
-    /// redraw control bytes, and all whitespace removed, so a wrapped or repainted sentinel reads as one token.</summary>
+    /// <summary>Strips escape sequences, redraw control bytes, and whitespace, so a wrapped or repainted sentinel reads as one token.</summary>
     private static string Condense(ReadOnlySpan<char> input)
     {
         var output = new StringBuilder(input.Length);

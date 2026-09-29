@@ -33,12 +33,22 @@ public static class HostingExtensions
         services.AddSingleton(sp => new PilotStore(
             PilotStore.ResolvePath(sp.GetRequiredService<HostInstall>()),
             sp.GetRequiredService<ILogger<PilotStore>>()));
-        services.AddSingleton<PilotApiClient>();
-        services.AddSingleton<IPilotRuntime, PilotRuntime>();
-        services.AddSingleton<PilotCoordinator>();
-        services.AddHostedService(sp => sp.GetRequiredService<PilotCoordinator>());
-        services.AddSingleton<PilotEventListener>();
-        services.AddHostedService(sp => sp.GetRequiredService<PilotEventListener>());
+        services.AddSingleton<PilotApi>();
+        services.AddSingleton<IPilotSession, PilotSession>();
+        services.AddSingleton<PilotLoop>();
+        services.AddHostedService(sp => sp.GetRequiredService<PilotLoop>());
+        services.AddHostedService(sp => new PilotEventListener(
+            sp.GetRequiredService<PilotStore>(),
+            sp.GetRequiredService<PilotApi>(),
+            sp.GetRequiredService<PilotLoop>().Wake,
+            sp.GetRequiredService<ILogger<PilotEventListener>>()));
+
+        // One long-lived client for every outbound call. Callers bound their own requests; the pooled lifetime
+        // lets a host that runs for weeks follow DNS changes.
+        services.AddSingleton(_ => new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(15) })
+        {
+            Timeout = Timeout.InfiniteTimeSpan,
+        });
         services.ConfigureHttpJsonOptions(c =>
             c.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonContext.Default));
 

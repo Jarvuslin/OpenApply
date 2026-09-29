@@ -10,14 +10,14 @@ public class StuckDetectorTests
 
     private static byte[] Bytes(string text) => Encoding.UTF8.GetBytes(text);
 
-    private static PilotStuckReason FeedLine(StuckDetector detector, string line, DateTimeOffset now) =>
+    private static StuckReason FeedLine(StuckDetector detector, string line, DateTimeOffset now) =>
         detector.Feed(Bytes(line + "\n"), now);
 
     [Fact]
     public void RepeatedOutput_FiresAtThreshold_AfterTheWindowElapses()
     {
         var detector = new StuckDetector();
-        var last = PilotStuckReason.None;
+        var last = StuckReason.None;
 
         // Six identical lines spread across just over five minutes.
         for (var i = 0; i < StuckDetector.RepeatThreshold; i++)
@@ -26,7 +26,7 @@ public class StuckDetectorTests
             last = FeedLine(detector, "waiting for network...", now);
         }
 
-        Assert.Equal(PilotStuckReason.RepeatedOutput, last);
+        Assert.Equal(StuckReason.RepeatedOutput, last);
     }
 
     [Fact]
@@ -37,7 +37,7 @@ public class StuckDetectorTests
         for (var i = 0; i < StuckDetector.RepeatThreshold - 1; i++)
         {
             var reason = FeedLine(detector, "same line", T0 + TimeSpan.FromMinutes(i));
-            Assert.Equal(PilotStuckReason.None, reason);
+            Assert.Equal(StuckReason.None, reason);
         }
     }
 
@@ -45,7 +45,7 @@ public class StuckDetectorTests
     public void RepeatedOutput_DoesNotFire_WhenTheThresholdIsReachedTooQuickly()
     {
         var detector = new StuckDetector();
-        var last = PilotStuckReason.None;
+        var last = StuckReason.None;
 
         // Six repeats within a couple of seconds: a fast redraw, not a five-minute wedge.
         for (var i = 0; i < StuckDetector.RepeatThreshold + 2; i++)
@@ -53,7 +53,7 @@ public class StuckDetectorTests
             last = FeedLine(detector, "spinner frame", T0 + TimeSpan.FromMilliseconds(200 * i));
         }
 
-        Assert.Equal(PilotStuckReason.None, last);
+        Assert.Equal(StuckReason.None, last);
     }
 
     [Fact]
@@ -67,20 +67,20 @@ public class StuckDetectorTests
         // Distinct output breaks the run; the counter and window restart here.
         FeedLine(detector, "line B", T0 + TimeSpan.FromMinutes(3));
 
-        var last = PilotStuckReason.None;
+        var last = StuckReason.None;
         for (var i = 0; i < StuckDetector.RepeatThreshold; i++)
         {
             last = FeedLine(detector, "line A", T0 + TimeSpan.FromMinutes(4 + i));
         }
 
-        Assert.Equal(PilotStuckReason.RepeatedOutput, last);
+        Assert.Equal(StuckReason.RepeatedOutput, last);
     }
 
     [Fact]
     public void RepeatedOutput_NormalizesAnsiAndWhitespaceNoise()
     {
         var detector = new StuckDetector();
-        var last = PilotStuckReason.None;
+        var last = StuckReason.None;
 
         // Each repeat carries different color/cursor CSI noise and spacing but the same underlying text.
         for (var i = 0; i < StuckDetector.RepeatThreshold; i++)
@@ -89,14 +89,14 @@ public class StuckDetectorTests
             last = FeedLine(detector, noisy, T0 + TimeSpan.FromMinutes(i));
         }
 
-        Assert.Equal(PilotStuckReason.RepeatedOutput, last);
+        Assert.Equal(StuckReason.RepeatedOutput, last);
     }
 
     [Fact]
     public void ErrorLoop_FiresOnFiveErrorHitsAcrossAtMostTwoLines()
     {
         var detector = new StuckDetector();
-        var last = PilotStuckReason.None;
+        var last = StuckReason.None;
 
         // A real retry loop: two error lines alternating (a request that keeps refusing then timing out).
         string[] lines =
@@ -112,14 +112,14 @@ public class StuckDetectorTests
             last = FeedLine(detector, lines[i], T0 + TimeSpan.FromSeconds(20 * i));
         }
 
-        Assert.Equal(PilotStuckReason.ErrorLoop, last);
+        Assert.Equal(StuckReason.ErrorLoop, last);
     }
 
     [Fact]
     public void ErrorLoop_DoesNotFire_OnARepaintBurstOfOneLine()
     {
         var detector = new StuckDetector();
-        var last = PilotStuckReason.None;
+        var last = StuckReason.None;
 
         // The same error line diff-repainted many times within a fraction of a second is one on-screen line,
         // not a retry loop: the echo dedupe collapses it so the burst never reaches the threshold.
@@ -128,14 +128,14 @@ public class StuckDetectorTests
             last = FeedLine(detector, "Error: connect ECONNREFUSED", T0 + TimeSpan.FromMilliseconds(10 * i));
         }
 
-        Assert.Equal(PilotStuckReason.None, last);
+        Assert.Equal(StuckReason.None, last);
     }
 
     [Fact]
     public void ErrorLoop_MatchesTimeoutAndEconnVariants_OnWordBoundaries()
     {
         var detector = new StuckDetector();
-        var last = PilotStuckReason.None;
+        var last = StuckReason.None;
 
         // Two distinct lines exercising the timed-out / ETIMEDOUT variants; five hits across two lines fires.
         string[] lines =
@@ -151,14 +151,14 @@ public class StuckDetectorTests
             last = FeedLine(detector, lines[i], T0 + TimeSpan.FromSeconds(15 * i));
         }
 
-        Assert.Equal(PilotStuckReason.ErrorLoop, last);
+        Assert.Equal(StuckReason.ErrorLoop, last);
     }
 
     [Fact]
     public void ErrorLoop_DoesNotFire_WhenFiveDistinctErrorLines()
     {
         var detector = new StuckDetector();
-        var last = PilotStuckReason.None;
+        var last = StuckReason.None;
 
         // Five error-shaped but all-different lines: benign narration or varied job text, not a retry loop.
         string[] lines =
@@ -174,14 +174,14 @@ public class StuckDetectorTests
             last = FeedLine(detector, lines[i], T0 + TimeSpan.FromSeconds(20 * i));
         }
 
-        Assert.Equal(PilotStuckReason.None, last);
+        Assert.Equal(StuckReason.None, last);
     }
 
     [Fact]
     public void ErrorLoop_RequiresWholeWordMatch_NotSubstring()
     {
         var detector = new StuckDetector();
-        var last = PilotStuckReason.None;
+        var last = StuckReason.None;
 
         // "terror"/"mirror" embed "error" as a substring but are not the word; the word-boundary regex ignores them.
         // Two lines alternating (never 6 in a row, so RepeatedOutput cannot fire either).
@@ -191,14 +191,14 @@ public class StuckDetectorTests
             last = FeedLine(detector, nearMisses[i % 2], T0 + TimeSpan.FromSeconds(10 * i));
         }
 
-        Assert.Equal(PilotStuckReason.None, last);
+        Assert.Equal(StuckReason.None, last);
     }
 
     [Fact]
     public void ErrorLoop_DoesNotFire_WhenErrorsFallOutsideTheWindow()
     {
         var detector = new StuckDetector();
-        var last = PilotStuckReason.None;
+        var last = StuckReason.None;
 
         // Five errors, but each is three minutes apart, so the 2-minute window never holds five at once.
         for (var i = 0; i < 5; i++)
@@ -206,7 +206,7 @@ public class StuckDetectorTests
             last = FeedLine(detector, "failed to connect", T0 + TimeSpan.FromMinutes(3 * i));
         }
 
-        Assert.Equal(PilotStuckReason.None, last);
+        Assert.Equal(StuckReason.None, last);
     }
 
     [Fact]
@@ -217,7 +217,7 @@ public class StuckDetectorTests
         for (var i = 0; i < 10; i++)
         {
             var reason = FeedLine(detector, $"processing item {i}", T0 + TimeSpan.FromSeconds(i));
-            Assert.Equal(PilotStuckReason.None, reason);
+            Assert.Equal(StuckReason.None, reason);
         }
     }
 
@@ -225,7 +225,7 @@ public class StuckDetectorTests
     public void Feed_HandlesLinesSplitAcrossChunks()
     {
         var detector = new StuckDetector();
-        var last = PilotStuckReason.None;
+        var last = StuckReason.None;
 
         for (var i = 0; i < StuckDetector.RepeatThreshold; i++)
         {
@@ -234,7 +234,7 @@ public class StuckDetectorTests
             last = detector.Feed(Bytes("very same step\n"), now); // completes the line
         }
 
-        Assert.Equal(PilotStuckReason.RepeatedOutput, last);
+        Assert.Equal(StuckReason.RepeatedOutput, last);
     }
 
     [Fact]
@@ -247,16 +247,16 @@ public class StuckDetectorTests
         for (var i = 0; i < 600; i++)
         {
             var reason = detector.Feed(Bytes(frame), T0 + TimeSpan.FromSeconds(i));
-            Assert.Equal(PilotStuckReason.None, reason);
+            Assert.Equal(StuckReason.None, reason);
         }
 
-        var last = PilotStuckReason.None;
+        var last = StuckReason.None;
         for (var i = 0; i < StuckDetector.RepeatThreshold; i++)
         {
             last = FeedLine(detector, "\nwaiting for network...", T0 + TimeSpan.FromMinutes(20 + i));
         }
 
-        Assert.Equal(PilotStuckReason.RepeatedOutput, last);
+        Assert.Equal(StuckReason.RepeatedOutput, last);
     }
 
     [Fact]
@@ -272,7 +272,7 @@ public class StuckDetectorTests
         detector.Reset(); // A successful sentinel wipes the burst.
 
         var reason = FeedLine(detector, "failed to connect", T0 + TimeSpan.FromSeconds(50));
-        Assert.Equal(PilotStuckReason.None, reason);
+        Assert.Equal(StuckReason.None, reason);
     }
 
     [Fact]
@@ -280,15 +280,15 @@ public class StuckDetectorTests
     {
         var detector = new StuckDetector();
 
-        PilotStuckReason first = PilotStuckReason.None;
+        StuckReason first = StuckReason.None;
         for (var i = 0; i < 5; i++)
         {
             first = FeedLine(detector, "connection timeout", T0 + TimeSpan.FromSeconds(10 * i));
         }
-        Assert.Equal(PilotStuckReason.ErrorLoop, first);
+        Assert.Equal(StuckReason.ErrorLoop, first);
 
         // Immediately after firing it must re-accumulate: a single further error does not re-fire.
         var next = FeedLine(detector, "connection timeout", T0 + TimeSpan.FromSeconds(60));
-        Assert.Equal(PilotStuckReason.None, next);
+        Assert.Equal(StuckReason.None, next);
     }
 }

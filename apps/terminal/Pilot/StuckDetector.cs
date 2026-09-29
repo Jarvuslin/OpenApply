@@ -3,8 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace JobPilot.Terminal.Pilot;
 
-/// <summary>Why a deterministic stuck heuristic fired.</summary>
-public enum PilotStuckReason
+public enum StuckReason
 {
     None,
 
@@ -16,9 +15,8 @@ public enum PilotStuckReason
 }
 
 /// <summary>
-/// Cheap, deterministic stuck detection fed the same PTY chunks as <see cref="SentinelParser"/>. Two signals fire
-/// earlier than the 20-minute sentinel cap: an identical output line looping, or a burst of error-shaped lines.
-/// Pure of PTY/timing details (the caller supplies <c>now</c>) so the thresholds are unit-testable.
+/// Spots a stuck agent from its output, well before the 20-minute sentinel timeout: one line repeating, or a burst
+/// of error lines. The caller supplies <c>now</c>, so the thresholds are testable.
 /// </summary>
 public sealed partial class StuckDetector
 {
@@ -55,9 +53,8 @@ public sealed partial class StuckDetector
     [GeneratedRegex(@"\s+")]
     private static partial Regex WhitespacePattern();
 
-    // Feed runs on the PTY read thread while Reset comes from the coordinator; unsynchronized mutation could
-    // corrupt a collection and the throw would kill the read loop through OnOutput's unfiltered path.
-    private readonly Lock gate = new();
+    // Feed runs on the PTY read thread and Reset on the pilot loop; a corrupted collection would kill the read loop.
+    private readonly Lock sync = new();
 
     private readonly StringBuilder pending = new();
     private readonly Queue<(DateTimeOffset Time, string Line)> errorTimes = new();
@@ -69,16 +66,16 @@ public sealed partial class StuckDetector
     private int scanned; // Prefix of pending already searched for '\n', so newline-free feeds are not rescanned from 0.
 
     /// <summary>Feeds a raw output chunk; returns the first heuristic that fired this feed, or <c>None</c>.</summary>
-    public PilotStuckReason Feed(ReadOnlySpan<byte> chunk, DateTimeOffset now)
+    public StuckReason Feed(ReadOnlySpan<byte> chunk, DateTimeOffset now)
     {
         // ASCII sentinel/ANSI framing; a UTF-8 split only mangles surrounding non-ASCII, never the match.
         var text = Encoding.UTF8.GetString(chunk);
 
-        lock (gate)
+        lock (sync)
         {
             pending.Append(text);
 
-            var fired = PilotStuckReason.None;
+            var fired = StuckReason.None;
             int newline;
             while ((newline = IndexOf(pending, '\n', scanned)) >= 0)
             {
@@ -93,7 +90,7 @@ public sealed partial class StuckDetector
                 }
 
                 var signal = Observe(normalized, now);
-                if (signal != PilotStuckReason.None && fired == PilotStuckReason.None)
+                if (signal != StuckReason.None && fired == StuckReason.None)
                 {
                     fired = signal; // Return the first crossing; residual lines still update counters for the next feed.
                 }
@@ -110,10 +107,10 @@ public sealed partial class StuckDetector
         }
     }
 
-    /// <summary>Clears all accumulated evidence; called on a fresh cycle and on a successful sentinel.</summary>
+    /// <summary>Clears all evidence; called on a fresh cycle and on a sentinel.</summary>
     public void Reset()
     {
-        lock (gate)
+        lock (sync)
         {
             pending.Clear();
             errorTimes.Clear();
@@ -124,7 +121,7 @@ public sealed partial class StuckDetector
         }
     }
 
-    private PilotStuckReason Observe(string line, DateTimeOffset now)
+    private StuckReason Observe(string line, DateTimeOffset now)
     {
         if (ErrorPattern().IsMatch(line))
         {
@@ -144,7 +141,7 @@ public sealed partial class StuckDetector
                 if (errorTimes.Count >= ErrorThreshold && DistinctErrorLines() <= MaxDistinctErrorLines)
                 {
                     errorTimes.Clear(); // Re-arm: a second burst must re-accumulate before firing again.
-                    return PilotStuckReason.ErrorLoop;
+                    return StuckReason.ErrorLoop;
                 }
             }
         }
@@ -156,7 +153,7 @@ public sealed partial class StuckDetector
             {
                 repeatCount = 1; // Re-arm from this occurrence so the next fire needs a fresh run.
                 repeatStart = now;
-                return PilotStuckReason.RepeatedOutput;
+                return StuckReason.RepeatedOutput;
             }
         }
         else
@@ -166,10 +163,9 @@ public sealed partial class StuckDetector
             repeatStart = now;
         }
 
-        return PilotStuckReason.None;
+        return StuckReason.None;
     }
 
-    // Small window (bounded by ErrorThreshold-ish arrivals), so a plain distinct count reads clearer than a HashSet.
     private int DistinctErrorLines() => errorTimes.Select(e => e.Line).Distinct().Count();
 
     private static string Normalize(string line)
