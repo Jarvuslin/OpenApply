@@ -1,51 +1,46 @@
 # JobPilot terminal host
 
-The terminal host is a local .NET process that exposes one Claude Code or Codex PTY to the web app. It owns no
-cloud application state; it launches the provider with the authenticated JobPilot API environment and relays raw
-terminal traffic.
+A local .NET process that runs one Claude Code or Codex PTY for the web app. It owns no cloud state: it
+launches the provider with the user's JobPilot API environment and relays raw terminal traffic.
+
+## Layout
+
+Each folder is one feature and holds its endpoints, request and response records, and logic.
+
+| Folder | What it does |
+| --- | --- |
+| `Hosting/` | DI and middleware, `/healthz` and `/shutdown`, the install layout, the origin allowlist, the `jobpilot://` scheme. |
+| `Providers/` | What to launch. `Provider` is the registry; `ClaudeProvider` and `CodexProvider` hold each CLI's arguments and quirks. |
+| `Sessions/` | The live session. `TerminalSession` owns it, `PtyProcess` wraps one spawned process, `TerminalRelay` bridges WebSockets. |
+| `Pilot/` | The autonomous loop: `PilotLoop` runs cycles, `CycleRunner` runs one, `PilotSession` drives the terminal for it. |
+| `Updates/` | `HostUpdater` installs a newer GitHub release; `HostHandoff` passes the port to the relaunched host. |
 
 ## Runtime flows
 
-### Interactive terminal
+- **Session.** `/sessions/start` calls `TerminalSession.Start`, which prepares the provider's workspace (Codex
+  mirrors the bundled skills into `.agents/skills`), builds the `JOBPILOT_*` environment, and spawns a new
+  `PtyProcess`. `TerminalRelay` broadcasts output to every WebSocket and keeps a 512 KB replay for reconnects.
+- **Pilot.** `/pilot/start` saves `PilotSettings` to `pilot.json`; every save wakes `PilotLoop`. Each cycle
+  starts with one `/api/pilot/activity` probe that gates on the server's run-state and gives `CycleRunner` its
+  completion baseline. The runner sends the cycle, waits for the sentinel (or a server-recorded completion the
+  TUI garbled), and climbs check-in, skip, then restart when a run looks stuck. `PilotEventListener` holds
+  the API's event stream open and wakes the loop when new work can start the next cycle early.
+- **Update.** `HostUpdater` downloads the release, moves the running executable aside, and copies the release
+  over the install. `HostHandoff.Relaunch` starts the new host, which waits for this one to release the port.
+  Only the executable and `plugin/` are the updater's; the rest of the install root may be user state.
 
-`/sessions/start` validates the request and passes `SessionStartOptions` to `SessionManager`. The manager resolves
-the bundled provider assets, builds the `JOBPILOT_*` environment, and starts `IPty`. Before a Codex launch it
-rebuilds `.agents/skills` from the bundled skills (excluding the marketplace-owned `setup` bootstrap) and maps
-the bundled `.mcp.json` into launch-time MCP overrides. `TerminalHub` broadcasts PTY output to WebSocket clients
-and keeps a bounded replay buffer for reconnects. Browser input and resize messages flow back through the hub to
-the same session.
+## Shared state
 
-### Pilot
-
-`PilotStore` persists the provider pairing and enabled flag. `PilotCoordinator` owns the background lifecycle,
-runs `PilotCycleRunner` while enabled, and owns the inter-cycle sleep so a wake can end it early. The runner
-orchestrates one cycle: `CompletionTracker` and `CycleWaiter` cover the sentinel wait, the server-reported
-completion fallback, and liveness; `InterventionLadder` climbs check-in, skip, then restart, with backoff. Its
-side effects (PTY, timing, API) live behind `IPilotRuntime`. `PilotEventListener` consumes the API SSE feed and
-sends coalesced wake pulses when new work can resume a cycle.
-
-### Self-update
-
-`HostUpdateService` selects a newer GitHub release and delegates staging and activation to `ReleaseInstaller`.
-`HostHandoff` launches the replacement with `JOBPILOT_AWAIT_PID`; the child waits for the old process to release
-the port. The updater owns the host executable and bundled `plugin/` tree. Files elsewhere in the installation
-root may be user state and must not be pruned.
-
-## Shared-state ownership
-
-- `SessionManager.stateLock` owns session state, provider identity, PTY generation, and requested-stop generation.
-- `PtyProcess.connectionLock` owns the active Pty.Net connection. Every exit carries its generation so delayed
-  exits cannot stop a replacement session.
-- `TerminalHub.replayLock` orders replay-buffer writes with WebSocket registration and protects the client map.
-- `PilotStore.gate` owns the immutable in-memory pairing snapshot and serializes atomic `pilot.json` replacement.
-- `PilotWakeSignal.gate` owns the current iteration and inter-cycle-sleep cancellation sources. Its capacity-one
-  pulse channel coalesces event bursts; the separate runtime `WaitSignal` channel remains lossless for cycle sentinels.
+- `TerminalSession.sync` guards the current `PtyProcess` and the active provider. Replacing or stopping a
+  session disposes its process, which never reports an exit afterwards, so a stale exit cannot stop a newer one.
+- `TerminalRelay.sync` orders replay writes against client registration and guards the client map.
+- `PilotStore.sync` guards the in-memory settings and serializes the atomic `pilot.json` replacement.
+- `PilotLoop.sync` guards the live cycle's cancellation source. The loop publishes it before reading the
+  settings, so a stop either cancels that cycle or is seen by its read.
 
 ## Invariants
 
-- Explicit session stops still raise a requested exit for Pilot waiters, but never produce a crash banner.
-- Provider replacement disowns the outgoing PTY generation before stopping it.
-- A caller cancellation must propagate through Pilot probes, reports, and command submission; transport failures
-  alone fail open to the orchestrator ladder.
-- SSE re-pairing is heartbeat-bounded: the next frame detects changed credentials and reconnects without backoff.
-- `pilot.json` keeps its stable wire shape, is DPAPI-protected on Windows, and is created with mode `0600` on Unix.
+- A stop on request raises one requested exit (for Pilot waiters) and never shows a crash banner.
+- `PilotApi` probes and reports never throw except on the caller's own cancellation; a failed probe returns null.
+- A wake that leaves the pilot running never interrupts the agent mid-turn; a stop does.
+- `pilot.json` keeps its wire shape, is DPAPI-protected on Windows, and is created with mode `0600` on Unix.

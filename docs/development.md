@@ -116,7 +116,7 @@ flowchart LR
 
 One Terminal instance owns one PTY. It survives tab close: reopening the panel
 reattaches a WebSocket to the live session and replays the buffered tail
-(`TerminalHub`, 512 KB, cleared when a new session starts). Switching providers
+(`TerminalRelay`, 512 KB, cleared when a new session starts). Switching providers
 restarts the PTY. The web injects commands as `/jobpilot:<skill>` for Claude and
 `$<skill>` for Codex. On a new release the agent dock shows an update banner;
 the guided flow updates host + plugin and finishes with `/reload-plugins` on
@@ -148,7 +148,7 @@ under automatic approval review, so a blocked action prompts in the dashboard
 terminal. `settings/claude.json` pins Sonnet and describes the JobPilot API
 under `autoMode.environment`. Codex has no `--settings` flag, and a project
 `.codex/config.toml` loads only for trusted projects, so
-[AgentSettings](../apps/terminal/Hosting/AgentSettings.cs) expands
+[CodexProvider](../apps/terminal/Providers/CodexProvider.cs) expands
 `settings/codex.json` into `-c` arguments. A missing file logs a warning and
 still launches.
 

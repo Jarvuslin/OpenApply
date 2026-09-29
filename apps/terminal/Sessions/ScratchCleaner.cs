@@ -9,7 +9,7 @@ public sealed class ScratchCleaner(HostInstall install, ILogger<ScratchCleaner> 
 {
     public static readonly TimeSpan Retention = TimeSpan.FromHours(24);
 
-    public static readonly TimeSpan SweepInterval = TimeSpan.FromHours(6);
+    private static readonly TimeSpan SweepInterval = TimeSpan.FromHours(6);
 
     // Lets Kestrel finish binding before the first sweep touches the disk.
     private static readonly TimeSpan StartupDelay = TimeSpan.FromMinutes(1);

@@ -24,13 +24,6 @@ public sealed class ScratchCleanerTests : IDisposable
     }
 
     [Fact]
-    public void RetentionDefaults_AreExact()
-    {
-        Assert.Equal(TimeSpan.FromHours(24), ScratchCleaner.Retention);
-        Assert.Equal(TimeSpan.FromHours(6), ScratchCleaner.SweepInterval);
-    }
-
-    [Fact]
     public void CleanSessionStart_RemovesTopLevelPlaywrightScratch_RegardlessOfAge()
     {
         var fresh = temp.File(Path.Combine(".playwright-mcp", "console-fresh.log"));
