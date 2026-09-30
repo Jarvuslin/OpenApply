@@ -11,6 +11,7 @@ import { singleton } from "tsyringe";
 import { conflict } from "@/common/errors";
 import { publish } from "@/common/sse";
 import { type PilotState as PilotStateModel, PrismaClient } from "@/generated/prisma/client";
+import { publishCampaignStatus } from "@/modules/campaign/campaign.utils";
 import { AGENDA_SNAPSHOT_RESET } from "./agenda/snapshot";
 import { costByKind, countAppliedToday, countSentToday, countTodayOutcomes } from "./pilot.stats";
 import { SERVER_SKIP_REASONS } from "./skip-reasons";
@@ -146,10 +147,20 @@ export class PilotService {
         }),
       );
     }
-    if (change.completeCampaigns) {
+    // Read first: updateMany returns no rows, and the campaign views need a status event per row.
+    const completing = change.completeCampaigns
+      ? await this.prisma.campaign.findMany({
+          where: { userId, ...PILOT_CAMPAIGN, status: "in_progress" },
+          select: { campaignId: true, source: true },
+        })
+      : [];
+    if (completing.length > 0) {
       writes.push(
         this.prisma.campaign.updateMany({
-          where: { userId, ...PILOT_CAMPAIGN, status: "in_progress" },
+          where: {
+            campaignId: { in: completing.map((campaign) => campaign.campaignId) },
+            status: "in_progress",
+          },
           data: {
             status: "completed",
             statusActor: "user",
@@ -160,6 +171,7 @@ export class PilotService {
       );
     }
     if (writes.length > 0) await this.prisma.$transaction(writes);
+    for (const campaign of completing) publishCampaignStatus(userId, campaign, "completed");
   }
 
   async start(userId: string) {

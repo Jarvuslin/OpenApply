@@ -39,7 +39,10 @@ function stateService(savedGoals: string) {
     },
     pilotSearch: { updateMany: count("searchResets"), deleteMany: count("searchDeletes") },
     pilotClaim: { deleteMany: count("bootstrapClaimDeletes") },
-    campaign: { updateMany: count("campaignsCompleted") },
+    campaign: {
+      findMany: async () => [{ campaignId: "c1", source: "auto_apply" }],
+      updateMany: count("campaignsCompleted"),
+    },
     job: { updateMany: count("jobsDropped") },
     application: { count: async () => 0 },
     networkingMessage: { count: async () => 0 },
