@@ -31,7 +31,7 @@ answers from a phone.
    length, follow-up on day 3 or day 7. Pool outcomes across users and turn the winners into
    evidence-backed mandate defaults. Per-user data is noise. The fleet is a sample.
    First step: an experiments table and the arm assignment in
-   `apps/api/src/modules/pilot/agenda/grant.ts`.
+   `apps/api/src/modules/pilot/agenda/claim.service.ts`.
 
 ### Fleet-only
 
@@ -76,7 +76,7 @@ answers from a phone.
 
 11. **Policy the server enforces.** Goals are free text, so the model can talk itself past
     them. Add a small structured policy: company blocklist, salary floor, no relocation, no
-    clearance jobs. Evaluate it in `grant.ts` before any claim is granted.
+    clearance jobs. Evaluate it in `claim.service.ts` before any claim is granted.
 
 12. **Autopsy and debrief.** A rejection triggers an autopsy of resume against posting, timing,
     and fleet outcomes at that company. It ends in one hypothesis and one experiment for idea 3.
