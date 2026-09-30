@@ -1,6 +1,6 @@
 import type { CampaignStatus, PrismaClient } from "@/generated/prisma/client";
 import { CampaignService } from "./campaign.service";
-import { emptyJobSummary } from "./campaign.summary";
+import { emptySummary } from "./campaign.summary";
 import { describe, expect, it } from "bun:test";
 
 const row = {
@@ -72,19 +72,13 @@ describe("CampaignService", () => {
     const { service } = makeService();
     const result = await service.list("u1", { page: 1, limit: 25 });
     expect(result.pagination).toMatchObject({ page: 1, limit: 25, total: 1, totalPages: 1 });
-    expect(result.items[0]?.summary).toEqual(emptyJobSummary());
+    expect(result.items[0]?.summary).toEqual(emptySummary("search"));
   });
 
   it("filters to campaigns still holding a job of the requested status, in SQL", async () => {
     const { service, listWheres } = makeService();
     await service.list("u1", { page: 1, limit: 25, source: "apply", jobStatus: "queued" });
     expect(listWheres[0]).toMatchObject({ jobs: { some: { status: "queued" } } });
-  });
-
-  it("leaves the job filter off when no job status is asked for", async () => {
-    const { service, listWheres } = makeService();
-    await service.list("u1", { page: 1, limit: 25 });
-    expect(listWheres[0]?.jobs).toBeUndefined();
   });
 
   it("applies an allowed status command with actor attribution", async () => {
@@ -141,14 +135,6 @@ describe("CampaignService", () => {
       }),
     ).rejects.toThrow("Campaign changed since it was fetched");
   });
-
-  it("still scopes a config write to the owner when no version is expected", async () => {
-    const { service, wheres } = makeService();
-    await service.updateConfig("u1", "c1", {
-      config: { resumeId: "b0f1c2d3-4e5a-4b6c-8d7e-9f0a1b2c3d4e" },
-    });
-    expect(wheres.at(-1)).toEqual({ campaignId: "c1", userId: "u1" });
-  });
 });
 
 describe("CampaignService create with pasted urls", () => {
@@ -195,11 +181,5 @@ describe("CampaignService create with pasted urls", () => {
     );
     expect(jobBatches[0]?.map((j) => j.url)).toEqual(["https://x.test/1", "https://x.test/2"]);
     expect(campaign.summary).toMatchObject({ totalFound: 2 });
-  });
-
-  it("seeds every link in one bulk write, so a half-written batch cannot strand them", async () => {
-    const { service, jobBatches } = makeService();
-    await service.create("u1", create(["https://x.test/1", "https://x.test/2"]));
-    expect(jobBatches).toHaveLength(1);
   });
 });

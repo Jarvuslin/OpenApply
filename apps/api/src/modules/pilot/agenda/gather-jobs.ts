@@ -1,7 +1,6 @@
-import { type CampaignConfig } from "@jobpilot/contracts/campaign";
+import { type CampaignConfig, campaignConfigSchema } from "@jobpilot/contracts/campaign";
 import type { PilotInstructionsConfig } from "@jobpilot/contracts/pilot";
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
-import { parseCampaignConfig } from "@/modules/campaign/campaign.config";
 import { normalizeCompanyName } from "@/modules/scoring/applied-duplicates";
 import {
   CRASH_RETRY_MS,
@@ -46,7 +45,7 @@ function toAgendaJobs(rows: AgendaJobRow[]): AgendaApprovedJob[] {
   return rows.map((row) => {
     let cfg = configByCampaign.get(row.campaignId);
     if (!cfg) {
-      cfg = parseCampaignConfig(row.campaign.config);
+      cfg = campaignConfigSchema.parse(row.campaign.config);
       configByCampaign.set(row.campaignId, cfg);
     }
     const { campaign: _, ...fields } = row;
@@ -183,7 +182,7 @@ export async function gatherScorePendingCampaigns(
     campaigns,
   );
   return claimable.map((c) => {
-    const config = parseCampaignConfig(c.config);
+    const config = campaignConfigSchema.parse(c.config);
     return {
       campaignId: c.campaignId,
       query: c.query,

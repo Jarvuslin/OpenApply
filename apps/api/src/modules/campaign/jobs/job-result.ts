@@ -3,55 +3,40 @@ import { CAMPAIGN_JOB_TERMINAL_OUTCOMES } from "@jobpilot/contracts/campaign";
 import { conflict, findOwned } from "@/common/errors";
 import type { Application, PrismaClient } from "@/generated/prisma/client";
 import { canonicalizeJobUrl } from "@/modules/application/job-url";
-import { deriveCampaignSummary } from "../campaign.summary";
 
-/** Returns whether a job status is terminal. */
 export function isTerminalJob(status: CampaignJobStatus): boolean {
-  return CAMPAIGN_JOB_TERMINAL_OUTCOMES.includes(
-    status as (typeof CAMPAIGN_JOB_TERMINAL_OUTCOMES)[number],
-  );
+  return (CAMPAIGN_JOB_TERMINAL_OUTCOMES as readonly string[]).includes(status);
 }
 
-function requireAppliedAt(data: CampaignJobResultInput): Date {
-  if (data.outcome !== "applied" || !data.appliedAt) {
-    throw new Error("Applied job result has no applied timestamp.");
-  }
-  return new Date(data.appliedAt);
-}
-
-interface SubmittedResume {
-  resumeId: string | null;
-  resumeVariantId: string | null;
-}
+const NO_RESUME = { resumeId: null, resumeVariantId: null };
 
 /**
- * Resolves the resume the agent says it submitted, dropping anything the user doesn't own - the ids
- * arrive from the agent, not from a route the auth guard has already scoped. A variant's own
+ * The agent reports these ids, so anything the user doesn't own is dropped. A variant's own
  * `resumeId` wins over a reported one so the two can never disagree.
  */
 async function resolveSubmittedResume(
-  tx: Pick<PrismaClient, "resume" | "resumeVariant">,
+  prisma: PrismaClient,
   userId: string,
   data: CampaignJobResultInput,
-): Promise<SubmittedResume> {
+): Promise<{ resumeId: string | null; resumeVariantId: string | null }> {
   if (data.resumeVariantId) {
-    const variant = await tx.resumeVariant.findFirst({
+    const variant = await prisma.resumeVariant.findFirst({
       where: { id: data.resumeVariantId, resume: { userId } },
       select: { id: true, resumeId: true },
     });
     if (variant) return { resumeId: variant.resumeId, resumeVariantId: variant.id };
   }
   if (data.resumeId) {
-    const resume = await tx.resume.findFirst({
+    const resume = await prisma.resume.findFirst({
       where: { id: data.resumeId, userId },
       select: { id: true },
     });
     if (resume) return { resumeId: resume.id, resumeVariantId: null };
   }
-  return { resumeId: null, resumeVariantId: null };
+  return NO_RESUME;
 }
 
-/** Atomically records an idempotent terminal job result and its dependent writes. */
+/** Records an idempotent terminal job result and, when applied, its Application and documents. */
 export async function writeJobResult(
   prisma: PrismaClient,
   userId: string,
@@ -60,10 +45,12 @@ export async function writeJobResult(
   data: CampaignJobResultInput,
 ) {
   const existing = await findOwned(
-    (where) => prisma.job.findFirst({ where, include: { campaign: true } }),
+    (where) => prisma.job.findFirst({ where, include: { campaign: { select: { source: true } } } }),
     { campaignId, key, campaign: { userId } },
     "Campaign job",
   );
+  const { source } = existing.campaign;
+
   if (isTerminalJob(existing.status)) {
     if (existing.status !== data.outcome) {
       throw conflict(`Job already finished with outcome ${existing.status}.`);
@@ -74,66 +61,49 @@ export async function writeJobResult(
             where: { userId_url: { userId, url: canonicalizeJobUrl(existing.url) } },
           })
         : null;
-    return {
-      campaignJob: existing,
-      application,
-      summary: await deriveCampaignSummary(prisma, campaignId, existing.campaign.source),
-      changed: false,
-    };
+    return { campaignJob: existing, application, source, changed: false };
   }
 
-  // Read-only ownership checks on rows the transaction never writes, so they stay out of its lock window.
-  const submitted: SubmittedResume =
-    data.outcome === "applied"
-      ? await resolveSubmittedResume(prisma, userId, data)
-      : { resumeId: null, resumeVariantId: null };
+  // The contract requires `appliedAt` exactly when the outcome is applied.
+  const appliedAt = data.outcome === "applied" && data.appliedAt ? new Date(data.appliedAt) : null;
+  // Read outside the transaction: rows it never writes need not sit in its lock window.
+  const submitted = appliedAt ? await resolveSubmittedResume(prisma, userId, data) : NO_RESUME;
 
   return prisma.$transaction(async (tx) => {
     const changed = await tx.job.updateMany({
       where: { campaignId, key, status: { notIn: [...CAMPAIGN_JOB_TERMINAL_OUTCOMES] } },
       data: {
         status: data.outcome,
-        appliedAt: data.outcome === "applied" ? requireAppliedAt(data) : null,
+        appliedAt,
         failReason: data.outcome === "failed" ? data.failReason : null,
         skipReason: data.outcome === "skipped" ? data.skipReason : null,
         retryNotes: data.retryNotes,
         matchScore: data.matchScore,
       },
     });
-
-    let raced = null;
-
-    if (changed.count === 0) {
-      raced = await tx.job.findUniqueOrThrow({ where: { campaignId_key: { campaignId, key } } });
-      if (raced.status !== data.outcome) {
-        throw conflict(`Job already finished with outcome ${raced.status}.`);
-      }
+    const job = await tx.job.findUniqueOrThrow({ where: { campaignId_key: { campaignId, key } } });
+    if (changed.count === 0 && job.status !== data.outcome) {
+      throw conflict(`Job already finished with outcome ${job.status}.`);
     }
-    const job =
-      raced ?? (await tx.job.findUniqueOrThrow({ where: { campaignId_key: { campaignId, key } } }));
-
-    const canonicalUrl = canonicalizeJobUrl(job.url);
 
     let application: Application | null = null;
-    if (data.outcome === "applied") {
-      const appliedAt = requireAppliedAt(data);
+    if (appliedAt) {
       const logApplied = {
         create: { kind: "status_change", toStatus: "applied", source: "campaign" },
       } as const;
       application = await tx.application.upsert({
-        where: { userId_url: { userId, url: canonicalUrl } },
+        where: { userId_url: { userId, url: canonicalizeJobUrl(job.url) } },
         // A repost reuses this row, so the date has to move: the duplicate window measures from
-        // it, and a frozen date retires the guard for that url. A result already recorded
-        // (`count === 0`) must not, or the retry logs a second event.
+        // it. A result already recorded (`count === 0`) must not, or the retry logs a second event.
         update: changed.count === 0 ? {} : { appliedAt, events: logApplied, ...submitted },
         create: {
           userId,
-          url: canonicalUrl,
+          url: canonicalizeJobUrl(job.url),
           title: job.title,
           company: job.company,
           location: job.location,
           board: job.board,
-          source: existing.campaign.source,
+          source,
           campaignId,
           matchScore: job.matchScore,
           matchReason: job.matchReason,
@@ -143,8 +113,8 @@ export async function writeJobResult(
         },
       });
 
-      // Marks the variant used, which is what the resume page's prune filter reads. A reused variant
-      // already points at the application it was created for; that first link is the one to keep.
+      // Marks the variant used, which the resume page's prune filter reads. A reused variant keeps
+      // its first link: the application it was created for.
       if (submitted.resumeVariantId) {
         await tx.resumeVariant.updateMany({
           where: { id: submitted.resumeVariantId, applicationId: null },
@@ -159,11 +129,6 @@ export async function writeJobResult(
       });
     }
 
-    return {
-      campaignJob: job,
-      application,
-      summary: await deriveCampaignSummary(tx, campaignId, existing.campaign.source),
-      changed: changed.count > 0,
-    };
+    return { campaignJob: job, application, source, changed: changed.count > 0 };
   });
 }

@@ -1,6 +1,6 @@
 // The public job index is built from the digest, so a garbled or empty one silently loses the job.
 
-import { addCampaignJobSchema, patchCampaignJobSchema } from "@jobpilot/contracts/campaign";
+import { addCampaignJobSchema, patchCampaignJobSchema } from "./campaign";
 import { describe, expect, it } from "bun:test";
 
 const job = (digest?: string) => ({

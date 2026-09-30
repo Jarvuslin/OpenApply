@@ -45,17 +45,6 @@ describe("CampaignJobService duplicate apply guard", () => {
     expect(state.job.status).toBe("skipped");
   });
 
-  it("blocks the pilot claim", async () => {
-    const state = setup();
-    state.setStatus("approved");
-    state.setApplication(EXISTING);
-
-    await expect(state.service.claimJobForApply("u1", "c1", "j1")).rejects.toThrow(
-      /Already applied/,
-    );
-    expect(state.job.status).toBe("skipped");
-  });
-
   // The refusal rolls its own transaction back, so without a separate write the job stays
   // `approved` and the next agenda offers the same duplicate again.
   it("records the refused job as skipped with the duplicate reason", async () => {
@@ -63,9 +52,7 @@ describe("CampaignJobService duplicate apply guard", () => {
     state.setStatus("approved");
     state.setApplication(EXISTING);
 
-    await expect(state.service.claimJobForApply("u1", "c1", "j1")).rejects.toThrow(
-      /Already applied/,
-    );
+    await expect(state.claim()).rejects.toThrow(/recorded as skipped/);
 
     expect(state.job).toMatchObject({ status: "skipped", skipReason: "Already applied (url)" });
   });
@@ -83,7 +70,7 @@ describe("CampaignJobService duplicate apply guard", () => {
     const state = setup();
     state.setStatus("approved");
 
-    const claimed = await state.service.claimJobForApply("u1", "c1", "j1");
+    const claimed = await state.claim();
 
     expect(claimed).toMatchObject({ key: "j1", status: "applying" });
     expect(state.job.status).toBe("applying");
@@ -93,8 +80,6 @@ describe("CampaignJobService duplicate apply guard", () => {
     const state = setup();
     state.setStatus("pending");
 
-    await expect(state.service.claimJobForApply("u1", "c1", "j1")).rejects.toThrow(
-      "Job is no longer approved.",
-    );
+    await expect(state.claim()).rejects.toThrow("Job is no longer approved.");
   });
 });

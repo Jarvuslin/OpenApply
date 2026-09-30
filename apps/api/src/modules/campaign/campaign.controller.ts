@@ -3,6 +3,7 @@ import {
   createCampaignSchema,
   updateCampaignConfigSchema,
 } from "@jobpilot/contracts/campaign";
+import { idParam } from "@jobpilot/contracts/shared";
 import { campaignChannel } from "@jobpilot/contracts/sse";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
@@ -11,7 +12,6 @@ import { sseStream } from "@/common/sse";
 import {
   campaignDeletedSchema,
   campaignListSchema,
-  campaignParams,
   campaignSchema,
   campaignsQuery,
 } from "./campaign.schema";
@@ -50,7 +50,7 @@ export const campaignController = new Elysia({
     },
   )
   .get("/:id", ({ user, params }) => svc.get(user.id, params.id), {
-    params: campaignParams,
+    params: idParam,
     response: campaignSchema,
     detail: {
       summary: "Get campaign",
@@ -59,7 +59,7 @@ export const campaignController = new Elysia({
     },
   })
   .patch("/:id", ({ user, params, body }) => svc.updateConfig(user.id, params.id, body), {
-    params: campaignParams,
+    params: idParam,
     body: updateCampaignConfigSchema,
     response: campaignSchema,
     detail: {
@@ -69,7 +69,7 @@ export const campaignController = new Elysia({
     },
   })
   .post("/:id/status", ({ user, params, body }) => svc.commandStatus(user.id, params.id, body), {
-    params: campaignParams,
+    params: idParam,
     body: campaignStatusCommandSchema,
     response: campaignSchema,
     detail: {
@@ -79,7 +79,7 @@ export const campaignController = new Elysia({
     },
   })
   .delete("/:id", ({ user, params }) => svc.remove(user.id, params.id), {
-    params: campaignParams,
+    params: idParam,
     response: campaignDeletedSchema,
     detail: {
       summary: "Delete campaign",
@@ -90,11 +90,11 @@ export const campaignController = new Elysia({
   .get(
     "/:id/events",
     async ({ user, params, headers }) => {
-      await svc.ensureCampaignOwned(user.id, params.id);
+      await svc.findCampaign(user.id, params.id);
       return sseStream(campaignChannel, { campaignId: params.id }, headers);
     },
     {
-      params: campaignParams,
+      params: idParam,
       detail: {
         summary: "Stream campaign events",
         description:

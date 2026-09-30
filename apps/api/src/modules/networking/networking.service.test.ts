@@ -1,8 +1,5 @@
-// Fake-Prisma unit test for the networking send gate (InMail requires user approval) and terminal
-// result recording. Injects a fake Prisma directly (no database); guardSend runs before the
-// transaction, so the rejection paths need no summary fakes.
 import type { PrismaClient } from "@/generated/prisma/client";
-import { CampaignNetworkingService } from "./networking.service";
+import { NetworkingService } from "./networking.service";
 import { describe, expect, it } from "bun:test";
 
 interface Over {
@@ -96,9 +93,7 @@ const service = (over: Over) => {
   const journals: Record<string, unknown>[] = [];
   const networkingWrites: Record<string, unknown>[] = [];
   return {
-    svc: new CampaignNetworkingService(
-      makeDb(over, journals, networkingWrites) as unknown as PrismaClient,
-    ),
+    svc: new NetworkingService(makeDb(over, journals, networkingWrites) as unknown as PrismaClient),
     journals,
     networkingWrites,
   };

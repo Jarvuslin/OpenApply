@@ -4,30 +4,41 @@ import {
   patchNetworkingMessageSchema,
 } from "@jobpilot/contracts/networking";
 import { paginationQuerySchema } from "@jobpilot/contracts/pagination";
+import { idParam } from "@jobpilot/contracts/shared";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { authGuard, requireVerifiedEmail } from "@/common/middleware";
-import { campaignParams, networkingMessageParams } from "../campaign.schema";
 import {
   networkingMessageListSchema,
+  networkingMessageParams,
+  networkingMessageQuerySchema,
   networkingMessageResultResponseSchema,
   networkingMessageSchema,
 } from "./networking.schema";
-import { CampaignNetworkingService } from "./networking.service";
+import { NetworkingService } from "./networking.service";
 
-const svc = container.resolve(CampaignNetworkingService);
+const svc = container.resolve(NetworkingService);
 
-export const campaignNetworkingController = new Elysia({
-  name: "campaign-networking",
-  prefix: "/campaigns",
-  detail: { tags: ["Campaigns"] },
-})
+export const networkingController = new Elysia({ detail: { tags: ["Campaigns"] } })
   .use(authGuard)
   .get(
-    "/:id/networking",
+    "/networking/messages",
+    ({ user, query }) => svc.listNetworking(user.id, { ...query, order: "desc" }),
+    {
+      query: networkingMessageQuerySchema,
+      response: networkingMessageListSchema,
+      detail: {
+        summary: "List networking messages across campaigns",
+        description:
+          "Returns one page of the active profile's networking messages, newest first. Optional `status` and `campaignId` filters.",
+      },
+    },
+  )
+  .get(
+    "/campaigns/:id/networking",
     ({ user, params, query }) => svc.listNetworking(user.id, { ...query, campaignId: params.id }),
     {
-      params: campaignParams,
+      params: idParam,
       query: paginationQuerySchema,
       response: networkingMessageListSchema,
       detail: {
@@ -38,24 +49,24 @@ export const campaignNetworkingController = new Elysia({
     },
   )
   .post(
-    "/:id/networking",
+    "/campaigns/:id/networking",
     async ({ user, params, body }) => {
       await requireVerifiedEmail(user.id);
       return svc.addNetworking(user.id, params.id, body);
     },
     {
-      params: campaignParams,
+      params: idParam,
       body: addCampaignNetworkingSchema,
       response: networkingMessageSchema,
       detail: {
         summary: "Add networking message",
         description:
-          "Atomically adds a contact (new or existing) and an initial non-terminal networking message, emits an SSE update, and returns it. Requires a verified email address.",
+          "Atomically adds a contact (new or existing) and an initial non-terminal networking message. Requires a verified email address.",
       },
     },
   )
   .patch(
-    "/:id/networking/:messageId",
+    "/campaigns/:id/networking/:messageId",
     ({ user, params, body }) => svc.patchNetworking(user.id, params.id, params.messageId, body),
     {
       params: networkingMessageParams,
@@ -64,12 +75,12 @@ export const campaignNetworkingController = new Elysia({
       detail: {
         summary: "Update networking message",
         description:
-          "Applies a conditional non-terminal message edit or contact connection update and returns the updated message. Terminal outcomes are accepted only by the result route.",
+          "Applies a conditional non-terminal message edit or contact connection update. Terminal outcomes go through the result route.",
       },
     },
   )
   .post(
-    "/:id/networking/:messageId/result",
+    "/campaigns/:id/networking/:messageId/result",
     ({ user, params, body }) =>
       svc.recordNetworkingResult(user.id, params.id, params.messageId, body),
     {
@@ -79,7 +90,7 @@ export const campaignNetworkingController = new Elysia({
       detail: {
         summary: "Record networking message result",
         description:
-          "Conditionally records an idempotent terminal outcome, stamps delivery identifiers when sent, and returns the message with its current derived summary.",
+          "Idempotently records a terminal outcome, stamps delivery identifiers when sent, and returns the message with the campaign's current summary.",
       },
     },
   );

@@ -1,11 +1,11 @@
-import { type AgendaItem, type ReleasePilotClaimInput } from "@jobpilot/contracts/pilot";
+import type { ReleasePilotClaimInput } from "@jobpilot/contracts/pilot";
 import { singleton } from "tsyringe";
 import { z } from "zod/v4";
 import { conflict, findOwned } from "@/common/errors";
 import { toInputJson } from "@/common/json";
 import { type Job, type PilotClaim, type Prisma, PrismaClient } from "@/generated/prisma/client";
-import { AlreadyAppliedError } from "@/modules/campaign/jobs/applied-guard";
-import { CampaignJobService } from "@/modules/campaign/jobs/job.service";
+import { claimJobForApply, guardApply } from "@/modules/campaign/jobs/apply-guard";
+import { publishJob } from "@/modules/campaign/jobs/job-events";
 import { toPilotClaim } from "../pilot.mapper";
 import { verifyGrant } from "./grant";
 import { parseJobPayload } from "./job-mutations";
@@ -15,36 +15,24 @@ const CLAIM_TTL_MS = 15 * 60 * 1000;
 /** Hard limit from `grantedAt`. A stuck driver that still heartbeats would never expire. */
 const MAX_CLAIM_LIFETIME_MS = 25 * 60 * 1000;
 
-/** Either the claim, or the duplicate refusal the guard recorded a skip for. */
-type ClaimResult =
-  | { claim: PilotClaim; item: AgendaItem; claimedJob: Job | null }
-  | AlreadyAppliedError;
+interface ClaimResult {
+  claim: PilotClaim;
+  claimedJob: Job | null;
+}
 
 /** Atomically claims versioned agenda items and manages claim heartbeats and release. */
 @singleton()
 export class ClaimService {
-  constructor(
-    private readonly prisma: PrismaClient,
-    private readonly campaignJobs: CampaignJobService,
-  ) {}
+  constructor(private readonly prisma: PrismaClient) {}
 
   async claim(userId: string, agendaVersion: string, itemId: string) {
-    const result = await this.prisma.$transaction((tx) =>
-      this.claimInTransaction(tx, userId, agendaVersion, itemId),
+    const { claim, claimedJob } = await guardApply(this.prisma, userId, () =>
+      this.prisma.$transaction((tx) => this.claimInTransaction(tx, userId, agendaVersion, itemId)),
     );
-
-    // Committing is the point: the guard recorded the skip inside that same transaction.
-    if (result instanceof AlreadyAppliedError)
-      return this.campaignJobs.rejectDuplicate(userId, result);
-
-    if (result.claimedJob && result.item.kind === "job.apply") {
-      this.campaignJobs.publishClaimedJob(
-        userId,
-        result.item.payload.campaignId,
-        result.claimedJob,
-      );
+    if (claimedJob) {
+      publishJob(userId, claimedJob, "updated");
     }
-    return toPilotClaim(result.claim);
+    return toPilotClaim(claim);
   }
 
   private async claimInTransaction(
@@ -97,17 +85,10 @@ export class ClaimService {
     if (open) throw conflict("This item is already claimed.");
 
     await verifyGrant(tx, userId, item.kind, item.subjectId);
-    let claimedJob = null;
-    if (item.kind === "job.apply") {
-      const attempt = await this.campaignJobs.claimJobForApplyInTransaction(
-        tx,
-        userId,
-        item.payload.campaignId,
-        item.payload.jobKey,
-      );
-      if (attempt instanceof AlreadyAppliedError) return attempt;
-      claimedJob = attempt;
-    }
+    const claimedJob =
+      item.kind === "job.apply"
+        ? await claimJobForApply(tx, userId, item.payload.campaignId, item.payload.jobKey)
+        : null;
 
     const claim = await tx.pilotClaim.create({
       data: {
@@ -119,7 +100,7 @@ export class ClaimService {
         expiresAt: new Date(now.getTime() + CLAIM_TTL_MS),
       },
     });
-    return { claim, item, claimedJob };
+    return { claim, claimedJob };
   }
 
   async heartbeat(userId: string, id: string) {

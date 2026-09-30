@@ -7,7 +7,7 @@ import {
 } from "@jobpilot/contracts/application";
 import { paginatedSchema, paginationQuerySchema } from "@jobpilot/contracts/pagination";
 import { z } from "zod/v4";
-import { campaignJobSchema } from "@/modules/campaign/campaign.schema";
+import { campaignJobSchema } from "@/modules/campaign/jobs/job.schema";
 import { contactSchema } from "@/modules/contact/contact.schema";
 import { emailMessageSchema } from "@/modules/email/email.schema";
 import { resumeSummarySchema } from "@/modules/resume/resume.schema";

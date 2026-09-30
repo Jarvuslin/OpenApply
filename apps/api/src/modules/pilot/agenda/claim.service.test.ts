@@ -1,6 +1,5 @@
 import type { AgendaResponse } from "@jobpilot/contracts/pilot";
 import type { PrismaClient } from "@/generated/prisma/client";
-import type { CampaignJobService } from "@/modules/campaign/jobs/job.service";
 import { ClaimService } from "./claim.service";
 import { describe, expect, it } from "bun:test";
 
@@ -78,15 +77,21 @@ function setup(version = VERSION, openClaim: { id: string } | null = null) {
         };
       },
     },
+    // The claimed job and the duplicate scans `claimJobForApply` runs; nothing matches here.
+    job: {
+      findFirst: async () => ({
+        url: "https://example.test/job",
+        title: "Engineer",
+        company: "Acme",
+      }),
+      findMany: async () => [],
+      updateManyAndReturn: async () => [{ campaignId: "c1", key: "j1", status: "applying" }],
+    },
+    application: { findUnique: async () => null, findMany: async () => [] },
     $transaction: async (work: (tx: unknown) => Promise<unknown>) => work(db),
   };
-  const campaignJobs = {
-    claimJobForApplyInTransaction: async () => ({ key: "j1" }),
-    publishClaimedJob: () => undefined,
-    rejectDuplicate: async () => undefined,
-  } as unknown as CampaignJobService;
   return {
-    service: new ClaimService(db as unknown as PrismaClient, campaignJobs),
+    service: new ClaimService(db as unknown as PrismaClient),
     creates,
     locks,
   };
@@ -147,9 +152,8 @@ function heartbeatDb(grantedAt: Date) {
       }),
     },
   };
-  const campaignJobs = {} as unknown as CampaignJobService;
   return {
-    service: new ClaimService(db as unknown as PrismaClient, campaignJobs),
+    service: new ClaimService(db as unknown as PrismaClient),
     get expiry() {
       return writes[0]?.expiresAt as Date;
     },

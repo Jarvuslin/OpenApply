@@ -8,112 +8,65 @@ import { CAMPAIGN_JOB_STATUSES } from "@jobpilot/contracts/campaign";
 import { type CampaignSource, Prisma } from "@/generated/prisma/client";
 
 type SummaryClient = Pick<Prisma.TransactionClient, "$queryRaw" | "job" | "networkingMessage">;
-type ContactCount = { campaignId: string; discovered: number };
+type CampaignRef = { campaignId: string; source: CampaignSource };
+type StatusCount = { status: string; count: number; scored?: number };
 
-function requireJobSummary(
-  summaries: Map<string, CampaignSummary>,
-  campaignId: string,
-): CampaignJobSummary {
-  const summary = summaries.get(campaignId);
-  if (summary?.kind !== "jobs") {
-    throw new Error(`Missing job summary accumulator for campaign ${campaignId}.`);
+/**
+ * The roll-ups beside `byStatus` stay on the wire because installed agent skills read them
+ * (`summary.applied` gates the max-applications cap); deriving them here keeps them in step.
+ */
+export function jobSummary(rows: StatusCount[], networkingCount = 0): CampaignJobSummary {
+  const byStatus = Object.fromEntries(CAMPAIGN_JOB_STATUSES.map((status) => [status, 0])) as Record<
+    CampaignJobStatus,
+    number
+  >;
+  let scored = 0;
+  for (const row of rows) {
+    byStatus[row.status as CampaignJobStatus] += row.count;
+    scored += row.scored ?? 0;
   }
-  return summary;
-}
+  const totalFound = CAMPAIGN_JOB_STATUSES.reduce((n, status) => n + byStatus[status], 0);
 
-function requireNetworkingSummary(
-  summaries: Map<string, CampaignSummary>,
-  campaignId: string | null,
-): CampaignNetworkingSummary {
-  if (!campaignId) throw new Error("Campaign summary query returned no campaign id.");
-  const summary = summaries.get(campaignId);
-  if (summary?.kind !== "networking") {
-    throw new Error(`Missing networking summary accumulator for campaign ${campaignId}.`);
-  }
-  return summary;
-}
-
-/** Returns the zero-value summary for a job campaign. */
-export function emptyJobSummary(): CampaignJobSummary {
   return {
     kind: "jobs",
-    totalFound: 0,
-    qualified: 0,
-    applied: 0,
-    failed: 0,
-    skipped: 0,
-    remaining: 0,
-    byStatus: Object.fromEntries(CAMPAIGN_JOB_STATUSES.map((status) => [status, 0])) as Record<
-      CampaignJobStatus,
-      number
-    >,
-    scored: 0,
-    networkingCount: 0,
+    totalFound,
+    qualified: totalFound - byStatus.skipped,
+    applied: byStatus.applied,
+    failed: byStatus.failed,
+    skipped: byStatus.skipped,
+    remaining: byStatus.approved + byStatus.applying + byStatus.needs_user,
+    byStatus,
+    scored,
+    networkingCount,
   };
 }
 
-/** Returns the zero-value summary for a networking campaign. */
-export function emptyNetworkingSummary(): CampaignNetworkingSummary {
-  return { kind: "networking", discovered: 0, drafted: 0, sent: 0, replied: 0, bounced: 0 };
+function networkingSummary(rows: StatusCount[], discovered: number): CampaignNetworkingSummary {
+  const count = (...statuses: string[]) =>
+    rows.filter((row) => statuses.includes(row.status)).reduce((n, row) => n + row.count, 0);
+
+  return {
+    kind: "networking",
+    discovered,
+    drafted: count("draft", "approved"),
+    sent: count("sent"),
+    replied: count("replied"),
+    bounced: count("bounced"),
+  };
 }
 
-function foldJob(summary: CampaignJobSummary, status: string, count: number): void {
-  summary.byStatus[status as CampaignJobStatus] += count;
+export function emptySummary(source: CampaignSource): CampaignSummary {
+  return source === "networking" ? networkingSummary([], 0) : jobSummary([]);
 }
 
-/**
- * Recomputes the six roll-ups from `byStatus`. They stay on the wire because the installed
- * agent skills read them (`summary.applied` gates the max-applications cap), but they are a
- * projection - deriving them here is what keeps them from drifting out of step with `byStatus`.
- */
-function finalizeJobSummary(summary: CampaignJobSummary): CampaignJobSummary {
-  const counts = summary.byStatus;
-  summary.totalFound = CAMPAIGN_JOB_STATUSES.reduce((n, status) => n + counts[status], 0);
-  summary.qualified = summary.totalFound - counts.skipped;
-  summary.applied = counts.applied;
-  summary.failed = counts.failed;
-  summary.skipped = counts.skipped;
-  summary.remaining = counts.approved + counts.applying + counts.needs_user;
-  return summary;
-}
-
-/** Folds job rows into the public job-summary shape. */
-export function summarizeJobs(jobs: { status: string }[]): CampaignJobSummary {
-  const summary = emptyJobSummary();
-  for (const job of jobs) foldJob(summary, job.status, 1);
-  return finalizeJobSummary(summary);
-}
-
-function foldNetworking(summary: CampaignNetworkingSummary, status: string, count: number): void {
-  if (status === "draft" || status === "approved") summary.drafted += count;
-  else if (status === "sent") summary.sent += count;
-  else if (status === "replied") summary.replied += count;
-  else if (status === "bounced") summary.bounced += count;
-}
-
-/** Derives one campaign summary from current rows. */
-export async function deriveCampaignSummary(
+/** Each campaign with its summary, derived from current rows in three aggregate queries. */
+export async function summarizeCampaigns<T extends CampaignRef>(
   client: SummaryClient,
-  campaignId: string,
-  source: CampaignSource,
-): Promise<CampaignSummary> {
-  const summaries = await loadCampaignSummaries(client, [{ campaignId, source }]);
-  const summary = summaries.get(campaignId);
-  if (!summary) throw new Error(`Missing derived summary for campaign ${campaignId}.`);
-  return summary;
-}
-
-/** Derives summaries for a bounded campaign page with aggregate queries. */
-export async function loadCampaignSummaries(
-  client: SummaryClient,
-  campaigns: { campaignId: string; source: CampaignSource }[],
-): Promise<Map<string, CampaignSummary>> {
-  const jobIds = campaigns
-    .filter((campaign) => campaign.source !== "networking")
-    .map((c) => c.campaignId);
-  const networkingIds = campaigns
-    .filter((campaign) => campaign.source === "networking")
-    .map((c) => c.campaignId);
+  campaigns: T[],
+): Promise<(T & { summary: CampaignSummary })[]> {
+  const ids = campaigns.map((c) => c.campaignId);
+  const networkingIds = campaigns.filter((c) => c.source === "networking").map((c) => c.campaignId);
+  const jobIds = campaigns.filter((c) => c.source !== "networking").map((c) => c.campaignId);
 
   const [jobCounts, messageCounts, contacts] = await Promise.all([
     jobIds.length
@@ -124,18 +77,16 @@ export async function loadCampaignSummaries(
           _count: { _all: true, matchScore: true },
         })
       : [],
-
     // Job campaigns included: the pilot saves warm-intro drafts against them too.
-    campaigns.length
+    ids.length
       ? client.networkingMessage.groupBy({
           by: ["campaignId", "status"],
-          where: { campaignId: { in: campaigns.map((c) => c.campaignId) } },
+          where: { campaignId: { in: ids } },
           _count: { _all: true },
         })
       : [],
-
     networkingIds.length
-      ? client.$queryRaw<ContactCount[]>(Prisma.sql`
+      ? client.$queryRaw<{ campaignId: string; discovered: number }[]>(Prisma.sql`
           SELECT campaign_id AS "campaignId", COUNT(DISTINCT contact_id)::integer AS discovered
           FROM networking_messages
           WHERE campaign_id IN (${Prisma.join(networkingIds)})
@@ -144,36 +95,31 @@ export async function loadCampaignSummaries(
       : [],
   ]);
 
-  const summaries = new Map<string, CampaignSummary>();
-
-  for (const id of jobIds) {
-    summaries.set(id, emptyJobSummary());
-  }
-  for (const id of networkingIds) {
-    summaries.set(id, emptyNetworkingSummary());
-  }
-  for (const row of jobCounts) {
-    const summary = requireJobSummary(summaries, row.campaignId);
-    foldJob(summary, row.status, row._count._all);
-    summary.scored += row._count.matchScore;
-  }
-  for (const id of jobIds) {
-    finalizeJobSummary(requireJobSummary(summaries, id));
-  }
-  for (const row of contacts) {
-    requireNetworkingSummary(summaries, row.campaignId).discovered = row.discovered;
-  }
-  for (const row of messageCounts) {
-    const summary = row.campaignId ? summaries.get(row.campaignId) : undefined;
-    if (summary?.kind === "jobs") {
-      summary.networkingCount += row._count._all;
-      continue;
+  return campaigns.map((campaign) => {
+    const messages = messageCounts
+      .filter((row) => row.campaignId === campaign.campaignId)
+      .map((row) => ({ status: row.status, count: row._count._all }));
+    if (campaign.source === "networking") {
+      const contact = contacts.find((row) => row.campaignId === campaign.campaignId);
+      return { ...campaign, summary: networkingSummary(messages, contact?.discovered ?? 0) };
     }
-    foldNetworking(
-      requireNetworkingSummary(summaries, row.campaignId),
-      row.status,
-      row._count._all,
-    );
-  }
-  return summaries;
+    const jobs = jobCounts
+      .filter((row) => row.campaignId === campaign.campaignId)
+      .map((row) => ({
+        status: row.status,
+        count: row._count._all,
+        scored: row._count.matchScore,
+      }));
+    const drafts = messages.reduce((n, row) => n + row.count, 0);
+    return { ...campaign, summary: jobSummary(jobs, drafts) };
+  });
+}
+
+export async function deriveCampaignSummary(
+  client: SummaryClient,
+  campaignId: string,
+  source: CampaignSource,
+): Promise<CampaignSummary> {
+  const [campaign] = await summarizeCampaigns(client, [{ campaignId, source }]);
+  return campaign.summary;
 }

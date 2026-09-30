@@ -7,17 +7,13 @@ import { paginatedSchema, paginationQuerySchema } from "@jobpilot/contracts/pagi
 import { z } from "zod/v4";
 import { contactSchema } from "@/modules/contact/contact.schema";
 
-/** Filters for the cross-campaign networking message list. */
+export const networkingMessageParams = z.object({ id: z.uuid(), messageId: z.uuid() });
+
 export const networkingMessageQuerySchema = paginationQuerySchema.extend({
   status: networkingMessageStatusSchema.optional(),
   campaignId: z.uuid().optional(),
 });
 
-/**
- * A networking message with its contact (mirrors the mapper's `NetworkingMessageRow`).
- * `status`/`channel` are narrowed to the contract unions and all dates are
- * serialized to ISO.
- */
 export const networkingMessageSchema = z.object({
   id: z.uuid(),
   userId: z.uuid(),
@@ -38,13 +34,8 @@ export const networkingMessageSchema = z.object({
   contact: contactSchema,
 });
 
-/** A list of networking messages (the `listNetworking` route). */
 export const networkingMessageListSchema = paginatedSchema(networkingMessageSchema);
 
-/**
- * Result of recording a networking message's terminal outcome - the updated
- * message and the current summary derived from message rows.
- */
 export const networkingMessageResultResponseSchema = z.object({
   message: networkingMessageSchema,
   summary: campaignSummarySchema,

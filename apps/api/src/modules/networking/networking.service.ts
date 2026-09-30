@@ -15,9 +15,9 @@ import { publishActivity, writeActivity } from "@/common/activity-log";
 import { conflict, findOwned, notFound, unprocessable } from "@/common/errors";
 import { publish } from "@/common/sse";
 import { type Prisma, PrismaClient } from "@/generated/prisma/client";
+import { deriveCampaignSummary } from "@/modules/campaign/campaign.summary";
+import { ensureCampaignOwned } from "@/modules/campaign/campaign.utils";
 import { createContactPayload } from "@/modules/contact";
-import { deriveCampaignSummary } from "../campaign.summary";
-import { ensureCampaignOwned } from "../campaign.utils";
 
 export interface NetworkingMessageFilters {
   campaignId?: string;
@@ -26,12 +26,11 @@ export interface NetworkingMessageFilters {
   order?: "asc" | "desc";
 }
 
-/** Owns paginated campaign networking writes and idempotent terminal outcomes. */
 @singleton()
-export class CampaignNetworkingService {
+export class NetworkingService {
   constructor(private readonly prisma: PrismaClient) {}
 
-  /** One page of networking messages: a campaign's board when `campaignId` is set, otherwise every campaign's. */
+  /** A campaign's board when `campaignId` is set, otherwise every campaign's messages. */
   async listNetworking(userId: string, query: PaginationQuery & NetworkingMessageFilters) {
     const { campaignId, status, order = "asc" } = query;
     const where: Prisma.NetworkingMessageWhereInput = {
@@ -39,8 +38,7 @@ export class CampaignNetworkingService {
       ...(campaignId && { campaignId }),
       ...(status && { status }),
     };
-    // The page is already ownership-scoped; the probe only separates 404 from an empty page, so
-    // it rides along rather than costing a round trip of its own.
+    // The page is already ownership-scoped; the probe only tells a 404 from an empty page.
     const [, messages, total] = await Promise.all([
       campaignId ? ensureCampaignOwned(this.prisma, userId, campaignId) : null,
       this.prisma.networkingMessage.findMany({
@@ -160,15 +158,13 @@ export class CampaignNetworkingService {
       (where) =>
         this.prisma.networkingMessage.findFirst({
           where,
-          include: { campaign: true, contact: true },
+          include: { campaign: { select: { source: true } }, contact: true },
         }),
       { id: messageId, campaignId, userId },
       "Networking message",
     );
-    if (!existing.campaign) {
-      throw new Error("Campaign-scoped networking message has no campaign relation.");
-    }
-    const campaignSource = existing.campaign.source;
+    const campaignSource = existing.campaign?.source;
+    if (!campaignSource) throw notFound("Campaign not found");
     if (isTerminalNetworkingStatus(existing.status)) {
       if (existing.status !== data.outcome) {
         throw conflict(`Networking message already finished with outcome ${existing.status}.`);
@@ -178,14 +174,9 @@ export class CampaignNetworkingService {
         summary: await deriveCampaignSummary(this.prisma, campaignId, campaignSource),
       };
     }
-    if (
-      data.outcome === "sent" &&
-      existing.channel === "linkedin" &&
-      existing.linkedinKind === "inmail"
-    ) {
-      if (existing.status !== "approved") {
-        throw unprocessable("A LinkedIn InMail can only be sent after approval.");
-      }
+    const isInMail = existing.channel === "linkedin" && existing.linkedinKind === "inmail";
+    if (data.outcome === "sent" && isInMail && existing.status !== "approved") {
+      throw unprocessable("A LinkedIn InMail can only be sent after approval.");
     }
     const result = await this.prisma.$transaction(async (tx) => {
       const changed = await tx.networkingMessage.updateMany({
@@ -215,6 +206,6 @@ export class CampaignNetworkingService {
       };
     });
     publish(campaignChannel, { campaignId }, { type: "networking-update" });
-    return { message: result.message, summary: result.summary };
+    return result;
   }
 }

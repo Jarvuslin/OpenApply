@@ -5,23 +5,23 @@ import {
   rescanCampaignJobSchema,
   retryCampaignJobSchema,
 } from "@jobpilot/contracts/campaign";
+import { idParam } from "@jobpilot/contracts/shared";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { authGuard } from "@/common/middleware";
 import {
-  campaignJobParams,
-  campaignJobSchema,
-  campaignJobsQuery,
-  campaignParams,
-} from "../campaign.schema";
-import {
   campaignJobListSchema,
+  campaignJobParams,
   campaignJobReasonListSchema,
   campaignJobResultResponseSchema,
+  campaignJobSchema,
+  campaignJobsQuery,
 } from "./job.schema";
 import { CampaignJobService } from "./job.service";
+import { CampaignJobQueryService } from "./job-query.service";
 
 const svc = container.resolve(CampaignJobService);
+const queries = container.resolve(CampaignJobQueryService);
 
 export const campaignJobController = new Elysia({
   name: "campaign-jobs",
@@ -29,8 +29,8 @@ export const campaignJobController = new Elysia({
   detail: { tags: ["Campaigns"] },
 })
   .use(authGuard)
-  .get("/:id/jobs", ({ user, params, query }) => svc.listJobs(user.id, params.id, query), {
-    params: campaignParams,
+  .get("/:id/jobs", ({ user, params, query }) => queries.listJobs(user.id, params.id, query), {
+    params: idParam,
     query: campaignJobsQuery,
     response: campaignJobListSchema,
     detail: {
@@ -39,8 +39,8 @@ export const campaignJobController = new Elysia({
         "Returns one page of jobs for the owned campaign, ordered by creation. Optional status and title/company search filters apply across the whole campaign.",
     },
   })
-  .get("/:id/jobs/reasons", ({ user, params }) => svc.listJobReasons(user.id, params.id), {
-    params: campaignParams,
+  .get("/:id/jobs/reasons", ({ user, params }) => queries.listJobReasons(user.id, params.id), {
+    params: idParam,
     response: campaignJobReasonListSchema,
     detail: {
       summary: "List campaign skip/fail reasons",
@@ -48,7 +48,7 @@ export const campaignJobController = new Elysia({
     },
   })
   .post("/:id/jobs", ({ user, params, body }) => svc.addJob(user.id, params.id, body), {
-    params: campaignParams,
+    params: idParam,
     body: addCampaignJobSchema,
     response: campaignJobSchema,
     detail: {

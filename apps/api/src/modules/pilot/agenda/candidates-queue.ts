@@ -1,5 +1,5 @@
+import { campaignConfigSchema } from "@jobpilot/contracts/campaign";
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
-import { parseCampaignConfig, resolveMinScore } from "@/modules/campaign/campaign.config";
 import { GATHER_CAP, QUEUE_BATCH, SCORE_PENDING_COOLDOWN_MS } from "./constants";
 import { claimableCampaigns } from "./gather-jobs";
 import type { AgendaQueueDrain } from "./types";
@@ -41,8 +41,8 @@ export async function gatherQueueDrain(
   );
   return claimable.map((c) => ({
     campaignId: c.campaignId,
-    resumeId: parseCampaignConfig(c.config).resumeId,
-    minScore: resolveMinScore(c.config, fallbackMinScore),
+    resumeId: campaignConfigSchema.parse(c.config).resumeId,
+    minScore: campaignConfigSchema.parse(c.config).minScore ?? fallbackMinScore,
     queuedCount: c._count.jobs,
     entries: c.jobs,
   }));

@@ -1,8 +1,9 @@
 // Shared fake-Prisma scaffolding for the CampaignJobService suites: one mutable job row plus the
 // application/variant/cover-letter writes its result path touches.
 import { DAY_MS } from "@/common/date/buckets";
-import type { PrismaClient } from "@/generated/prisma/client";
+import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 import type { JobListingPublisher } from "@/modules/job-listing";
+import { claimJobForApply, guardApply } from "./apply-guard";
 import { CampaignJobService } from "./job.service";
 
 /** Relative to now, so the duplicate fixtures stay inside the window as the calendar moves. */
@@ -65,10 +66,11 @@ export function setup() {
         where,
         data,
       }: {
-        where: { status?: unknown };
+        where: { status?: string | { in: string[] } };
         data: Record<string, unknown>;
       }) => {
-        if (typeof where.status === "string" && job.status !== where.status) return [];
+        const allowed = typeof where.status === "string" ? [where.status] : where.status?.in;
+        if (allowed && !allowed.includes(job.status)) return [];
         job = { ...job, ...data } as typeof job;
         return [job];
       },
@@ -97,7 +99,7 @@ export function setup() {
       },
     },
     campaign: {
-      findUnique: async () => campaign,
+      findUniqueOrThrow: async () => campaign,
     },
     networkingMessage: {
       groupBy: async () => [],
@@ -131,8 +133,14 @@ export function setup() {
     $transaction: async (work: (tx: unknown) => Promise<unknown>) => work(db),
   };
   const listings = { publishInBackground: () => undefined } as unknown as JobListingPublisher;
+  const service = new CampaignJobService(db as unknown as PrismaClient, listings);
   return {
-    service: new CampaignJobService(db as unknown as PrismaClient, listings),
+    service,
+    /** The pilot's claim: the move runs inside a transaction wrapped in the duplicate guard. */
+    claim: () =>
+      guardApply(db as unknown as PrismaClient, "u1", () =>
+        claimJobForApply(db as unknown as Prisma.TransactionClient, "u1", "c1", "j1"),
+      ),
     get job() {
       return job;
     },

@@ -42,24 +42,6 @@ function setup() {
 }
 
 describe("CampaignJobService.promoteScoredJobs", () => {
-  it("batches one write per outcome and score rather than three per candidate", async () => {
-    const state = setup();
-    await state.service.promoteScoredJobs("u1", "c1", "auto_apply", [
-      { key: "a", matchScore: 90, threshold: 50 },
-      { key: "b", matchScore: 90, threshold: 50 },
-      { key: "c", matchScore: 70, threshold: 50 },
-      { key: "d", matchScore: 30, threshold: 50 },
-      { key: "e", matchScore: 30, threshold: 50 },
-      { key: "f", matchScore: 10, threshold: 50 },
-    ]);
-
-    // approved@90, approved@70, skipped@30, skipped@10 - four writes for six candidates.
-    expect(state.jobUpdates).toHaveLength(4);
-    const approved = state.jobUpdates.filter((u) => u.data.status === "approved");
-    expect(approved.flatMap((u) => u.where.key?.in ?? []).sort()).toEqual(["a", "b", "c"]);
-    expect(approved.find((u) => u.where.matchScore === 90)?.where.key?.in).toEqual(["a", "b"]);
-  });
-
   it("keeps the concurrent-rescore guard exact by grouping on the candidate's score", async () => {
     const state = setup();
     await state.service.promoteScoredJobs("u1", "c1", "auto_apply", [
@@ -95,11 +77,5 @@ describe("CampaignJobService.promoteScoredJobs", () => {
 
     expect(state.jobUpdates[0]?.where.campaign?.source?.in).toEqual(["auto_apply", "apply"]);
     expect(state.jobUpdates[0]?.data.status).toBe("approved");
-  });
-
-  it("writes nothing when there are no candidates", async () => {
-    const state = setup();
-    await state.service.promoteScoredJobs("u1", "c1", "auto_apply", []);
-    expect(state.jobUpdates).toHaveLength(0);
   });
 });

@@ -14,8 +14,6 @@ import { authProvidersController } from "@/modules/auth/providers.controller";
 import { securityController } from "@/modules/auth/security.controller";
 import { campaignController } from "@/modules/campaign/campaign.controller";
 import { campaignJobController } from "@/modules/campaign/jobs/job.controller";
-import { networkingMessageController } from "@/modules/campaign/networking/message.controller";
-import { campaignNetworkingController } from "@/modules/campaign/networking/networking.controller";
 import { captchaController } from "@/modules/captcha/captcha.controller";
 import { contactController } from "@/modules/contact";
 import { coverLetterController } from "@/modules/cover-letter/cover-letter.controller";
@@ -29,6 +27,7 @@ import { jobBoardController } from "@/modules/job-board/job-board.controller";
 import { adminJobListingController, publicJobListingController } from "@/modules/job-listing";
 import { cleanupJob } from "@/modules/maintenance/cleanup.job";
 import { pdfCacheJob } from "@/modules/maintenance/pdf-cache.job";
+import { networkingController } from "@/modules/networking/networking.controller";
 import { pilotController } from "@/modules/pilot/pilot.controller";
 import { pilotAgendaController } from "@/modules/pilot/pilot-agenda.controller";
 import { pilotClaimsController } from "@/modules/pilot/pilot-claims.controller";
@@ -67,7 +66,6 @@ const app = new Elysia()
       .use(jobBoardController)
       .use(credentialController)
       .use(contactController)
-      .use(networkingMessageController)
       .use(analyticsController)
       .use(captchaController)
       .use(userController)
@@ -82,7 +80,7 @@ const app = new Elysia()
       .use(upworkController)
       .use(campaignController)
       .use(campaignJobController)
-      .use(campaignNetworkingController)
+      .use(networkingController)
       .use(pilotController)
       .use(pilotSearchController)
       .use(pilotAgendaController)

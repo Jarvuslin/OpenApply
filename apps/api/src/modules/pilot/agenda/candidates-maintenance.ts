@@ -1,9 +1,8 @@
+import { campaignConfigSchema } from "@jobpilot/contracts/campaign";
 import { z } from "zod/v4";
 import { DAY_MS } from "@/common/date/buckets";
 import type { PrismaClient } from "@/generated/prisma/client";
-import { parseCampaignConfig } from "@/modules/campaign/campaign.config";
-import { isJobSummary } from "@/modules/campaign/campaign.mapper";
-import { loadCampaignSummaries } from "@/modules/campaign/campaign.summary";
+import { summarizeCampaigns } from "@/modules/campaign/campaign.summary";
 import type { AgendaRescanSkipped, AgendaRetryFailed, AgendaStrategyReview } from "./types";
 
 const STRATEGY_MIN_JOBS = 20;
@@ -69,7 +68,6 @@ export async function gatherQuietCandidates(
       select: { subjectId: true, detail: true },
     }),
   ]);
-  const summaries = await loadCampaignSummaries(prisma, campaigns);
   const strategyMarked = markedSubjects(markers, "strategyReview");
   const rescanMarked = markedSubjects(markers, "rescanSkipped");
   const retryMarked = markedSubjects(markers, "retryFailed");
@@ -77,15 +75,15 @@ export async function gatherQuietCandidates(
   const rescanSkipped: AgendaRescanSkipped[] = [];
   const retryFailed: AgendaRetryFailed[] = [];
 
-  for (const campaign of campaigns) {
-    const summary = summaries.get(campaign.campaignId);
-    if (!summary || !isJobSummary(summary)) continue;
+  for (const campaign of await summarizeCampaigns(prisma, campaigns)) {
+    const { summary } = campaign;
+    if (summary.kind !== "jobs") continue;
     if (
       summary.totalFound >= STRATEGY_MIN_JOBS &&
       summary.qualified / summary.totalFound < STRATEGY_MAX_RATIO &&
       !strategyMarked.has(campaign.campaignId)
     ) {
-      const config = parseCampaignConfig(campaign.config);
+      const config = campaignConfigSchema.parse(campaign.config);
       strategyReviews.push({
         campaignId: campaign.campaignId,
         query: campaign.query,

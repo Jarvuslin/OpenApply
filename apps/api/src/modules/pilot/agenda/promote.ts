@@ -1,6 +1,6 @@
+import { campaignConfigSchema } from "@jobpilot/contracts/campaign";
 import type { CampaignSource } from "@/generated/prisma/client";
-import { resolveMinScore } from "@/modules/campaign/campaign.config";
-import { PROMOTABLE_SOURCES } from "@/modules/campaign/campaign.mapper";
+import { PROMOTABLE_SOURCES } from "@/modules/campaign/campaign.utils";
 import { GATHER_CAP } from "./constants";
 import type { JobMutationDeps } from "./job-mutations";
 
@@ -45,7 +45,7 @@ export async function promoteScoredPendingJobs(
     if (!batch) {
       batch = {
         source: job.campaign.source,
-        threshold: resolveMinScore(job.campaign.config, fallbackMinScore),
+        threshold: campaignConfigSchema.parse(job.campaign.config).minScore ?? fallbackMinScore,
         candidates: [],
       };
       batches.set(job.campaignId, batch);

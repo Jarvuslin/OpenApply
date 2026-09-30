@@ -1,6 +1,6 @@
 import { CAMPAIGN_JOB_ACTIVE_STATUSES } from "@jobpilot/contracts/campaign";
 import type { PrismaClient } from "@/generated/prisma/client";
-import { publishCampaignCompleted } from "@/modules/campaign/campaign.utils";
+import { publishCampaignStatus } from "@/modules/campaign/campaign.utils";
 import type { PilotJournalService } from "../journal.service";
 import { FINALIZE_IDLE_MS } from "./constants";
 
@@ -30,7 +30,7 @@ function gatherIdleCampaigns(prisma: PrismaClient, userId: string, now: Date) {
         },
       ],
     },
-    select: { campaignId: true, query: true },
+    select: { campaignId: true, query: true, source: true },
   });
 }
 
@@ -66,7 +66,7 @@ export async function finalizeIdleCampaigns(
   }
 
   for (const campaign of completed) {
-    publishCampaignCompleted(userId, campaign.campaignId);
+    publishCampaignStatus(userId, campaign, "completed");
   }
   await pilot.appendJournal(userId, {
     entries: completed.map((campaign) => ({

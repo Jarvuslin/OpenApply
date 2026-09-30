@@ -1,5 +1,5 @@
+import { campaignConfigSchema } from "@jobpilot/contracts/campaign";
 import type { PrismaClient } from "@/generated/prisma/client";
-import { parseCampaignConfig } from "@/modules/campaign/campaign.config";
 import { MAX_PAUSED_REVIEWS, PAUSED_REVIEW_CANDIDATES, PAUSED_REVIEW_RETRY_MS } from "./constants";
 import { claimDamped, latestClaimBySubject } from "./gather-jobs";
 import type { AgendaPausedCampaign } from "./types";
@@ -57,7 +57,7 @@ export async function gatherPausedCampaigns(
       break;
     }
 
-    const board = parseCampaignConfig(c.config).board ?? null;
+    const board = campaignConfigSchema.parse(c.config).board ?? null;
 
     // An answer newer than the pause decided THIS pause episode; an older one is a previous episode.
     const decided = (questionsByCampaign.get(c.campaignId) ?? []).some(
