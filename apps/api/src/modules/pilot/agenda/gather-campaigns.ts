@@ -184,6 +184,7 @@ export async function gatherCampaignReviews(prisma: PrismaClient, userId: string
       where: {
         userId,
         kind: "action",
+        subjectType: "campaign",
         createdAt: { gte: new Date(now.getTime() - REVIEW_REPEAT_MS) },
       },
       select: { subjectId: true, detail: true },

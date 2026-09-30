@@ -62,7 +62,11 @@ export class PilotSearchService {
 
   private findOwnedSearch(userId: string, id: string) {
     return findOwned(
-      (where) => this.prisma.pilotSearch.findFirst({ where }),
+      (where) =>
+        this.prisma.pilotSearch.findFirst({
+          where,
+          select: { query: true, board: true, emptyRuns: true },
+        }),
       { id, userId },
       "Search",
     );
