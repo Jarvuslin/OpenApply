@@ -61,13 +61,15 @@ export class ResumeService {
   }
 
   async createFromUpload(userId: string, file: File, label?: string) {
-    const resume = await this.prisma.resume.create({
-      data: {
-        userId,
-        label: label?.trim() || path.basename(file.name, path.extname(file.name)) || "Resume",
-        ...(await this.saveSource(file)),
-      },
-    });
+    const resume = await this.withSavedSource(file, (source) =>
+      this.prisma.resume.create({
+        data: {
+          userId,
+          label: label?.trim() || path.basename(file.name, path.extname(file.name)) || "Resume",
+          ...source,
+        },
+      }),
+    );
     await this.claimPrimaryIfUnset(userId, resume.id);
     return { id: resume.id };
   }
@@ -208,35 +210,52 @@ export class ResumeService {
 
   async uploadSource(userId: string, id: string, file: File) {
     const resume = await this.findOwned(userId, id);
-    const source = await this.saveSource(file);
+    const source = await this.withSavedSource(file, async (source) => {
+      await this.prisma.resume.update({ where: { id }, data: source });
+      return source;
+    });
+    // Only once the row points at the new file, so a failed write never leaves it dangling.
     if (resume.sourceFilename) {
       await deleteResumeFile(resume.sourceFilename);
     }
-    await this.prisma.resume.update({ where: { id }, data: source });
     return { id, sourceFilename: source.sourceFilename };
   }
 
   async deleteSource(userId: string, id: string) {
     const resume = await this.findOwned(userId, id);
-    if (resume.sourceFilename) {
-      await deleteResumeFile(resume.sourceFilename);
-    }
     await this.prisma.resume.update({
       where: { id },
       data: { sourceFilename: null, sourceMimeType: null, sourceSizeBytes: null },
     });
+    if (resume.sourceFilename) {
+      await deleteResumeFile(resume.sourceFilename);
+    }
     return { id };
   }
 
-  private async saveSource(file: File) {
+  /** Saves the upload, then runs the row write; a failed write removes the file it would have orphaned. */
+  private async withSavedSource<T>(
+    file: File,
+    write: (source: {
+      sourceFilename: string;
+      sourceMimeType: string;
+      sourceSizeBytes: number;
+    }) => Promise<T>,
+  ): Promise<T> {
     if (file.size > MAX_RESUME_BYTES) {
       throw badRequest("Resume must be 5 MB or less");
     }
-    return {
-      sourceFilename: await saveResumeSource(file),
-      sourceMimeType: file.type || "application/pdf",
-      sourceSizeBytes: file.size,
-    };
+    const sourceFilename = await saveResumeSource(file);
+    try {
+      return await write({
+        sourceFilename,
+        sourceMimeType: file.type || "application/pdf",
+        sourceSizeBytes: file.size,
+      });
+    } catch (error) {
+      await deleteResumeFile(sourceFilename);
+      throw error;
+    }
   }
 
   /** Conditional write rather than count-then-set, so two first uploads cannot both claim it. */
