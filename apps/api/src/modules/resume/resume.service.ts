@@ -41,7 +41,7 @@ export class ResumeService {
         isPrimary: r.id === primaryId,
         updatedAt: r.updatedAt,
       }))
-      .sort((a, b) => (a.isPrimary === b.isPrimary ? 0 : a.isPrimary ? -1 : 1));
+      .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary));
   }
 
   /** Create a structured resume from a JSON body. */
@@ -56,6 +56,7 @@ export class ResumeService {
         content: input.content ? JSON.stringify(input.content) : null,
       },
     });
+    await this.claimPrimaryIfUnset(userId, resume.id);
     return { id: resume.id };
   }
 
@@ -84,15 +85,16 @@ export class ResumeService {
       },
     });
 
-    const isFirst = (await this.prisma.resume.count({ where: { userId } })) === 1;
-    if (isFirst) {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: { primaryResumeId: resume.id },
-      });
-    }
-
+    await this.claimPrimaryIfUnset(userId, resume.id);
     return { id: resume.id };
+  }
+
+  /** Conditional write rather than count-then-set, so two first uploads cannot both claim it. */
+  private async claimPrimaryIfUnset(userId: string, resumeId: string): Promise<void> {
+    await this.prisma.user.updateMany({
+      where: { id: userId, primaryResumeId: null },
+      data: { primaryResumeId: resumeId },
+    });
   }
 
   async get(userId: string, id: string) {
@@ -194,11 +196,7 @@ export class ResumeService {
       "Resume",
     );
 
-    await this.prisma.user.updateMany({
-      where: { id: userId, primaryResumeId: id },
-      data: { primaryResumeId: null },
-    });
-
+    // `User.primaryResume` is `onDelete: SetNull`, so the pointer clears with the row.
     await this.prisma.resume.delete({ where: { id } });
     await deleteAllResumeArtifacts({
       resumeId: existing.id,

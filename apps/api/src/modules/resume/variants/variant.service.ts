@@ -64,13 +64,16 @@ export class ResumeVariantService {
   }
 
   /** The link is the record of what was sent - a dangling id 404s rather than storing null. */
-  private async assertApplicationExists(applicationId: string | null | undefined): Promise<void> {
+  private async assertApplicationOwned(
+    userId: string,
+    applicationId: string | null | undefined,
+  ): Promise<void> {
     if (!applicationId) {
       return;
     }
 
-    const app = await this.prisma.application.findUnique({
-      where: { id: applicationId },
+    const app = await this.prisma.application.findFirst({
+      where: { id: applicationId, userId },
       select: { id: true },
     });
     if (!app) {
@@ -87,20 +90,19 @@ export class ResumeVariantService {
   async listVariants(userId: string, resumeId: string) {
     await this.ownResume(userId, resumeId);
 
-    const variants = await this.prisma.resumeVariant.findMany({
+    return this.prisma.resumeVariant.findMany({
       where: { resumeId },
       orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        resumeId: true,
+        label: true,
+        jobUrl: true,
+        applicationId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
-
-    return variants.map((v) => ({
-      id: v.id,
-      resumeId: v.resumeId,
-      label: v.label,
-      jobUrl: v.jobUrl,
-      applicationId: v.applicationId,
-      createdAt: v.createdAt,
-      updatedAt: v.updatedAt,
-    }));
   }
 
   async createVariant(
@@ -109,7 +111,7 @@ export class ResumeVariantService {
     body: ResumeVariantCreateInput,
   ): Promise<{ id: string }> {
     await this.ownResume(userId, resumeId);
-    await this.assertApplicationExists(body.applicationId);
+    await this.assertApplicationOwned(userId, body.applicationId);
 
     const variant = await this.prisma.resumeVariant.create({
       data: {
@@ -155,15 +157,13 @@ export class ResumeVariantService {
     body: ResumeVariantPatch,
   ): Promise<{ id: string }> {
     await this.findVariant(userId, id);
+    await this.assertApplicationOwned(userId, body.applicationId);
 
     const updated = await this.prisma.resumeVariant.update({
       where: { id },
       data: {
-        label: body.label ?? undefined,
-        jobUrl: body.jobUrl === undefined ? undefined : body.jobUrl,
-        applicationId: body.applicationId === undefined ? undefined : body.applicationId,
+        ...body,
         content: body.content ? JSON.stringify(body.content) : undefined,
-        diffNotes: body.diffNotes === undefined ? undefined : body.diffNotes,
       },
     });
     return { id: updated.id };
@@ -267,7 +267,7 @@ export class ResumeVariantService {
     if (!base.content) {
       throw unprocessable("Base resume has no structured content. Run extract-resume first.");
     }
-    await this.assertApplicationExists(body.applicationId);
+    await this.assertApplicationOwned(userId, body.applicationId);
 
     const { content: parsedBase } = backfillResumeIds(JSON.parse(base.content) as ResumeData);
     const tailored = buildTailoredVariant(parsedBase, body);
