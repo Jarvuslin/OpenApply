@@ -8,7 +8,7 @@ interface LiveStatusChipProps {
   status: SseConnectionStatus;
 }
 
-/** Connection badge for live pilot feeds; hidden until the stream has been up at least once. */
+/** Hidden until the stream has been up at least once. */
 export function LiveStatusChip(props: LiveStatusChipProps): ReactNode {
   const { status } = props;
   if (status === "open") {

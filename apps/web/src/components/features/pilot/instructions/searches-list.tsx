@@ -8,7 +8,7 @@ import { pilotQueries } from "@/api/queries";
 import { EmptyState, QuerySection } from "@/components/ui/data";
 import { formatRelativeTime, formatTimeUntil } from "@/utils/format";
 
-// Consecutive empty runs at which the pilot starts backing a search off (see contracts/pilot/search).
+/** Consecutive empty runs before a search reads as backing off; the API delays it from the first. */
 const BACKOFF_THRESHOLD = 3;
 
 interface SearchStatus {
@@ -16,7 +16,6 @@ interface SearchStatus {
   color: "warning" | "info";
 }
 
-/** The one status worth flagging on a row, or null when the search is on its normal cadence. */
 function searchStatus(search: PilotSearch): SearchStatus | null {
   if (search.emptyRuns >= BACKOFF_THRESHOLD) {
     return { label: "coming up dry — backing off", color: "warning" };
@@ -27,7 +26,6 @@ function searchStatus(search: PilotSearch): SearchStatus | null {
   return null;
 }
 
-/** Compact yield line: last run, this-run yield, and the next scheduled check. */
 function yieldStats(search: PilotSearch): string {
   const parts: string[] = [];
   if (search.lastRunAt) {
@@ -79,7 +77,6 @@ function SearchRow(props: SearchRowProps): ReactElement {
   );
 }
 
-/** Read-only list of the pilot's self-managed discovery searches - no add/edit/delete controls. */
 export function SearchesList(): ReactElement {
   const query = useApiQuery(pilotQueries.searches(), {
     errorMessage: "Failed to load pilot searches",

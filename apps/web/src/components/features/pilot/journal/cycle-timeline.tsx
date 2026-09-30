@@ -13,45 +13,42 @@ import { CYCLE_STATUS_COLOR } from "@/lib/terminal";
 import { formatDuration, formatSpanBetween } from "@/utils/format";
 import { JournalRow, KIND_META, KIND_ORDER } from "./journal-row";
 
-type Block =
-  | { type: "cycle"; cycleId: string; entries: PilotJournalEntry[] }
-  | { type: "entry"; entry: PilotJournalEntry };
+interface CycleBlock {
+  type: "cycle";
+  cycleId: string;
+  entries: PilotJournalEntry[];
+}
 
-/**
- * Groups a newest-first entry list into cycle blocks anchored at each cycle's newest entry;
- * cycle-less entries (host orchestrator / system) stay standalone in their chronological position.
- */
+type Block = CycleBlock | { type: "entry"; entry: PilotJournalEntry };
+
+/** Each cycle sits at its newest entry's position; cycle-less (host/system) entries stay standalone. */
 function toBlocks(entries: PilotJournalEntry[]): Block[] {
   const blocks: Block[] = [];
-  const indexByCycle = new Map<string, number>();
+  const blockByCycle = new Map<string, CycleBlock>();
 
   for (const entry of entries) {
     if (!entry.cycleId) {
       blocks.push({ type: "entry", entry });
       continue;
     }
-    const at = indexByCycle.get(entry.cycleId);
-
-    if (at == null) {
-      indexByCycle.set(entry.cycleId, blocks.length);
-      blocks.push({ type: "cycle", cycleId: entry.cycleId, entries: [entry] });
-    } else {
-      (blocks[at] as Extract<Block, { type: "cycle" }>).entries.push(entry);
+    const block = blockByCycle.get(entry.cycleId);
+    if (block) {
+      block.entries.push(entry);
+      continue;
     }
+    const created: CycleBlock = { type: "cycle", cycleId: entry.cycleId, entries: [entry] };
+    blockByCycle.set(entry.cycleId, created);
+    blocks.push(created);
   }
   return blocks;
 }
 
-/** Compact elapsed span between a cycle's first and last entry, e.g. `1m`. */
-function cycleDuration(entries: PilotJournalEntry[]): string {
-  if (entries.length < 2) {
-    return "";
-  }
-  return formatSpanBetween(entries[entries.length - 1].createdAt, entries[0].createdAt);
+interface CycleEntriesProps {
+  entries: PilotJournalEntry[];
 }
 
 /** The `cycle` kind is skipped: the card header already says "Cycle" with its status. */
-function KindSummary(props: { entries: PilotJournalEntry[] }): ReactNode {
+function KindSummary(props: CycleEntriesProps): ReactNode {
   const { entries } = props;
   const counts = new Map<PilotJournalKind, number>();
   for (const entry of entries) {
@@ -77,14 +74,18 @@ function KindSummary(props: { entries: PilotJournalEntry[] }): ReactNode {
   );
 }
 
-function CycleCard(props: { entries: PilotJournalEntry[]; defaultOpen: boolean }): ReactElement {
+interface CycleCardProps extends CycleEntriesProps {
+  defaultOpen: boolean;
+}
+
+function CycleCard(props: CycleCardProps): ReactElement {
   const { entries, defaultOpen } = props;
   const [open, setOpen] = useState(defaultOpen);
 
-  // Entries arrive newest-first; the oldest anchors the cycle's start, and the body reads chronologically.
   const chronological = [...entries].reverse();
   const started = chronological[0]?.createdAt;
-  const duration = cycleDuration(entries);
+  const duration =
+    entries.length < 2 ? "" : formatSpanBetween(chronological[0].createdAt, entries[0].createdAt);
   const cycleEntry = entries.find((entry) => entry.kind === "cycle");
   const detail = cycleEntry && pilotCycleDetailSchema.safeParse(cycleEntry.detail).data;
 
@@ -134,12 +135,7 @@ function CycleCard(props: { entries: PilotJournalEntry[]; defaultOpen: boolean }
   );
 }
 
-interface CycleTimelineProps {
-  entries: PilotJournalEntry[];
-}
-
-/** Journal grouped into collapsible cycle cards (newest first), with standalone rows in place. */
-export function CycleTimeline(props: CycleTimelineProps): ReactElement {
+export function CycleTimeline(props: CycleEntriesProps): ReactElement {
   const { entries } = props;
   const blocks = toBlocks(entries);
   let firstCycleSeen = false;

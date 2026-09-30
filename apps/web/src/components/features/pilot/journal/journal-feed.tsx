@@ -32,12 +32,12 @@ import { dedupeById } from "@/utils/array";
 import { CycleTimeline } from "./cycle-timeline";
 import { JournalRow, KIND_META, KIND_ORDER } from "./journal-row";
 import { LiveStatusChip } from "./live-status-chip";
-import { clearLiveJournal, useJournalLive } from "./use-journal-live";
+import { useJournalLiveStatus } from "./use-journal-live";
 
-/** Same-site cookie rides a top-level anchor download, so no fetch/token handling is needed here. */
+/** A top-level anchor download carries the same-site auth cookie, so no fetch is needed. */
 const JOURNAL_EXPORT_URL = `${API_BASE_URL}/api/pilot/journal/export`;
 
-/** Drops cycle rows whose cycle also logged actions - they just repeat them; lone (empty/error) cycle rows stay. */
+/** Drops cycle rows whose actions already repeat them; lone (empty/error) cycle rows stay. */
 function collapseCoveredCycles(entries: PilotJournalEntry[]): PilotJournalEntry[] {
   const covered = new Set<string>();
   for (const entry of entries) {
@@ -48,14 +48,14 @@ function collapseCoveredCycles(entries: PilotJournalEntry[]): PilotJournalEntry[
   return entries.filter((e) => !(e.kind === "cycle" && e.cycleId && covered.has(e.cycleId)));
 }
 
-/** Full journal feed. Kind filters run server-side, so paging under a filter stays on one stream. */
+/** Kind filters run server-side, so paging under a filter stays on one stream. */
 export function JournalFeed(): ReactElement {
   const toast = useToast();
   const confirm = useConfirm();
   const [selectedKinds, setSelectedKinds] = useState<PilotJournalKind[]>([]);
   const firstPage = useApiQuery(pilotQueries.journal(selectedKinds));
-  const { entries: live, status } = useJournalLive();
-  // Whole pages, so the cursor to resume from is just the newest one's - no paging flag to keep in sync.
+  const status = useJournalLiveStatus();
+  // Whole pages, so the resume cursor is simply the last page's.
   const [pages, setPages] = useState<PilotJournalPage[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
   const [view, setView] = useState<"flat" | "cycle">("flat");
@@ -64,10 +64,7 @@ export function JournalFeed(): ReactElement {
   const reset = useApiMutation(() => api.pilot.reset.post(), {
     successMessage: "Pilot reset",
     invalidate: [queryKeys.pilot.all],
-    onSuccess: () => {
-      clearLiveJournal();
-      setPages([]);
-    },
+    onSuccess: () => setPages([]),
   });
 
   const resetWithConfirm = async (): Promise<void> => {
@@ -119,11 +116,9 @@ export function JournalFeed(): ReactElement {
     setPages([]);
   };
 
-  // The live buffer is unfiltered - it carries every kind streamed since mount.
-  const streamed =
-    selectedKinds.length === 0 ? live : live.filter((e) => selectedKinds.includes(e.kind));
+  // Live prepends keep the first page's tail, which the first older page repeats.
   const older = pages.flatMap((page) => page.items);
-  const entries = dedupeById([...streamed, ...(firstPage.data?.items ?? []), ...older]);
+  const entries = dedupeById([...(firstPage.data?.items ?? []), ...older]);
   const visible = view === "flat" && collapseCycles ? collapseCoveredCycles(entries) : entries;
 
   const emptyMessage =

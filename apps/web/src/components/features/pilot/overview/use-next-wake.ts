@@ -1,40 +1,38 @@
 "use client";
 
-import { type PilotJournalEntry, pilotCycleDetailSchema } from "@jobpilot/contracts/pilot";
+import { type PilotJournalPage, pilotCycleDetailSchema } from "@jobpilot/contracts/pilot";
 import { useEffect, useState } from "react";
 import { useApiQuery } from "@/api/hooks";
 import { pilotQueries } from "@/api/queries";
-import { useLatestCycle } from "../journal/use-journal-live";
 
-const isCycle = (entry: PilotJournalEntry): boolean => entry.kind === "cycle";
+const TICK_MS = 30_000;
+
+/** A number, so the query only re-renders callers when the wake time itself moves. */
+function selectWakeMs(page: PilotJournalPage): number | null {
+  const cycle = page.items.find((entry) => entry.kind === "cycle");
+  const sleepSeconds = cycle && pilotCycleDetailSchema.safeParse(cycle.detail).data?.sleepSeconds;
+  if (!cycle || sleepSeconds == null) {
+    return null;
+  }
+  return cycle.createdAt.getTime() + sleepSeconds * 1000;
+}
 
 /**
- * When the next cycle wakes: the newest cycle entry's completion plus the sleep it announced.
- * The agenda carries the same figure, but its query is pinned (compiling one is costly) and goes
- * stale; the journal cache + live SSE buffer are already on the page and stay current.
+ * The newest cycle's completion plus the sleep it announced. The agenda carries the same figure,
+ * but its query is pinned and goes stale; the journal cache is streamed into and stays live.
  */
 export function useNextWake(): Date | null {
-  const journal = useApiQuery(pilotQueries.journal());
-  const streamed = useLatestCycle();
+  const { data: wakeMs = null } = useApiQuery(pilotQueries.journal(), { select: selectWakeMs });
 
-  const cycle = streamed ?? journal.data?.items.find(isCycle);
-  const sleepSeconds = cycle && pilotCycleDetailSchema.safeParse(cycle.detail).data?.sleepSeconds;
-  const wakeAt =
-    cycle && sleepSeconds != null
-      ? new Date(cycle.createdAt.getTime() + sleepSeconds * 1000)
-      : null;
-
-  // Nothing to refresh for a wake that already passed - callers render a static label from then on.
+  // Only a pending wake has a countdown to keep moving; callers render a static label after it.
   const [, setTick] = useState(0);
-  const wakeMs = wakeAt?.getTime() ?? null;
-
   useEffect(() => {
     if (wakeMs === null || wakeMs <= Date.now()) {
       return;
     }
-    const id = setInterval(() => setTick((t) => t + 1), 30_000);
+    const id = setInterval(() => setTick((t) => t + 1), TICK_MS);
     return () => clearInterval(id);
   }, [wakeMs]);
 
-  return wakeAt;
+  return wakeMs === null ? null : new Date(wakeMs);
 }

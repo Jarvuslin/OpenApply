@@ -23,7 +23,7 @@ import { formatRelativeTime, plural } from "@/utils/format";
 
 interface GoalsChangeDialogProps {
   open: boolean;
-  impact: PilotInstructionsImpact | undefined;
+  impact: PilotInstructionsImpact | null;
   isLoading: boolean;
   saving: boolean;
   onConfirm: (change: PilotInstructionsChange) => void;
@@ -70,10 +70,7 @@ function options(impact: PilotInstructionsImpact): Option[] {
   return list;
 }
 
-/**
- * Asked before saving changed goals. Searches, campaigns and the approved backlog all outlive an
- * instructions edit, so without this the pilot goes straight back to the old plan on the next cycle.
- */
+/** Searches, campaigns and approved jobs outlive a goals edit, so without this the pilot keeps the old plan. */
 export function GoalsChangeDialog(props: GoalsChangeDialogProps): ReactElement {
   const { open, impact, isLoading, saving, onConfirm, onCancel } = props;
   const [change, setChange] = useState<PilotInstructionsChange>(ALL_CHECKED);

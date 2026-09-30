@@ -68,7 +68,7 @@ function PilotCardBody(props: PilotCardBodyProps): ReactNode {
   const { health, hostStatus } = props;
   const queryClient = useQueryClient();
   const stateQuery = useApiQuery(pilotQueries.state());
-  const { count: openQuestions } = useOpenQuestions();
+  const openQuestions = useOpenQuestions().questions.length;
 
   // Rides the shared pilotChannel source (refcounted per URL), so this adds no connection.
   useSseChannel(pilotChannel, null, {

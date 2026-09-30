@@ -24,10 +24,7 @@ const AGENDA_KIND_LABELS: Record<AgendaItem["kind"], string> = {
   "upwork.syncInbox": "Refresh the Upwork inbox",
 };
 
-/**
- * Falls back to the raw kind: claim history keeps kinds the agenda no longer emits, and a cost row
- * for a retired kind is still worth showing.
- */
+/** Falls back to the raw kind: cost history still holds kinds the agenda no longer emits. */
 export function agendaKindLabel(kind: string): string {
   return (AGENDA_KIND_LABELS as Record<string, string | undefined>)[kind] ?? kind;
 }

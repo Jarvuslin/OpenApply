@@ -1,30 +1,35 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { networkingMode } from "@jobpilot/contracts/pilot";
+import type { PilotState } from "@jobpilot/contracts/pilot";
 import { Alert, Box, Button, Chip, Grid, Stack, Tooltip, Typography } from "@mui/material";
-import { ColorChip, RelativeTime, StatCard } from "@/components/ui/display";
+import { ColorChip, RelativeTime } from "@/components/ui/display";
 import { SectionCard } from "@/components/ui/layout";
-import { CYCLE_STATUS_COLOR, providerDisplayName } from "@/lib/terminal";
+import { CYCLE_STATUS_COLOR, type PilotHealth, providerDisplayName } from "@/lib/terminal";
 import { useConfirm } from "@/providers/confirm-provider";
-import { formatTimeUntil } from "@/utils/format";
+import { formatTimeUntil, plural } from "@/utils/format";
+import type { TerminalHealth } from "../../agent-dock/use-terminal-health";
 import { isHostOffline, PILOT_HOST_OFFLINE_MESSAGE, PILOT_STARTING_UP_LABEL } from "../host-status";
-import { usePilotStatus } from "./pilot-status-context";
-import { Meter, TodayOutcomes } from "./today-panel";
+import type { PilotControls } from "../use-pilot-controls";
+import { TodayPanel } from "./today-panel";
 import { useNextWake } from "./use-next-wake";
 
-/** State + controls on the left, today's budget on the right; the one card that answers "is it working?". */
-export function StatusHero(): ReactElement {
-  const { state, controls, health, hostStatus } = usePilotStatus();
+interface StatusHeroProps {
+  state: PilotState;
+  controls: PilotControls;
+  health: TerminalHealth;
+  pilot: PilotHealth | null;
+}
+
+export function StatusHero(props: StatusHeroProps): ReactElement {
+  const { state, controls, health, pilot } = props;
   const confirm = useConfirm();
   const nextWakeAt = useNextWake();
 
-  const pilot = hostStatus?.pilot ?? null;
   const running = state.running;
+  const conducting = pilot?.conducting ?? false;
   const goalsEmpty = state.instructionsGoals.trim() === "";
-  const { dailyApplyCap, minScore, networking } = state.instructionsConfig;
-  const outreachOn = networkingMode(state.instructionsConfig) !== null;
-  const { appliedToday, capReached, networkingSentToday } = state;
+  const timeouts = pilot?.consecutiveTimeouts ?? 0;
 
   const stopWithConfirm = async (): Promise<void> => {
     const ok = await confirm({
@@ -84,9 +89,8 @@ export function StatusHero(): ReactElement {
                 label={pilot?.paired ? "Agent connected" : "Agent not connected"}
                 size="small"
               />
-              {pilot?.conducting && <Chip color="info" label="Working" size="small" />}
-              {/* First-cycle feedback: right after Start there is no history yet - say so instead of looking idle. */}
-              {running && state.cycleCount === 0 && !pilot?.conducting && (
+              {conducting && <Chip color="info" label="Working" size="small" />}
+              {running && state.cycleCount === 0 && !conducting && (
                 <Chip
                   color="info"
                   variant="outlined"
@@ -94,17 +98,17 @@ export function StatusHero(): ReactElement {
                   size="small"
                 />
               )}
-              {typeof pilot?.consecutiveTimeouts === "number" && pilot.consecutiveTimeouts > 0 && (
+              {timeouts > 0 && (
                 <Chip
                   color="warning"
                   variant="outlined"
-                  label={`${pilot.consecutiveTimeouts} timeout${pilot.consecutiveTimeouts > 1 ? "s" : ""}`}
+                  label={plural(timeouts, "timeout")}
                   size="small"
                 />
               )}
             </Stack>
 
-            {/* The stopped + offline case is the setup checklist's job; only warn when cycles should be running. */}
+            {/* Stopped + offline is the setup checklist's job; only warn when cycles should run. */}
             {running && isHostOffline(health) && (
               <Alert severity="warning">{PILOT_HOST_OFFLINE_MESSAGE}</Alert>
             )}
@@ -137,7 +141,7 @@ export function StatusHero(): ReactElement {
                 </Stack>
               </Box>
               {/* Hidden mid-cycle: the "Working" chip already covers that state. */}
-              {running && nextWakeAt && !pilot?.conducting && (
+              {running && nextWakeAt && !conducting && (
                 <Box>
                   <Typography variant="overlineMuted">Next wake</Typography>
                   <Typography variant="body2">
@@ -152,47 +156,7 @@ export function StatusHero(): ReactElement {
         </Grid>
 
         <Grid size={{ xs: 12, md: 5 }}>
-          <Stack spacing={2}>
-            <Stack spacing={1}>
-              <Typography variant="overlineMuted">Today</Typography>
-              {dailyApplyCap > 0 ? (
-                <Meter
-                  label="Applied"
-                  value={appliedToday}
-                  cap={dailyApplyCap}
-                  spent={capReached}
-                />
-              ) : (
-                <Typography variant="body2Muted">
-                  Daily apply cap is 0 - the pilot won't apply until you raise it.
-                </Typography>
-              )}
-              {outreachOn && networking.dailyCap > 0 && (
-                <Meter
-                  label="Networked"
-                  value={networkingSentToday}
-                  cap={networking.dailyCap}
-                  spent={networkingSentToday >= networking.dailyCap}
-                />
-              )}
-              <TodayOutcomes appliedToday={appliedToday} />
-            </Stack>
-            <Grid container spacing={1.5}>
-              <Grid size={4}>
-                <StatCard label="Min score" value={minScore} />
-              </Grid>
-              <Grid size={4}>
-                <StatCard label="Daily cap" value={dailyApplyCap} />
-              </Grid>
-              <Grid size={4}>
-                <StatCard
-                  label="Networking"
-                  value={outreachOn ? networking.dailyCap : "Off"}
-                  hint={outreachOn ? "per day" : "disabled"}
-                />
-              </Grid>
-            </Grid>
-          </Stack>
+          <TodayPanel state={state} />
         </Grid>
       </Grid>
     </SectionCard>

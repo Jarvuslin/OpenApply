@@ -3,6 +3,7 @@
 import type { ReactElement } from "react";
 import { Save } from "@mui/icons-material";
 import { Button, Stack, Typography } from "@mui/material";
+import { StickyFooter } from "@/components/ui/layout";
 import type { SaveState } from "./use-autosave";
 
 const STATUS: Record<SaveState, string> = {
@@ -20,22 +21,11 @@ interface SaveBarProps {
   conflict?: ReactElement | null;
 }
 
-/** Must stay outside any Card: MUI Card clips overflow, which kills `position: sticky`. */
 export function SaveBar(props: SaveBarProps): ReactElement {
   const { state, onSave, conflict } = props;
 
   return (
-    <Stack
-      spacing={1}
-      sx={(theme) => ({
-        position: "sticky",
-        bottom: 0,
-        paddingBlock: theme.spacing(1.5),
-        backgroundColor: theme.palette.surfaces.base,
-        borderTop: `1px solid ${theme.palette.line.divider}`,
-        zIndex: 1,
-      })}
-    >
+    <StickyFooter>
       {conflict}
       <Stack direction="row" spacing={2} sx={{ justifyContent: "flex-end", alignItems: "center" }}>
         <Typography variant="captionMuted" color={state === "error" ? "error.main" : undefined}>
@@ -51,6 +41,6 @@ export function SaveBar(props: SaveBarProps): ReactElement {
           {state === "error" ? "Retry" : "Save now"}
         </Button>
       </Stack>
-    </Stack>
+    </StickyFooter>
   );
 }

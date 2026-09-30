@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { Box, Stack } from "@mui/material";
+import { Box, Skeleton, Stack } from "@mui/material";
 import { useApiQuery } from "@/api/hooks";
 import { pilotQueries } from "@/api/queries";
 import { useTerminalHealth } from "../../agent-dock/use-terminal-health";
@@ -9,48 +9,53 @@ import { NeedsAttention } from "../attention/needs-attention";
 import { usePilotControls } from "../use-pilot-controls";
 import { AgendaPreview } from "./agenda-preview";
 import { OrchestrationPanel } from "./orchestration-panel";
-import { OverviewSkeleton } from "./overview-skeleton";
-import { PilotStatusProvider } from "./pilot-status-context";
 import { RecentActivity } from "./recent-activity";
 import { PilotSetupChecklist } from "./setup-checklist";
 import { StatusHero } from "./status-hero";
 
 export function OverviewTab(): ReactElement {
-  // Controls + health are hoisted so the hero and the checklist share one host poll.
+  // Owned here so the hero, checklist and diagram share one host poll.
   const controls = usePilotControls();
   const { health, status } = useTerminalHealth(controls.isLoading);
   const stateQuery = useApiQuery(pilotQueries.state(), {
     errorMessage: "Failed to load pilot state",
   });
 
-  if (stateQuery.isLoading || !stateQuery.data) {
-    return <OverviewSkeleton />;
+  const state = stateQuery.data;
+  if (stateQuery.isLoading || !state) {
+    return (
+      <Stack spacing={3}>
+        <Skeleton variant="rounded" height={72} />
+        <Skeleton variant="rounded" height={180} />
+        <Skeleton variant="rounded" height={140} />
+        <Skeleton variant="rounded" height={140} />
+        <Skeleton variant="rounded" height={140} />
+      </Stack>
+    );
   }
 
-  const state = stateQuery.data;
+  const pilot = status?.pilot ?? null;
 
-  // On xs, Needs-attention hoists above the hero so it's reachable one-handed;
-  // md keeps DOM order. useFlexGap makes `order` reflow cleanly.
+  // On xs, Needs attention hoists above the hero so it's reachable one-handed. Sibling margins
+  // would break under `order`, hence useFlexGap.
   return (
-    <PilotStatusProvider state={state} controls={controls} health={health} hostStatus={status}>
-      <Stack spacing={3} useFlexGap>
-        <PilotSetupChecklist />
-        <Box sx={{ order: { xs: 2, md: 0 } }}>
-          <StatusHero />
-        </Box>
-        <Box sx={{ order: { xs: 3, md: 0 } }}>
-          <OrchestrationPanel />
-        </Box>
-        <Box sx={{ order: { xs: 1, md: 0 } }}>
-          <NeedsAttention />
-        </Box>
-        <Box sx={{ order: { xs: 4, md: 0 } }}>
-          <AgendaPreview />
-        </Box>
-        <Box sx={{ order: { xs: 5, md: 0 } }}>
-          <RecentActivity />
-        </Box>
-      </Stack>
-    </PilotStatusProvider>
+    <Stack spacing={3} useFlexGap>
+      <PilotSetupChecklist state={state} controls={controls} health={health} />
+      <Box sx={{ order: { xs: 2, md: 0 } }}>
+        <StatusHero state={state} controls={controls} health={health} pilot={pilot} />
+      </Box>
+      <Box sx={{ order: { xs: 3, md: 0 } }}>
+        <OrchestrationPanel state={state} health={health} pilot={pilot} />
+      </Box>
+      <Box sx={{ order: { xs: 1, md: 0 } }}>
+        <NeedsAttention />
+      </Box>
+      <Box sx={{ order: { xs: 4, md: 0 } }}>
+        <AgendaPreview />
+      </Box>
+      <Box sx={{ order: { xs: 5, md: 0 } }}>
+        <RecentActivity />
+      </Box>
+    </Stack>
   );
 }

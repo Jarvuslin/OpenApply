@@ -9,10 +9,7 @@ import { SectionCard } from "@/components/ui/layout";
 import { formatDuration, plural } from "@/utils/format";
 import { agendaKindLabel } from "../agenda-kinds";
 
-/**
- * Where the week's cycles went, by agenda kind. Wall clock stands in for token spend: the two track
- * each other closely enough to rank the kinds, and nothing measures tokens per cycle today.
- */
+/** Wall clock stands in for token spend: nothing measures tokens per cycle, and both rank kinds alike. */
 export function CycleCost(): ReactElement {
   const query = useApiQuery(pilotQueries.cost(), { errorMessage: "Failed to load cycle costs" });
   const items = query.data?.items ?? [];

@@ -3,3 +3,4 @@ export { PageShell } from "./page-shell";
 export type { SectionAnchor } from "./section-anchor-nav";
 export { SectionCard } from "./section-card";
 export { SectionLayout } from "./section-layout";
+export { StickyFooter } from "./sticky-footer";

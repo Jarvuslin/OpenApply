@@ -1,8 +1,15 @@
 import type { ReactElement, ReactNode } from "react";
 import { NotificationsNone } from "@mui/icons-material";
-import { PilotLive, PilotTabs } from "@/components/features/pilot";
+import { PilotLive } from "@/components/features/pilot";
 import { LinkButton } from "@/components/ui/buttons";
 import { PageHeader, PageShell } from "@/components/ui/layout";
+import { type Tab, TabStrip } from "@/components/ui/navigation/tab-strip";
+
+const TABS: Tab[] = [
+  { label: "Overview", href: "/pilot" },
+  { label: "Instructions", href: "/pilot/instructions" },
+  { label: "Activity", href: "/pilot/activity" },
+];
 
 interface PilotLayoutProps {
   children: ReactNode;
@@ -27,8 +34,8 @@ export default function PilotLayout(props: PilotLayoutProps): ReactElement {
           </LinkButton>
         }
       />
-      <PilotTabs />
-      {/* Lives in the layout so the shared pilot SSE subscription survives tab navigation. */}
+      <TabStrip tabs={TABS} ariaLabel="Pilot sections" />
+      {/* In the layout so the subscription survives tab navigation. */}
       <PilotLive />
       {children}
     </PageShell>

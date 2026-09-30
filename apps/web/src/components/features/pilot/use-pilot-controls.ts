@@ -11,17 +11,17 @@ import { useToast } from "@/providers/notification-provider";
 
 export interface PilotControls {
   provider: TerminalProviderId;
-  /** True while a start/stop round-trip is in flight. */
   isLoading: boolean;
   start: () => Promise<void>;
   stop: () => Promise<void>;
 }
 
 function describeHostError(error: unknown): string {
+  // The host call runs against the user's own machine, so a network failure means it's offline.
   if (error instanceof TypeError) {
     return "Terminal host offline - install or start the JobPilot agent first, then try again.";
   }
-  // A host without the /pilot/start|stop routes is an old agent: point the user at the update.
+  // Only an agent too old to have the /pilot/start|stop routes answers 404.
   if (error instanceof TerminalApiError && error.status === 404) {
     return "Update the JobPilot agent, then try again.";
   }
@@ -31,11 +31,7 @@ function describeHostError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/**
- * Wires the three-step start flow (terminal token → local host pairing → API
- * state) and its reverse. The host call runs against the user's local machine,
- * so a TypeError means the host is offline rather than an API failure.
- */
+/** Start: terminal token, then local host pairing, then API state. Stop runs it in reverse. */
 export function usePilotControls(): PilotControls {
   const toast = useToast();
   const queryClient = useQueryClient();

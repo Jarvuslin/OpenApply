@@ -1,20 +1,40 @@
 "use client";
 
 import { type ReactElement, useState } from "react";
-import type { PatchPromotionInput, Promotion } from "@jobpilot/contracts/pilot";
+import type { PatchPromotionInput, Promotion, PromotionStatus } from "@jobpilot/contracts/pilot";
 import { OpenInNew } from "@mui/icons-material";
-import { Button, Card, CardContent, Chip, Link, Stack, TextField, Typography } from "@mui/material";
+import {
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  type ChipProps,
+  Link,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { api } from "@/api/client";
 import { useApiMutation } from "@/api/hooks";
 import { queryKeys } from "@/api/query-keys";
+import { ColorChip } from "@/components/ui/display";
 import { formatRelativeTime } from "@/utils/format";
-import { PromotionStatusChip } from "./promotion-status-chip";
 
-/** Editable draft card: edit title/body, then Save (edits only) or Approve (edits + approval). */
+const STATUS_COLOR: Record<PromotionStatus, ChipProps["color"]> = {
+  draft: "warning",
+  approved: "info",
+  declined: "default",
+  posted: "success",
+  failed: "error",
+  skipped: "default",
+  expired: "default",
+};
+
 interface PromotionCardProps {
   promotion: Promotion;
 }
 
+/** Save keeps it a draft; Approve sends the same edits along with the approval. */
 export function PromotionDraftCard(props: PromotionCardProps): ReactElement {
   const { promotion } = props;
   const hasTitle = promotion.title !== null;
@@ -71,8 +91,7 @@ export function PromotionDraftCard(props: PromotionCardProps): ReactElement {
               variant="text"
               size="small"
               disabled={isLoading || !dirty || !canSave}
-              // Resync both fields: a server-normalized title would otherwise keep
-              // `dirty` true forever and never re-disable Save.
+              // Resync both fields, or a server-normalized title keeps `dirty` true forever.
               onClick={() =>
                 patch.mutate(edits, {
                   onSuccess: (p) => {
@@ -108,13 +127,17 @@ export function PromotionDraftCard(props: PromotionCardProps): ReactElement {
   );
 }
 
-/** Compact read-only row for a non-draft post; links out to the published URL when present. */
-export function PromotionSummary(props: { promotion: Promotion }): ReactElement {
+export function PromotionSummary(props: PromotionCardProps): ReactElement {
   const { promotion } = props;
   return (
     <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
       <Chip size="small" variant="outlined" label={promotion.platform} sx={{ minWidth: 90 }} />
-      <PromotionStatusChip status={promotion.status} />
+      <ColorChip
+        value={promotion.status}
+        colors={STATUS_COLOR}
+        variant="filled"
+        sx={{ textTransform: "capitalize" }}
+      />
       <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>
         {promotion.title ?? promotion.body}
       </Typography>

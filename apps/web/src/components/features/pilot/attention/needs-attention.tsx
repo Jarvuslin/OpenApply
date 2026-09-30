@@ -19,7 +19,6 @@ interface DraftRowProps {
   onToggle: () => void;
 }
 
-/** Collapsed one-liner for a draft post; expands into the full editor on review. */
 function DraftRow(props: DraftRowProps): ReactElement {
   const { promotion, expanded, onToggle } = props;
   return (
@@ -46,7 +45,6 @@ function DraftRow(props: DraftRowProps): ReactElement {
   );
 }
 
-/** One queue for everything blocking the pilot: open questions first, then draft posts. */
 export function NeedsAttention(): ReactElement {
   const questionsQuery = useOpenQuestions();
   const { questions } = questionsQuery;

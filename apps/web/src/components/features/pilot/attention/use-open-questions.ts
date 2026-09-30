@@ -10,13 +10,12 @@ import { useSseChannel } from "@/lib/sse/client";
 
 interface OpenQuestions {
   questions: PilotQuestion[];
-  count: number;
   isLoading: boolean;
   isError: boolean;
   refetch: () => void;
 }
 
-/** Open-question feed shared by the pilot list and the nav badge; kept live via pilotChannel. */
+/** Shared by the attention list, the nav badge and the dashboard card. */
 export function useOpenQuestions(): OpenQuestions {
   const queryClient = useQueryClient();
   const query = useApiQuery(pilotQueries.questions("open"));
@@ -25,16 +24,13 @@ export function useOpenQuestions(): OpenQuestions {
     queryClient.invalidateQueries({ queryKey: queryKeys.pilot.questionsAll() });
   };
 
-  // Duplicates PilotLive's handlers on /pilot, but the nav badge mounts outside the
-  // pilot layout and would otherwise go stale. TanStack dedupes the refetch.
+  // Repeats PilotLive's handlers because the nav badge lives outside the pilot layout.
   useSseChannel(pilotChannel, null, {
     on: { "question.created": refresh, "question.answered": refresh },
   });
 
-  const questions = query.data ?? [];
   return {
-    questions,
-    count: questions.length,
+    questions: query.data ?? [],
     isLoading: query.isLoading,
     isError: query.isError,
     refetch: () => void query.refetch(),

@@ -1,13 +1,47 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { usePilotLive } from "./use-pilot-live";
+import { type ReactNode, useEffect, useRef } from "react";
+import { pilotChannel } from "@jobpilot/contracts/sse";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/api/query-keys";
+import { useSseChannel } from "@/lib/sse/client";
+import { appendJournalEntry } from "./journal/use-journal-live";
 
 /**
- * Renders nothing; exists so the pilot layout (a server component) can host
- * the shared pilot SSE subscription once, persisting across tab navigation.
+ * The pilot layout's one SSE subscription, fanned out to query invalidations. `journal.appended`
+ * writes straight into the journal caches instead, so it costs no refetch.
  */
 export function PilotLive(): ReactNode {
-  usePilotLive();
+  const queryClient = useQueryClient();
+
+  const invalidate = (queryKey: readonly unknown[]): void => {
+    queryClient.invalidateQueries({ queryKey });
+  };
+  const refreshQuestions = (): void => invalidate(queryKeys.pilot.questionsAll());
+  const refreshPromotions = (): void => invalidate(queryKeys.pilot.promotionsAll());
+
+  const status = useSseChannel(pilotChannel, null, {
+    on: {
+      "state.changed": () => invalidate(queryKeys.pilot.state()),
+      "journal.appended": (event) => appendJournalEntry(queryClient, event.entry),
+      "question.created": refreshQuestions,
+      "question.answered": refreshQuestions,
+      "promotion.created": refreshPromotions,
+      "promotion.updated": refreshPromotions,
+    },
+  });
+
+  // Catch up on events missed while reconnecting. Never `pilot.all`: that would recompile the agenda.
+  const previousStatus = useRef(status);
+  useEffect(() => {
+    if (previousStatus.current === "reconnecting" && status === "open") {
+      queryClient.invalidateQueries({ queryKey: queryKeys.pilot.state() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.pilot.journalAll() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.pilot.questionsAll() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.pilot.promotionsAll() });
+    }
+    previousStatus.current = status;
+  }, [status, queryClient]);
+
   return null;
 }

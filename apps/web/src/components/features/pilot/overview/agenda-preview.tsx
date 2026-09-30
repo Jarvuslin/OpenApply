@@ -5,7 +5,7 @@ import type { AgendaResponse } from "@jobpilot/contracts/pilot";
 import { Refresh } from "@mui/icons-material";
 import { Box, Chip, Divider, IconButton, Stack, Typography } from "@mui/material";
 import { api } from "@/api/client";
-import { useApiMutation, useApiQuery } from "@/api/hooks";
+import { type ApiQueryResult, useApiMutation, useApiQuery } from "@/api/hooks";
 import { pilotQueries } from "@/api/queries";
 import { queryKeys } from "@/api/query-keys";
 import { LinkButton } from "@/components/ui/buttons";
@@ -21,7 +21,6 @@ interface AgendaEmptyProps {
   budget: AgendaResponse["budget"];
 }
 
-/** Explains an empty agenda; the reason is decided server-side (see AgendaResponse.emptyReason). */
 function AgendaEmpty(props: AgendaEmptyProps): ReactElement {
   const { reason, budget } = props;
   if (reason === "capReached") {
@@ -51,13 +50,17 @@ function AgendaEmpty(props: AgendaEmptyProps): ReactElement {
   return <EmptyState variant="inline" title="Agenda is clear." />;
 }
 
-/** Read-only peek at the next cycle's plan. Fetched once + manual refresh: agenda compiles are costly. */
-export function AgendaPreview(): ReactElement {
-  const query = useApiQuery(pilotQueries.agenda(), {
+/** Pinned to one fetch plus manual refresh: compiling an agenda is costly. */
+export function useAgenda(): ApiQueryResult<AgendaResponse | null> {
+  return useApiQuery(pilotQueries.agenda(), {
     staleTime: Number.POSITIVE_INFINITY,
     refetchOnWindowFocus: false,
     retry: false,
   });
+}
+
+export function AgendaPreview(): ReactElement {
+  const query = useAgenda();
   const refresh = useApiMutation<AgendaResponse, void>(() => api.pilot.agenda.refresh.post(), {
     invalidate: [queryKeys.pilot.agenda()],
   });
@@ -89,7 +92,7 @@ export function AgendaPreview(): ReactElement {
           <EmptyState
             variant="inline"
             title="No current agenda snapshot."
-            description="Refresh to compile the pilot's next versioned agenda."
+            description="Refresh to build the pilot's next versioned agenda."
           />
         }
       >

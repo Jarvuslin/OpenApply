@@ -1,9 +1,11 @@
 "use client";
 
 import type { ReactElement, ReactNode } from "react";
-import { LinearProgress, Stack, Typography } from "@mui/material";
+import { networkingMode, type PilotState } from "@jobpilot/contracts/pilot";
+import { Grid, LinearProgress, Stack, Typography } from "@mui/material";
 import { useApiQuery } from "@/api/hooks";
 import { pilotQueries } from "@/api/queries";
+import { StatCard } from "@/components/ui/display";
 
 interface MeterProps {
   label: string;
@@ -13,7 +15,7 @@ interface MeterProps {
   spent: boolean;
 }
 
-export function Meter(props: MeterProps): ReactElement {
+function Meter(props: MeterProps): ReactElement {
   const { label, value, cap, spent } = props;
   const percent = cap > 0 ? Math.min(100, (value / cap) * 100) : 0;
 
@@ -57,10 +59,9 @@ interface TodayOutcomesProps {
 }
 
 /** Without this, "16 applied" beside 52 quiet skips reads as a slow day, not a bad search. */
-export function TodayOutcomes(props: TodayOutcomesProps): ReactNode {
+function TodayOutcomes(props: TodayOutcomesProps): ReactNode {
   const { appliedToday } = props;
-  const query = useApiQuery(pilotQueries.todayOutcomes());
-  const outcomes = query.data;
+  const outcomes = useApiQuery(pilotQueries.todayOutcomes()).data;
 
   if (!outcomes || outcomes.skipped + outcomes.failed === 0) {
     return null;
@@ -88,6 +89,56 @@ export function TodayOutcomes(props: TodayOutcomesProps): ReactNode {
           Most jobs are being skipped. Lower the min score, or point your searches somewhere else.
         </Typography>
       )}
+    </Stack>
+  );
+}
+
+interface TodayPanelProps {
+  state: PilotState;
+}
+
+export function TodayPanel(props: TodayPanelProps): ReactElement {
+  const { state } = props;
+  const { appliedToday, capReached, networkingSentToday } = state;
+  const { dailyApplyCap, minScore, networking } = state.instructionsConfig;
+  const outreachOn = networkingMode(state.instructionsConfig) !== null;
+
+  return (
+    <Stack spacing={2}>
+      <Stack spacing={1}>
+        <Typography variant="overlineMuted">Today</Typography>
+        {dailyApplyCap > 0 ? (
+          <Meter label="Applied" value={appliedToday} cap={dailyApplyCap} spent={capReached} />
+        ) : (
+          <Typography variant="body2Muted">
+            Daily apply cap is 0 - the pilot won't apply until you raise it.
+          </Typography>
+        )}
+        {outreachOn && networking.dailyCap > 0 && (
+          <Meter
+            label="Networked"
+            value={networkingSentToday}
+            cap={networking.dailyCap}
+            spent={networkingSentToday >= networking.dailyCap}
+          />
+        )}
+        <TodayOutcomes appliedToday={appliedToday} />
+      </Stack>
+      <Grid container spacing={1.5}>
+        <Grid size={4}>
+          <StatCard label="Min score" value={minScore} />
+        </Grid>
+        <Grid size={4}>
+          <StatCard label="Daily cap" value={dailyApplyCap} />
+        </Grid>
+        <Grid size={4}>
+          <StatCard
+            label="Networking"
+            value={outreachOn ? networking.dailyCap : "Off"}
+            hint={outreachOn ? "per day" : "disabled"}
+          />
+        </Grid>
+      </Grid>
     </Stack>
   );
 }

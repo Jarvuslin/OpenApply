@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import type { PilotState } from "@jobpilot/contracts/pilot";
 import { CheckCircle, RadioButtonUnchecked } from "@mui/icons-material";
 import { Box, Button, Stack, Typography } from "@mui/material";
 import { useApiQuery } from "@/api/hooks";
@@ -8,7 +9,8 @@ import { emailQueries } from "@/api/queries";
 import { LinkButton } from "@/components/ui/buttons";
 import { SectionCard } from "@/components/ui/layout";
 import { useAgentAvailable, useAgentDock } from "@/providers/agent-provider";
-import { usePilotStatus } from "./pilot-status-context";
+import type { TerminalHealth } from "../../agent-dock/use-terminal-health";
+import type { PilotControls } from "../use-pilot-controls";
 
 interface ChecklistStep {
   id: string;
@@ -18,9 +20,15 @@ interface ChecklistStep {
   action: ReactNode;
 }
 
-/** Onboarding card; renders nothing once the pilot is fully set up. */
-export function PilotSetupChecklist(): ReactNode {
-  const { state, controls, health } = usePilotStatus();
+interface PilotSetupChecklistProps {
+  state: PilotState;
+  controls: PilotControls;
+  health: TerminalHealth;
+}
+
+/** Renders nothing once the pilot is fully set up. */
+export function PilotSetupChecklist(props: PilotSetupChecklistProps): ReactNode {
+  const { state, controls, health } = props;
   const dock = useAgentDock();
   const agentAvailable = useAgentAvailable();
 
@@ -33,7 +41,7 @@ export function PilotSetupChecklist(): ReactNode {
   const needsReauth = connected && mailbox.needsReauth;
   const emailOk = connected && !needsReauth;
 
-  // Unanswered counts as done here so the checklist doesn't flash; the step rows below stay strict.
+  // An unanswered probe counts as done here so the card doesn't flash; the step rows stay strict.
   const hostSettled = hostReady || health === "checking";
   const emailSettled = emailOk || mailbox == null;
 

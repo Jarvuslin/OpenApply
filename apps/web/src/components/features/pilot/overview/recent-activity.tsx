@@ -7,20 +7,18 @@ import { pilotQueries } from "@/api/queries";
 import { LinkButton } from "@/components/ui/buttons";
 import { EmptyState, QuerySection } from "@/components/ui/data";
 import { SectionCard } from "@/components/ui/layout";
-import { dedupeById } from "@/utils/array";
 import { JournalRow } from "../journal/journal-row";
 import { LiveStatusChip } from "../journal/live-status-chip";
-import { useJournalLive } from "../journal/use-journal-live";
+import { useJournalLiveStatus } from "../journal/use-journal-live";
 
 const RECENT_LIMIT = 8;
 
-/** Compact live strip of the newest journal entries; the Activity tab holds the full feed. */
 export function RecentActivity(): ReactElement {
   // Same query key as the Activity tab, so both share one cached first page.
   const firstPage = useApiQuery(pilotQueries.journal());
-  const { entries: live, status } = useJournalLive();
+  const status = useJournalLiveStatus();
 
-  const entries = dedupeById([...live, ...(firstPage.data?.items ?? [])]).slice(0, RECENT_LIMIT);
+  const entries = (firstPage.data?.items ?? []).slice(0, RECENT_LIMIT);
 
   return (
     <SectionCard
