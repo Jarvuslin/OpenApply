@@ -8,7 +8,7 @@ import { pilotQueries } from "@/api/queries";
 import { EmptyState, QuerySection } from "@/components/ui/data";
 import { formatRelativeTime, formatTimeUntil } from "@/utils/format";
 
-/** Consecutive empty runs before a search reads as backing off; the API delays it from the first. */
+/** The empty-run streak that puts a search on the API backoff ladder's top (48h) rung. */
 const BACKOFF_THRESHOLD = 3;
 
 interface SearchStatus {
