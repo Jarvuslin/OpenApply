@@ -24,16 +24,13 @@ const pilotPromotionPlatformSchema = z.object({
   postEveryDays: z.number().int().min(1).default(30),
 });
 
-/** Self-promotion config. Review-only in M3: auto-posting is deliberately not offered. */
+/** Review-only: auto-posting is deliberately not offered. */
 const pilotPromotionConfigSchema = z.object({
   platforms: z.array(pilotPromotionPlatformSchema).default([]),
   autonomy: z.literal("review").default("review"),
 });
 
-/**
- * The Pilot's operating envelope, stored as JSON in `PilotState.instructionsConfig`.
- * Every field defaults, so an empty `{}` parses to a full, usable config.
- */
+/** Stored as JSON in `PilotState.instructionsConfig`; `{}` parses to a full config. */
 export const pilotInstructionsConfigSchema = z.object({
   dailyApplyCap: z.number().int().min(0).default(10),
   minScore: z.number().min(0).max(100).default(60),
@@ -44,31 +41,24 @@ export const pilotInstructionsConfigSchema = z.object({
   promotion: pilotPromotionConfigSchema.prefault({}),
 });
 
-/**
- * What to do with work the pilot started under the old goals. Nothing here happens by default: the
- * searches, campaigns and approved backlog all outlive an instructions edit, which is why rewritten
- * goals otherwise look ignored. The web asks before sending any of it.
- */
+/** What to retire from the old goals. Nothing by default, so the web asks before sending any. */
 export const pilotInstructionsChangeSchema = z.object({
-  // Deletes the searches so `strategy.bootstrap` can derive new ones - it is gated on there being none.
+  // `strategy.bootstrap` only runs once no searches exist, so deleting them is what re-derives.
   rederiveSearches: z.boolean().default(false),
   completeCampaigns: z.boolean().default(false),
   dropApprovedJobs: z.boolean().default(false),
 });
 
-/** Retire nothing: what a save sends when the goals did not change. */
 export const NO_INSTRUCTIONS_CHANGE: PilotInstructionsChange = pilotInstructionsChangeSchema.parse(
   {},
 );
 
 export const updatePilotInstructionsSchema = z.object({
-  // Goals are mandatory and the pilot's whole steering input: an empty save is rejected.
   goals: z.string().trim().min(1, "Write the pilot's goals before saving."),
   config: pilotInstructionsConfigSchema,
   onChange: pilotInstructionsChangeSchema.prefault({}),
 });
 
-/** What an instructions edit would leave behind, so the user can decide before saving. */
 export const pilotInstructionsImpactSchema = z.object({
   searches: z.array(z.object({ id: z.uuid(), query: z.string(), reason: z.string() })),
   campaigns: z.array(
@@ -86,7 +76,6 @@ export const pilotStateSchema = z.object({
   instructionsUpdatedAt: z.date().nullable(),
   lastCycleAt: z.date().nullable(),
   cycleCount: z.number().int(),
-  // Today's applied count (tz-aware) and whether it has reached the instructions' daily cap.
   appliedToday: z.number().int(),
   capReached: z.boolean(),
   networkingSentToday: z.number().int(),
@@ -109,7 +98,7 @@ export function channelAutonomy(
   return mode === "off" ? null : mode;
 }
 
-// Which channel a warm intro prefers when both are on
+// A warm intro prefers email when both channels are on.
 const CHANNEL_PREFERENCE = ["email", "linkedin"] as const satisfies readonly NetworkingChannel[];
 
 /** How a new outreach message goes out, or null when every channel is off. */

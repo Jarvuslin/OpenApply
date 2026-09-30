@@ -1,149 +1,198 @@
 import {
   type AgendaContent,
   type AgendaItem,
+  type AgendaPayload,
   channelAutonomy,
   networkingMode,
+  type PilotInstructionsConfig,
 } from "@jobpilot/contracts/pilot";
 import { nextDayReset } from "@/common/date/buckets";
+import type { AgendaJob } from "./gather-jobs";
+import type { Followup } from "./gather-outreach";
+import type { DueSearch } from "./gather-searches";
 import {
-  ACTIVE_SLEEP_SECONDS,
-  MAX_IDLE_SLEEP_SECONDS,
-  MAX_ITEMS,
-  MIN_IDLE_SLEEP_SECONDS,
-  NEW_JOBS_TARGET_MAX,
-  NEW_JOBS_TARGET_MIN,
-} from "./constants";
-import { buildInterviewPrepItems, buildInterviewReplyItems } from "./items-interview";
-import {
-  buildDiscoverItems,
-  buildJobApplyItems,
-  buildQuestionItems,
-  buildReviewPausedItems,
-  buildScorePendingItems,
-  buildWarmIntroItems,
-} from "./items-jobs";
-import { buildFollowupItems, buildInboxItem, buildNetworkingSendItems } from "./items-networking";
-import {
-  buildBoardHealthItems,
-  buildBootstrapItem,
-  buildQueueDrainItems,
-  buildRescanSkippedItems,
-  buildRetryFailedItems,
-  buildStrategyReviewItems,
-  buildUpworkSyncItems,
-} from "./items-proactive";
-import { buildPromoComposeItems, buildPromoPostItems } from "./items-promo";
-import type { AgendaInput } from "./types";
+  applyItem,
+  boardHealthItem,
+  bootstrapItem,
+  discoverItem,
+  followupItem,
+  inboxItem,
+  interviewPrepItem,
+  interviewReplyItem,
+  networkingSendItem,
+  promoComposeItem,
+  promoPostItem,
+  questionItem,
+  queueDrainItem,
+  rescanSkippedItem,
+  retryFailedItem,
+  reviewPausedItem,
+  scorePendingItem,
+  strategyReviewItem,
+  upworkSyncItem,
+  warmIntroItem,
+} from "./items";
 
-/**
- * Name why the agenda is empty so clients render it instead of re-deriving suppression rules.
- * Awaiting setup + empty means bootstrap was gathered but suppressed (recent attempt), otherwise
- * it would be an item.
- */
-function agendaEmptyReason(
-  itemCount: number,
-  capReached: boolean,
-  awaitingSetup: boolean,
-): AgendaContent["emptyReason"] {
-  if (itemCount > 0) return null;
-  if (capReached) return "capReached";
-  if (awaitingSetup) return "awaitingSetup";
-  return "clear";
+const MAX_ITEMS = 10;
+const MAX_TITLE_LENGTH = 200;
+/** Per-agenda caps keep one cycle focused; the rest drain over later cycles. */
+const PER_AGENDA = {
+  boardHealth: 1,
+  reviewPaused: 1,
+  interviewReply: 2,
+  interviewPrep: 1,
+  warmIntro: 1,
+  followup: 2,
+  promoCompose: 1,
+  maintenance: 1,
+} as const;
+const ACTIVE_SLEEP_SECONDS = 15;
+/** Floors a tiny `checkIntervalMinutes` so the loop can't spin. */
+const MIN_IDLE_SLEEP_SECONDS = 30;
+/** A backed-off pilot still wakes within the day. */
+const MAX_IDLE_SLEEP_SECONDS = 6 * 60 * 60;
+const NEW_JOBS_TARGET_MIN = 5;
+const NEW_JOBS_TARGET_MAX = 20;
+const SEARCH_MAX_PAGES = 5;
+
+export interface AgendaInput {
+  now: Date;
+  config: PilotInstructionsConfig;
+  // Rotates discovery across the configured boards.
+  cycleCount: number;
+  openQuestions: number;
+  activeClaims: number;
+  appliedToday: number;
+  networkingSentToday: number;
+  // No searches yet, or no goals to derive them from.
+  awaitingSetup: boolean;
+  // The idle sleep never runs past this.
+  nextSearchRunAt: Date | null;
+  answeredQuestions: AgendaPayload<"question.answered">[];
+  approvedJobs: AgendaJob[];
+  warmIntroCandidates: AgendaJob[];
+  dueQueries: DueSearch[];
+  scorePending: AgendaPayload<"campaign.scorePending">[];
+  queueDrains: AgendaPayload<"queue.drain">[];
+  pausedCampaigns: AgendaPayload<"campaign.reviewPaused">[];
+  boardHealth: AgendaPayload<"board.health">[];
+  inbox: AgendaPayload<"inbox.review">;
+  interviewReplies: AgendaPayload<"interview.reply">[];
+  interviewPreps: AgendaPayload<"interview.prep">[];
+  upworkSync: AgendaPayload<"upwork.syncInbox"> | null;
+  approvedNetworking: AgendaPayload<"networking.send">[];
+  followups: Followup[];
+  approvedPromotions: AgendaPayload<"promo.post">[];
+  duePlatforms: AgendaPayload<"promo.compose">[];
+  strategyReviews: AgendaPayload<"campaign.strategyReview">[];
+  rescanSkipped: AgendaPayload<"job.rescanSkipped">[];
+  retryFailed: AgendaPayload<"job.retryFailed">[];
+  bootstrap: AgendaPayload<"strategy.bootstrap"> | null;
+}
+
+type PipelineWork = Pick<
+  AgendaInput,
+  "approvedJobs" | "dueQueries" | "scorePending" | "queueDrains"
+>;
+
+/** Bootstrap and campaign reviews wait until no apply, discovery or scoring work is queued. */
+export function isPipelineQuiet(work: PipelineWork): boolean {
+  const { approvedJobs, dueQueries, scorePending, queueDrains } = work;
+  return approvedJobs.length + dueQueries.length + scorePending.length + queueDrains.length === 0;
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-/**
- * Compile a prioritized agenda from already-fetched inputs. Pure: no I/O, so the ordering,
- * cap-suppression, budget, and sleep rules are unit-testable. Ranking lives in PRIORITY
- * (./constants).
- */
+/** Ranks already-gathered work into the agenda. Pure, so every gating rule is unit-testable. */
 export function buildAgenda(input: AgendaInput): AgendaContent {
   const { now, config } = input;
   const capReached = input.appliedToday >= config.dailyApplyCap;
-  // The networking cap is independent of the apply cap; it gates sends and followups alike.
-  const sendsLeftToday = Math.max(0, config.networking.dailyCap - input.networkingSentToday);
+  const sendsLeft = Math.max(0, config.networking.dailyCap - input.networkingSentToday);
   const outreach = networkingMode(config);
   const emailAutonomy = channelAutonomy(config, "email");
 
-  const items: AgendaItem[] = [...buildQuestionItems(input.answeredQuestions)];
-  if (!capReached) items.push(...buildJobApplyItems(input.approvedJobs));
-  // Board health outranks apply work: a failing board should be probed before more attempts pile on.
-  items.push(...buildBoardHealthItems(input.boardHealth));
-  items.push(...buildUpworkSyncItems(input.upworkSync));
-  // Ungated by cap/busy: a stranded paused campaign must surface regardless.
-  items.push(...buildReviewPausedItems(input.pausedCampaigns));
-  items.push(...buildInterviewReplyItems(input.interviewReplies));
-  items.push(...buildInterviewPrepItems(input.interviewPreps));
-  // User-pasted links are proactive apply work, ranked just under the scored apply queue.
-  items.push(...buildQueueDrainItems(input.queueDrains));
-  if (outreach)
-    items.push(...buildWarmIntroItems(input.warmIntroCandidates, outreach, sendsLeftToday));
-  // A send acts on an email draft, so the email channel gates it.
-  const sendItems = emailAutonomy
-    ? buildNetworkingSendItems(input.approvedNetworking, sendsLeftToday)
-    : [];
-  items.push(...sendItems);
-  items.push(...buildInboxItem(input.inbox));
-  items.push(...buildPromoPostItems(input.approvedPromotions));
+  const items: AgendaItem[] = [
+    ...input.answeredQuestions.map(questionItem),
+    ...input.boardHealth.slice(0, PER_AGENDA.boardHealth).map(boardHealthItem),
+    ...input.pausedCampaigns.slice(0, PER_AGENDA.reviewPaused).map(reviewPausedItem),
+    ...input.interviewReplies.slice(0, PER_AGENDA.interviewReply).map(interviewReplyItem),
+    ...input.interviewPreps.slice(0, PER_AGENDA.interviewPrep).map(interviewPrepItem),
+    ...input.queueDrains.map(queueDrainItem),
+    ...input.approvedPromotions.map(promoPostItem),
+    ...input.duePlatforms.slice(0, PER_AGENDA.promoCompose).map(promoComposeItem),
+  ];
+  if (!capReached) items.push(...input.approvedJobs.map(applyItem));
+  if (input.inbox.count > 0) items.push(inboxItem(input.inbox));
+  if (input.upworkSync) items.push(upworkSyncItem(input.upworkSync));
 
-  // Scoring an existing campaign's pending rows and fresh discovery both only matter when there is
-  // nothing approved left to apply to; scoring ranks first so found-but-unscored work finishes first.
+  if (outreach && sendsLeft > 0) {
+    const intros = input.warmIntroCandidates.slice(0, PER_AGENDA.warmIntro);
+    items.push(...intros.map((job) => warmIntroItem(job, outreach)));
+  }
+  // Sends and followups act on email threads, and followups only get the budget sends leave over.
+  if (emailAutonomy) {
+    const sends = input.approvedNetworking.slice(0, sendsLeft);
+    const followupRoom = Math.min(PER_AGENDA.followup, sendsLeft - sends.length);
+    items.push(
+      ...sends.map(networkingSendItem),
+      ...input.followups
+        .slice(0, followupRoom)
+        .map((followup) =>
+          followupItem({ ...followup, channel: "email", autonomy: emailAutonomy }),
+        ),
+    );
+  }
+
+  // Scoring and discovery only matter once nothing approved is left to apply to.
   if (input.approvedJobs.length === 0) {
-    items.push(...buildScorePendingItems(input.scorePending));
-
-    // Discovery targets the room left under the daily apply cap; the clamp keeps one run bounded.
+    const { boards } = config;
+    const rotatedBoard = boards.length > 0 ? boards[input.cycleCount % boards.length] : undefined;
     const newJobsTarget = clamp(
       config.dailyApplyCap - input.appliedToday,
       NEW_JOBS_TARGET_MIN,
       NEW_JOBS_TARGET_MAX,
     );
-    items.push(...buildDiscoverItems(input.dueQueries, config, newJobsTarget, input.cycleCount));
+    items.push(
+      ...input.scorePending.map(scorePendingItem),
+      ...input.dueQueries.map((search) =>
+        discoverItem({
+          ...search,
+          board: rotatedBoard ?? search.board,
+          minScore: config.minScore,
+          newJobsTarget,
+          maxPages: SEARCH_MAX_PAGES,
+        }),
+      ),
+    );
   }
 
-  // Followups spend the same send budget, so they only get what the sends left over.
-  const followupsLeftToday = sendsLeftToday - sendItems.length;
-  if (followupsLeftToday > 0 && emailAutonomy)
-    items.push(...buildFollowupItems(input.followups.slice(0, followupsLeftToday), emailAutonomy));
-  items.push(...buildPromoComposeItems(input.duePlatforms));
-
-  // Quiet-agenda maintenance surfaces only when no apply / discover / queue work is queued.
-  const busy = items.some(
-    (i) =>
-      i.kind === "job.apply" ||
-      i.kind === "search.discover" ||
-      i.kind === "campaign.scorePending" ||
-      i.kind === "queue.drain",
-  );
-
-  if (!busy) {
-    items.push(...buildBootstrapItem(input.bootstrap));
-    items.push(...buildStrategyReviewItems(input.strategyReviews));
-    items.push(...buildRescanSkippedItems(input.rescanSkipped));
-    items.push(...buildRetryFailedItems(input.retryFailed));
+  if (isPipelineQuiet(input)) {
+    if (input.bootstrap) items.push(bootstrapItem(input.bootstrap));
+    items.push(
+      ...input.strategyReviews.slice(0, PER_AGENDA.maintenance).map(strategyReviewItem),
+      ...input.rescanSkipped.slice(0, PER_AGENDA.maintenance).map(rescanSkippedItem),
+      ...input.retryFailed.slice(0, PER_AGENDA.maintenance).map(retryFailedItem),
+    );
   }
 
-  items.sort((a, b) => b.priority - a.priority);
-  const capped = items.slice(0, MAX_ITEMS);
+  const ranked = items
+    .sort((a, b) => b.priority - a.priority)
+    .slice(0, MAX_ITEMS)
+    .map((item) => ({ ...item, title: item.title.slice(0, MAX_TITLE_LENGTH) }));
 
-  const emptyReason = agendaEmptyReason(capped.length, capReached, input.awaitingSetup);
-
-  // Idle sleep wakes at the sooner of the poll cadence and the next search due, clamped both ways.
   const secondsUntilSearch = input.nextSearchRunAt
     ? Math.max(0, Math.round((input.nextSearchRunAt.getTime() - now.getTime()) / 1000))
     : Number.POSITIVE_INFINITY;
-
   const idleSleep = clamp(
     Math.min(config.checkIntervalMinutes * 60, secondsUntilSearch),
     MIN_IDLE_SLEEP_SECONDS,
     MAX_IDLE_SLEEP_SECONDS,
   );
-
-  const sleepSeconds = capped.length > 0 ? ACTIVE_SLEEP_SECONDS : idleSleep;
+  const sleepSeconds = ranked.length > 0 ? ACTIVE_SLEEP_SECONDS : idleSleep;
 
   return {
     generatedAt: now,
-    items: capped,
+    items: ranked,
     counts: {
       openQuestions: input.openQuestions,
       activeClaims: input.activeClaims,
@@ -158,8 +207,20 @@ export function buildAgenda(input: AgendaInput): AgendaContent {
       networkingSentToday: input.networkingSentToday,
       resetsAt: nextDayReset(now),
     },
-    emptyReason,
+    emptyReason: emptyReason(ranked.length, capReached, input.awaitingSetup),
     sleepSeconds,
     nextWakeAt: new Date(now.getTime() + sleepSeconds * 1000),
   };
+}
+
+/** Named so clients render why the agenda is empty instead of re-deriving the gating rules. */
+function emptyReason(
+  itemCount: number,
+  capReached: boolean,
+  awaitingSetup: boolean,
+): AgendaContent["emptyReason"] {
+  if (itemCount > 0) return null;
+  if (capReached) return "capReached";
+  if (awaitingSetup) return "awaitingSetup";
+  return "clear";
 }

@@ -1,32 +1,45 @@
-import type { AgendaResponse } from "@jobpilot/contracts/pilot";
+import type { AgendaItem, AgendaResponse } from "@jobpilot/contracts/pilot";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { ClaimService } from "./claim.service";
 import { describe, expect, it } from "bun:test";
 
+const USER_ID = "5f0d4d0e-4f27-4a0a-9f4e-2b1c6f1f7f01";
+const CLAIM_ID = "4c965efd-b586-49ea-825b-1af715760116";
 const VERSION = "31b0c512-b767-4dd7-9ee8-913e46d544c6";
 const now = new Date();
+
+const applyItem: AgendaItem = {
+  id: "job.apply:c1:j1",
+  kind: "job.apply",
+  priority: 100,
+  title: "Engineer",
+  subjectType: "job",
+  subjectId: "j1",
+  payload: {
+    campaignId: "c1",
+    jobKey: "j1",
+    url: "https://example.test/job",
+    board: null,
+    digest: null,
+    matchScore: 90,
+  },
+};
+
+const pausedItem: AgendaItem = {
+  id: "campaign.reviewPaused:c9",
+  kind: "campaign.reviewPaused",
+  priority: 910,
+  title: "Review paused campaign: react",
+  subjectType: "campaign",
+  subjectId: "c9",
+  payload: { campaignId: "c9", query: "react", board: null, pausedAt: now },
+};
+
 const snapshot: AgendaResponse = {
   version: VERSION,
   generatedAt: now,
   expiresAt: new Date(now.getTime() + 60_000),
-  items: [
-    {
-      id: "job.apply:c1:j1",
-      kind: "job.apply",
-      priority: 100,
-      title: "Engineer",
-      subjectType: "job",
-      subjectId: "j1",
-      payload: {
-        campaignId: "c1",
-        jobKey: "j1",
-        url: "https://example.test/job",
-        board: null,
-        digest: null,
-        matchScore: 90,
-      },
-    },
-  ],
+  items: [applyItem, pausedItem],
   counts: { openQuestions: 0, activeClaims: 0, approvedJobs: 1, appliedToday: 0 },
   budget: {
     dailyApplyCap: 10,
@@ -37,47 +50,45 @@ const snapshot: AgendaResponse = {
     resetsAt: now,
   },
   emptyReason: null,
-  sleepSeconds: 30,
-  nextWakeAt: new Date(now.getTime() + 30_000),
+  sleepSeconds: 15,
+  nextWakeAt: new Date(now.getTime() + 15_000),
 };
 
-function setup(version = VERSION, openClaim: { id: string } | null = null) {
+interface ClaimSetup {
+  currentVersion?: string;
+  openClaim?: { id: string } | null;
+  campaignStillPaused?: boolean;
+}
+
+function claimDb({
+  currentVersion = VERSION,
+  openClaim = null,
+  campaignStillPaused = true,
+}: ClaimSetup) {
   const creates: Record<string, unknown>[] = [];
-  const locks: Record<string, unknown>[] = [];
   const db = {
     pilotState: {
-      updateMany: async ({ where }: { where: Record<string, unknown> }) => {
-        locks.push(where);
-        return { count: where.agendaVersion === version ? 1 : 0 };
-      },
-      findUnique: async () => ({
-        running: true,
-        agendaVersion: version,
-        agendaSnapshot: snapshot,
-        agendaExpiresAt: snapshot.expiresAt,
-      }),
-      findUniqueOrThrow: async () => ({
-        running: true,
-        agendaVersion: version,
-        agendaSnapshot: snapshot,
-        agendaExpiresAt: snapshot.expiresAt,
-      }),
+      updateManyAndReturn: async (a: { where: { agendaVersion: string } }) =>
+        a.where.agendaVersion === currentVersion ? [{ agendaSnapshot: snapshot }] : [],
+      findUnique: async () => ({ running: true }),
     },
     pilotClaim: {
       findFirst: async () => openClaim,
-      create: async ({ data }: { data: Record<string, unknown> }) => {
-        creates.push(data);
+      create: async (a: { data: Record<string, unknown> }) => {
+        creates.push(a.data);
         return {
-          id: "4c965efd-b586-49ea-825b-1af715760116",
+          id: CLAIM_ID,
+          userId: USER_ID,
           grantedAt: now,
           heartbeatAt: null,
           releasedAt: null,
           outcome: null,
-          ...data,
+          ...a.data,
         };
       },
     },
-    // The claimed job and the duplicate scans `claimJobForApply` runs; nothing matches here.
+    campaign: { count: async () => (campaignStillPaused ? 1 : 0) },
+    // What `claimJobForApply` reads and writes; no duplicate matches.
     job: {
       findFirst: async () => ({
         url: "https://example.test/job",
@@ -90,96 +101,69 @@ function setup(version = VERSION, openClaim: { id: string } | null = null) {
     application: { findUnique: async () => null, findMany: async () => [] },
     $transaction: async (work: (tx: unknown) => Promise<unknown>) => work(db),
   };
-  return {
-    service: new ClaimService(db as unknown as PrismaClient),
-    creates,
-    locks,
-  };
+  return { service: new ClaimService(db as unknown as PrismaClient), creates };
 }
 
-describe("ClaimService snapshots", () => {
-  it("claims from the supplied snapshot version and persists the typed payload", async () => {
-    const { service, creates, locks } = setup();
-    const claim = await service.claim(
-      "8d71b5f1-3a64-43b1-ac29-ebda08c7eba6",
-      VERSION,
-      "job.apply:c1:j1",
-    );
+describe("ClaimService.claim", () => {
+  it("claims an item off the supplied snapshot and stores its payload", async () => {
+    const { service, creates } = claimDb({});
+    const claim = await service.claim(USER_ID, VERSION, applyItem.id);
     expect(creates[0]).toMatchObject({ kind: "job.apply", subjectId: "j1" });
-    expect(locks[0]).toMatchObject({ running: true, agendaVersion: VERSION });
     expect(claim.payload).toMatchObject({ campaignId: "c1", jobKey: "j1" });
   });
 
-  it("rejects a stale agenda version before creating a claim", async () => {
-    const { service, creates } = setup("d6579e89-e9af-4f83-a04e-7d2cfad07cf3");
-    await expect(service.claim("u1", VERSION, "job.apply:c1:j1")).rejects.toThrow("stale");
-    expect(creates).toHaveLength(0);
-  });
-
-  it("rejects a subject that already holds an open claim", async () => {
-    const { service, creates } = setup(VERSION, { id: "held" });
-    await expect(service.claim("u1", VERSION, "job.apply:c1:j1")).rejects.toThrow(
-      "already claimed",
-    );
-    expect(creates).toHaveLength(0);
+  it("refuses a stale snapshot, a held subject, or a row that changed since the build", async () => {
+    const refusals: [ClaimSetup, string, string][] = [
+      [{ currentVersion: "d6579e89-e9af-4f83-a04e-7d2cfad07cf3" }, applyItem.id, "stale"],
+      [{ openClaim: { id: "held" } }, applyItem.id, "already claimed"],
+      [{ campaignStillPaused: false }, pausedItem.id, "no longer paused"],
+    ];
+    for (const [setup, itemId, message] of refusals) {
+      const { service, creates } = claimDb(setup);
+      await expect(service.claim(USER_ID, VERSION, itemId)).rejects.toThrow(message);
+      expect(creates).toHaveLength(0);
+    }
   });
 });
 
-const USER_ID = "5f0d4d0e-4f27-4a0a-9f4e-2b1c6f1f7f01";
-const CLAIM_ID = "4c965efd-b586-49ea-825b-1af715760116";
-
-function heartbeatDb(grantedAt: Date) {
-  const writes: Record<string, unknown>[] = [];
-  const db = {
-    pilotClaim: {
-      findFirst: async () => ({ grantedAt }),
-      updateMany: async ({ data }: { data: Record<string, unknown> }) => {
-        writes.push(data);
-        return { count: 1 };
+describe("ClaimService.heartbeat", () => {
+  const heartbeat = async (grantedMinutesAgo: number) => {
+    const grantedAt = new Date(Date.now() - grantedMinutesAgo * 60_000);
+    let expiresAt = new Date(0);
+    const db = {
+      pilotClaim: {
+        findFirst: async () => ({ grantedAt, releasedAt: null }),
+        updateManyAndReturn: async (a: { data: { expiresAt: Date } }) => {
+          expiresAt = a.data.expiresAt;
+          const { kind, subjectType, subjectId, payload } = applyItem;
+          const claim = { id: CLAIM_ID, userId: USER_ID, kind, subjectType, subjectId, payload };
+          return [
+            {
+              ...claim,
+              grantedAt,
+              heartbeatAt: new Date(),
+              expiresAt,
+              releasedAt: null,
+              outcome: null,
+            },
+          ];
+        },
       },
-      findUniqueOrThrow: async () => ({
-        id: CLAIM_ID,
-        userId: USER_ID,
-        kind: "job.apply",
-        subjectType: "job",
-        subjectId: "j1",
-        payload: snapshot.items[0].payload,
-        grantedAt,
-        heartbeatAt: new Date(),
-        expiresAt: new Date(),
-        releasedAt: null,
-        outcome: null,
-      }),
-    },
+    };
+    await new ClaimService(db as unknown as PrismaClient).heartbeat(USER_ID, CLAIM_ID);
+    return (expiresAt.getTime() - Date.now()) / 60_000;
   };
-  return {
-    service: new ClaimService(db as unknown as PrismaClient),
-    get expiry() {
-      return writes[0]?.expiresAt as Date;
-    },
-  };
-}
 
-describe("ClaimService heartbeat lifetime ceiling", () => {
-  it("extends a young claim by the usual TTL", async () => {
-    const state = heartbeatDb(new Date(Date.now() - 60_000));
-    await state.service.heartbeat(USER_ID, CLAIM_ID);
-    const minutesOut = (state.expiry.getTime() - Date.now()) / 60_000;
-    expect(minutesOut).toBeGreaterThan(14);
-    expect(minutesOut).toBeLessThanOrEqual(15);
+  it("extends a young claim by the full TTL", async () => {
+    const minutesLeft = await heartbeat(1);
+    expect(minutesLeft).toBeGreaterThan(14);
+    expect(minutesLeft).toBeLessThanOrEqual(15);
   });
 
-  it("holds a long-running claim to the ceiling instead of sliding it forward again", async () => {
-    const state = heartbeatDb(new Date(Date.now() - 20 * 60_000));
-    await state.service.heartbeat(USER_ID, CLAIM_ID);
-    const minutesOut = (state.expiry.getTime() - Date.now()) / 60_000;
-    expect(minutesOut).toBeGreaterThan(4);
-    expect(minutesOut).toBeLessThanOrEqual(5);
-  });
-
-  it("stops extending a claim already past the ceiling, so the sweep can reclaim it", async () => {
-    const state = heartbeatDb(new Date(Date.now() - 90 * 60_000));
-    await state.service.heartbeat(USER_ID, CLAIM_ID);
-    expect(state.expiry.getTime()).toBeLessThan(Date.now());
+  it("holds a long-running claim to its lifetime ceiling, even past it", async () => {
+    const nearCeiling = await heartbeat(20);
+    expect(nearCeiling).toBeGreaterThan(4);
+    expect(nearCeiling).toBeLessThanOrEqual(5);
+    expect(await heartbeat(90)).toBeLessThan(0);
   });
 });

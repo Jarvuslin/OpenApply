@@ -1,26 +1,81 @@
-import type { ReleasePilotClaimInput } from "@jobpilot/contracts/pilot";
+import {
+  type AgendaItem,
+  type PilotClaim,
+  pilotClaimSchema,
+  type ReleasePilotClaimInput,
+} from "@jobpilot/contracts/pilot";
 import { singleton } from "tsyringe";
 import { z } from "zod/v4";
 import { conflict, findOwned } from "@/common/errors";
-import { toInputJson } from "@/common/json";
-import { type Job, type PilotClaim, type Prisma, PrismaClient } from "@/generated/prisma/client";
+import { reviveJsonDates, toInputJson } from "@/common/json";
+import {
+  type PilotClaim as PilotClaimModel,
+  type Prisma,
+  PrismaClient,
+} from "@/generated/prisma/client";
 import { claimJobForApply, guardApply } from "@/modules/campaign/jobs/apply-guard";
 import { publishJob } from "@/modules/campaign/jobs/job-events";
-import { toPilotClaim } from "../pilot.mapper";
-import { verifyGrant } from "./grant";
-import { parseJobPayload } from "./job-mutations";
-import { parseAgendaSnapshot } from "./service";
+import { parseJobRef, revertApplyingJobs } from "./claims";
+import { NEEDS_WORKER_VISIT } from "./gather-campaigns";
+import { parseAgendaSnapshot } from "./snapshot";
 
 const CLAIM_TTL_MS = 15 * 60 * 1000;
-/** Hard limit from `grantedAt`. A stuck driver that still heartbeats would never expire. */
+/** Counted from `grantedAt`, so a stuck driver that keeps heartbeating still expires. */
 const MAX_CLAIM_LIFETIME_MS = 25 * 60 * 1000;
+const STALE_AGENDA = "Agenda snapshot is stale; refresh it before claiming.";
 
-interface ClaimResult {
-  claim: PilotClaim;
-  claimedJob: Job | null;
+const payloadSchema = z.record(z.string(), z.json());
+
+function toPilotClaim(row: PilotClaimModel): PilotClaim {
+  return pilotClaimSchema.parse({ ...row, payload: reviveJsonDates(row.payload) });
 }
 
-/** Atomically claims versioned agenda items and manages claim heartbeats and release. */
+/** Kinds whose row can change after the agenda was built are re-checked rather than trusted. */
+async function assertStillClaimable(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  item: AgendaItem,
+): Promise<void> {
+  const { subjectId } = item;
+  let remaining: number;
+  let gone: string;
+  switch (item.kind) {
+    case "promo.post":
+      remaining = await tx.promotionPost.count({
+        where: { id: subjectId, userId, status: "approved" },
+      });
+      gone = "Promotion post is no longer approved.";
+      break;
+    case "networking.send":
+      remaining = await tx.networkingMessage.count({
+        where: { id: subjectId, userId, status: "approved" },
+      });
+      gone = "Networking message is no longer approved.";
+      break;
+    case "campaign.reviewPaused":
+      remaining = await tx.campaign.count({
+        where: { campaignId: subjectId, userId, status: "paused" },
+      });
+      gone = "Campaign is no longer paused.";
+      break;
+    case "campaign.scorePending":
+      remaining = await tx.campaign.count({
+        where: {
+          campaignId: subjectId,
+          userId,
+          status: "in_progress",
+          jobs: { some: NEEDS_WORKER_VISIT },
+        },
+      });
+      gone = "Campaign has no jobs left to score.";
+      break;
+    default:
+      return;
+  }
+  if (remaining === 0) throw conflict(gone);
+}
+
+/** Claims items off a versioned agenda snapshot, and keeps those claims alive or releases them. */
 @singleton()
 export class ClaimService {
   constructor(private readonly prisma: PrismaClient) {}
@@ -29,9 +84,7 @@ export class ClaimService {
     const { claim, claimedJob } = await guardApply(this.prisma, userId, () =>
       this.prisma.$transaction((tx) => this.claimInTransaction(tx, userId, agendaVersion, itemId)),
     );
-    if (claimedJob) {
-      publishJob(userId, claimedJob, "updated");
-    }
+    if (claimedJob) publishJob(userId, claimedJob, "updated");
     return toPilotClaim(claim);
   }
 
@@ -40,38 +93,25 @@ export class ClaimService {
     userId: string,
     agendaVersion: string,
     itemId: string,
-  ): Promise<ClaimResult> {
+  ) {
     const now = new Date();
-    const locked = await tx.pilotState.updateMany({
-      where: {
-        userId,
-        running: true,
-        agendaVersion,
-        agendaExpiresAt: { gt: now },
-      },
+    // The no-op write locks this user's state row, which serializes concurrent claims below.
+    const [locked] = await tx.pilotState.updateManyAndReturn({
+      where: { userId, running: true, agendaVersion, agendaExpiresAt: { gt: now } },
       data: { agendaVersion },
+      select: { agendaSnapshot: true },
     });
-
-    if (locked.count === 0) {
-      const current = await tx.pilotState.findUnique({
+    if (!locked?.agendaSnapshot) {
+      const state = await tx.pilotState.findUnique({
         where: { userId },
         select: { running: true },
       });
-      if (!current?.running) throw conflict("Pilot is stopped.");
-      throw conflict("Agenda snapshot is stale; refresh it before claiming.");
+      throw conflict(state?.running ? STALE_AGENDA : "Pilot is stopped.");
     }
 
-    const state = await tx.pilotState.findUniqueOrThrow({ where: { userId } });
-    if (!state.agendaSnapshot) {
-      throw conflict("Agenda snapshot is stale; refresh it before claiming.");
-    }
-    const item = parseAgendaSnapshot(state.agendaSnapshot).items.find(
-      (candidate) => candidate.id === itemId,
-    );
+    const item = parseAgendaSnapshot(locked.agendaSnapshot).items.find((i) => i.id === itemId);
     if (!item) throw conflict("Agenda item is no longer available.");
 
-    // Safe as a read-then-write: the pilotState update above locks this user's row for the
-    // rest of the transaction, so concurrent claim() calls for one user serialize here.
     const open = await tx.pilotClaim.findFirst({
       where: {
         userId,
@@ -84,7 +124,7 @@ export class ClaimService {
     });
     if (open) throw conflict("This item is already claimed.");
 
-    await verifyGrant(tx, userId, item.kind, item.subjectId);
+    await assertStillClaimable(tx, userId, item);
     const claimedJob =
       item.kind === "job.apply"
         ? await claimJobForApply(tx, userId, item.payload.campaignId, item.payload.jobKey)
@@ -104,28 +144,28 @@ export class ClaimService {
   }
 
   async heartbeat(userId: string, id: string) {
-    const open = await this.prisma.pilotClaim.findFirst({
-      where: { id, userId, releasedAt: null },
-      select: { grantedAt: true },
-    });
+    const claim = await findOwned(
+      (where) =>
+        this.prisma.pilotClaim.findFirst({ where, select: { grantedAt: true, releasedAt: true } }),
+      { id, userId },
+      "Claim",
+    );
+    if (claim.releasedAt) throw conflict("Claim is already released.");
 
     const now = Date.now();
-    const ceiling = (open?.grantedAt.getTime() ?? Number.POSITIVE_INFINITY) + MAX_CLAIM_LIFETIME_MS;
-    const updated = await this.prisma.pilotClaim.updateMany({
+    const ceiling = claim.grantedAt.getTime() + MAX_CLAIM_LIFETIME_MS;
+    const [updated] = await this.prisma.pilotClaim.updateManyAndReturn({
       where: { id, userId, releasedAt: null },
       data: {
         heartbeatAt: new Date(now),
         expiresAt: new Date(Math.min(now + CLAIM_TTL_MS, ceiling)),
       },
     });
-    if (updated.count === 0) {
-      const existing = await this.prisma.pilotClaim.findFirst({ where: { id, userId } });
-      if (!existing) await findOwned(() => Promise.resolve(null), { id, userId }, "Claim");
-      throw conflict("Claim is already released.");
-    }
-    return toPilotClaim(await this.prisma.pilotClaim.findUniqueOrThrow({ where: { id } }));
+    if (!updated) throw conflict("Claim is already released.");
+    return toPilotClaim(updated);
   }
 
+  /** Bookkeeping only: an abandoned apply goes back to approved, other results use their own routes. */
   async release(userId: string, id: string, body: ReleasePilotClaimInput) {
     const existing = await findOwned(
       (where) => this.prisma.pilotClaim.findFirst({ where }),
@@ -137,23 +177,12 @@ export class ClaimService {
       throw conflict(`Claim already released with outcome ${existing.outcome}.`);
     }
 
-    const payload = z.record(z.string(), z.json()).parse(existing.payload);
-
-    const updated = await this.prisma.$transaction(async (tx) => {
+    const payload = payloadSchema.parse(existing.payload);
+    const released = await this.prisma.$transaction(async (tx) => {
       if (body.outcome === "abandoned" && existing.kind === "job.apply") {
-        const jobRef = parseJobPayload(payload);
-        await tx.job.updateMany({
-          where: {
-            campaignId: jobRef.campaignId,
-            key: jobRef.jobKey,
-            status: "applying",
-            campaign: { userId },
-          },
-          data: { status: "approved" },
-        });
+        await revertApplyingJobs(tx, userId, [parseJobRef(payload)]);
       }
-
-      const changed = await tx.pilotClaim.updateMany({
+      const [row] = await tx.pilotClaim.updateManyAndReturn({
         where: { id, userId, releasedAt: null },
         data: {
           releasedAt: new Date(),
@@ -161,9 +190,9 @@ export class ClaimService {
           payload: toInputJson(body.note ? { ...payload, releaseNote: body.note } : payload),
         },
       });
-      if (changed.count === 0) throw conflict("Claim was released concurrently.");
-      return tx.pilotClaim.findUniqueOrThrow({ where: { id } });
+      if (!row) throw conflict("Claim was released concurrently.");
+      return row;
     });
-    return toPilotClaim(updated);
+    return toPilotClaim(released);
   }
 }

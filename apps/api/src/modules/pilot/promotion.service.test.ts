@@ -1,145 +1,126 @@
-import type { PushPayload, PushService } from "@/common/push/push.service";
+import type { PushService } from "@/common/push/push.service";
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { PilotJournalService } from "./journal.service";
 import { PromotionService } from "./promotion.service";
 import { describe, expect, it } from "bun:test";
 
-/** Strip `undefined` values so the fake update mirrors Prisma's skip-undefined semantics. */
-function defined(data: Record<string, unknown>): Record<string, unknown> {
-  return Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
-}
+type Row = Record<string, unknown>;
 
-const basePost = {
-  id: "promo-1",
-  userId: "p1",
-  platform: "linkedin",
-  target: null,
-  title: "Shipped a thing",
-  body: "Original body",
-  status: "draft",
-  postedUrl: null,
-  scheduledFor: null,
-  postedAt: null,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-};
+/** Prisma leaves `undefined` fields untouched, so the fake drops them too. */
+const defined = (data: Row) =>
+  Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
 
-function makeDeps(over: Record<string, unknown> = {}) {
-  const journals: Record<string, unknown>[] = [];
-  const existing: Record<string, unknown> = { ...basePost, ...over };
+function makeService(over: Row = {}) {
+  const journals: Row[] = [];
+  const post: Row = {
+    id: "promo-1",
+    userId: "p1",
+    platform: "linkedin",
+    target: null,
+    title: "Shipped a thing",
+    body: "Original body",
+    status: "draft",
+    postedUrl: null,
+    scheduledFor: null,
+    postedAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...over,
+  };
   const db = {
     promotionPost: {
-      findFirst: async () => existing,
-      // Prisma leaves `undefined` fields untouched; mirror that so unchanged columns survive.
-      update: async (a: { data: Record<string, unknown> }) => ({ ...existing, ...defined(a.data) }),
-      updateMany: async (a: { where: { status?: string }; data: Record<string, unknown> }) => {
-        if (a.where.status && existing.status !== a.where.status) return { count: 0 };
-        Object.assign(existing, defined(a.data));
-        return { count: 1 };
+      findFirst: async () => post,
+      update: async (a: { data: Row }) => ({ ...post, ...defined(a.data) }),
+      updateManyAndReturn: async (a: { where: { status: string }; data: Row }) => {
+        if (post.status !== a.where.status) return [];
+        Object.assign(post, defined(a.data));
+        return [post];
       },
     },
   };
-  const push = {
-    sendToUser: async (_p: string, _payload: PushPayload) => {},
-  } as unknown as PushService;
-  const pilot = {
-    appendJournal: async (_p: string, body: { entries: Record<string, unknown>[] }) => {
+  const push = { sendToUser: async () => {} } as unknown as PushService;
+  const journal = {
+    appendJournal: async (_userId: string, body: { entries: Row[] }) => {
       journals.push(...body.entries);
       return { items: [] };
     },
   } as unknown as PilotJournalService;
-  const svc = new PromotionService(db as unknown as PrismaClient, push, pilot);
-  return { svc, journals, existing };
+  return {
+    svc: new PromotionService(db as unknown as PrismaClient, push, journal),
+    journals,
+    post,
+  };
 }
 
-describe("PromotionService correction capture", () => {
-  it("logs a decline correction with the declined draft's content", async () => {
-    const { svc, journals } = makeDeps();
+describe("PromotionService.patchPromotion", () => {
+  it("journals a decline with the declined draft", async () => {
+    const { svc, journals } = makeService();
     await svc.patchPromotion("p1", "promo-1", { status: "declined" });
-
-    expect(journals).toHaveLength(1);
-    expect(journals[0]).toMatchObject({
-      kind: "correction",
-      summary: "Declined linkedin post draft.",
-      subjectType: "promotion",
-      subjectId: "promo-1",
-      detail: {
-        type: "promotion.declined",
-        platform: "linkedin",
-        title: "Shipped a thing",
-        body: "Original body",
+    expect(journals).toEqual([
+      {
+        kind: "correction",
+        subjectType: "promotion",
+        subjectId: "promo-1",
+        summary: "Declined linkedin post draft.",
+        detail: {
+          type: "promotion.declined",
+          platform: "linkedin",
+          title: "Shipped a thing",
+          body: "Original body",
+        },
       },
-    });
+    ]);
   });
 
-  it("logs an edit correction capturing before and after", async () => {
-    const { svc, journals } = makeDeps();
+  it("journals an edit with the draft before and after", async () => {
+    const { svc, journals } = makeService();
     await svc.patchPromotion("p1", "promo-1", { body: "Revised body" });
-
-    expect(journals).toHaveLength(1);
-    expect(journals[0]).toMatchObject({
-      kind: "correction",
-      subjectType: "promotion",
-      subjectId: "promo-1",
-      detail: {
-        type: "promotion.edited",
-        platform: "linkedin",
-        before: { title: "Shipped a thing", body: "Original body" },
-        after: { title: "Shipped a thing", body: "Revised body" },
-      },
+    expect(journals[0]?.detail).toEqual({
+      type: "promotion.edited",
+      platform: "linkedin",
+      before: { title: "Shipped a thing", body: "Original body" },
+      after: { title: "Shipped a thing", body: "Revised body" },
     });
   });
 
-  it("logs nothing when a draft is approved without content changes", async () => {
-    const { svc, journals } = makeDeps();
+  it("journals nothing for a plain approval", async () => {
+    const { svc, journals } = makeService();
     await svc.patchPromotion("p1", "promo-1", { status: "approved" });
-
-    expect(journals).toHaveLength(0);
+    expect(journals).toEqual([]);
   });
 });
 
-describe("PromotionService result approval gate", () => {
-  it("records a posted result for an approved post", async () => {
-    const { svc } = makeDeps({ status: "approved" });
-    const res = await svc.recordPromotionResult("p1", "promo-1", {
+describe("PromotionService.recordPromotionResult", () => {
+  const postedUrl = "https://linkedin.com/feed/update/1";
+
+  it("records a post for an approved draft", async () => {
+    const { svc } = makeService({ status: "approved" });
+    const result = await svc.recordPromotionResult("p1", "promo-1", {
       outcome: "posted",
-      postedUrl: "https://linkedin.com/feed/update/1",
+      postedUrl,
     });
-
-    expect(res.status).toBe("posted");
-    expect(res.postedUrl).toBe("https://linkedin.com/feed/update/1");
-    expect(res.postedAt).toBeInstanceOf(Date);
+    expect(result).toMatchObject({ status: "posted", postedUrl, postedAt: expect.any(Date) });
   });
 
-  it("rejects a result for a draft post, leaving it untouched", async () => {
-    const { svc, existing } = makeDeps();
-
+  it("refuses a draft that was never approved, or a second different outcome", async () => {
+    const draft = makeService();
     await expect(
-      svc.recordPromotionResult("p1", "promo-1", { outcome: "posted" }),
-    ).rejects.toMatchObject({ status: 409 });
-    expect(existing.status).toBe("draft");
-    expect(existing.postedAt).toBeNull();
-  });
+      draft.svc.recordPromotionResult("p1", "promo-1", { outcome: "posted" }),
+    ).rejects.toThrow("not approved");
+    expect(draft.post).toMatchObject({ status: "draft", postedAt: null });
 
-  it("rejects a second result for an already-posted post", async () => {
-    const { svc, existing } = makeDeps({
-      status: "posted",
-      postedUrl: "https://linkedin.com/feed/update/1",
-    });
-
+    const posted = makeService({ status: "posted", postedUrl });
     await expect(
-      svc.recordPromotionResult("p1", "promo-1", { outcome: "failed" }),
-    ).rejects.toMatchObject({ status: 409 });
-    expect(existing.status).toBe("posted");
-    expect(existing.postedUrl).toBe("https://linkedin.com/feed/update/1");
+      posted.svc.recordPromotionResult("p1", "promo-1", { outcome: "failed" }),
+    ).rejects.toThrow("already finished");
+    expect(posted.post).toMatchObject({ status: "posted", postedUrl });
   });
 
-  it("returns a repeated posted outcome idempotently", async () => {
-    const { svc } = makeDeps({
+  it("returns a repeated outcome as it was", async () => {
+    const { svc } = makeService({ status: "posted", postedUrl });
+    expect(await svc.recordPromotionResult("p1", "promo-1", { outcome: "posted" })).toMatchObject({
       status: "posted",
-      postedUrl: "https://linkedin.com/feed/update/1",
+      postedUrl,
     });
-    const result = await svc.recordPromotionResult("p1", "promo-1", { outcome: "posted" });
-    expect(result.status).toBe("posted");
   });
 });

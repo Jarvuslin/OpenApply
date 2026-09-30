@@ -8,7 +8,7 @@ export const PILOT_JOURNAL_KINDS = [
   "question",
   "system",
   "digest",
-  // A user override (declined/edited a draft) captured as a labeled learning signal.
+  // The user declined or edited a draft: a labeled learning signal.
   "correction",
 ] as const;
 const pilotJournalKindSchema = z.enum(PILOT_JOURNAL_KINDS);
@@ -50,15 +50,11 @@ export type CreatePilotJournalInput = z.infer<typeof createPilotJournalSchema>;
 export type PilotJournalEntry = z.infer<typeof pilotJournalEntrySchema>;
 export type PilotJournalPage = z.infer<typeof pilotJournalPageSchema>;
 
-/** Terminal outcome of one orchestrator cycle - the vocabulary shared by the journal detail and the host's sentinel. */
-const PILOT_CYCLE_STATUSES = ["ok", "empty", "error"] as const;
-export const pilotCycleStatusSchema = z.enum(PILOT_CYCLE_STATUSES);
+/** Shared by the cycle journal detail and the host's sentinel. */
+export const pilotCycleStatusSchema = z.enum(["ok", "empty", "error"]);
 export type PilotCycleStatus = z.infer<typeof pilotCycleStatusSchema>;
 
-/**
- * `kind="cycle"` detail: the host's completion signal when the sentinel is mangled.
- * Fields are optional because stall-recovery cycles usually omit them, and a strict parse would drop those.
- */
+/** Optional fields: stuck-recovery cycles usually journal an empty detail. */
 export const pilotCycleDetailSchema = z
   .object({
     status: pilotCycleStatusSchema.optional(),

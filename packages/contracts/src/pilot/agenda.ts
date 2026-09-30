@@ -1,8 +1,7 @@
 import { z } from "zod/v4";
 import { networkingModeSchema } from "../networking";
 
-// The server picks the channel and resolves the mode, so "off" never reaches a worker - an off
-// channel means the item is not emitted at all.
+// An "off" channel is never emitted, so a worker only ever sees a resolved channel and mode.
 const outgoingMode = networkingModeSchema.shape;
 
 const AGENDA_ITEM_KINDS = [
@@ -99,9 +98,7 @@ export const agendaClaimFieldsSchema = z.discriminatedUnion("kind", [
       board: optionalString,
       resumeId: optionalString,
       minScore: z.number(),
-      // Existing in-progress campaign for this query; the agent reuses it instead of creating one.
       campaignId: optionalString,
-      // Fresh non-duplicate rows this run aims for, and the page cap for the paginated crawl.
       newJobsTarget: z.number().int(),
       maxPages: z.number().int(),
     }),
@@ -126,7 +123,7 @@ export const agendaClaimFieldsSchema = z.discriminatedUnion("kind", [
       campaignId: z.string(),
       query: z.string(),
       board: nullableString,
-      // The campaign's last status-transition time - approximates when it was paused.
+      // The campaign's last update, which approximates when it was paused.
       pausedAt: z.date(),
     }),
   ),
@@ -284,6 +281,13 @@ export const agendaClaimFieldsSchema = z.discriminatedUnion("kind", [
     }),
   ),
 ]);
+
+type AgendaClaimFields = z.infer<typeof agendaClaimFieldsSchema>;
+type AgendaKind = AgendaClaimFields["kind"];
+export type AgendaPayload<K extends AgendaKind> = Extract<
+  AgendaClaimFields,
+  { kind: K }
+>["payload"];
 
 const agendaItemSchema = z.intersection(
   z.object({ id: z.string(), priority: z.number(), title: z.string() }),

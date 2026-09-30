@@ -3,63 +3,40 @@ import type { PushService } from "@/common/push/push.service";
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { PilotJournalService } from "../journal.service";
 
-/** The morning digest is composed once the UTC clock passes this hour. */
-const DIGEST_HOUR = 7;
+const DIGEST_HOUR_UTC = 7;
 
-/** Deps for writing the digest journal entry and pushing its summary. */
 interface DigestDeps {
   prisma: PrismaClient;
-  pilot: PilotJournalService;
+  journal: PilotJournalService;
   push: PushService;
 }
 
-interface DigestCounts {
-  applicationsCreated: number;
-  jobsFailed: number;
-  jobsSkipped: number;
-  openQuestions: number;
-  networkingSent: number;
-  networkingReplies: number;
-  promotionsPosted: number;
-}
-
-/** Compact human sentence over the last-24h counts; also the push body (kept short). */
-function composeDigestSummary(c: DigestCounts): string {
-  const parts = [
-    `${c.applicationsCreated} application${c.applicationsCreated === 1 ? "" : "s"}`,
-    `${c.jobsFailed + c.jobsSkipped} not applied`,
-    `${c.networkingSent} networking sent (${c.networkingReplies} repl${c.networkingReplies === 1 ? "y" : "ies"})`,
-    `${c.promotionsPosted} post${c.promotionsPosted === 1 ? "" : "s"} published`,
-    `${c.openQuestions} open question${c.openQuestions === 1 ? "" : "s"}`,
-  ];
-  return `Last 24h: ${parts.join(", ")}.`;
-}
+const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
 /**
- * Compose one "digest" journal entry summarizing the last 24h, once per UTC day after 07:00.
- * An advisory xact lock serializes concurrent compiles so the count-then-write can't double-fire.
- * Fire-and-forget at the call site, so it swallows its own errors and never rejects.
+ * Writes one "digest" journal entry per UTC day, after 07:00, and pushes it. Called fire-and-forget,
+ * so it logs its own errors instead of rejecting.
  */
 export async function writeDigestIfDue(
-  { prisma, pilot, push }: DigestDeps,
+  { prisma, journal, push }: DigestDeps,
   userId: string,
   now: Date,
   openQuestions: number,
 ): Promise<void> {
+  if (minutesOfDay(now) < DIGEST_HOUR_UTC * 60) return;
+  const todaysDigest = { userId, kind: "digest" as const, createdAt: { gte: startOfDay(now) } };
   try {
-    if (minutesOfDay(now) < DIGEST_HOUR * 60) return;
-
-    const dayStart = startOfDay(now);
-    // No unique constraint backs the once-per-day rule; the lock is the only duplicate guard.
+    // Unlocked first: every refresh after the digest hour would otherwise open a locking transaction.
+    const alreadyWritten = await prisma.pilotJournalEntry.count({ where: todaysDigest });
+    if (alreadyWritten > 0) return;
     await prisma.$transaction(async (tx) => {
-      // $executeRaw, not $queryRaw: the lock returns void and the pg adapter can't deserialize a void column.
+      // No unique constraint backs once-per-day, so this lock is the only duplicate guard.
+      // $executeRaw because the pg adapter can't deserialize the lock's void column.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}), hashtext('pilot-digest'))`;
-      const alreadyWritten = await tx.pilotJournalEntry.count({
-        where: { userId, kind: "digest", createdAt: { gte: dayStart } },
-      });
-      if (alreadyWritten > 0) return;
+      const written = await tx.pilotJournalEntry.count({ where: todaysDigest });
+      if (written > 0) return;
 
-      const windowStart = new Date(now.getTime() - DAY_MS);
+      const since = new Date(now.getTime() - DAY_MS);
       const [
         applicationsCreated,
         jobsFailed,
@@ -68,21 +45,26 @@ export async function writeDigestIfDue(
         networkingReplies,
         promotionsPosted,
       ] = await Promise.all([
-        tx.application.count({ where: { userId, appliedAt: { gte: windowStart } } }),
+        tx.application.count({ where: { userId, appliedAt: { gte: since } } }),
         tx.job.count({
-          where: { status: "failed", campaign: { userId }, createdAt: { gte: windowStart } },
+          where: { status: "failed", campaign: { userId }, createdAt: { gte: since } },
         }),
         tx.job.count({
-          where: { status: "skipped", campaign: { userId }, createdAt: { gte: windowStart } },
+          where: { status: "skipped", campaign: { userId }, createdAt: { gte: since } },
         }),
-        tx.networkingMessage.count({ where: { userId, sentAt: { gte: windowStart } } }),
-        tx.networkingMessage.count({ where: { userId, repliedAt: { gte: windowStart } } }),
-        tx.promotionPost.count({
-          where: { userId, status: "posted", postedAt: { gte: windowStart } },
-        }),
+        tx.networkingMessage.count({ where: { userId, sentAt: { gte: since } } }),
+        tx.networkingMessage.count({ where: { userId, repliedAt: { gte: since } } }),
+        tx.promotionPost.count({ where: { userId, status: "posted", postedAt: { gte: since } } }),
       ]);
 
-      const counts: DigestCounts = {
+      const summary = `Last 24h: ${[
+        plural(applicationsCreated, "application", "applications"),
+        `${jobsFailed + jobsSkipped} not applied`,
+        `${networkingSent} networking sent (${plural(networkingReplies, "reply", "replies")})`,
+        `${plural(promotionsPosted, "post", "posts")} published`,
+        plural(openQuestions, "open question", "open questions"),
+      ].join(", ")}.`;
+      const detail = {
         applicationsCreated,
         jobsFailed,
         jobsSkipped,
@@ -91,11 +73,7 @@ export async function writeDigestIfDue(
         networkingReplies,
         promotionsPosted,
       };
-      const summary = composeDigestSummary(counts);
-      // Reuse the journal write path so SSE fires; then push the glanceable summary to the phone.
-      await pilot.appendJournal(userId, {
-        entries: [{ kind: "digest", summary, detail: { ...counts } }],
-      });
+      await journal.appendJournal(userId, { entries: [{ kind: "digest", summary, detail }] });
       void push.sendToUser(userId, {
         title: "Your Pilot's morning digest",
         body: summary,

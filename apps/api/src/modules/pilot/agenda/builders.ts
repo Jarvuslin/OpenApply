@@ -1,14 +1,17 @@
 import {
+  type AgendaPayload,
   type PilotInstructionsConfig,
   pilotInstructionsConfigSchema,
 } from "@jobpilot/contracts/pilot";
 import type { z } from "zod/v4";
-import type { AgendaInput, WarmContact } from "./types";
+import type { AgendaInput } from "./build";
+import type { AgendaJob } from "./gather-jobs";
+import type { Followup } from "./gather-outreach";
 
 type ConfigOverrides = z.input<typeof pilotInstructionsConfigSchema>;
+type WarmContact = NonNullable<AgendaJob["warmContacts"]>[number];
 
-// Networking is off by default in prod, but these suites assert networking behavior, so both
-// channels default on here; a test that wants one off overrides just that key.
+// Networking is off by default, but these suites exercise it, so both channels start on here.
 export const cfg = (over: ConfigOverrides = {}): PilotInstructionsConfig =>
   pilotInstructionsConfigSchema.parse({
     ...over,
@@ -22,27 +25,27 @@ export const base = (over: Partial<AgendaInput> = {}): AgendaInput => ({
   config: cfg(),
   cycleCount: 0,
   openQuestions: 0,
-  answeredQuestions: [],
   activeClaims: 0,
-  approvedJobs: [],
-  warmIntroCandidates: [],
   appliedToday: 0,
-  dueQueries: [],
+  networkingSentToday: 0,
   awaitingSetup: true,
   nextSearchRunAt: null,
+  answeredQuestions: [],
+  approvedJobs: [],
+  warmIntroCandidates: [],
+  dueQueries: [],
   scorePending: [],
+  queueDrains: [],
   pausedCampaigns: [],
+  boardHealth: [],
   inbox: { messageIds: [], count: 0 },
-  approvedNetworking: [],
-  networkingSentToday: 0,
-  followups: [],
-  duePlatforms: [],
-  approvedPromotions: [],
   interviewReplies: [],
   interviewPreps: [],
-  queueDrains: [],
-  boardHealth: [],
   upworkSync: null,
+  approvedNetworking: [],
+  followups: [],
+  approvedPromotions: [],
+  duePlatforms: [],
   strategyReviews: [],
   rescanSkipped: [],
   retryFailed: [],
@@ -50,7 +53,7 @@ export const base = (over: Partial<AgendaInput> = {}): AgendaInput => ({
   ...over,
 });
 
-export const job = (key: string, matchScore: number | null) => ({
+export const job = (key: string, matchScore: number | null, over: Partial<AgendaJob> = {}) => ({
   campaignId: "c1",
   key,
   title: `Job ${key}`,
@@ -58,24 +61,31 @@ export const job = (key: string, matchScore: number | null) => ({
   board: null,
   digest: null,
   matchScore,
+  company: null,
+  ...over,
 });
 
-export const contact = (id: string, over: Partial<WarmContact> = {}): WarmContact => ({
+export const contact = (id: string): WarmContact => ({
   id,
   name: "Insider",
   title: null,
   email: `${id}@acme.test`,
-  ...over,
 });
 
-/** A job that also qualifies for the warm-intro pool: named company, optional known contacts. */
-export const hotJob = (key: string, matchScore: number, warmContacts?: WarmContact[]) => ({
-  ...job(key, matchScore),
-  company: "Acme",
-  ...(warmContacts ? { warmContacts } : {}),
+/** A job strong enough for the warm-intro pool. */
+export const hotJob = (key: string, matchScore: number, warmContacts?: WarmContact[]) =>
+  job(key, matchScore, { company: "Acme", warmContacts });
+
+export const question = (id: string): AgendaPayload<"question.answered"> => ({
+  questionId: id,
+  questionKind: "question",
+  subjectType: null,
+  subjectId: null,
+  prompt: "Which start date?",
+  answer: "Two weeks",
 });
 
-export const send = (messageId: string, over: Record<string, unknown> = {}) => ({
+export const send = (messageId: string): AgendaPayload<"networking.send"> => ({
   campaignId: "c1",
   messageId,
   contactId: `ct-${messageId}`,
@@ -83,10 +93,9 @@ export const send = (messageId: string, over: Record<string, unknown> = {}) => (
   contactEmail: "dana@acme.test",
   subject: "Hi",
   body: "hello",
-  ...over,
 });
 
-export const followup = (messageId: string, over: Record<string, unknown> = {}) => ({
+export const followup = (messageId: string): Followup => ({
   campaignId: "c1",
   messageId,
   contactId: `ct-${messageId}`,
@@ -95,74 +104,72 @@ export const followup = (messageId: string, over: Record<string, unknown> = {}) 
   subject: "Hi",
   sentAt: new Date("2026-07-08T12:00:00.000Z"),
   daysSince: 7,
-  ...over,
 });
 
-export const reply = (emailMessageId: string, over: Record<string, unknown> = {}) => ({
+export const reply = (emailMessageId: string): AgendaPayload<"interview.reply"> => ({
   applicationId: `app-${emailMessageId}`,
   emailMessageId,
-  threadId: `thr-${emailMessageId}`,
+  threadId: null,
   from: "dana@acme.test",
   subject: "Interview availability?",
   receivedAt: new Date("2026-07-14T12:00:00.000Z"),
   company: "Acme",
   jobTitle: "Engineer",
-  ...over,
 });
 
-export const prep = (applicationId: string, over: Record<string, unknown> = {}) => ({
+export const prep = (applicationId: string): AgendaPayload<"interview.prep"> => ({
   applicationId,
   company: "Acme",
   jobTitle: "Engineer",
   jobUrl: "https://x/1",
-  resumeId: "r1",
-  ...over,
+  resumeId: null,
 });
 
-export const boardHealth = (board: string, over: Record<string, unknown> = {}) => ({
+export const boardHealth = (board: string): AgendaPayload<"board.health"> => ({
   board,
   consecutiveFailures: 3,
   recentFailReasons: ["captcha"],
-  probeJob: { campaignId: "c1", jobKey: "j1", url: "https://x/j1" },
-  ...over,
+  probeJob: null,
 });
 
-export const bootstrapCandidate = (over: Record<string, unknown> = {}) => ({
-  goals: "Senior TypeScript roles, remote",
-  minScore: 60,
-  ...over,
-});
-
-/** A due discovery entry; `searchId` is the PilotSearch row id (the item id + claim subject). */
-export const dueQuery = (query: string, over: Record<string, unknown> = {}) => ({
+export const dueQuery = (query: string, board?: string) => ({
   searchId: `s-${query}`,
   query,
-  ...over,
+  board,
 });
 
-export const pausedCampaign = (campaignId: string, over: Record<string, unknown> = {}) => ({
+export const pausedCampaign = (campaignId: string): AgendaPayload<"campaign.reviewPaused"> => ({
   campaignId,
   query: "react",
   board: null,
   pausedAt: new Date("2026-07-14T12:00:00.000Z"),
-  ...over,
 });
 
-/** An apply campaign holding pasted links; `entries` are the sampled `queued` rows. */
-export const queueDrain = (campaignId: string, over: Record<string, unknown> = {}) => ({
+export const queueDrain = (campaignId: string): AgendaPayload<"queue.drain"> => ({
   campaignId,
   minScore: 60,
   queuedCount: 1,
   entries: [{ key: "q1", url: "https://x/1" }],
-  ...over,
 });
 
-export const strategyReview = (campaignId: string, over: Record<string, unknown> = {}) => ({
+export const scorePending = (campaignId: string): AgendaPayload<"campaign.scorePending"> => ({
   campaignId,
   query: "react",
-  minScore: 70,
-  board: "linkedin",
+  board: null,
+  minScore: 60,
+  pendingCount: 9,
+  entries: [{ key: "j1", url: "https://x/j1", title: "Engineer" }],
+});
+
+export const strategyReview = (campaignId: string): AgendaPayload<"campaign.strategyReview"> => ({
+  campaignId,
+  query: "react",
+  config: { minScore: 70, board: "linkedin" },
   counts: { totalFound: 40, qualified: 4, applied: 1, skipped: 36 },
   topSkipReasons: ["overqualified"],
-  ...over,
 });
+
+export const bootstrap: AgendaPayload<"strategy.bootstrap"> = {
+  goals: "Senior TypeScript roles, remote",
+  minScore: 60,
+};

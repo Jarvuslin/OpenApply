@@ -21,8 +21,6 @@ const pilot = container.resolve(PilotService);
 const limitAgenda = rateLimit(RATE_LIMITS.pilotAgenda);
 const limitMutation = rateLimit(RATE_LIMITS.pilotMutation);
 
-// Core pilot-state routes. Per-domain routes (searches, agenda, claims, journal, questions) live in
-// sibling `/pilot` controllers, each mounted standalone in app.ts.
 export const pilotController = new Elysia({
   prefix: "/pilot",
   detail: { tags: ["Pilot"] },

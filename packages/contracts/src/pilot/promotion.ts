@@ -13,7 +13,6 @@ export const PROMOTION_STATUSES = [
 ] as const;
 const promotionStatusSchema = z.enum(PROMOTION_STATUSES);
 
-/** Statuses past which a post is locked (no further editing or approval). */
 export const PROMOTION_TERMINAL_STATUSES: readonly string[] = [
   "declined",
   "posted",
@@ -22,7 +21,6 @@ export const PROMOTION_TERMINAL_STATUSES: readonly string[] = [
   "expired",
 ];
 
-/** Agent creates a draft post for a platform. */
 export const createPromotionSchema = z.object({
   platform: z.string().min(1),
   target: z.string().optional(),
@@ -30,7 +28,6 @@ export const createPromotionSchema = z.object({
   body: z.string().min(1),
 });
 
-/** User edits the draft body/title, or moves draft → approved | declined, or schedules it. */
 export const patchPromotionSchema = z.object({
   title: z.string().optional(),
   body: z.string().optional(),
@@ -38,12 +35,8 @@ export const patchPromotionSchema = z.object({
   scheduledFor: z.iso.datetime().optional(),
 });
 
-const PROMOTION_OUTCOMES = ["posted", "failed", "skipped"] as const;
-const promotionOutcomeSchema = z.enum(PROMOTION_OUTCOMES);
-
-/** Agent reports the terminal outcome after posting. */
 export const promotionResultSchema = z.object({
-  outcome: promotionOutcomeSchema,
+  outcome: z.enum(["posted", "failed", "skipped"]),
   postedUrl: webLinkSchema.optional(),
   note: z.string().optional(),
 });
