@@ -14,7 +14,7 @@ const applyItem: AgendaItem = {
   priority: 100,
   title: "Engineer",
   subjectType: "job",
-  subjectId: "j1",
+  subjectId: "c1:j1",
   payload: {
     campaignId: "c1",
     jobKey: "j1",
@@ -108,7 +108,7 @@ describe("ClaimService.claim", () => {
   it("claims an item off the supplied snapshot and stores its payload", async () => {
     const { service, creates } = claimDb({});
     const claim = await service.claim(USER_ID, VERSION, applyItem.id);
-    expect(creates[0]).toMatchObject({ kind: "job.apply", subjectId: "j1" });
+    expect(creates[0]).toMatchObject({ kind: "job.apply", subjectId: "c1:j1" });
     expect(claim.payload).toMatchObject({ campaignId: "c1", jobKey: "j1" });
   });
 

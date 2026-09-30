@@ -85,7 +85,7 @@ describe("buildAgenda ranking", () => {
       base({ config: NETWORKING_OFF, approvedJobs: jobs, pausedCampaigns: [pausedCampaign("c9")] }),
     );
     expect(agenda.items).toHaveLength(10);
-    expect(agenda.items.map((i) => i.subjectId).slice(0, 3)).toEqual(["c9", "j14", "j13"]);
+    expect(agenda.items.map((i) => i.subjectId).slice(0, 3)).toEqual(["c9", "c1:j14", "c1:j13"]);
   });
 
   it("caps long titles", () => {

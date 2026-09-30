@@ -46,7 +46,7 @@ export const applyItem = (job: AgendaJob): AgendaItem => ({
   priority: PRIORITY.jobBase + (job.matchScore ?? 0),
   title: job.title,
   subjectType: "job",
-  subjectId: job.key,
+  subjectId: jobSubjectId(job),
   payload: {
     campaignId: job.campaignId,
     jobKey: job.key,
