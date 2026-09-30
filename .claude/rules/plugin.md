@@ -20,7 +20,7 @@ archives as `JOBPILOT_SKILLS_ROOT`. No generation step. Edit here directly.
 
 Resume skills: `extract-resume` parses the PDF and chains `review-resume` on a first extraction.
 `review-resume` saves one `Suggested rewrite` variant and never edits a base. `tailor-resume`
-owns per-job variants, guarded in `apps/api/src/modules/resume/structure.ts`.
+owns per-job variants, guarded in `apps/api/src/modules/resume/tailoring/structure.ts`.
 
 ## Writing a skill
 

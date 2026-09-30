@@ -5,11 +5,8 @@ import { pruneGeneratedCache } from "@/common/storage/storage";
 const HOUR_MS = 60 * 60 * 1000;
 const MB = 1024 * 1024;
 
-// The generated-PDF cache (resumes-generated/) is a regenerable cache, not source
-// state - every file can be re-rendered from the resume/variant JSON in Postgres.
-// The daily job evicts files idle longer than the TTL, then caps the total size, so
-// the cache can't fill the VPS disk. Evicted files are re-rendered on next download.
-const CACHE_TTL_MS = 72 * HOUR_MS; // 3 days idle
+// Every cached PDF re-renders from Postgres on its next download, so eviction only costs time.
+const CACHE_TTL_MS = 72 * HOUR_MS;
 const CACHE_MAX_BYTES = 512 * MB;
 
 async function prunePdfCache(): Promise<void> {
@@ -24,8 +21,8 @@ async function prunePdfCache(): Promise<void> {
   }
 }
 
-/** Daily job (03:00 server time) that prunes the regenerable generated-PDF cache. */
-export const resumeJob = cron({
+/** Daily at 03:00 server time, so the generated-PDF cache cannot fill the disk. */
+export const pdfCacheJob = cron({
   name: "prune-pdf-cache",
   pattern: Patterns.everyDayAt("03:00"),
   run() {

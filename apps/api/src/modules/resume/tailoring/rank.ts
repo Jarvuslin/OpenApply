@@ -1,16 +1,11 @@
 import type { ResumeData, ResumeSkillGroup } from "@jobpilot/contracts/resume";
 import { matchesTerm, toSearchText } from "@/modules/scoring/keyword-normalize";
+import type { TailorVariantBody } from "../variants/variant.schema";
 
-export interface TailorOptions {
-  summary?: string;
-  /** Retargets `basics.headline`. */
-  headline?: string;
-  emphasizedTech?: string[];
-  jobKeywords?: string[];
-  maxBulletsPerEntry?: number;
-  /** From `validateRewrites`, keyed `entryIndex → (trimmed original → tailored)`. */
-  bulletRewrites?: Map<number, Map<string, string>>;
-}
+type RankOptions = Pick<
+  TailorVariantBody,
+  "summary" | "headline" | "emphasizedTech" | "jobKeywords" | "maxBulletsPerEntry"
+>;
 
 function matchesAny(text: string, terms: string[]): boolean {
   if (terms.length === 0) {
@@ -48,10 +43,14 @@ function reorderSkillGroups(skills: ResumeSkillGroup[], emphasized: string[]): R
 }
 
 /**
- * Deterministic tailoring: skills reordered to surface emphasized tech, bullets sorted by
- * job-keyword overlap, summary and headline spliced when given.
+ * Surfaces emphasized tech, ranks bullets by keyword overlap, and splices in summary and headline.
+ * `rewrites` is keyed `entryIndex → (trimmed original → tailored)`.
  */
-export function tailorBase(base: ResumeData, opts: TailorOptions): ResumeData {
+export function tailorBase(
+  base: ResumeData,
+  opts: RankOptions,
+  rewrites: Map<number, Map<string, string>> = new Map(),
+): ResumeData {
   const emphasized = (opts.emphasizedTech ?? []).map((t) => t.trim()).filter(Boolean);
   const keywords = (opts.jobKeywords ?? emphasized).map((t) => t.trim()).filter(Boolean);
   const maxBullets = Math.max(1, opts.maxBulletsPerEntry ?? 6);
@@ -71,7 +70,7 @@ export function tailorBase(base: ResumeData, opts: TailorOptions): ResumeData {
 
   const experience = (base.experience ?? []).map((entry, index) => {
     let bullets = entry.bullets ?? [];
-    const entryRewrites = opts.bulletRewrites?.get(index);
+    const entryRewrites = rewrites.get(index);
     if (entryRewrites) {
       // Reword from the master set before ranking; unmatched bullets pass through.
       bullets = bullets.map((b) => entryRewrites.get(b.trim()) ?? b);

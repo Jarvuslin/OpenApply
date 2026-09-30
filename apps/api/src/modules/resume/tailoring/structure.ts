@@ -1,7 +1,6 @@
 import type { ResumeData, ResumeExperience, ResumeProject } from "@jobpilot/contracts/resume";
-import type { z } from "zod/v4";
+import type { StructureAudit, StructurePlan } from "../variants/variant.schema";
 import { parseResumeDate, spanOf } from "./dates";
-import type { resumeStructureSchema } from "./resume.schema";
 
 /** The employer a promoted entry gets when the model names none. */
 const DEFAULT_UMBRELLA_COMPANY = "Independent Software Development";
@@ -14,29 +13,16 @@ export const UMBRELLA_COMPANY_NAMES: readonly string[] = [
   DEFAULT_UMBRELLA_COMPANY,
 ];
 
-/** Derived from the request schema: the validator and the applier cannot describe different plans. */
-export type StructureInput = z.infer<typeof resumeStructureSchema>;
-type MergeEntry = NonNullable<StructureInput["mergeEntries"]>[number];
-type PromoteProjects = NonNullable<StructureInput["promoteProjects"]>;
+type MergeEntry = NonNullable<StructurePlan["mergeEntries"]>[number];
+type PromoteProjects = NonNullable<StructurePlan["promoteProjects"]>;
 
-export interface StructureAudit {
-  merged: { company: string; absorbed: string[]; start: string; end: string }[];
-  dropped: string[];
-  promoted: { company: string; projects: string[]; start: string; end: string }[];
-  reordered: boolean;
-  retitled: { company: string; from: string; to: string }[];
-  /** Soft, non-blocking review notes. */
-  flags: string[];
-}
-
-export interface StructureValidation {
+interface StructureValidation {
   ok: boolean;
   violations: string[];
   audit: StructureAudit;
   content: ResumeData;
 }
 
-/** Why the plan was refused, plus the record of what it did. Threaded through every stage. */
 interface Report {
   violations: string[];
   audit: StructureAudit;
@@ -48,7 +34,6 @@ interface IndexedEntry {
   index: number;
 }
 
-/** True when the index addresses a real entry; otherwise reports it against `label`. */
 function entryExists(index: number, count: number, label: string, report: Report): boolean {
   if (Number.isInteger(index) && index >= 0 && index < count) {
     return true;
@@ -57,7 +42,7 @@ function entryExists(index: number, count: number, label: string, report: Report
   return false;
 }
 
-/** Whether a proposed title still describes the same role. Shared word ⇒ plausible, else flagged. */
+/** A shared word means the new title plausibly describes the same role. */
 function titlesOverlap(original: string, proposed: string): boolean {
   const tokens = (s: string) =>
     new Set(
@@ -70,7 +55,6 @@ function titlesOverlap(original: string, proposed: string): boolean {
   return [...tokens(proposed)].some((t) => originalTokens.has(t));
 }
 
-/** The merged entry's title, recorded in the audit and flagged when it no longer describes the role. */
 function retitle(
   target: ResumeExperience,
   proposed: string | undefined,
@@ -87,10 +71,7 @@ function retitle(
   return proposed;
 }
 
-/**
- * The entry one merge produces and the indices it absorbs, or null when the merge is refused -
- * every refusal reason lands in `report.violations`.
- */
+/** Null when the merge is refused; the reasons land in `report.violations`. */
 function combineEntries(
   experience: ResumeExperience[],
   merge: MergeEntry,
@@ -159,10 +140,7 @@ function projectToBullets(project: ResumeProject): string[] {
   return (project.bullets ?? []).map((bullet) => `${project.name}: ${bullet}`);
 }
 
-/**
- * The synthesized experience entry for a set of promoted projects, or null when the plan is
- * refused - every refusal reason lands in `report.violations`.
- */
+/** Null when the promotion is refused; the reasons land in `report.violations`. */
 function promoteToEntry(
   promote: PromoteProjects,
   projects: ResumeProject[],
@@ -231,7 +209,6 @@ function checkDropLimits(survivors: number, total: number, report: Report): void
   }
 }
 
-/** The requested permutation of the survivors; the list unchanged when the order is absent or invalid. */
 function orderEntries(
   survivors: IndexedEntry[],
   entryOrder: number[] | undefined,
@@ -285,11 +262,8 @@ function orderProjects(
   return [...requested, ...rest].map((index) => projects[index]);
 }
 
-/**
- * Validates a plan and returns the restructured content. Fixed order - merge, drop, promote,
- * reorder - so every input index refers to the base, not an intermediate state.
- */
-export function applyStructure(base: ResumeData, input: StructureInput): StructureValidation {
+/** Fixed order - merge, drop, promote, reorder - so every index refers to the base. */
+export function applyStructure(base: ResumeData, input: StructurePlan): StructureValidation {
   const report: Report = {
     violations: [],
     audit: { merged: [], dropped: [], promoted: [], reordered: false, retitled: [], flags: [] },

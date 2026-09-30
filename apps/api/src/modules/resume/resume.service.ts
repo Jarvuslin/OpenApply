@@ -1,19 +1,24 @@
-import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { ResumeData } from "@jobpilot/contracts/resume";
 import { resumeChannel } from "@jobpilot/contracts/sse";
 import { singleton } from "tsyringe";
-import { badRequest, findOwned } from "@/common/errors";
+import { badRequest, findOwned, notFound } from "@/common/errors";
+import { renderResumePdf } from "@/common/pdf/render";
 import { publish } from "@/common/sse";
 import {
   deleteAllResumeArtifacts,
-  ensureResumesDir,
-  generateResumeFilename,
+  deleteResumeFile,
+  generatedResumePath,
+  resumePath,
+  saveResumeSource,
+  serveCachedPdf,
+  streamFile,
 } from "@/common/storage/storage";
-import { PrismaClient } from "@/generated/prisma/client";
-import { backfillResumeIds } from "./backfill-ids";
+import { PrismaClient, type Resume } from "@/generated/prisma/client";
 import { findProfileMismatches } from "./consistency";
-import { findResume, MAX_RESUME_BYTES } from "./resume.utils";
+import { readContent, toStoredContent } from "./content";
+
+const MAX_RESUME_BYTES = 5 * 1024 * 1024;
 
 @singleton()
 export class ResumeService {
@@ -29,7 +34,6 @@ export class ResumeService {
         include: { _count: { select: { variants: true } } },
       }),
     ]);
-    const primaryId = profile?.primaryResumeId ?? null;
 
     return resumes
       .map((r) => ({
@@ -38,63 +42,34 @@ export class ResumeService {
         sourceFilename: r.sourceFilename,
         hasData: r.content !== null,
         variantCount: r._count.variants,
-        isPrimary: r.id === primaryId,
+        isPrimary: r.id === profile?.primaryResumeId,
         updatedAt: r.updatedAt,
       }))
       .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary));
   }
 
-  /** Create a structured resume from a JSON body. */
-  async createJson(
-    userId: string,
-    input: { label: string; content?: ResumeData },
-  ): Promise<{ id: string }> {
+  async createJson(userId: string, input: { label: string; content?: ResumeData }) {
     const resume = await this.prisma.resume.create({
       data: {
         userId,
         label: input.label,
-        content: input.content ? JSON.stringify(input.content) : null,
+        content: input.content && toStoredContent(input.content),
       },
     });
     await this.claimPrimaryIfUnset(userId, resume.id);
     return { id: resume.id };
   }
 
-  /** Create a resume from an uploaded source file (multipart). */
-  async createFromUpload(userId: string, file: File, labelRaw?: string): Promise<{ id: string }> {
-    if (file.size > MAX_RESUME_BYTES) {
-      throw badRequest("Resume must be 5 MB or less");
-    }
-
-    const label = labelRaw?.trim()
-      ? labelRaw.trim()
-      : path.basename(file.name, path.extname(file.name)) || "Resume";
-
-    const dir = await ensureResumesDir();
-    const filename = generateResumeFilename(file.name);
-    const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(path.join(dir, filename), buffer);
-
+  async createFromUpload(userId: string, file: File, label?: string) {
     const resume = await this.prisma.resume.create({
       data: {
         userId,
-        label,
-        sourceFilename: filename,
-        sourceMimeType: file.type || "application/pdf",
-        sourceSizeBytes: file.size,
+        label: label?.trim() || path.basename(file.name, path.extname(file.name)) || "Resume",
+        ...(await this.saveSource(file)),
       },
     });
-
     await this.claimPrimaryIfUnset(userId, resume.id);
     return { id: resume.id };
-  }
-
-  /** Conditional write rather than count-then-set, so two first uploads cannot both claim it. */
-  private async claimPrimaryIfUnset(userId: string, resumeId: string): Promise<void> {
-    await this.prisma.user.updateMany({
-      where: { id: userId, primaryResumeId: null },
-      data: { primaryResumeId: resumeId },
-    });
   }
 
   async get(userId: string, id: string) {
@@ -112,22 +87,9 @@ export class ResumeService {
           website: true,
         },
       }),
-      findResume(this.prisma, userId, id),
+      this.findOwned(userId, id),
     ]);
-
-    let content: ResumeData | null = null;
-
-    if (resume.content) {
-      const parsed = JSON.parse(resume.content) as ResumeData;
-      const { content: backfilled, mutated } = backfillResumeIds(parsed);
-      content = backfilled;
-      if (mutated) {
-        await this.prisma.resume.update({
-          where: { id: resume.id },
-          data: { content: JSON.stringify(backfilled) },
-        });
-      }
-    }
+    const content = resume.content === null ? null : readContent(resume.content);
 
     return {
       id: resume.id,
@@ -146,51 +108,39 @@ export class ResumeService {
     };
   }
 
-  async update(
-    userId: string,
-    id: string,
-    body: { label?: string; content?: ResumeData },
-  ): Promise<{ id: string; version: number }> {
+  async update(userId: string, id: string, body: { label?: string; content?: ResumeData }) {
     if (body.label === undefined && body.content === undefined) {
       throw badRequest("label or content required");
     }
-
-    const existing = await findResume(this.prisma, userId, id);
+    await this.findOwned(userId, id);
 
     const updated = await this.prisma.resume.update({
       where: { id },
       data: {
-        label: body.label ?? existing.label,
-        content: body.content ? JSON.stringify(body.content) : existing.content,
-        version: body.content ? existing.version + 1 : existing.version,
+        label: body.label,
+        ...(body.content && {
+          content: toStoredContent(body.content),
+          version: { increment: 1 },
+        }),
       },
     });
 
     if (body.content) {
       publish(
         resumeChannel,
-        { resumeId: updated.id },
-        {
-          type: "content.updated",
-          resumeId: updated.id,
-          version: updated.version,
-        },
+        { resumeId: id },
+        { type: "content.updated", resumeId: id, version: updated.version },
       );
     }
-
-    return { id: updated.id, version: updated.version };
+    return { id, version: updated.version };
   }
 
-  async remove(userId: string, id: string): Promise<{ deleted: string }> {
-    const existing = await findOwned(
+  async remove(userId: string, id: string) {
+    const resume = await findOwned(
       (where) =>
         this.prisma.resume.findFirst({
           where,
-          select: {
-            id: true,
-            sourceFilename: true,
-            variants: { select: { id: true } },
-          },
+          select: { sourceFilename: true, variants: { select: { id: true } } },
         }),
       { id, userId },
       "Resume",
@@ -199,20 +149,101 @@ export class ResumeService {
     // `User.primaryResume` is `onDelete: SetNull`, so the pointer clears with the row.
     await this.prisma.resume.delete({ where: { id } });
     await deleteAllResumeArtifacts({
-      resumeId: existing.id,
-      sourceFilename: existing.sourceFilename,
-      variantIds: existing.variants.map((v) => v.id),
+      resumeId: id,
+      sourceFilename: resume.sourceFilename,
+      variantIds: resume.variants.map((v) => v.id),
     });
 
     return { deleted: id };
   }
 
-  /** Ownership assertion for the SSE events subscription. */
-  async assertResumeOwned(userId: string, id: string): Promise<void> {
-    await findOwned(
-      (where) => this.prisma.resume.findFirst({ where, select: { id: true } }),
-      { id, userId },
-      "Resume",
-    );
+  findOwned(userId: string, id: string): Promise<Resume> {
+    return findOwned((where) => this.prisma.resume.findFirst({ where }), { id, userId }, "Resume");
+  }
+
+  async renderPdf(userId: string, id: string) {
+    return this.streamPdf(await this.findOwned(userId, id));
+  }
+
+  /** Unauthenticated: the resume's v4 uuid is the capability token. */
+  async renderPublicPdf(id: string) {
+    const resume = await this.prisma.resume.findUnique({ where: { id } });
+    if (!resume) {
+      throw notFound("Resume not found");
+    }
+    return this.streamPdf(resume);
+  }
+
+  /** Rendered from structured content when there is some, else the uploaded source. */
+  private async streamPdf(resume: Resume): Promise<Response> {
+    const { content } = resume;
+    if (content !== null) {
+      return serveCachedPdf(
+        generatedResumePath(resume.id, resume.updatedAt.getTime()),
+        () => renderResumePdf(readContent(content)),
+        resume.label,
+      );
+    }
+    return this.streamSource(resume);
+  }
+
+  async getSource(userId: string, id: string) {
+    return this.streamSource(await this.findOwned(userId, id));
+  }
+
+  private async streamSource(resume: Resume): Promise<Response> {
+    if (!resume.sourceFilename) {
+      throw notFound("Resume has no source file");
+    }
+    try {
+      return await streamFile(
+        resumePath(resume.sourceFilename),
+        resume.sourceMimeType ?? "application/pdf",
+        resume.sourceFilename,
+      );
+    } catch {
+      throw notFound("Source file missing on disk");
+    }
+  }
+
+  async uploadSource(userId: string, id: string, file: File) {
+    const resume = await this.findOwned(userId, id);
+    const source = await this.saveSource(file);
+    if (resume.sourceFilename) {
+      await deleteResumeFile(resume.sourceFilename);
+    }
+    await this.prisma.resume.update({ where: { id }, data: source });
+    return { id, sourceFilename: source.sourceFilename };
+  }
+
+  async deleteSource(userId: string, id: string) {
+    const resume = await this.findOwned(userId, id);
+    if (resume.sourceFilename) {
+      await deleteResumeFile(resume.sourceFilename);
+    }
+    await this.prisma.resume.update({
+      where: { id },
+      data: { sourceFilename: null, sourceMimeType: null, sourceSizeBytes: null },
+    });
+    return { id };
+  }
+
+  private async saveSource(file: File) {
+    if (file.size > MAX_RESUME_BYTES) {
+      throw badRequest("Resume must be 5 MB or less");
+    }
+    return {
+      sourceFilename: await saveResumeSource(file),
+      sourceMimeType: file.type || "application/pdf",
+      sourceSizeBytes: file.size,
+    };
+  }
+
+  /** Conditional write rather than count-then-set, so two first uploads cannot both claim it. */
+  private async claimPrimaryIfUnset(userId: string, resumeId: string): Promise<void> {
+    await this.prisma.user.updateMany({
+      where: { id: userId, primaryResumeId: null },
+      data: { primaryResumeId: resumeId },
+    });
   }
 }

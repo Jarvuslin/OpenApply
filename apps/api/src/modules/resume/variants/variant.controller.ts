@@ -8,11 +8,12 @@ import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { authGuard } from "@/common/middleware";
 import { deletedResponseSchema, idResponseSchema } from "@/types/response";
-import { resumeUpdatedSchema, tailorResumeSchema } from "../resume.schema";
+import { resumeUpdatedSchema } from "../resume.schema";
 import {
   prunedResponseSchema,
   pruneVariantsQuerySchema,
   tailoredVariantSchema,
+  tailorResumeSchema,
   variantDetailSchema,
   variantListSchema,
 } from "./variant.schema";
@@ -26,7 +27,6 @@ export const resumeVariantController = new Elysia({
   detail: { tags: ["Resumes"] },
 })
   .use(authGuard)
-  // variant PDF (cached, binary)
   .get("/variants/:id/pdf", ({ user, params }) => svc.renderVariantPdf(user.id, params.id), {
     params: idParam,
     detail: {
@@ -35,7 +35,6 @@ export const resumeVariantController = new Elysia({
         "Streams a tailored resume variant as a cached PDF, rendering it from the variant's structured content on first request.",
     },
   })
-  // variants for a resume: list / create
   .get("/:id/variants", ({ user, params }) => svc.listVariants(user.id, params.id), {
     params: idParam,
     response: variantListSchema,
@@ -55,7 +54,6 @@ export const resumeVariantController = new Elysia({
         "Creates a tailored variant under the given master resume from explicit structured content and returns the new variant's id.",
     },
   })
-  // deterministic tailored variant from model hints
   .post(
     "/:id/tailor",
     ({ user, params, body }) => svc.createTailoredVariant(user.id, params.id, body),
@@ -70,7 +68,6 @@ export const resumeVariantController = new Elysia({
       },
     },
   )
-  // single variant CRUD
   .get("/variants/:id", ({ user, params }) => svc.getVariant(user.id, params.id), {
     params: idParam,
     response: variantDetailSchema,
@@ -105,10 +102,10 @@ export const resumeVariantController = new Elysia({
     detail: {
       summary: "Apply resume variant",
       description:
-        "Writes the variant's content onto its master resume, bumping the resume's version, then deletes the variant. One transaction, so a suggested rewrite is never applied while still being offered. Returns the resume id and its new version.",
+        "Writes the variant's content onto its master resume in one transaction, bumping the resume's version and deleting the variant. Returns the resume id and new version.",
     },
   })
-  // bulk prune - registered after /variants/:id so the static segment cannot shadow it
+  // Registered after /variants/:id so the static segment cannot shadow it.
   .delete(
     "/:id/variants",
     ({ user, params, query }) => svc.pruneVariants(user.id, params.id, query),

@@ -2,7 +2,7 @@ import { resumeDataSchema } from "@jobpilot/contracts/resume";
 import { singleton } from "tsyringe";
 import { bucketPerDay, DAY_MS, startOfDay } from "@/common/date/buckets";
 import { notFound } from "@/common/errors";
-import { PrismaClient } from "@/generated/prisma/client";
+import { type Prisma, PrismaClient } from "@/generated/prisma/client";
 import type { LeaderboardResponse, LeaderboardWindow, PortfolioResponse } from "./portfolio.schema";
 
 const HEATMAP_DAYS = 365;
@@ -255,13 +255,8 @@ export class PortfolioService {
     return { current, longest };
   }
 
-  private parseResume(content: string | null) {
-    if (!content) return null;
-    try {
-      const parsed = resumeDataSchema.safeParse(JSON.parse(content));
-      return parsed.success ? parsed.data : null;
-    } catch {
-      return null;
-    }
+  private parseResume(content: Prisma.JsonValue) {
+    const parsed = resumeDataSchema.safeParse(content);
+    return parsed.success ? parsed.data : null;
   }
 }

@@ -9,8 +9,8 @@ model Resume {
   sourceMimeType  String? @map("source_mime_type")
   sourceSizeBytes Int?    @map("source_size_bytes")
 
-  content String?
-  version Int     @default(1)
+  content Json?
+  version Int   @default(1)
 
   variants     ResumeVariant[]
   primaryFor   User?           @relation("PrimaryResume")
@@ -37,13 +37,11 @@ model ResumeVariant {
   // application this variant was created for.
   usedByApplications Application[] @relation("ApplicationResumeUsed")
 
-  content   String
+  content   Json
   diffNotes String? @map("diff_notes")
 
-  // JSON audit of model-authored bullet rewrites applied to this variant:
-  // { experience: [{ entryIndex, company, bullets: [{ original, tailored }] }] }.
-  // Null when the variant used selection/reordering only (no rewording).
-  rewrites String?
+  // Audit of rewording and restructuring (`VariantRewriteAudit`); null when the variant only reranked.
+  rewrites Json?
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

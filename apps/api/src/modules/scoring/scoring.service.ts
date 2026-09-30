@@ -1,6 +1,6 @@
-import type { ResumeData } from "@jobpilot/contracts/resume";
 import { singleton } from "tsyringe";
-import { PrismaClient } from "@/generated/prisma/client";
+import { type Prisma, PrismaClient } from "@/generated/prisma/client";
+import { readContent } from "@/modules/resume/content";
 import { type FitResult, scoreFit } from "./fit";
 import { deriveProfileFitInputs } from "./profile-fit";
 import type { FitProfile, JobDigest } from "./scoring.schema";
@@ -35,12 +35,8 @@ export class ScoringService {
 
     let derived = { skills: [] as string[], yearsExperience: null as number | null };
 
-    if (content) {
-      try {
-        derived = deriveProfileFitInputs(JSON.parse(content) as ResumeData);
-      } catch {
-        // resume content malformed - fall back to caller-provided profile only
-      }
+    if (content !== null) {
+      derived = deriveProfileFitInputs(readContent(content));
     }
 
     const fitProfile = {
@@ -62,7 +58,7 @@ export class ScoringService {
   private async resolveBaseResumeContent(
     userId: string,
     resumeId?: string,
-  ): Promise<string | null> {
+  ): Promise<Prisma.JsonValue> {
     if (resumeId) {
       const override = await this.prisma.resume.findFirst({
         where: { id: resumeId, userId },

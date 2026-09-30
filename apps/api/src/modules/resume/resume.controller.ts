@@ -2,7 +2,9 @@ import { idParam } from "@jobpilot/contracts/shared";
 import { resumeChannel } from "@jobpilot/contracts/sse";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
+import { badRequest } from "@/common/errors";
 import { authGuard } from "@/common/middleware";
+import { RATE_LIMITS, rateLimit } from "@/common/rate-limit";
 import { sseStream } from "@/common/sse";
 import { deletedResponseSchema, idResponseSchema } from "@/types/response";
 import {
@@ -10,19 +12,28 @@ import {
   resumeDetailSchema,
   resumeListSchema,
   resumeUpdatedSchema,
+  sourceUploadedSchema,
   updateResumeSchema,
 } from "./resume.schema";
 import { ResumeService } from "./resume.service";
-import { readUpload } from "./resume.upload";
 
 const svc = container.resolve(ResumeService);
+
+async function readUpload(request: Request): Promise<{ file: File; label?: string }> {
+  const form = await request.formData();
+  const file = form.get("file");
+  if (!(file instanceof File)) {
+    throw badRequest("file field is required");
+  }
+  const label = form.get("label");
+  return { file, label: typeof label === "string" ? label : undefined };
+}
 
 export const resumeController = new Elysia({
   prefix: "/resumes",
   detail: { tags: ["Resumes"] },
 })
   .use(authGuard)
-  // list
   .get("/", ({ user }) => svc.list(user.id), {
     response: resumeListSchema,
     detail: {
@@ -31,7 +42,6 @@ export const resumeController = new Elysia({
         "Returns all of the active profile's master resumes ordered by most recently updated, with variant counts and the primary resume listed first.",
     },
   })
-  // create (structured JSON)
   .post("/", ({ user, body }) => svc.createJson(user.id, body), {
     body: createResumeSchema,
     response: idResponseSchema,
@@ -41,12 +51,11 @@ export const resumeController = new Elysia({
         "Creates a new master resume from a structured JSON body and optional content, returning the new resume's id.",
     },
   })
-  // create from uploaded source file (multipart)
   .post(
     "/upload",
     async ({ user, request }) => {
-      const { file, text } = await readUpload(request, "file", "label");
-      return svc.createFromUpload(user.id, file, text);
+      const { file, label } = await readUpload(request);
+      return svc.createFromUpload(user.id, file, label);
     },
     {
       response: idResponseSchema,
@@ -57,7 +66,6 @@ export const resumeController = new Elysia({
       },
     },
   )
-  // single resume CRUD
   .get("/:id", ({ user, params }) => svc.get(user.id, params.id), {
     params: idParam,
     response: resumeDetailSchema,
@@ -86,11 +94,10 @@ export const resumeController = new Elysia({
         "Deletes a master resume along with its variants and all on-disk artifacts, clears the primary pointer if set, and returns the deleted id.",
     },
   })
-  // resume content-change SSE stream
   .get(
     "/:id/events",
     async ({ user, params, headers }) => {
-      await svc.assertResumeOwned(user.id, params.id);
+      await svc.findOwned(user.id, params.id);
       return sseStream(resumeChannel, { resumeId: params.id }, headers);
     },
     {
@@ -101,4 +108,57 @@ export const resumeController = new Elysia({
           "Opens a Server-Sent Events stream that emits content-change events for the resume after verifying the active profile owns it.",
       },
     },
-  );
+  )
+  .get("/:id/pdf", ({ user, params }) => svc.renderPdf(user.id, params.id), {
+    params: idParam,
+    detail: {
+      summary: "Render resume PDF",
+      description:
+        "Streams the master resume as a cached PDF, rendered from structured content when present, else the uploaded source file.",
+    },
+  })
+  .get("/:id/source", ({ user, params }) => svc.getSource(user.id, params.id), {
+    params: idParam,
+    detail: {
+      summary: "Stream resume source file",
+      description: "Streams the resume's uploaded source file, or 404 when there is none.",
+    },
+  })
+  .post(
+    "/:id/source",
+    async ({ user, params, request }) => {
+      const { file } = await readUpload(request);
+      return svc.uploadSource(user.id, params.id, file);
+    },
+    {
+      params: idParam,
+      response: sourceUploadedSchema,
+      detail: {
+        summary: "Replace resume source file",
+        description:
+          "Replaces the resume's source file with a multipart upload and returns the new stored filename.",
+      },
+    },
+  )
+  .delete("/:id/source", ({ user, params }) => svc.deleteSource(user.id, params.id), {
+    params: idParam,
+    response: idResponseSchema,
+    detail: {
+      summary: "Delete resume source file",
+      description: "Removes the resume's uploaded source file and clears its source metadata.",
+    },
+  });
+
+/** Unauthenticated, for recipient-reachable links such as networking emails. */
+export const publicResumeController = new Elysia({
+  prefix: "/public/resumes",
+  detail: { tags: ["Resumes"] },
+}).get("/:id/pdf", ({ params }) => svc.renderPublicPdf(params.id), {
+  params: idParam,
+  beforeHandle: rateLimit(RATE_LIMITS.publicResumePdf),
+  detail: {
+    summary: "Render resume PDF (public)",
+    description:
+      "Streams a resume as a PDF without authentication, keyed by the resume's unguessable uuid.",
+  },
+});

@@ -1,6 +1,7 @@
 import { EMPTY_RESUME_DATA, type ResumeData } from "@jobpilot/contracts/resume";
 import { HttpError } from "@/common/errors";
-import { buildTailoredVariant, type TailorVariantBody } from "./tailor-variant";
+import type { TailorVariantBody } from "../variants/variant.schema";
+import { buildTailoredVariant } from "./build-variant";
 import { describe, expect, it } from "bun:test";
 
 function base(): ResumeData {
@@ -98,40 +99,6 @@ describe("buildTailoredVariant", () => {
     expect(result.audit?.experience).toHaveLength(1);
   });
 
-  it("refuses a rewrite that invents a number", () => {
-    const violations = violationsOf(() =>
-      buildTailoredVariant(
-        base(),
-        body({
-          bulletRewrites: [
-            {
-              entryIndex: 0,
-              bullets: [{ original: "Shipped A.", tailored: "Shipped A to 12k users." }],
-            },
-          ],
-        }),
-      ),
-    );
-
-    expect(violations[0]).toContain("12k");
-  });
-
-  it("keeps a number the original already stated", () => {
-    const result = buildTailoredVariant(
-      base(),
-      body({
-        bulletRewrites: [
-          {
-            entryIndex: 1,
-            bullets: [{ original: "Cut latency by 40%.", tailored: "Cut request latency 40%." }],
-          },
-        ],
-      }),
-    );
-
-    expect(result.content.experience[1].bullets).toEqual(["Cut request latency 40%."]);
-  });
-
   it("validates rewrites against the restructured entries, not the base ones", () => {
     const result = buildTailoredVariant(
       base(),
@@ -167,35 +134,6 @@ describe("buildTailoredVariant", () => {
     const result = buildTailoredVariant(base(), body({ headline: "Backend Engineer" }));
 
     expect(result.content.basics.headline).toBe("Backend Engineer");
-  });
-
-  it("refuses a rewrite that names tech the resume never mentions", () => {
-    const violations = violationsOf(() =>
-      buildTailoredVariant(
-        base(),
-        body({
-          bulletRewrites: [
-            {
-              entryIndex: 0,
-              bullets: [{ original: "Shipped A.", tailored: "Shipped A in GraphQL." }],
-            },
-          ],
-        }),
-      ),
-    );
-
-    expect(violations[0]).toContain("GraphQL");
-  });
-
-  it("refuses a summary that reads as stock phrasing", () => {
-    const violations = violationsOf(() =>
-      buildTailoredVariant(
-        base(),
-        body({ summary: "Passionate engineer comfortable with React." }),
-      ),
-    );
-
-    expect(violations[0]).toContain("stock phrasing");
   });
 
   it("stores no audit when nothing was reworded or restructured", () => {

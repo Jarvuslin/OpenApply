@@ -1,3 +1,4 @@
+import { createReadStream } from "node:fs";
 import { mkdir, readdir, stat, unlink, utimes, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { slugify } from "@/common/utils/slug";
@@ -6,16 +7,6 @@ import { env } from "@/env";
 const STORAGE_ROOT = path.resolve(env.STORAGE_ROOT);
 const RESUMES_DIR = path.join(STORAGE_ROOT, "resumes");
 const GENERATED_DIR = path.join(STORAGE_ROOT, "resumes-generated");
-
-export async function ensureResumesDir(): Promise<string> {
-  await mkdir(RESUMES_DIR, { recursive: true });
-  return RESUMES_DIR;
-}
-
-export async function ensureGeneratedDir(): Promise<string> {
-  await mkdir(GENERATED_DIR, { recursive: true });
-  return GENERATED_DIR;
-}
 
 export function resumePath(filename: string): string {
   return path.join(RESUMES_DIR, filename);
@@ -93,10 +84,30 @@ export async function deleteAllResumeArtifacts(refs: ResumeArtifactRefs): Promis
   ]);
 }
 
-export function generateResumeFilename(originalName: string): string {
-  const ext = path.extname(originalName) || ".pdf";
-  const slug = slugify(path.basename(originalName, ext), { fallback: "resume" });
-  return `${slug}-${Date.now()}${ext}`;
+/** Writes an uploaded resume under a fresh name and returns that name. */
+export async function saveResumeSource(file: File): Promise<string> {
+  const ext = path.extname(file.name) || ".pdf";
+  const slug = slugify(path.basename(file.name, ext), { fallback: "resume" });
+  const filename = `${slug}-${Date.now()}${ext}`;
+  await mkdir(RESUMES_DIR, { recursive: true });
+  await writeFile(resumePath(filename), Buffer.from(await file.arrayBuffer()));
+  return filename;
+}
+
+/** Streams a file inline. Rejects when the file is missing. */
+export async function streamFile(
+  filePath: string,
+  mime: string,
+  downloadName: string,
+): Promise<Response> {
+  const stats = await stat(filePath);
+  return new Response(createReadStream(filePath) as unknown as ReadableStream, {
+    headers: {
+      "content-type": mime,
+      "content-length": String(stats.size),
+      "content-disposition": `inline; filename="${downloadName}"`,
+    },
+  });
 }
 
 export function slugifyForDownload(label: string): string {
@@ -104,29 +115,22 @@ export function slugifyForDownload(label: string): string {
 }
 
 /**
- * Ensures a PDF exists at `cachePath`, rendering it via `render` on a miss. On a hit
- * it bumps the file's mtime so the prune sweep treats time-since-last-download as the
- * idle clock (a frequently downloaded PDF whose source hasn't changed stays warm). The
- * cache is fully regenerable - eviction only costs a re-render on the next request.
+ * Serves the PDF cached at `cachePath`, rendering it on a miss. A hit bumps the mtime, so the prune
+ * sweep measures idleness from the last download rather than the last render.
  */
-export async function ensureCachedPdf(
+export async function serveCachedPdf(
   cachePath: string,
   render: () => Promise<Buffer>,
-): Promise<void> {
+  label: string,
+): Promise<Response> {
   try {
-    await stat(cachePath);
-  } catch {
-    const buffer = await render();
-    await writeFile(cachePath, buffer);
-    return;
-  }
-  // Recency bump is best-effort - never fail a download because utimes hiccuped.
-  const now = new Date();
-  try {
+    const now = new Date();
     await utimes(cachePath, now, now);
   } catch {
-    // ignore
+    await mkdir(GENERATED_DIR, { recursive: true });
+    await writeFile(cachePath, await render());
   }
+  return streamFile(cachePath, "application/pdf", `${slugifyForDownload(label)}.pdf`);
 }
 
 export interface CachePruneResult {

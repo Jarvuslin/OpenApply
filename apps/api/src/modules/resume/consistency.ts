@@ -1,8 +1,8 @@
-// Compares a resume's contact block against the profile fields the form-filler submits. A recruiter
-// reads the resume; the ATS row comes from the profile. Pure - no db, no env.
+// A recruiter reads the resume's contact block; the ATS row comes from the profile. They should agree.
 import type { ResumeBasics } from "@jobpilot/contracts/resume";
+import type { z } from "zod/v4";
+import type { profileMismatchSchema } from "./resume.schema";
 
-/** The profile fields a resume header can contradict. */
 export interface ProfileContact {
   city: string | null;
   state: string | null;
@@ -13,18 +13,12 @@ export interface ProfileContact {
   website: string | null;
 }
 
-export interface ProfileMismatch {
-  field: "location" | "email" | "phone" | "linkedin" | "github" | "website";
-  resume: string;
-  profile: string;
-}
+type ProfileMismatch = z.infer<typeof profileMismatchSchema>;
 
-/** Case/punctuation/whitespace-insensitive. "+1 857 867 1942" and "(857) 867-1942" are one number. */
 function loose(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
-/** Drops scheme, `www.`, and a trailing slash so a bare handle URL matches a full one. */
 function looseUrl(value: string): string {
   return loose(
     value
@@ -34,26 +28,20 @@ function looseUrl(value: string): string {
   );
 }
 
-/** Digits only, minus a NANP country code: "+1 857…" and "(857)…" are the same phone. */
+/** Minus a NANP country code: "+1 857…" and "(857)…" are the same phone. */
 function loosePhone(value: string): string {
   const digits = value.replace(/\D/g, "");
   return digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits;
 }
 
-/**
- * Matches when the resume names the profile's city in any format - "Portland, Maine" and
- * "Greater Portland, ME" both agree with city=Portland. Only a different place is reported.
- */
+/** "Portland, Maine" and "Greater Portland, ME" both agree with city=Portland. */
 function locationAgrees(resume: string, city: string | null, state: string | null): boolean {
   // City is load-bearing: "MA" alone is inside "Massachusetts" but also "Amsterdam".
   const anchor = city?.trim() || state?.trim();
   return !anchor || loose(resume).includes(loose(anchor));
 }
 
-/**
- * Every field where the resume and profile disagree. A field absent from either side is a choice,
- * not a conflict.
- */
+/** A field absent from either side is a choice, not a conflict. */
 export function findProfileMismatches(
   basics: ResumeBasics | undefined,
   profile: ProfileContact,

@@ -28,6 +28,7 @@ import { adminBoardController } from "@/modules/job-board/admin-board.controller
 import { jobBoardController } from "@/modules/job-board/job-board.controller";
 import { adminJobListingController, publicJobListingController } from "@/modules/job-listing";
 import { cleanupJob } from "@/modules/maintenance/cleanup.job";
+import { pdfCacheJob } from "@/modules/maintenance/pdf-cache.job";
 import { pilotController } from "@/modules/pilot/pilot.controller";
 import { pilotAgendaController } from "@/modules/pilot/pilot-agenda.controller";
 import { pilotClaimsController } from "@/modules/pilot/pilot-claims.controller";
@@ -37,10 +38,7 @@ import { pilotSearchController } from "@/modules/pilot/pilot-search.controller";
 import { promotionController } from "@/modules/pilot/promotion.controller";
 import { publicPortfolioController } from "@/modules/portfolio/portfolio.controller";
 import { pushController } from "@/modules/push/push.controller";
-import { resumeFileController } from "@/modules/resume/files/file.controller";
-import { publicResumeController } from "@/modules/resume/files/public.controller";
-import { resumeController } from "@/modules/resume/resume.controller";
-import { resumeJob } from "@/modules/resume/resume.job";
+import { publicResumeController, resumeController } from "@/modules/resume/resume.controller";
 import { resumeVariantController } from "@/modules/resume/variants/variant.controller";
 import { scoringController } from "@/modules/scoring/scoring.controller";
 import { upworkController } from "@/modules/upwork/upwork.controller";
@@ -52,7 +50,7 @@ const app = new Elysia()
   .use(errorMiddleware)
   .use(corsPlugin)
   .use(openapiPlugin)
-  .use(resumeJob)
+  .use(pdfCacheJob)
   .use(cleanupJob)
   .onStop(async () => {
     await db.$disconnect();
@@ -74,7 +72,6 @@ const app = new Elysia()
       .use(captchaController)
       .use(userController)
       .use(resumeController)
-      .use(resumeFileController)
       .use(resumeVariantController)
       .use(publicResumeController)
       .use(publicJobListingController)

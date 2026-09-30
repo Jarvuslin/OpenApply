@@ -3,7 +3,7 @@
 import { UNUSED_VARIANT_DAYS } from "@jobpilot/contracts/resume";
 import { DAY_MS } from "@/common/date/buckets";
 import type { Prisma } from "@/generated/prisma/client";
-import { notProtectedVariant } from "@/modules/resume/variants/prunable";
+import { notProtectedVariant } from "@/modules/resume/variants/variant.schema";
 
 export const RETENTION_DAYS = {
   journal: 30,

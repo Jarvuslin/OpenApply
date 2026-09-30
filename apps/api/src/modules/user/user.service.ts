@@ -7,7 +7,7 @@ import {
 import { singleton } from "tsyringe";
 import { conflict, findOwned, notFound } from "@/common/errors";
 import { resumePath } from "@/common/storage/storage";
-import { PrismaClient } from "@/generated/prisma/client";
+import { Prisma, PrismaClient } from "@/generated/prisma/client";
 import { PORTFOLIO_SETTINGS_SELECT } from "./user.mapper";
 
 const USER_SCALAR_SELECT = {
@@ -73,7 +73,7 @@ export class UserService {
           },
         }),
         this.prisma.resume.findMany({
-          where: { userId, content: { not: null } },
+          where: { userId, content: { not: Prisma.DbNull } },
           select: { id: true },
         }),
         this.prisma.reference.findMany({

@@ -1,11 +1,7 @@
 import type { ResumeData } from "@jobpilot/contracts/resume";
 import { matchesTerm, toSearchText } from "@/modules/scoring/keyword-normalize";
 
-/**
- * What a resume states as fact: its numbers and its tech names. Tailoring may rephrase around
- * these but never add one the resume lacks or drop one an original bullet had.
- */
-
+/** What a resume states as fact: its numbers and its tech names. */
 export interface Corpus {
   /** Normalized for whole-token search. */
   search: string;
@@ -18,9 +14,8 @@ function normalizeNumber(raw: string): string {
 }
 
 /**
- * Numeric tokens in `text`, normalized. Captures magnitudes with their unit suffix (`200+`, `40%`,
- * `1.5m`) and also a bare-core form (`200`, `40`, `1.5`) so that swapping a unit (`40%` → `40
- * percent`) is not treated as a new number, while a genuinely different magnitude still is.
+ * Each number with its unit (`40%`) and bare (`40`), so rewording the unit ("40 percent") is not a
+ * new number while a different magnitude still is.
  */
 export function extractNumbers(text: string): Set<string> {
   const out = new Set<string>();
@@ -43,7 +38,6 @@ function isTechLike(token: string): boolean {
   return false;
 }
 
-/** Distinct tech-like tokens in `text`, in order of first appearance. */
 function techTokens(text: string): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
@@ -59,7 +53,6 @@ function techTokens(text: string): string[] {
   return out;
 }
 
-/** All free text the resume carries, as the search corpus and the numbers it states. */
 export function buildCorpus(base: ResumeData): Corpus {
   const parts: string[] = [base.summary ?? "", base.basics?.headline ?? ""];
   for (const entry of base.experience ?? []) {
@@ -88,15 +81,11 @@ export function buildCorpus(base: ResumeData): Corpus {
   return { search: toSearchText(raw), numbers: extractNumbers(raw) };
 }
 
-/**
- * Tech-like tokens in `text` that the resume never mentions. Single-capitalized names (e.g.
- * "Kubernetes") can slip past; the hard guarantee against fabrication is the numbers guard.
- */
+/** Single-capitalized names like "Kubernetes" slip past; the numbers guard is the hard one. */
 export function unverifiedTerms(text: string, corpus: Corpus): string[] {
   return techTokens(text).filter((token) => !matchesTerm(corpus.search, token));
 }
 
-/** Tech named in `original` that `tailored` no longer mentions. */
 export function droppedTerms(original: string, tailored: string): string[] {
   const tailoredSearchText = toSearchText(tailored);
   return techTokens(original).filter((token) => !matchesTerm(tailoredSearchText, token));

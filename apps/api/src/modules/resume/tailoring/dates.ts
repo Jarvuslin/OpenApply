@@ -1,5 +1,4 @@
-// Free-text resume dates. A resume writes "Jan 2025", "2025-01", "2016" and "Present" in the same
-// section, so comparisons need one sortable form. Pure - no db, no env.
+// A resume writes "Jan 2025", "2025-01", "2016" and "Present" in one section; compare them as months.
 
 const MONTHS: Record<string, number> = {
   jan: 1,
@@ -16,10 +15,7 @@ const MONTHS: Record<string, number> = {
   dec: 12,
 };
 
-/**
- * A resume date as a sortable month number. "Present" sorts last; null when nothing year-like is
- * present, so the caller refuses rather than guesses.
- */
+/** "Present" sorts last; null when nothing year-like is present, so the caller refuses. */
 export function parseResumeDate(raw: string | undefined): number | null {
   const value = raw?.trim().toLowerCase();
   if (!value) {
@@ -41,7 +37,7 @@ export function parseResumeDate(raw: string | undefined): number | null {
   return Number(year) * 12 + Math.min(Math.max(month, 1), 12);
 }
 
-/** Earliest start / latest end across a set of entries, returned as the original strings. */
+/** Earliest start and latest end, as the original strings. */
 export function spanOf(
   entries: { start?: string; end?: string }[],
 ): { start: string; end: string } | null {

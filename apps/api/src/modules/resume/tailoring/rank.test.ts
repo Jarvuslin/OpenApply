@@ -1,7 +1,5 @@
-// Deterministic reordering. `tailor.ts` imports only `keyword-normalize` + types, so no env/Prisma.
-
 import { EMPTY_RESUME_DATA, type ResumeData } from "@jobpilot/contracts/resume";
-import { tailorBase } from "./tailor";
+import { tailorBase } from "./rank";
 import { describe, expect, it } from "bun:test";
 
 const base = (over: Partial<ResumeData>): ResumeData => ({
