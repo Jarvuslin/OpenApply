@@ -29,12 +29,6 @@ public sealed class PilotStoreTests : IDisposable
     };
 
     [Fact]
-    public void Current_IsNull_WhenNoFileExists()
-    {
-        Assert.Null(NewStore().Current);
-    }
-
-    [Fact]
     public void Save_RoundTripsThroughAFreshStore()
     {
         NewStore().Save(SavedSettings());
@@ -70,22 +64,14 @@ public sealed class PilotStoreTests : IDisposable
         store.Changed += () => changes++;
 
         store.SetRunning(false); // nothing saved yet
+        Assert.Null(store.Current);
+        Assert.False(File.Exists(path));
+
         store.Save(SavedSettings());
         store.SetRunning(true);  // already running
         store.SetRunning(false);
 
         Assert.Equal(2, changes);
-    }
-
-    [Fact]
-    public void SetRunning_IsANoOp_WhenNothingIsSaved()
-    {
-        var store = NewStore();
-
-        store.SetRunning(false);
-
-        Assert.Null(store.Current);
-        Assert.False(File.Exists(path));
     }
 
     [Theory]

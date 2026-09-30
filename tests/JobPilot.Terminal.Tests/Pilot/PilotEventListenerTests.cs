@@ -9,21 +9,15 @@ namespace JobPilot.Terminal.Tests;
 public sealed class PilotEventListenerTests
 {
     [Theory]
-    [InlineData("""{"type":"question.answered","question":{}}""")]
-    [InlineData("""{"type":"state.changed","state":{}}""")]
-    [InlineData("""{"type":"promotion.updated","promotion":{"status":"approved"}}""")]
-    public void ShouldWake_OnEventsThatUnblockTheNextCycle(string data)
+    [InlineData("""{"type":"question.answered","question":{}}""", true)]
+    [InlineData("""{"type":"state.changed","state":{}}""", true)]
+    [InlineData("""{"type":"promotion.updated","promotion":{"status":"approved"}}""", true)]
+    [InlineData("""{"type":"promotion.updated","promotion":{"status":"draft"}}""", false)]
+    [InlineData("""{"type":"journal.appended","entry":{}}""", false)]
+    [InlineData("""{"type":"question.created","question":{}}""", false)]
+    public void ShouldWake_OnlyOnEventsThatUnblockTheNextCycle(string data, bool expected)
     {
-        Assert.True(PilotEventListener.ShouldWake(PilotEventListener.Parse(data)!));
-    }
-
-    [Theory]
-    [InlineData("""{"type":"promotion.updated","promotion":{"status":"draft"}}""")]
-    [InlineData("""{"type":"journal.appended","entry":{}}""")]
-    [InlineData("""{"type":"question.created","question":{}}""")]
-    public void ShouldWake_IsFalse_ForEverythingElse(string data)
-    {
-        Assert.False(PilotEventListener.ShouldWake(PilotEventListener.Parse(data)!));
+        Assert.Equal(expected, PilotEventListener.ShouldWake(PilotEventListener.Parse(data)!));
     }
 
     [Theory]
@@ -38,7 +32,6 @@ public sealed class PilotEventListenerTests
     [InlineData("""{"type":"state.changed","state":{"running":false}}""", true)]
     [InlineData("""{"type":"state.changed","state":{"running":true}}""", false)]
     [InlineData("""{"type":"state.changed","state":{}}""", false)]
-    [InlineData("""{"type":"question.answered","question":{}}""", false)]
     public void IsRemoteStop_OnlyForAStateChangeToStopped(string data, bool expected)
     {
         Assert.Equal(expected, PilotEventListener.IsRemoteStop(PilotEventListener.Parse(data)!));
@@ -100,7 +93,6 @@ public sealed class PilotEventListenerTests
         Assert.Equal(1, h.Handler.Calls);
     }
 
-    /// <summary>A started listener with running settings over a fake SSE stream.</summary>
     private sealed class Harness : IAsyncDisposable
     {
         private readonly TempDir temp = new();

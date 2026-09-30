@@ -4,10 +4,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace JobPilot.Terminal.Pilot;
 
-/// <summary>
-/// The pilot's background loop: runs cycles while the pilot is running and parks while it is stopped. Saving the
-/// settings or an API event wakes it, which ends an inter-cycle sleep early; a stop also aborts the live cycle.
-/// </summary>
+/// <summary>Runs cycles while the pilot is running and parks while it is stopped.</summary>
 public sealed class PilotLoop : BackgroundService
 {
     public const string ResumeReport = "Pilot resumed after the app restarted.";
@@ -23,7 +20,7 @@ public sealed class PilotLoop : BackgroundService
     private readonly ILogger<PilotLoop> logger;
     private readonly CycleRunner runner;
 
-    // Capacity one coalesces a burst of wakes into one pending wake.
+    // Capacity one coalesces a burst of wakes into one.
     private readonly Channel<bool> wakes = Channel.CreateBounded<bool>(
         new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropWrite, SingleReader = true });
 

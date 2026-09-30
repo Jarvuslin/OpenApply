@@ -6,15 +6,14 @@ using Reports = JobPilot.Terminal.Pilot.CycleRunner.Reports;
 
 namespace JobPilot.Terminal.Tests;
 
-/// <summary>Starting, finishing, and the check-in -> skip -> restart ladder.</summary>
 public class CycleRunnerTests
 {
     private static readonly string[] FullLadder = ["cycle", "wait", "check-in", "wait", "skip", "wait", "stop"];
 
     // An interval at least as long as every wait makes each wait a single "wait" action.
-    internal static CycleRunner Runner(FakePilotSession session) => new(session, TimeSpan.FromMinutes(20));
+    private static CycleRunner Runner(FakePilotSession session) => new(session, TimeSpan.FromMinutes(20));
 
-    internal static Task<TimeSpan?> RunAsync(CycleRunner runner, FakePilotSession session, CancellationToken? ct = null) =>
+    private static Task<TimeSpan?> RunAsync(CycleRunner runner, FakePilotSession session, CancellationToken? ct = null) =>
         runner.RunAsync(Settings(), session.NextActivity() ?? Activity(Stale), ct ?? TestContext.Current.CancellationToken);
 
     [Fact]
@@ -102,13 +101,12 @@ public class CycleRunnerTests
     }
 
     [Theory]
-    [InlineData(WaitOutcome.Timeout, WaitOutcome.Timeout, WaitOutcome.Timeout)]
-    [InlineData(WaitOutcome.Stuck, WaitOutcome.Stuck, WaitOutcome.Stuck)]
-    [InlineData(WaitOutcome.Timeout, WaitOutcome.Stuck, WaitOutcome.Timeout)]
-    public async Task Run_ChecksInThenSkipsThenRestarts_WhenTheCycleStaysStuck(params WaitOutcome[] outcomes)
+    [InlineData(WaitOutcome.Timeout)]
+    [InlineData(WaitOutcome.Stuck)]
+    public async Task Run_ChecksInThenSkipsThenRestarts_WhenTheCycleStaysStuck(WaitOutcome outcome)
     {
         var session = new FakePilotSession { RunningProvider = Provider.Claude };
-        foreach (var outcome in outcomes)
+        for (var i = 0; i < 3; i++)
         {
             session.Signals.Enqueue(new WaitResult(outcome));
         }
@@ -124,43 +122,39 @@ public class CycleRunnerTests
     }
 
     [Fact]
-    public async Task Run_Recovers_WhenTheCheckInUnsticksTheAgent()
+    public async Task Run_Recovers_WhenACheckInOrSkipUnsticksTheAgent()
     {
-        var session = new FakePilotSession { RunningProvider = Provider.Claude };
-        session.Signals.Enqueue(WaitResult.Timeout);
-        session.Signals.Enqueue(WaitResult.Sentinel(Cycle(20)));
+        var checkedIn = new FakePilotSession { RunningProvider = Provider.Claude };
+        checkedIn.Signals.Enqueue(WaitResult.Timeout);
+        checkedIn.Signals.Enqueue(WaitResult.Sentinel(Cycle(20)));
 
-        var sleep = await RunAsync(Runner(session), session);
+        Assert.Equal(TimeSpan.FromSeconds(20), await RunAsync(Runner(checkedIn), checkedIn));
+        Assert.Equal(["cycle", "wait", "check-in", "wait"], checkedIn.Actions);
+        Assert.Equal([Reports.CheckIn], checkedIn.Reports);
 
-        Assert.Equal(["cycle", "wait", "check-in", "wait"], session.Actions);
-        Assert.Equal(TimeSpan.FromSeconds(20), sleep);
-        Assert.Equal([Reports.CheckIn], session.Reports);
+        var skipped = new FakePilotSession { RunningProvider = Provider.Claude };
+        skipped.Signals.Enqueue(WaitResult.Stuck);
+        skipped.Signals.Enqueue(WaitResult.Stuck);
+        skipped.Signals.Enqueue(WaitResult.Sentinel(Cycle(45)));
+
+        Assert.Equal(TimeSpan.FromSeconds(45), await RunAsync(Runner(skipped), skipped));
+        Assert.Equal(["cycle", "wait", "check-in", "wait", "skip", "wait"], skipped.Actions);
+        Assert.Equal([Reports.CheckIn, Reports.Skip], skipped.Reports);
     }
 
     [Fact]
-    public async Task Run_Recovers_WhenTheSkipUnsticksTheAgent()
-    {
-        var session = new FakePilotSession { RunningProvider = Provider.Claude };
-        session.Signals.Enqueue(WaitResult.Stuck);
-        session.Signals.Enqueue(WaitResult.Stuck);
-        session.Signals.Enqueue(WaitResult.Sentinel(Cycle(45)));
-
-        var sleep = await RunAsync(Runner(session), session);
-
-        Assert.Equal(["cycle", "wait", "check-in", "wait", "skip", "wait"], session.Actions);
-        Assert.Equal(TimeSpan.FromSeconds(45), sleep);
-        Assert.Equal([Reports.CheckIn, Reports.Skip], session.Reports);
-    }
-
-    [Fact]
-    public async Task Run_BacksOff_OnTheThirdRestartInARow()
+    public async Task Run_BacksOff_OnTheThirdRestartInARow_AndAFinishedCycleResetsTheCount()
     {
         var session = new FakePilotSession { RunningProvider = Provider.Claude };
         var runner = Runner(session);
 
         await RunAsync(runner, session);
+        session.Signals.Enqueue(WaitResult.Sentinel(Cycle(30)));
         await RunAsync(runner, session);
-        Assert.DoesNotContain("sleep:1800", session.Actions);
+        Assert.Equal(0, runner.ConsecutiveRestarts);
+
+        await RunAsync(runner, session);
+        await RunAsync(runner, session);
         Assert.DoesNotContain(Reports.Backoff, session.Reports);
 
         await RunAsync(runner, session);
@@ -170,17 +164,100 @@ public class CycleRunnerTests
         Assert.Single(session.Reports, r => r == Reports.Backoff);
     }
 
+    [Theory]
+    [InlineData(120, 120)]
+    [InlineData(null, CycleRunner.MinSleepSeconds)]
+    public async Task Run_Finishes_WhenTheServerRecordsACompletionTheTerminalGarbled(int? sleepHint, int expectedSleep)
+    {
+        var session = new FakePilotSession { RunningProvider = Provider.Claude, DefaultActivity = Activity(Stale, Completed(sleepHint)) };
+        session.Activities.Enqueue(Activity(Stale)); // baseline: nothing finished yet
+
+        var sleep = await RunAsync(Runner(session), session);
+
+        Assert.Equal(["cycle", "wait"], session.Actions);
+        Assert.Equal(TimeSpan.FromSeconds(expectedSleep), sleep);
+        Assert.Equal([Reports.Completion], session.Reports);
+    }
+
     [Fact]
-    public async Task Run_ResetsTheRestartCount_AfterAFinishedCycle()
+    public async Task Run_IgnoresTheBaselineCompletion()
+    {
+        var baseline = new CompletedCycle(
+            "11111111-1111-1111-1111-111111111111", new DateTimeOffset(2026, 7, 20, 0, 0, 0, TimeSpan.Zero), "ok", 120);
+        var session = new FakePilotSession { RunningProvider = Provider.Claude, DefaultActivity = Activity(Stale, baseline) };
+
+        var sleep = await RunAsync(Runner(session), session);
+
+        Assert.Null(sleep);
+        Assert.Equal(FullLadder, session.Actions);
+        Assert.DoesNotContain(Reports.Completion, session.Reports);
+        Assert.DoesNotContain(Reports.Extend, session.Reports);
+    }
+
+    [Fact]
+    public async Task Run_DoesNotCountStuckSignalsAsTime_WhileTheServerSeesActivity()
+    {
+        var session = new FakePilotSession { RunningProvider = Provider.Claude, DefaultActivity = Activity(Fresh) };
+        for (var i = 0; i < 40; i++)
+        {
+            session.Signals.Enqueue(WaitResult.Stuck);
+        }
+
+        session.Signals.Enqueue(WaitResult.Sentinel(Cycle(60)));
+
+        var sleep = await RunAsync(Runner(session), session);
+
+        // A noisy burst on a live run must never reach the cycle cap, nor announce an extension.
+        Assert.Equal(TimeSpan.FromSeconds(60), sleep);
+        Assert.DoesNotContain("check-in", session.Actions);
+        Assert.Empty(session.Reports);
+    }
+
+    [Fact]
+    public async Task Run_ExtendsWhileActive_ThenClimbsTheLadderPastTheCycleCap()
+    {
+        var session = new FakePilotSession { RunningProvider = Provider.Claude, DefaultActivity = Activity(Fresh) };
+
+        var sleep = await RunAsync(Runner(session), session);
+
+        // Two extensions (20 -> 40 -> 60 minutes), then the cap hands over to the ladder.
+        Assert.Null(sleep);
+        Assert.Equal(["cycle", "wait", "wait", "wait", "check-in", "wait", "skip", "wait", "stop"], session.Actions);
+        Assert.Single(session.Reports, r => r == Reports.Extend);
+    }
+
+    [Fact]
+    public async Task Run_KeepsWaitingBeforeSkip_WhenActivityResumesAfterTheCheckIn()
     {
         var session = new FakePilotSession { RunningProvider = Provider.Claude };
-        var runner = Runner(session);
-
-        await RunAsync(runner, session);
-        Assert.Equal(1, runner.ConsecutiveRestarts);
-
+        session.Signals.Enqueue(WaitResult.Stuck);
+        session.Signals.Enqueue(WaitResult.Stuck);
         session.Signals.Enqueue(WaitResult.Sentinel(Cycle(30)));
-        await RunAsync(runner, session);
-        Assert.Equal(0, runner.ConsecutiveRestarts);
+        session.Activities.Enqueue(Activity(Stale)); // baseline
+        session.Activities.Enqueue(Activity(Stale)); // after the first stuck
+        session.Activities.Enqueue(Activity(Fresh)); // after the second stuck: active again
+
+        var sleep = await RunAsync(Runner(session), session);
+
+        Assert.Equal(["cycle", "wait", "check-in", "wait", "wait"], session.Actions);
+        Assert.Equal(TimeSpan.FromSeconds(30), sleep);
+    }
+
+    [Fact]
+    public async Task Run_PropagatesCancellation_DuringAProbeOrAReport()
+    {
+        var probing = new FakePilotSession { RunningProvider = Provider.Claude, BlockActivity = true };
+        var reporting = new FakePilotSession { RunningProvider = Provider.Claude, DefaultActivity = Activity(Stale), BlockReport = true };
+
+        foreach (var (session, started) in new[] { (probing, probing.ActivityStarted), (reporting, reporting.ReportStarted) })
+        {
+            using var cts = new CancellationTokenSource();
+            var run = RunAsync(Runner(session), session, cts.Token);
+            await started.Task;
+            cts.Cancel();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => run);
+            Assert.DoesNotContain("check-in", session.Actions);
+        }
     }
 }

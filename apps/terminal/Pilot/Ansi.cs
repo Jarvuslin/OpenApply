@@ -2,7 +2,6 @@ using System.Text;
 
 namespace JobPilot.Terminal.Pilot;
 
-/// <summary>Strips terminal escape sequences from PTY output.</summary>
 internal static class Ansi
 {
     /// <summary>Removes CSI, OSC, and two-char escapes. An escape cut off at the end is dropped whole.</summary>

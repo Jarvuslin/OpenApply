@@ -10,19 +10,19 @@ public enum CycleStatus
     Error,
 }
 
-/// <summary>How a cycle ended, from its <c>[[JOBPILOT_CYCLE ...]]</c> sentinel or the server's record.</summary>
+/// <summary>How a cycle ended, from its sentinel or the server's record.</summary>
 public readonly record struct CycleResult(CycleStatus Status, int SleepSeconds);
 
 /// <summary>
-/// Detects the Pilot cycle sentinel in raw PTY output. The TUI redraws with ANSI/CSI sequences and may echo
-/// the line, so a rolling ANSI-stripped tail is rescanned each feed and every cycle id fires at most once.
+/// Detects the <c>[[JOBPILOT_CYCLE ...]]</c> sentinel in raw PTY output. The TUI redraws and may echo the line, so
+/// a rolling tail is rescanned on every feed and each cycle id fires at most once.
 /// </summary>
 public sealed partial class SentinelParser
 {
-    // 32KB tail: a single styled 220x50 repaint frame can be ~8KB, so keep several so a match is never split out.
+    // One styled 220x50 repaint frame can be ~8KB; keep several so a repaint never pushes half a match out.
     private const int MaxTailChars = 32768;
 
-    // > the max sentinels that fit in the tail, so an id never evicts before its match scrolls out (no refire).
+    // More than the sentinels that fit in the tail, so an id is never forgotten while its match can still refire.
     private const int MaxSeenIds = 512;
 
     private readonly StringBuilder tail = new();
@@ -34,7 +34,6 @@ public sealed partial class SentinelParser
     [GeneratedRegex(@"\[\[JOBPILOT_CYCLEcycle=([0-9a-fA-F-]{36})status=(ok|empty|error)sleep=(\d+)\]\]")]
     private static partial Regex SentinelPattern();
 
-    /// <summary>Feeds a raw output chunk and returns any newly detected cycles (usually none).</summary>
     public IReadOnlyList<CycleResult> Feed(ReadOnlySpan<byte> chunk)
     {
         // The sentinel and ANSI framing are ASCII; a UTF-8 split only mangles surrounding non-ASCII text.
@@ -75,7 +74,6 @@ public sealed partial class SentinelParser
     // The runner clamps; an overflowing number still caps at the ceiling rather than dropping the cycle.
     private static int ParseSleep(ReadOnlySpan<char> value) => int.TryParse(value, out var seconds) ? seconds : int.MaxValue;
 
-    /// <summary>Strips escape sequences, redraw control bytes, and whitespace, so a wrapped or repainted sentinel reads as one token.</summary>
     private static string Condense(string input)
     {
         // An escape cut off at the tail edge is dropped; the raw tail replays it whole on the next feed.

@@ -5,22 +5,19 @@ using Microsoft.Extensions.Hosting;
 
 namespace JobPilot.Terminal.Pilot;
 
-/// <summary>The fields of a pilot event the listener reads. The event type is in the JSON, not the SSE event name.</summary>
+/// <summary>The event type is in the JSON, not the SSE event name.</summary>
 internal sealed record PilotEvent(string? Type, PilotEventPromotion? Promotion, PilotEventState? State);
 
 internal sealed record PilotEventPromotion(string? Status);
 
 internal sealed record PilotEventState(bool? Running);
 
-/// <summary>
-/// Holds the API's pilot event stream open while the pilot runs, and wakes the loop when an answer, an approved
-/// promotion, or a state change means a sleeping pilot should start its next cycle now.
-/// </summary>
+/// <summary>Holds the pilot event stream open while the pilot runs, and wakes the loop on events that unblock a cycle.</summary>
 public sealed class PilotEventListener(PilotStore store, PilotApi api, Action wake, ILogger<PilotEventListener> logger)
     : BackgroundService
 {
-    internal static readonly TimeSpan InitialBackoff = TimeSpan.FromSeconds(5);
-    internal static readonly TimeSpan MaxBackoff = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan InitialBackoff = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan MaxBackoff = TimeSpan.FromMinutes(5);
 
     internal static bool ShouldWake(PilotEvent e) => e.Type switch
     {

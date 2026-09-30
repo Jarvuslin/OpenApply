@@ -3,7 +3,6 @@ using JobPilot.Terminal.Providers;
 
 namespace JobPilot.Terminal.Tests;
 
-/// <summary>A scriptable <see cref="IPilotSession"/> that records what the pilot loop does.</summary>
 internal sealed class FakePilotSession : IPilotSession
 {
     // The loop records from a background thread while the test asserts, so the logs are read as snapshots.
@@ -13,7 +12,6 @@ internal sealed class FakePilotSession : IPilotSession
 
     public List<string> Actions => Snapshot(actions);
 
-    /// <summary>Journal summaries, kept apart from Actions so sequence asserts stay short.</summary>
     public List<string> Reports => Snapshot(reports);
 
     /// <summary>Results of successive waits; an empty queue times out.</summary>
@@ -24,8 +22,6 @@ internal sealed class FakePilotSession : IPilotSession
 
     /// <summary>Null by default: a failed probe, so the completion fallback stays off.</summary>
     public PilotActivity? DefaultActivity { get; set; }
-
-    public int ActivityProbes;
 
     public bool BlockActivity { get; set; }
 
@@ -42,14 +38,6 @@ internal sealed class FakePilotSession : IPilotSession
     public bool BlockWhenUnscripted { get; set; }
 
     public Provider? RunningProvider { get; set; }
-
-    public void ClearActions()
-    {
-        lock (sync)
-        {
-            actions.Clear();
-        }
-    }
 
     /// <summary>The next probe result; the runner tests pass it as the cycle's baseline, like the loop does.</summary>
     public PilotActivity? NextActivity()
@@ -113,7 +101,6 @@ internal sealed class FakePilotSession : IPilotSession
 
     public async Task<PilotActivity?> GetActivityAsync(CancellationToken ct)
     {
-        Interlocked.Increment(ref ActivityProbes);
         ActivityStarted.TrySetResult();
         if (BlockActivity)
         {

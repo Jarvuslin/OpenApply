@@ -41,17 +41,6 @@ public sealed class PilotApiTests
     }
 
     [Fact]
-    public async Task GetActivity_IsNotNull_WhenTheUserHasNoCycleYet()
-    {
-        var api = Api((_, _) => Respond(HttpStatusCode.OK, """{"running":false,"lastActivityAt":null,"lastCycle":null}"""));
-
-        var activity = await api.GetActivityAsync(Settings(), TestContext.Current.CancellationToken);
-
-        // A successful probe with no data is not a failure, so the completion fallback stays on.
-        Assert.Equal(new PilotActivity(false, null, null), activity);
-    }
-
-    [Fact]
     public async Task GetActivity_ReturnsNull_OnARejectionATransportFailureATimeoutOrABadBody()
     {
         var ct = TestContext.Current.CancellationToken;

@@ -4,7 +4,6 @@ using JobPilot.Terminal.Sessions;
 
 namespace JobPilot.Terminal.Pilot;
 
-/// <summary>Drives the real terminal session for the pilot and watches its output for sentinels and stuck signs.</summary>
 public sealed class PilotSession : IPilotSession, IDisposable
 {
     private const string PilotSkill = "pilot";
@@ -30,9 +29,9 @@ public sealed class PilotSession : IPilotSession, IDisposable
     private readonly SentinelParser sentinels = new();
     private readonly StuckDetector stuck = new();
 
-    // Sentinels and stuck signals share one channel so a wait sees whichever comes first. Not single-writer: the
-    // PTY thread writes while the loop re-queues sentinels it drained.
-    private readonly Channel<Signal> signals = Channel.CreateUnbounded<Signal>(new UnboundedChannelOptions { SingleReader = true });
+    // A cycle, or null for a stuck signal, in one channel so a wait sees whichever comes first. Not single-writer:
+    // the PTY thread writes while the loop re-queues sentinels it drained.
+    private readonly Channel<CycleResult?> signals = Channel.CreateUnbounded<CycleResult?>(new UnboundedChannelOptions { SingleReader = true });
 
     public PilotSession(TerminalSession terminal, PilotStore store, PilotApi api, ILogger<PilotSession> logger)
     {
@@ -93,7 +92,7 @@ public sealed class PilotSession : IPilotSession, IDisposable
 
             waitCts.CancelAfter(timeout);
             var signal = await signals.Reader.ReadAsync(waitCts.Token);
-            return signal.Cycle is { } cycle ? WaitResult.Sentinel(cycle) : WaitResult.Stuck;
+            return signal is { } cycle ? WaitResult.Sentinel(cycle) : WaitResult.Stuck;
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
@@ -151,7 +150,7 @@ public sealed class PilotSession : IPilotSession, IDisposable
         var cycles = sentinels.Feed(data);
         foreach (var cycle in cycles)
         {
-            signals.Writer.TryWrite(new Signal(cycle));
+            signals.Writer.TryWrite(cycle);
         }
 
         // A finished cycle clears stuck evidence before the next one gathers its own.
@@ -164,28 +163,25 @@ public sealed class PilotSession : IPilotSession, IDisposable
         if (stuck.Feed(data, DateTimeOffset.UtcNow) is var reason and not StuckReason.None)
         {
             logger.LogDebug("Pilot stuck heuristic fired ({Reason}).", reason);
-            signals.Writer.TryWrite(new Signal(null));
+            signals.Writer.TryWrite(null);
         }
     }
 
     // Stuck evidence left over from before a directive would end its grace at once, but a sentinel must survive.
     private void DropStuckSignals()
     {
-        List<Signal> kept = [];
+        List<CycleResult> kept = [];
         while (signals.Reader.TryRead(out var signal))
         {
-            if (signal.Cycle is not null)
+            if (signal is { } cycle)
             {
-                kept.Add(signal);
+                kept.Add(cycle);
             }
         }
 
-        foreach (var signal in kept)
+        foreach (var cycle in kept)
         {
-            signals.Writer.TryWrite(signal);
+            signals.Writer.TryWrite(cycle);
         }
     }
-
-    /// <summary>A cycle sentinel, or a stuck signal when <see cref="Cycle"/> is null.</summary>
-    private readonly record struct Signal(CycleResult? Cycle);
 }

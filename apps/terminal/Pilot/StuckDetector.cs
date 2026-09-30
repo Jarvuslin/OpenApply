@@ -6,40 +6,32 @@ namespace JobPilot.Terminal.Pilot;
 public enum StuckReason
 {
     None,
-
-    /// <summary>The same normalized output tail recurred past the threshold with no fresh output.</summary>
     RepeatedOutput,
-
-    /// <summary>A burst of error-shaped lines with no intervening sentinel.</summary>
     ErrorLoop,
 }
 
 /// <summary>
-/// Spots a stuck agent from its output, well before the 20-minute sentinel timeout: one line repeating, or a burst
-/// of error lines. The caller supplies <c>now</c>, so the thresholds are testable.
+/// Spots a stuck agent from its output well before the sentinel timeout: one line repeating, or a burst of error
+/// lines. The caller supplies <c>now</c>, so the thresholds are testable.
 /// </summary>
 public sealed partial class StuckDetector
 {
-    // The same normalized line recurring this many times across this window signals a wedged agent redraw loop.
+    // The same line recurring this many times across the window is a wedged redraw loop.
     public const int RepeatThreshold = 6;
-    public static readonly TimeSpan RepeatWindow = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan RepeatWindow = TimeSpan.FromMinutes(5);
 
-    // A burst of this many error-shaped lines inside this window signals a retry/crash loop.
-    public const int ErrorThreshold = 5;
-    public static readonly TimeSpan ErrorWindow = TimeSpan.FromMinutes(2);
+    private const int ErrorThreshold = 5;
+    private static readonly TimeSpan ErrorWindow = TimeSpan.FromMinutes(2);
 
-    // A real retry loop repeats a few lines; varied error-shaped narration does not. Require the burst to collapse
-    // to at most this many distinct normalized lines so job text and prose that merely mention errors do not fire.
-    public const int MaxDistinctErrorLines = 2;
+    // A real retry loop repeats a few lines; varied narration or job text that merely mentions errors does not.
+    private const int MaxDistinctErrorLines = 2;
 
-    // A TUI diff-repaint can echo one on-screen error line many times in a burst. Only count an error line when it
-    // differs from the last counted one or at least this long has passed, so a repaint burst cannot fire on its own.
-    public static readonly TimeSpan ErrorEchoDedupe = TimeSpan.FromSeconds(2);
+    // A TUI diff-repaint can echo one on-screen error line many times in a burst; within this gap it counts once.
+    private static readonly TimeSpan ErrorEchoGap = TimeSpan.FromSeconds(2);
 
-    // Cap the compared tail so a very long single line still matches its own repeats cheaply.
     private const int MaxLineChars = 512;
 
-    // Cap the unterminated residue: a spinner redrawing via \r never emits '\n', so nothing else shrinks pending.
+    // A spinner redrawing via \r never emits '\n', so without a cap the unterminated residue grows forever.
     private const int MaxPendingChars = 8192;
 
     // Leading \b only, so "terror"/"mirrored" never count while suffixes still do ("errors", "ECONNABORTED").
@@ -53,67 +45,62 @@ public sealed partial class StuckDetector
     private readonly Lock sync = new();
 
     private readonly StringBuilder pending = new();
-    private readonly Queue<(DateTimeOffset Time, string Line)> errorTimes = new();
+    private readonly Queue<(DateTimeOffset Time, string Line)> recentErrors = new();
     private string? lastLine;
     private int repeatCount;
     private DateTimeOffset repeatStart;
     private string? lastErrorLine;
     private DateTimeOffset lastErrorTime;
-    private int scanned; // Prefix of pending already searched for '\n', so newline-free feeds are not rescanned from 0.
 
-    /// <summary>Feeds a raw output chunk; returns the first heuristic that fired this feed, or <c>None</c>.</summary>
+    /// <summary>Returns the first heuristic that fired on this chunk's complete lines, or <c>None</c>.</summary>
     public StuckReason Feed(ReadOnlySpan<byte> chunk, DateTimeOffset now)
     {
-        // ASCII sentinel/ANSI framing; a UTF-8 split only mangles surrounding non-ASCII, never the match.
         var text = Encoding.UTF8.GetString(chunk);
 
         lock (sync)
         {
             pending.Append(text);
-
             var fired = StuckReason.None;
-            int newline;
-            while ((newline = IndexOf(pending, '\n', scanned)) >= 0)
+            if (text.Contains('\n'))
             {
-                var raw = pending.ToString(0, newline);
-                pending.Remove(0, newline + 1);
-                scanned = 0;
+                var lines = pending.ToString().Split('\n');
+                pending.Clear().Append(lines[^1]);
 
-                var normalized = Normalize(raw);
-                if (normalized.Length == 0)
+                // Lines after the first fire still update the counters for the next feed.
+                foreach (var raw in lines[..^1])
                 {
-                    continue;
-                }
+                    var line = Normalize(raw);
+                    if (line.Length == 0)
+                    {
+                        continue;
+                    }
 
-                var signal = Observe(normalized, now);
-                if (signal != StuckReason.None && fired == StuckReason.None)
-                {
-                    fired = signal; // Return the first crossing; residual lines still update counters for the next feed.
+                    var reason = Observe(line, now);
+                    if (fired == StuckReason.None)
+                    {
+                        fired = reason;
+                    }
                 }
             }
 
-            // Trim after line processing so a complete line is never dropped; Normalize keeps a 512-char tail anyway.
             if (pending.Length > MaxPendingChars)
             {
                 pending.Remove(0, pending.Length - MaxPendingChars);
             }
-            scanned = pending.Length;
 
             return fired;
         }
     }
 
-    /// <summary>Clears all evidence; called on a fresh cycle and on a sentinel.</summary>
     public void Reset()
     {
         lock (sync)
         {
             pending.Clear();
-            errorTimes.Clear();
+            recentErrors.Clear();
             lastLine = null;
             repeatCount = 0;
             lastErrorLine = null;
-            scanned = 0;
         }
     }
 
@@ -121,22 +108,23 @@ public sealed partial class StuckDetector
     {
         if (ErrorPattern().IsMatch(line))
         {
-            // A repaint echo of the same line within the dedupe window is one on-screen line, not a fresh retry.
-            var echo = line == lastErrorLine && now - lastErrorTime < ErrorEchoDedupe;
+            var echo = line == lastErrorLine && now - lastErrorTime < ErrorEchoGap;
             lastErrorLine = line;
             lastErrorTime = now;
 
             if (!echo)
             {
-                errorTimes.Enqueue((now, line));
-                while (errorTimes.Count > 0 && now - errorTimes.Peek().Time > ErrorWindow)
+                recentErrors.Enqueue((now, line));
+                while (now - recentErrors.Peek().Time > ErrorWindow)
                 {
-                    errorTimes.Dequeue();
+                    recentErrors.Dequeue();
                 }
 
-                if (errorTimes.Count >= ErrorThreshold && DistinctErrorLines() <= MaxDistinctErrorLines)
+                var distinctLines = recentErrors.Select(e => e.Line).Distinct().Count();
+                if (recentErrors.Count >= ErrorThreshold && distinctLines <= MaxDistinctErrorLines)
                 {
-                    errorTimes.Clear(); // Re-arm: a second burst must re-accumulate before firing again.
+                    // Re-arm: a second burst must re-accumulate before firing again.
+                    recentErrors.Clear();
                     return StuckReason.ErrorLoop;
                 }
             }
@@ -147,7 +135,8 @@ public sealed partial class StuckDetector
             repeatCount++;
             if (repeatCount >= RepeatThreshold && now - repeatStart >= RepeatWindow)
             {
-                repeatCount = 1; // Re-arm from this occurrence so the next fire needs a fresh run.
+                // Re-arm from this occurrence so the next fire needs a fresh run.
+                repeatCount = 1;
                 repeatStart = now;
                 return StuckReason.RepeatedOutput;
             }
@@ -162,32 +151,17 @@ public sealed partial class StuckDetector
         return StuckReason.None;
     }
 
-    private int DistinctErrorLines() => errorTimes.Select(e => e.Line).Distinct().Count();
-
     private static string Normalize(string line)
     {
         var stripped = Ansi.Strip(line);
         var builder = new StringBuilder(stripped.Length);
         foreach (var c in stripped)
         {
-            // Keep printable text and spaces; whitespace runs collapse next so redraw control bytes never split a match.
+            // Control bytes become spaces, then collapse with the rest, so a redraw byte never splits a match.
             builder.Append(char.IsControl(c) ? ' ' : c);
         }
 
         var collapsed = WhitespacePattern().Replace(builder.ToString(), " ").Trim();
         return collapsed.Length > MaxLineChars ? collapsed[^MaxLineChars..] : collapsed;
-    }
-
-    private static int IndexOf(StringBuilder builder, char value, int start)
-    {
-        for (var i = start; i < builder.Length; i++)
-        {
-            if (builder[i] == value)
-            {
-                return i;
-            }
-        }
-
-        return -1;
     }
 }

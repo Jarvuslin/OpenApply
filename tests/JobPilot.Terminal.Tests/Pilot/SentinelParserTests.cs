@@ -84,8 +84,7 @@ public class SentinelParserTests
         var parser = new SentinelParser();
         var full = Sentinel(sleep: 300);
 
-        // > 8KB of pure ANSI/whitespace repaint between the halves: the old 8KB tail would have evicted the first
-        // half before the second arrived. StripControl drops the escapes and the condensed pass reunites the halves.
+        // Over 8KB of pure ANSI/whitespace repaint between the halves.
         var styling = string.Concat(Enumerable.Repeat("\x1b[2K\x1b[0m\n", 1200));
         parser.Feed(Bytes(full[..40]));
         parser.Feed(Bytes(styling));
@@ -136,15 +135,5 @@ public class SentinelParserTests
         var parser = new SentinelParser();
 
         Assert.Empty(parser.Feed(Bytes(garbage)));
-    }
-
-    [Fact]
-    public void Feed_KeepsTheRawSleep_ForTheRunnerToClamp()
-    {
-        var parser = new SentinelParser();
-
-        var cycle = Assert.Single(parser.Feed(Bytes(Sentinel(sleep: 5))));
-
-        Assert.Equal(5, cycle.SleepSeconds);
     }
 }

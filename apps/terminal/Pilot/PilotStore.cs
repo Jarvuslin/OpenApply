@@ -6,7 +6,6 @@ using JobPilot.Terminal.Providers;
 
 namespace JobPilot.Terminal.Pilot;
 
-/// <summary>Which provider the pilot drives, the credentials it uses, and whether it is running.</summary>
 public sealed record PilotSettings
 {
     public required Provider Provider { get; init; }
@@ -27,7 +26,6 @@ internal sealed record PilotSettingsFile
     public required bool Protected { get; init; }
 }
 
-/// <summary>Persists the pilot settings in pilot.json and keeps them in memory.</summary>
 public sealed class PilotStore
 {
     private readonly string filePath;
@@ -45,7 +43,7 @@ public sealed class PilotStore
     /// <summary>Raised after every write, outside the lock.</summary>
     public event Action? Changed;
 
-    /// <summary>The saved settings, or null when none are saved or the file is unreadable.</summary>
+    /// <summary>Null when nothing is saved or pilot.json is unreadable.</summary>
     public PilotSettings? Current
     {
         get
@@ -72,7 +70,7 @@ public sealed class PilotStore
         Changed?.Invoke();
     }
 
-    /// <summary>Flips the running flag and keeps the rest; a no-op when nothing is saved.</summary>
+    /// <summary>A no-op when nothing is saved.</summary>
     public void SetRunning(bool running)
     {
         lock (sync)
@@ -103,8 +101,7 @@ public sealed class PilotStore
             Protected = isProtected,
         };
 
-        var directory = Path.GetDirectoryName(filePath)
-            ?? throw new InvalidOperationException("The pilot settings path has no parent directory.");
+        var directory = Path.GetDirectoryName(filePath)!;
         Directory.CreateDirectory(directory);
 
         // Write a temp file and move it over, so a crash never leaves a half-written pilot.json.
