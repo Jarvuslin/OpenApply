@@ -1,6 +1,5 @@
 import {
   type CampaignStatusCommandInput,
-  type CampaignSummary,
   type CreateCampaignInput,
   campaignConfigSchema,
   campaignConfigSupportsSource,
@@ -24,6 +23,7 @@ import {
   emptySummary,
   jobSummary,
   summarizeCampaigns,
+  type WithSummary,
 } from "./campaign.summary";
 import { ensureCampaignOwned, publishCampaignStatus } from "./campaign.utils";
 
@@ -34,7 +34,7 @@ const STATUS_TRANSITIONS: Record<CampaignStatus, readonly CampaignStatus[]> = {
   failed: [],
 };
 
-function toRow(campaign: Campaign & { summary: CampaignSummary }) {
+function toRow(campaign: WithSummary<Campaign>) {
   return { ...campaign, config: campaignConfigSchema.parse(campaign.config) };
 }
 

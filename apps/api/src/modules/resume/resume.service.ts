@@ -1,7 +1,7 @@
 import path from "node:path";
-import type { ResumeData } from "@jobpilot/contracts/resume";
 import { resumeChannel } from "@jobpilot/contracts/sse";
 import { singleton } from "tsyringe";
+import type { z } from "zod/v4";
 import { badRequest, findOwned, notFound } from "@/common/errors";
 import { renderResumePdf } from "@/common/pdf/render";
 import { publish } from "@/common/sse";
@@ -17,8 +17,18 @@ import {
 import { PrismaClient, type Resume } from "@/generated/prisma/client";
 import { findProfileMismatches } from "./consistency";
 import { readContent, toStoredContent } from "./content";
+import type { createResumeSchema, updateResumeSchema } from "./resume.schema";
 
 const MAX_RESUME_BYTES = 5 * 1024 * 1024;
+
+type CreateResumeInput = z.infer<typeof createResumeSchema>;
+type UpdateResumeInput = z.infer<typeof updateResumeSchema>;
+
+interface SavedSource {
+  sourceFilename: string;
+  sourceMimeType: string;
+  sourceSizeBytes: number;
+}
 
 @singleton()
 export class ResumeService {
@@ -48,7 +58,7 @@ export class ResumeService {
       .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary));
   }
 
-  async createJson(userId: string, input: { label: string; content?: ResumeData }) {
+  async createJson(userId: string, input: CreateResumeInput) {
     const resume = await this.prisma.resume.create({
       data: {
         userId,
@@ -110,7 +120,7 @@ export class ResumeService {
     };
   }
 
-  async update(userId: string, id: string, body: { label?: string; content?: ResumeData }) {
+  async update(userId: string, id: string, body: UpdateResumeInput) {
     if (body.label === undefined && body.content === undefined) {
       throw badRequest("label or content required");
     }
@@ -236,11 +246,7 @@ export class ResumeService {
   /** Saves the upload, then runs the row write; a failed write removes the file it would have orphaned. */
   private async withSavedSource<T>(
     file: File,
-    write: (source: {
-      sourceFilename: string;
-      sourceMimeType: string;
-      sourceSizeBytes: number;
-    }) => Promise<T>,
+    write: (source: SavedSource) => Promise<T>,
   ): Promise<T> {
     if (file.size > MAX_RESUME_BYTES) {
       throw badRequest("Resume must be 5 MB or less");

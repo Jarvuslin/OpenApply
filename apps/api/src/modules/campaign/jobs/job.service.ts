@@ -45,6 +45,11 @@ interface JobTransition {
   rejection: (status: CampaignJobStatus) => string;
 }
 
+interface TransitionResult {
+  job: Job;
+  changed: boolean;
+}
+
 export interface ScoredJobPromotion {
   key: string;
   matchScore: number;
@@ -226,7 +231,7 @@ export class CampaignJobService {
     campaignId: string,
     key: string,
     transition: JobTransition,
-  ): Promise<{ job: Job; changed: boolean }> {
+  ): Promise<TransitionResult> {
     const existing = await this.findJob(userId, campaignId, key);
     if (existing.status === transition.idempotentAt) {
       return { job: existing, changed: false };

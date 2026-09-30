@@ -146,10 +146,12 @@ export interface CachePruneResult {
  * (oldest mtime) first until under the cap. A `ttlMs`/`maxBytes` of 0 disables that
  * stage. Safe to run repeatedly - every evicted file is re-rendered on next download.
  */
-export async function pruneGeneratedCache(opts: {
+interface CachePruneOptions {
   ttlMs: number;
   maxBytes: number;
-}): Promise<CachePruneResult> {
+}
+
+export async function pruneGeneratedCache(opts: CachePruneOptions): Promise<CachePruneResult> {
   let names: string[];
   try {
     names = await readdir(GENERATED_DIR);

@@ -5,11 +5,18 @@ import type {
   CampaignSummary,
 } from "@jobpilot/contracts/campaign";
 import { CAMPAIGN_JOB_STATUSES } from "@jobpilot/contracts/campaign";
-import { type CampaignSource, Prisma } from "@/generated/prisma/client";
+import { type Campaign, type CampaignSource, Prisma } from "@/generated/prisma/client";
 
 type SummaryClient = Pick<Prisma.TransactionClient, "$queryRaw" | "job" | "networkingMessage">;
-type CampaignRef = { campaignId: string; source: CampaignSource };
-type StatusCount = { status: string; count: number; scored?: number };
+type CampaignRef = Pick<Campaign, "campaignId" | "source">;
+
+interface StatusCount {
+  status: string;
+  count: number;
+  scored?: number;
+}
+
+export type WithSummary<T> = T & { summary: CampaignSummary };
 
 /**
  * The roll-ups beside `byStatus` stay on the wire because installed agent skills read them
@@ -63,7 +70,7 @@ export function emptySummary(source: CampaignSource): CampaignSummary {
 export async function summarizeCampaigns<T extends CampaignRef>(
   client: SummaryClient,
   campaigns: T[],
-): Promise<(T & { summary: CampaignSummary })[]> {
+): Promise<WithSummary<T>[]> {
   const ids = campaigns.map((c) => c.campaignId);
   const networkingIds = campaigns.filter((c) => c.source === "networking").map((c) => c.campaignId);
   const jobIds = campaigns.filter((c) => c.source !== "networking").map((c) => c.campaignId);

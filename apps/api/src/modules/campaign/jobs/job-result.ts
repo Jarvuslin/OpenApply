@@ -8,7 +8,12 @@ export function isTerminalJob(status: CampaignJobStatus): boolean {
   return (CAMPAIGN_JOB_TERMINAL_OUTCOMES as readonly string[]).includes(status);
 }
 
-const NO_RESUME = { resumeId: null, resumeVariantId: null };
+interface SubmittedResume {
+  resumeId: string | null;
+  resumeVariantId: string | null;
+}
+
+const NO_RESUME: SubmittedResume = { resumeId: null, resumeVariantId: null };
 
 /**
  * The agent reports these ids, so anything the user doesn't own is dropped. A variant's own
@@ -18,7 +23,7 @@ async function resolveSubmittedResume(
   prisma: PrismaClient,
   userId: string,
   data: CampaignJobResultInput,
-): Promise<{ resumeId: string | null; resumeVariantId: string | null }> {
+): Promise<SubmittedResume> {
   if (data.resumeVariantId) {
     const variant = await prisma.resumeVariant.findFirst({
       where: { id: data.resumeVariantId, resume: { userId } },

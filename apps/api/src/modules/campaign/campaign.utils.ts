@@ -1,7 +1,12 @@
 import { campaignChannel, workspaceChannel } from "@jobpilot/contracts/sse";
 import { findOwned } from "@/common/errors";
 import { publish } from "@/common/sse";
-import type { CampaignSource, CampaignStatus, PrismaClient } from "@/generated/prisma/client";
+import type {
+  Campaign,
+  CampaignSource,
+  CampaignStatus,
+  PrismaClient,
+} from "@/generated/prisma/client";
 
 /** Campaign kinds whose scored `pending` rows the pilot promotes: auto-apply and pasted links. */
 export const PROMOTABLE_SOURCES: CampaignSource[] = ["auto_apply", "apply"];
@@ -22,7 +27,7 @@ export async function ensureCampaignOwned(
 /** The SSE fan-out every status change emits, whichever path did the write. */
 export function publishCampaignStatus(
   userId: string,
-  campaign: { campaignId: string; source: CampaignSource },
+  campaign: Pick<Campaign, "campaignId" | "source">,
   status: CampaignStatus,
 ): void {
   const { campaignId, source } = campaign;

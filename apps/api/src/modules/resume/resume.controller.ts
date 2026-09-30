@@ -19,7 +19,12 @@ import { ResumeService } from "./resume.service";
 
 const svc = container.resolve(ResumeService);
 
-async function readUpload(request: Request): Promise<{ file: File; label?: string }> {
+interface Upload {
+  file: File;
+  label?: string;
+}
+
+async function readUpload(request: Request): Promise<Upload> {
   const form = await request.formData();
   const file = form.get("file");
   if (!(file instanceof File)) {
