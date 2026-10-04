@@ -27,6 +27,7 @@ import { jobBoardController } from "@/modules/job-board/job-board.controller";
 import { adminJobListingController, publicJobListingController } from "@/modules/job-listing";
 import { cleanupJob } from "@/modules/maintenance/cleanup.job";
 import { pdfCacheJob } from "@/modules/maintenance/pdf-cache.job";
+import { mvpController } from "@/modules/mvp/mvp.controller";
 import { networkingController } from "@/modules/networking/networking.controller";
 import { pilotAgendaController } from "@/modules/pilot/agenda/agenda.controller";
 import { pilotJournalController } from "@/modules/pilot/journal.controller";
@@ -59,6 +60,7 @@ const app = new Elysia()
   .group("/api", (api) =>
     api
       .use(authController)
+      .use(mvpController)
       .use(securityController)
       .use(authProvidersController)
       .use(healthController)
@@ -96,7 +98,11 @@ const app = new Elysia()
       .use(adminBoardController)
       .use(adminJobListingController),
   )
-  .listen(env.PORT);
+  .listen({
+    port: env.PORT,
+    hostname: env.MVP_LOCAL_RUNNER ? "127.0.0.1" : "0.0.0.0",
+    idleTimeout: env.MVP_LOCAL_RUNNER ? 150 : 30,
+  });
 
 logger.info(`JobPilot API running at http://localhost:${app.server?.port}`);
 if (env.NODE_ENV === "development") {

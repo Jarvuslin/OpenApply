@@ -9,6 +9,7 @@ const HOUR = 60 * MINUTE;
  * it could only strand a user half-logged-out.
  */
 export const RATE_LIMITS = {
+  localExtraction: { key: byUser, limit: 10, windowMs: HOUR, maxInFlight: 1 },
   /** Credential stuffing against one account. Keyed by (email, IP) so one bad actor can't lock out
    *  everyone else behind the same office/CGNAT address. */
   loginPerAccount: {

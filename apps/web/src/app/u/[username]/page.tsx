@@ -33,7 +33,7 @@ export async function generateMetadata(props: PortfolioPageProps): Promise<Metad
     : portfolio.displayName;
   const description =
     portfolio.summary ??
-    `${portfolio.displayName}'s portfolio - ${portfolio.stats.applications} applications tracked with JobPilot.`;
+    `${portfolio.displayName}'s portfolio - ${portfolio.stats.applications} applications tracked with OpenApply.`;
 
   return {
     title,

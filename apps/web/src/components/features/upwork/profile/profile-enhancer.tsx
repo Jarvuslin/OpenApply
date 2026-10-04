@@ -88,7 +88,7 @@ export function ProfileEnhancer(): ReactElement {
             description={
               agentAvailable
                 ? "Run “Generate suggestions” - the agent reads your live Upwork profile and résumé, then drafts an improved overview and portfolio for review."
-                : "Open JobPilot on your desktop to generate suggestions - the agent reads your live Upwork profile and résumé, then drafts an improved overview and portfolio for review."
+                : "Open OpenApply on your desktop to generate suggestions - the agent reads your live Upwork profile and résumé, then drafts an improved overview and portfolio for review."
             }
           />
         )}

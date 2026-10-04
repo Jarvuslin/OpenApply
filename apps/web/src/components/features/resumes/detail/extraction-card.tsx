@@ -1,59 +1,61 @@
 "use client";
-
-import { type ReactElement, useState } from "react";
-import { Button, CircularProgress, Stack, Typography } from "@mui/material";
-import { AgentOnlyButton } from "@/components/ui/buttons";
+import { type ReactElement, useEffect, useState } from "react";
+import { Alert, Button, CircularProgress, Stack, Typography } from "@mui/material";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/api/query-keys";
 import { SectionCard } from "@/components/ui/layout";
-import { useAgent, useAgentAvailable } from "@/providers/agent-provider";
+import { extractUpload } from "../extract-upload";
 import { useResumeExtraction } from "../use-resume-extraction";
 
 interface ExtractionCardProps {
   resumeId: string;
   onSkip: () => void;
 }
-
-/** Without this, a first upload lands on an empty form with nothing saying the agent is working. */
-export function ExtractionCard(props: ExtractionCardProps): ReactElement {
-  const { resumeId, onSkip } = props;
-  const agent = useAgent();
-  const agentAvailable = useAgentAvailable();
-  const [retrying, setRetrying] = useState(false);
-
-  // Nothing to poll for when this device can't run the extraction; the detail SSE still catches it.
-  useResumeExtraction(resumeId, agentAvailable);
-
-  const retry = async (): Promise<void> => {
-    setRetrying(true);
-    try {
-      await agent.injectSkill("extract-resume", resumeId);
-    } finally {
-      setRetrying(false);
-    }
-  };
-
+export function ExtractionCard({ resumeId, onSkip }: ExtractionCardProps): ReactElement {
+  const queryClient = useQueryClient();
+  const [attempt, setAttempt] = useState(0);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(true);
+  useResumeExtraction(resumeId, busy);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: attempt is an explicit retry trigger.
+  useEffect(() => {
+    let cancelled = false;
+    setBusy(true);
+    setError("");
+    void extractUpload(resumeId)
+      .then(() => {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.resume.all });
+      })
+      .catch((reason) => {
+        if (!cancelled)
+          setError(reason instanceof Error ? reason.message : "Could not read the document.");
+      })
+      .finally(() => {
+        if (!cancelled) setBusy(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [resumeId, attempt, queryClient]);
   return (
-    <SectionCard title="Reading your PDF">
+    <SectionCard title={busy ? "Reading your resume" : "Your file is saved"}>
       <Stack spacing={2}>
         <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-          <CircularProgress size={18} />
-          <Typography variant="body2Muted">
-            {agentAvailable
-              ? "The agent is pulling your details out of the PDF. This usually takes about a minute, and the fields fill in on their own."
-              : "Open JobPilot on your desktop to read this PDF, or fill the fields in yourself."}
+          {busy && <CircularProgress size={18} />}
+          <Typography color="text.secondary">
+            {busy
+              ? "Extracting your experience, education and skills with your Claude subscription. You can keep this page open."
+              : "You can retry reading this document without uploading another copy, or enter the details yourself."}
           </Typography>
         </Stack>
+        {error && <Alert severity="error">{error}</Alert>}
         <Stack direction="row" spacing={1.5}>
-          <Button variant="outlined" size="small" onClick={onSkip}>
-            Fill it in myself
+          <Button variant="outlined" onClick={onSkip}>
+            Edit manually
           </Button>
-          <AgentOnlyButton
-            variant="text"
-            size="small"
-            disabled={retrying}
-            onClick={() => void retry()}
-          >
-            Try again
-          </AgentOnlyButton>
+          <Button disabled={busy} onClick={() => setAttempt((n) => n + 1)}>
+            Retry extraction
+          </Button>
         </Stack>
       </Stack>
     </SectionCard>

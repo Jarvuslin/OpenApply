@@ -1,4 +1,4 @@
-import { jobListingStatusSchema } from "@jobpilot/contracts/job-listing";
+import { JOB_LEVELS, jobListingStatusSchema } from "@jobpilot/contracts/job-listing";
 import { paginatedSchema } from "@jobpilot/contracts/pagination";
 import { z } from "zod/v4";
 
@@ -14,6 +14,8 @@ const jobListingSummarySchema = z.object({
   id: z.uuid(),
   slug: z.string(),
   title: z.string(),
+  level: z.enum(JOB_LEVELS),
+  yearsExperience: z.number().int().nullable(),
   company: z.string(),
   location: z.string().nullable(),
   remote: z.boolean(),

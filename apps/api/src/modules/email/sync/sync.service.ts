@@ -84,6 +84,7 @@ export class EmailSyncService {
             threadId: m.threadId,
             subject: m.subject,
             fromAddress: m.fromAddress,
+            toHeader: m.toHeader ?? null,
             fromName: m.fromName,
             fromDomain: m.fromDomain,
             snippet: m.snippet,

@@ -55,7 +55,7 @@ export function Pilot(): ReactElement {
               <SectionEyebrow color="accent.primary">THE PILOT · AUTONOMOUS MODE</SectionEyebrow>
               <Typography variant="h2">Write your goals once. Close the lid.</Typography>
               <Typography variant="body1Muted" sx={{ fontSize: "0.9375rem" }}>
-                The Pilot is JobPilot running unattended. You give it instructions and limits; it
+                The Pilot is OpenApply running unattended. You give it instructions and limits; it
                 works through your search on its own, asks when it's unsure, and keeps a journal you
                 can read over coffee, so you never have to drive every step by hand.
               </Typography>

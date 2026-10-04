@@ -1,199 +1,138 @@
 <div align="center">
+<img src="apps/web/public/icon.svg" width="72" alt="OpenApply" />
 
-<img src="apps/web/public/icon.svg" width="96" alt="JobPilot logo" />
+# OpenApply
 
-# JobPilot
+A personal workspace for finding roles, improving your résumé, and preparing job applications with a local agent.
 
-**An AI agent that applies to jobs for you, on the Claude or Codex subscription you already have.**
-
-[![Release](https://img.shields.io/github/v/release/suxrobGM/jobpilot?style=flat&color=FF6A3D)](https://github.com/suxrobGM/jobpilot/releases)
-[![CI](https://github.com/suxrobGM/jobpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/suxrobGM/jobpilot/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-[![Bun](https://img.shields.io/badge/Bun-1.3-black?logo=bun)](https://bun.sh)
-[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs)](https://nextjs.org)
-[![.NET](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet)](https://dotnet.microsoft.com)
-
-[**Open JobPilot →**](https://jobpilot.suxrobgm.net) &nbsp;·&nbsp; [Docs](https://jobpilot.suxrobgm.net/docs) &nbsp;·&nbsp; [How it works](docs/architecture.md) &nbsp;·&nbsp; [Changelog](CHANGELOG.md)
-
-[![Watch the teaser](docs/images/teaser.gif)](apps/web/public/teaser.mp4)
-
-*[Watch it full size →](https://jobpilot.suxrobgm.net#see-it-run)*
-
+[Setup](#clone-and-setup-windows) · [Current capabilities](#current-capabilities) · [Architecture](docs/architecture.md) · [MIT license](LICENSE)
 </div>
 
----
+## Current capabilities
 
-Applying to jobs eats hours: the same forms, the same resume tweaks, the same
-follow-ups, day after day. JobPilot hands that work to an AI agent running on
-your own computer. You tell it what you're looking for, and it searches the
-boards, tailors your resume for each posting, fills out the forms, submits,
-messages recruiters, and files every reply. The dashboard on the web tracks
-where each application stands.
+- Local email/password registration and an onboarding profile with autosaved drafts.
+- PDF, DOCX and TXT résumé extraction through a locally authenticated Claude Code session; manual entry is also available.
+- Original résumé preservation, tailored variants, PDF export and a before/after rewrite review.
+- A job board importing public Ashby and Greenhouse company feeds, with location, level and required-experience filters.
+- An embedded Claude Code terminal and a persistent, headed Chromium browser in a WSL2 VM, visible through noVNC.
+- A preparation-only trial that inspects a real posting and form, generates a résumé variant and records missing answers.
+- Existing campaign, credential-vault, inbox and Pilot infrastructure inherited from JobPilot.
 
-> No API keys, no per-token bills. The agent runs inside Claude Code or Codex,
-> so all AI work comes out of the subscription you already pay for.
+**Status: development MVP.** Fully unattended signup → email activation → application submission has not passed an independent end-to-end test. CAPTCHA solving is disabled; blocking challenges, MFA and missing facts pause the flow. Public feed availability does not guarantee that an employer form will accept automation. Claude is the tested local provider; Codex integration is inherited and its Windows launcher still needs validation. No hosted OpenApply service or OpenApply installer release is published.
 
-The agent drives a real browser on your machine, logged in as you, so you can
-watch every click if you want to. Or close the lid and read the journal in the
-morning.
+## Clone and setup (Windows)
 
-## What it does
+The VM configuration currently targets **Windows x64 + WSL2 + Alpine Linux**. Web/API code can run on other platforms, but the bundled VM scripts and browser MCP command require adaptation. Run the following commands in PowerShell from the repository root unless noted.
 
-- Point it at LinkedIn, Indeed, Hiring Cafe, and more, or add your own board.
-  It scores every posting against your resume, then applies one at a time or
-  works through an auto-apply campaign, up to the limits you set. Screening
-  questions, tailored resumes, and cover letters are part of that.
+### 1. Prerequisites
 
-- The Pilot runs the search unattended. Write your goals once, set a daily
-  cap, and it keeps finding roles, applying, and following up on its own. When
-  something comes up that only you can answer, it sends a push notification.
-  Otherwise you read the journal in the morning.
+Install:
 
-- It finds the recruiter or hiring manager behind a posting and drafts a
-  personal message for email or LinkedIn. Connect Gmail and it reads replies,
-  matches them to your applications, and proposes the next move. You approve
-  every send.
+- [Git](https://git-scm.com/downloads)
+- [Bun](https://bun.sh/docs/installation) (tested with 1.4.2)
+- [Node.js](https://nodejs.org/) 22 or newer
+- [.NET SDK](https://dotnet.microsoft.com/download/dotnet/10.0) 10
+- [WSL2](https://learn.microsoft.com/windows/wsl/install), enabled and working
+- [Claude Code](https://code.claude.com/docs/en/setup), available as `claude` on PATH
 
-- Applications move through one pipeline from submitted to offer, with
-  analytics on top. Every resume variant is versioned and exported to PDF, so
-  you always know which resume went where. Upwork runs on Upwork's own MCP
-  connector: search, client-quality filters, drafted proposals you submit with
-  one button, and an inbox of invitations, offers and messages.
+Run `claude` once and sign in with your own account. Subscription limits and provider terms still apply. This project does not include access to any model account.
 
-## Get started
-
-You need a Claude Code or Codex subscription and [Node.js](https://nodejs.org)
-22 or later.
-
-1. Install the JobPilot plugin for Claude Code or Codex (commands below).
-2. Run the `setup` skill. It installs the local terminal companion (or
-   upgrades it to the latest release if you already have one), starts the
-   agent, and opens the dashboard.
-3. [Create an account](https://jobpilot.suxrobgm.net) and upload your resume.
-   The agent parses it into your profile.
-4. Launch your first search campaign. Review the matches, then apply to the
-   ones you like or let an auto-apply campaign work through them.
-
-> Claude Code sessions default to the latest Sonnet and Codex sessions to GPT 6
-> Luna. Top-tier models eat your weekly usage limits far faster without applying
-> to more jobs.
-> [Why](https://jobpilot.suxrobgm.net/docs/faq).
-
-### Install the plugin
-
-#### Claude Code
-
-Run these commands in Claude Code:
-
-```text
-/plugin marketplace add https://github.com/suxrobGM/claude-plugins
-/plugin install jobpilot@sukhrob-claude-plugins
-/jobpilot:setup
+```powershell
+git clone https://github.com/Jarvuslin/OpenApply.git
+cd OpenApply
+bun install --frozen-lockfile
+.\scripts\setup-env.ps1
+bun run --cwd apps/api db:generate
+dotnet build apps/terminal
 ```
 
-#### Codex
+For a private repository, authenticate Git with your GitHub account before cloning. If PowerShell blocks a script, use your machine's approved script-execution process.
 
-Run these commands in a shell:
+`setup-env.ps1` creates ignored `apps/api/.env` and `apps/web/.env.local` files, generating a unique JWT secret and 32-byte encryption master key. It **never overwrites existing configuration**. Keep the master key: replacing it makes existing encrypted credentials unreadable. It enables the local Claude résumé reader. Set `CLAUDE_BIN` in the API environment if `claude` is not discoverable on PATH.
 
-```text
-codex plugin marketplace add suxrobGM/codex-plugins
-codex plugin add jobpilot@sukhrob-codex-plugins
+### 2. Create the browser/database VM
+
+Download the **x86_64 Mini Root Filesystem for Alpine 3.24** from [Alpine downloads](https://alpinelinux.org/downloads/) and verify its published checksum. Main and community repositories must be enabled for that release. Supply the downloaded `.tar.gz` path:
+
+```powershell
+.\scripts\setup-vm.ps1 -RootfsPath "$env:USERPROFILE\Downloads\alpine-minirootfs-3.24.0-x86_64.tar.gz"
 ```
 
-Start a new Codex session, then run:
+Replace the filename with the version you downloaded. The script imports a WSL2 distribution and installs Chromium, PostgreSQL 18, Xvfb and noVNC. It refuses to replace an existing distribution. The internal distribution name remains `JobPilot-MVP` for compatibility with the browser connector; it is not the product name.
 
-```text
-$setup
+```powershell
+.\scripts\start-mvp.ps1 -VmOnly
+bun run --cwd apps/api db:migrate:apply
+bun run --cwd apps/api db:seed
+.\scripts\start-mvp.ps1
 ```
 
-After setup, launch the agent any time from the agent dock in the dashboard.
+First start downloads the pinned Playwright MCP package inside the VM. Allow that download to complete. The local PostgreSQL instance uses port 5433; do not run another database or SSH tunnel on that port.
 
-<details>
-<summary><b>Install the terminal companion manually</b></summary>
+### 3. Open the app
 
-Use one of these commands if you need to install or repair the terminal
-companion without running the setup skill. Dashboard sessions load their
-runtime skills and browser configuration from the terminal release, so the
-marketplace plugin is needed only for the guided `setup` bootstrap.
+- **Workspace:** http://localhost:4100/mvp
+- **VM browser:** http://localhost:6080/vnc.html?autoconnect=1
+- **API health:** http://localhost:4101/api/health
+- **Terminal health:** http://localhost:4102/healthz
 
-- **Windows (PowerShell):**
+Register your own local account using email/password. Development registration does not send a verification email. Google/GitHub login buttons need separately configured app credentials; they are not required for local registration. Upload a résumé or complete the profile manually. Open the agent panel and complete any Claude sign-in/workspace prompts yourself.
 
-  ```powershell
-  irm https://raw.githubusercontent.com/suxrobGM/jobpilot/main/apps/terminal/install.ps1 | iex
-  ```
+In Discover, enter an Ashby or Greenhouse company board name (for example `ashby` for Ashby's own feed), import the board, filter roles and select one. Start with **Prepare trial · no submission**. Review the actual form requirements and résumé before enabling a real application.
 
-- **macOS / Linux:**
+The app currently uses the upstream internal plugin namespace, so `/jobpilot:mvp-trial` and `JOBPILOT_*` environment variables are intentional. Do not globally rename them without migrating the terminal/plugin interface.
 
-  ```bash
-  curl -fsSL https://raw.githubusercontent.com/suxrobGM/jobpilot/main/apps/terminal/install.sh | bash
-  ```
+### Gmail
 
-</details>
+The working integration currently uses the app's **Connections → Gmail** settings:
 
-For a guided walkthrough, see the
-[getting-started guide](https://jobpilot.suxrobgm.net/docs/getting-started).
+1. Create your own Google Cloud project, enable Gmail API, and configure an external OAuth consent screen with your email as a test user.
+2. Create a Web OAuth client with this exact redirect URI:
+   `http://localhost:4101/api/email/oauth/callback`
+3. Enter its client ID/secret locally in the app, then authorize the intended Gmail account.
 
-## Skills
+The app requests Gmail read/send access and stores tokens encrypted. Google testing-mode refresh tokens can expire after seven days. Connecting Gmail to ChatGPT/Codex or Claude does **not** mark this app connection as configured. Reusing provider connectors is planned, but the worker/email adapter has not been validated. Never paste Gmail passwords or OAuth secrets into an issue or commit.
 
-There is only one command you type yourself:
+### Stop and restart
 
-```text
-/jobpilot:setup     # Claude Code
-$setup              # Codex
+```powershell
+.\scripts\stop-mvp.ps1
+.\scripts\start-mvp.ps1
 ```
 
-It installs the local terminal companion, starts the agent, and opens the
-dashboard. If the companion is already installed, `setup` upgrades it to the
-latest release instead, so run it again any time to update or repair the
-install.
+Stop retains the VM database and browser profile. Logs and process records live in `.temp/mvp/`. API source changes require an API restart; terminal C# changes require rebuilding and restarting the terminal. Do not restart during an active application. For interactive development after the VM is running, stop the existing web/API/terminal processes and use `bun run dev`.
 
-Everything else happens from the dashboard. Click an action and JobPilot hands
-the matching skill to the agent in the dock, so you can watch the work as it
-goes:
+## Local security and data
 
-| In the dashboard                             | What the agent does                                                        |
-| -------------------------------------------- | -------------------------------------------------------------------------- |
-| New campaign → Search only (`search`)        | Searches a board and scores every result against your resume.              |
-| New campaign → Auto-apply (`auto-apply`)     | Searches, then applies to matches one at a time, up to the limits you set. |
-| New campaign → Networking (`networking`)     | Finds the recruiter or hiring manager and drafts a message to each.        |
-| New campaign on Upwork (`upwork-search`)     | Searches Upwork, filters out low-quality clients, ranks the rest.          |
-| New campaign → Apply to links (`apply`)      | Applies to each job link you paste, after a fit review.                    |
-| Campaign → Resume (`resume-campaign`)        | Picks a paused campaign back up and finishes its approved jobs.            |
-| Campaign → Rescan skipped (`rescan-skipped`) | Re-checks skipped jobs in case the reason no longer holds.                 |
-| Campaign → Retry failed (`auto-apply`)       | Re-runs the applications that errored out.                                 |
-| Inbox → Scan pending (`scan-inbox`)          | Classifies new mail, matches it to applications, proposes stage moves.     |
-| Networking → Regenerate (`networking`)       | Rewrites a drafted message.                                                |
-| Resume → Extract from PDF (`extract-resume`) | Parses an uploaded PDF into your structured profile.                       |
-| Resume → Tailor (`tailor-resume`)            | Rewrites a resume variant against one job description.                     |
-| Upwork → Proposal (`upwork-proposal`)        | Drafts a proposal for one posting.                                         |
-| Upwork → Submit (`upwork-submit`)            | Submits a draft, after showing the Connects cost and asking.               |
-| Upwork → Profile (`upwork-profile`)          | Improves your Upwork title, overview and skills; writes back on approval.  |
-| Upwork → Inbox sync (`upwork-sync`)          | Pulls invitations, offers, messages and your Connects balance.             |
-| Pilot → Start (`pilot`)                      | Hands the whole search to the agent on a loop.                             |
+This setup is for your own trusted machine: PostgreSQL uses local trust authentication; noVNC and browser debugging are loopback services without application authentication. Do not publish these ports or use this setup as a multi-user hosted deployment.
 
-Mid-job the agent reaches for more skills on its own: tailoring your resume
-before it submits, writing a cover letter, solving a CAPTCHA, pulling a
-verification code out of your inbox. You never invoke those. The
-[full catalog](https://jobpilot.suxrobgm.net/docs/campaigns-and-skills) lists
-everything that exists.
+Personal data is stored in the VM database, the VM browser profile and `apps/api/storage/`. `.env*`, storage, `.temp/`, browser snapshots and logs are ignored by Git. Back up your database and encryption key together. Review generated résumé changes; the model can still make factual or editorial mistakes.
 
-Inbox scanning, verification codes, and networking emails require your own
-Google OAuth client. Follow the
-[email setup guide](https://jobpilot.suxrobgm.net/docs/email-setup) to
-connect it.
+## Development checks
 
-## Documentation
+```powershell
+bun run ci
+bun run knip
+bun run --cwd apps/api typecheck
+bun run --cwd apps/web typecheck
+bun run test
+dotnet test -c Release
+```
 
-- [User documentation](https://jobpilot.suxrobgm.net/docs): setup, campaigns,
-  skills, email, credentials, and common questions.
-- [How JobPilot works](docs/architecture.md): a non-technical overview of the
-  dashboard, local agent, and terminal companion.
-- [Development guide](docs/development.md): local setup, repository layout,
-  technical architecture, and contribution notes.
+Release configuration avoids locking the development terminal executable on Windows. `dotnet build apps/terminal` is enough for local development; native AOT publishing additionally requires platform C++ build tools. Inherited deployment/release workflows and install scripts are not an OpenApply distribution channel.
 
-## License
+## Project layout
 
-MIT. The humanizer skill in
-[plugin/skills/humanizer/](plugin/skills/humanizer/) is adapted from
-[blader/humanizer](https://github.com/blader/humanizer) (MIT) and ships with
-its own LICENSE file.
+| Directory | Purpose |
+| --- | --- |
+| `apps/web` | Next.js / React / MUI interface |
+| `apps/api` | Elysia API, Prisma, PostgreSQL and encrypted storage |
+| `apps/terminal` | .NET host for the local Claude/Codex terminal |
+| `packages/contracts` | Shared validation schemas |
+| `plugin` | Agent skills and browser MCP configuration |
+| `scripts` | Local setup, start/stop and explicitly simulated test fixture |
+| `docs/mvp.md` | Tested scope and remaining work |
+
+## Attribution and license
+
+OpenApply is a derivative of [suxrobGM/jobpilot](https://github.com/suxrobGM/jobpilot), originally created by Sukhrob Ilyosbekov. We reuse its application backend, terminal host, agent skills and other infrastructure. The original [MIT license and copyright notice](LICENSE) are preserved. Internal `jobpilot` package names, namespaces and historical documentation remain where required for compatibility or attribution. OpenApply's rebrand does not imply endorsement by the original author.

@@ -40,7 +40,7 @@ const LINE_SX = {
 
 /**
  * The page signature: a terminal transcript of the local agent running a
- * campaign - the literal thing JobPilot does, not a decorative chart.
+ * campaign - the literal thing OpenApply does, not a decorative chart.
  */
 export function AgentTranscript(): ReactElement {
   return (

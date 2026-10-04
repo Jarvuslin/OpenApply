@@ -109,7 +109,11 @@ describe("projection", () => {
     expect(draft?.responsibilities[0]?.endsWith("…")).toBe(true);
   });
 
-  it.each([[0], [-3], [80]])("drops an out-of-range yearsExperience of %p", (years) => {
+  it("preserves explicitly stated zero years instead of treating it as unknown", () => {
+    const raw = JSON.stringify({ skills: ["Go"], yearsExperience: 0 });
+    expect(buildListingDraft(job({ digest: raw }))?.yearsExperience).toBe(0);
+  });
+  it.each([[-3], [80]])("drops an out-of-range yearsExperience of %p", (years) => {
     const raw = JSON.stringify({ skills: ["Go"], yearsExperience: years });
     expect(buildListingDraft(job({ digest: raw }))?.yearsExperience).toBeNull();
   });

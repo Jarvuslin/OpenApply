@@ -1,18 +1,18 @@
 {
   "mcpServers": {
     "playwright": {
-      "command": "npx",
+      "command": "wsl",
       "args": [
-        "@playwright/mcp@latest",
-        "--snapshot-mode",
-        "none",
-        "--user-data-dir",
-        ".playwright-mcp"
+        "-d",
+        "JobPilot-MVP",
+        "--",
+        "node",
+        "/home/pilot/jobpilot-tools/node_modules/@playwright/mcp/cli.js",
+        "--cdp-endpoint",
+        "http://127.0.0.1:9222",
+        "--output-dir",
+        "."
       ]
-    },
-    "upwork": {
-      "type": "http",
-      "url": "https://mcp.upwork.com/mcp"
     }
   }
 }

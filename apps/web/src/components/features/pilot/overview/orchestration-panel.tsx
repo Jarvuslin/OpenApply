@@ -141,7 +141,7 @@ export function OrchestrationPanel(props: OrchestrationPanelProps): ReactElement
   if (mode === "off") {
     hint = "Enable the pilot to watch it run cycles.";
   } else if (mode === "offline") {
-    hint = "Start the JobPilot agent so the pilot can run cycles.";
+    hint = "Start the OpenApply agent so the pilot can run cycles.";
   }
 
   return (

@@ -29,7 +29,6 @@ import { FileUpload } from "@/components/ui/form";
 import { SectionCard } from "@/components/ui/layout";
 import { MAX_RESUME_BYTES } from "@/lib/constants";
 import { useSseChannel } from "@/lib/sse/client";
-import { useAgent, useAgentAvailable } from "@/providers/agent-provider";
 import { useToast } from "@/providers/notification-provider";
 import { plural } from "@/utils/format";
 import { NewResumeDialog } from "./new-resume-dialog";
@@ -51,8 +50,6 @@ function ResumeEventsSubscriber({ resumeId }: { resumeId: string }): ReactNode {
 
 export function ResumesList(): ReactElement {
   const toast = useToast();
-  const agent = useAgent();
-  const agentAvailable = useAgentAvailable();
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -62,12 +59,7 @@ export function ResumesList(): ReactElement {
     successMessage: "Resume uploaded",
     invalidate: invalidations.resume,
     onSuccess: ({ id }) => {
-      // Same chain as onboarding: parse, then extract-resume follows up with a suggested rewrite.
-      // Desktop-only, so on mobile the upload waits for a desktop session - as onboarding does.
-      if (agentAvailable) {
-        void agent.injectSkill("extract-resume", id);
-      }
-      // Extraction progress only shows on the detail page, not on a row saying "No structure".
+      // The detail page uses the same local extraction endpoint as onboarding.
       router.push(`/resumes/${id}` as Route);
     },
   });
@@ -95,10 +87,10 @@ export function ResumesList(): ReactElement {
         sx={{ alignItems: "center", p: 2, borderStyle: "dashed" }}
       >
         <FileUpload
-          accept="application/pdf"
+          accept=".pdf,.docx,.txt"
           maxBytes={MAX_RESUME_BYTES}
           loading={upload.isPending}
-          label="Upload PDF"
+          label="Upload resume"
           buttonProps={{ variant: "contained" }}
           onFile={(f) => upload.mutate(f)}
           onError={(msg) => toast.error(msg)}

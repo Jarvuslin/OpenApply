@@ -79,6 +79,7 @@ export const emailMessageSchema = z.object({
   threadId: z.string().nullable(),
   subject: z.string(),
   fromAddress: z.string(),
+  toHeader: z.string().nullable(),
   fromName: z.string().nullable(),
   fromDomain: z.string(),
   snippet: z.string(),

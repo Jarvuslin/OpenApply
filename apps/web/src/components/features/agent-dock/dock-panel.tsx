@@ -97,7 +97,7 @@ export function DockPanel(): ReactElement {
       {health === "degraded" && (
         <AgentInstallCard
           onRecheck={recheck}
-          title="Reinstall the JobPilot agent"
+          title="Reinstall the OpenApply agent"
           description="The agent host is running but its plugin files are missing or corrupt. Re-run setup to refresh it, then recheck."
           detail={status?.detail}
         />

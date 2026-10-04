@@ -80,7 +80,7 @@ async function send<T>(method: string, path: string, body?: unknown): Promise<T>
   });
   if (!response.ok) {
     // The host answers errors as ProblemDetails; surface its detail instead of a bare status.
-    let message = `JobPilot.Terminal ${method} ${path} -> ${response.status}`;
+    let message = `OpenApply.Terminal ${method} ${path} -> ${response.status}`;
     try {
       const problem = (await response.json()) as { detail?: string; title?: string } | null;
       message = problem?.detail ?? problem?.title ?? message;

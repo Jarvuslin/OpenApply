@@ -1,7 +1,7 @@
 import { buildDocsMetadata } from "@/components/features/docs";
 
 export const metadata = buildDocsMetadata("email-setup", {
-  description: "Connect Gmail to JobPilot with your own Google OAuth client.",
+  description: "Connect Gmail to OpenApply with your own Google OAuth client.",
 });
 
 # Email setup
@@ -10,7 +10,7 @@ Connecting email powers the inbox (recruiter replies are classified and
 matched to applications), verification codes (the agent reads sign-in codes
 during applies), and networking (messages are sent from your own address).
 
-JobPilot connects to Gmail with **your own** Google OAuth client. It ships no
+OpenApply connects to Gmail with **your own** Google OAuth client. It ships no
 shared client, so nothing about your mail passes through anyone else's Google
 app, and no Google verification or security audit is needed. Setup is once per
 user and takes about five minutes.
@@ -20,7 +20,7 @@ user and takes about five minutes.
 1. In the [Google Cloud Console](https://console.cloud.google.com/apis/credentials),
    create a new project, then an OAuth 2.0 Client ID (type: **Web application**).
 2. Enable the **Gmail API** for the project under "APIs & Services".
-3. In JobPilot, open **Settings → Email** and copy the **redirect URI** shown
+3. In OpenApply, open **Settings → Email** and copy the **redirect URI** shown
    there; add it as an authorized redirect URI on your OAuth client.
 4. Add the **`gmail.readonly`** and **`gmail.send`** scopes to the consent
    screen, under
@@ -38,11 +38,11 @@ user and takes about five minutes.
 6. Back in **Settings → Email**, paste your **Client ID** and **Client
    secret**, save, then **Connect Gmail**.
 
-## What JobPilot can and can't do
+## What OpenApply can and can't do
 
-JobPilot can read mail and send it, and nothing more. The consent screen asks
+OpenApply can read mail and send it, and nothing more. The consent screen asks
 for four scopes: `gmail.readonly` and `gmail.send` do the work, while `openid`
-and `email` only tell JobPilot which address you connected. Deleting or
+and `email` only tell OpenApply which address you connected. Deleting or
 modifying mail is outside what the token allows. Your client id and secret are
 stored encrypted per user (the secret never leaves the server) and the
 connected account is tied to your profile only.

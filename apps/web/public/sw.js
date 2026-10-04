@@ -10,7 +10,7 @@ self.addEventListener("push", (event) => {
       payload = { body: event.data.text() };
     }
   }
-  const title = payload.title || "JobPilot";
+  const title = payload.title || "OpenApply";
   event.waitUntil(
     self.registration.showNotification(title, {
       body: payload.body || "",

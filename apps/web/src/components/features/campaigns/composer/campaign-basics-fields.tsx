@@ -130,7 +130,7 @@ export const CampaignBasicsFields = withForm({
                   )}
                 </form.AppField>
                 <Typography variant="captionMuted">
-                  JobPilot tailors a copy of this resume to each application automatically - your
+                  OpenApply tailors a copy of this resume to each application automatically - your
                   original stays unchanged.
                 </Typography>
               </Stack>

@@ -10,9 +10,8 @@ import {
 } from "@/components/features/marketing";
 
 export const metadata: Metadata = {
-  title: "Install JobPilot",
-  description:
-    "Add the JobPilot plugin to Claude Code or Codex, run setup, and create your account. The agent does the rest.",
+  title: "Install OpenApply",
+  description: "Clone OpenApply and configure your local workspace, agent and browser VM.",
   alternates: { canonical: "/install" },
 };
 
@@ -26,11 +25,11 @@ export default function InstallPage(): ReactElement {
             <Stack spacing={2}>
               <SectionEyebrow color="accent.primary">GET STARTED</SectionEyebrow>
               <Typography variant="h1" sx={{ fontSize: { xs: "2rem", md: "2.75rem" } }}>
-                Install JobPilot in two commands.
+                Set up your OpenApply workspace.
               </Typography>
               <Typography variant="body1Muted" sx={{ maxWidth: 560 }}>
-                JobPilot is a plugin for the Claude Code or Codex subscription you already have. Add
-                it, run setup, and the agent takes care of everything else.
+                Run the local MVP from source with your own Claude Code account. The README covers
+                dependencies, the browser VM, Gmail and first-run setup.
               </Typography>
             </Stack>
             <InstallGuide />

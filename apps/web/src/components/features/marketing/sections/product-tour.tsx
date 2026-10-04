@@ -29,7 +29,7 @@ const ROWS: TourRow[] = [
   {
     eyebrow: "INBOX",
     title: "Recruiter replies, matched to the right application",
-    body: "JobPilot reads recruiter replies from your Gmail, classifies them, and pairs each with the application it belongs to. You approve the status move; nothing changes without you.",
+    body: "OpenApply reads recruiter replies from your Gmail, classifies them, and pairs each with the application it belongs to. You approve the status move; nothing changes without you.",
     panel: <InboxPanel />,
     glow: alpha(accent.secondary, 0.07),
   },

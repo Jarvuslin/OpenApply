@@ -2,7 +2,7 @@ import { buildDocsMetadata } from "@/components/features/docs";
 
 export const metadata = buildDocsMetadata("faq", {
   description:
-    "Common questions about JobPilot: the agent, the Pilot, boards, email, and your data.",
+    "Common questions about OpenApply: the agent, the Pilot, boards, email, and your data.",
 });
 
 # FAQ
@@ -10,7 +10,7 @@ export const metadata = buildDocsMetadata("faq", {
 ## Do I need an API key?
 
 No. The agent runs on your existing Claude Code or Codex subscription.
-JobPilot ships no model keys and bills you for nothing.
+OpenApply ships no model keys and bills you for nothing.
 
 ## Which AI model should I use?
 
@@ -22,7 +22,7 @@ at every step and eats your weekly usage limits far faster without applying to
 more jobs. On a Pilot running cycles all day you can burn a week's allowance in
 a day or two. Mid-tier is also faster, so more of your backlog gets done.
 
-JobPilot starts Claude Code sessions on the latest Sonnet and Codex sessions on
+OpenApply starts Claude Code sessions on the latest Sonnet and Codex sessions on
 GPT 6 Luna, so there is nothing to do unless you want to change it: `/model` in
 either one.
 
@@ -75,7 +75,7 @@ Nothing is lost. Each cycle does one unit of work and saves the result before
 moving on; work claimed by a crashed cycle times out and returns to the
 agenda. The host restarts cycles on its own after a reboot or wake.
 
-## Can I use JobPilot manually while the Pilot is running?
+## Can I use OpenApply manually while the Pilot is running?
 
 Yes. Campaigns and dashboard actions work as usual. If you launch a session
 with the other provider yourself, the Pilot pauses instead of fighting for the
@@ -96,7 +96,7 @@ read itself, meaning SMS and authenticator apps. Codes that arrive by email are
 pulled from your connected mailbox without asking you. Turn on notifications
 under **Settings → Notifications** to get questions as a push on your phone.
 
-## Can JobPilot read and send email?
+## Can OpenApply read and send email?
 
 Yes, through your own Google OAuth client. See
 [Email setup](/docs/email-setup). Reading powers the inbox and verification
@@ -126,7 +126,7 @@ the same plugin.
 
 ## Where are my resumes stored?
 
-Uploaded PDFs and generated variants are stored in your JobPilot account, not
+Uploaded PDFs and generated variants are stored in your OpenApply account, not
 on your machine. The structured content is editable under **Documents**.
 
 ## Does the agent change my resume?
@@ -168,6 +168,6 @@ Delete your account under settings. That destroys your per-user encryption
 key, which makes every stored secret unreadable, and removes your profile
 data.
 
-## Is JobPilot open source?
+## Is OpenApply open source?
 
-Yes, MIT-licensed: [github.com/suxrobGM/jobpilot](https://github.com/suxrobGM/jobpilot).
+Yes, MIT-licensed: [github.com/suxrobGM/jobpilot](https://github.com/Jarvuslin/OpenApply).

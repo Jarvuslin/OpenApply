@@ -93,7 +93,7 @@ async function openSession(
     terminal.writeln(
       notice(
         RED,
-        `couldn't authenticate the agent - sign in to JobPilot, then restart the terminal. (${error.value.message})`,
+        `couldn't authenticate the agent - sign in to OpenApply, then restart the terminal. (${error.value.message})`,
       ),
     );
     return false;
@@ -125,7 +125,7 @@ async function openSession(
       terminal.writeln(
         notice(
           YELLOW,
-          "Install the CLI and make sure it's on PATH, then restart the JobPilot host.",
+          "Install the CLI and make sure it's on PATH, then restart the OpenApply host.",
         ),
       );
     }
@@ -133,7 +133,7 @@ async function openSession(
   }
 }
 
-/** xterm.js bridged to a JobPilot.Terminal PTY over WebSocket; Shift+Enter sent as CSI-u `ESC[13;2u`. */
+/** xterm.js bridged to a OpenApply.Terminal PTY over WebSocket; Shift+Enter sent as CSI-u `ESC[13;2u`. */
 export function TerminalPanel(props: TerminalPanelProps): ReactElement {
   const { provider } = props;
   const containerRef = useRef<HTMLDivElement | null>(null);

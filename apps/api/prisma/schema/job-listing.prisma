@@ -5,6 +5,18 @@ enum JobListingStatus {
   @@map("job_listing_status")
 }
 
+enum JobLevel {
+  intern
+  entry
+  mid
+  senior
+  lead
+  executive
+  unknown
+
+  @@map("job_level")
+}
+
 // The public job index: one row per posting, deduped across every user's campaigns. Digest fields
 // only - it must never carry who discovered or applied. Grows into the fleet-wide shared job index.
 model JobListing {
@@ -26,6 +38,7 @@ model JobListing {
   requirements       String[] @map("requirements")
   responsibilities   String[] @map("responsibilities")
   yearsExperience    Int?     @map("years_experience")
+  level              JobLevel @default(unknown)
 
   // Auto-published behind the ingest quality gate; admins hide after the fact.
   status      JobListingStatus @default(published)

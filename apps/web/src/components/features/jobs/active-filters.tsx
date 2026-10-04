@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { jobsHref } from "./jobs-href";
 
 /** Chipped one-by-one; `tech` is absent because the multi-select above already renders it as chips. */
-const CHIPPED = ["q", "location", "board", "remote"] as const;
+const CHIPPED = ["q", "location", "board", "remote", "level", "maxYears"] as const;
 
 /** The applied filters as removable chips, plus the only "clear everything" affordance. */
 export function ActiveFilters(): ReactNode {
@@ -16,7 +16,7 @@ export function ActiveFilters(): ReactNode {
   const applied = CHIPPED.filter((key) => params.get(key)).map((key) => ({
     key,
     // `?remote=true` reads as a state, not a value.
-    label: key === "remote" ? "Remote" : (params.get(key) as string),
+    label: key === "remote" ? "Remote" : `${key}: ${params.get(key)}`,
   }));
 
   const dirty = [...params.keys()].some((key) => key !== "page");

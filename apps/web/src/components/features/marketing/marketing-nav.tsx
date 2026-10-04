@@ -20,7 +20,7 @@ const NAV_LINKS: NavLink[] = [
   { href: "/leaderboard" as Route, label: "Leaderboard" },
   { href: "/docs" as Route, label: "Docs" },
   { href: "/#how-it-works" as Route, label: "How it works" },
-  { href: "https://github.com/suxrobGM/jobpilot" as Route, label: "GitHub", external: true },
+  { href: "https://github.com/Jarvuslin/OpenApply" as Route, label: "GitHub", external: true },
 ];
 
 const EXTERNAL_PROPS = { target: "_blank", rel: "noopener noreferrer" } as const;

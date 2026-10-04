@@ -54,9 +54,9 @@ export function Hero(): ReactElement {
                 Job search on autopilot, on your machine.
               </Typography>
               <Typography variant="body1Muted" sx={{ fontSize: "1.05rem", maxWidth: 560 }}>
-                Tell JobPilot what you're looking for. It finds roles, tailors your resume, applies,
-                and messages recruiters, all on the Claude or Codex subscription you already pay
-                for. Every morning it leaves you a journal of what it did.
+                Tell OpenApply what you're looking for. It finds roles, tailors your resume,
+                applies, and messages recruiters, all on the Claude or Codex subscription you
+                already pay for. Every morning it leaves you a journal of what it did.
               </Typography>
               <Stack direction="row" spacing={1.5} sx={{ flexWrap: "wrap", gap: 1.5 }}>
                 <LinkButton href="/install" variant="contained" size="large">

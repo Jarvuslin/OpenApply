@@ -19,11 +19,11 @@ export interface PilotControls {
 function describeHostError(error: unknown): string {
   // The host call runs against the user's own machine, so a network failure means it's offline.
   if (error instanceof TypeError) {
-    return "Terminal host offline - install or start the JobPilot agent first, then try again.";
+    return "Terminal host offline - install or start the OpenApply agent first, then try again.";
   }
   // Only an agent too old to have the /pilot/start|stop routes answers 404.
   if (error instanceof TerminalApiError && error.status === 404) {
-    return "Update the JobPilot agent, then try again.";
+    return "Update the OpenApply agent, then try again.";
   }
   if (error instanceof TerminalApiError) {
     return `The terminal host rejected the request: ${error.message}`;
@@ -47,7 +47,7 @@ export function usePilotControls(): PilotControls {
     try {
       const { data, error } = await api.auth.tokens.terminal.post();
       if (error || !data) {
-        toast.error("Couldn't authenticate the agent - sign in to JobPilot and try again.");
+        toast.error("Couldn't authenticate the agent - sign in to OpenApply and try again.");
         return;
       }
       await pilotStart({

@@ -3,10 +3,10 @@ import { surfaces } from "@/theme/palette";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "JobPilot - your job search on autopilot",
-    short_name: "JobPilot",
+    name: "OpenApply — your next move",
+    short_name: "OpenApply",
     description:
-      "Write your goals once; JobPilot's local Pilot finds roles, tailors your resume, applies, and chases replies overnight - on your own Claude or Codex subscription.",
+      "Write your goals once; OpenApply's local Pilot finds roles, tailors your resume, applies, and chases replies overnight - on your own Claude or Codex subscription.",
     start_url: "/",
     display: "standalone",
     background_color: surfaces.base,

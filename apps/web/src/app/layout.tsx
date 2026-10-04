@@ -25,15 +25,15 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
-const title = "JobPilot - your job search on autopilot";
+const title = "OpenApply — your next move";
 const description =
   "A free, open-source AI agent that finds jobs, tailors your resume, and applies for you - running locally on your own Claude Code or Codex subscription.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: { default: title, template: "%s · JobPilot" },
+  title: { default: title, template: "%s · OpenApply" },
   description,
-  applicationName: "JobPilot",
+  applicationName: "OpenApply",
   keywords: [
     "autonomous job search",
     "AI job application",
@@ -46,20 +46,20 @@ export const metadata: Metadata = {
     "Upwork proposals",
     "job board automation",
   ],
-  authors: [{ name: "Sukhrob Ilyosbekov", url: "https://github.com/suxrobGM" }],
-  creator: "Sukhrob Ilyosbekov",
+  authors: [{ name: "OpenApply contributors", url: "https://github.com/Jarvuslin/OpenApply" }],
+  creator: "OpenApply",
   category: "technology",
   manifest: "/manifest.webmanifest",
   // apple-touch-icon comes from app/apple-icon.tsx (file convention); this covers the SVG favicon.
   icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }], shortcut: "/icon.svg" },
-  appleWebApp: { capable: true, title: "JobPilot", statusBarStyle: "black-translucent" },
+  appleWebApp: { capable: true, title: "OpenApply", statusBarStyle: "black-translucent" },
   robots: {
     index: true,
     follow: true,
     googleBot: { index: true, follow: true, "max-image-preview": "large" },
   },
   openGraph: {
-    siteName: "JobPilot",
+    siteName: "OpenApply",
     url: "/",
     type: "website",
     locale: "en_US",
@@ -75,7 +75,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: surfaces.base,
-  colorScheme: "dark",
+  colorScheme: "light",
 };
 
 export default function RootLayout(props: PropsWithChildren): ReactElement {

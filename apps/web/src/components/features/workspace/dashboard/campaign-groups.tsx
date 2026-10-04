@@ -59,7 +59,7 @@ export function CampaignGroups(): ReactElement {
           description={
             agentAvailable
               ? "Start a campaign, describe the job you want, and pick a board. Choose Search mode if you want to see the matches before anything is sent."
-              : "Open JobPilot on your desktop to start the agent and run your first search."
+              : "Open OpenApply on your desktop to start the agent and run your first search."
           }
           action={
             agentAvailable ? (

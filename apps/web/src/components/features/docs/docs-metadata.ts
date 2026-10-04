@@ -10,7 +10,7 @@ export function buildDocsMetadata(slug: string, overrides?: { description?: stri
   const entry = DOCS_NAV.find((e) => e.href === href);
   const title = entry?.title ?? "Docs";
   const description = overrides?.description ?? entry?.description ?? "";
-  const ogTitle = `${title} · JobPilot`;
+  const ogTitle = `${title} · OpenApply`;
   return {
     title,
     description,

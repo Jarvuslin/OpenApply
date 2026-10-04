@@ -1,5 +1,4 @@
 import { z } from "zod/v4";
-import { optionalPhoneSchema } from "./phone";
 import { normalizeLinkUrl } from "./utils/url";
 
 const linkUrl = z.string().transform(normalizeLinkUrl).optional();
@@ -8,7 +7,8 @@ const resumeBasicsSchema = z.object({
   name: z.string().min(1, "Required"),
   headline: z.string().optional(),
   email: z.union([z.email(), z.literal("")]).optional(),
-  phone: optionalPhoneSchema,
+  // Preserve the source resume's local formatting; the applicant profile validates dialable numbers.
+  phone: z.string().optional().nullable(),
   website: linkUrl,
   linkedin: linkUrl,
   github: linkUrl,

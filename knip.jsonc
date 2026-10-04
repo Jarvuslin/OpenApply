@@ -18,6 +18,7 @@
       "ignoreDependencies": ["pg", "pino-pretty", "@types/pg", "@prisma/client"]
     },
     "apps/web": {
+      "entry": ["src/**/*.test.ts"],
       "project": ["src/**/*.{ts,tsx,mdx}"],
       "includeEntryExports": true,
       "ignoreExportsUsedInFile": false,

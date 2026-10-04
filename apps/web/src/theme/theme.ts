@@ -7,9 +7,9 @@ import { typography } from "./typography";
 const baseTheme = createTheme({
   cssVariables: true,
   palette: {
-    mode: "dark",
-    primary: { main: accent.primary, contrastText: "#1A0A05" },
-    secondary: { main: accent.secondary, contrastText: "#0A1220" },
+    mode: "light",
+    primary: { main: accent.primary, contrastText: "#FFFFFF" },
+    secondary: { main: accent.secondary, contrastText: "#FFFFFF" },
     warning: { main: feedback.warning },
     error: { main: feedback.error },
     success: { main: feedback.success },

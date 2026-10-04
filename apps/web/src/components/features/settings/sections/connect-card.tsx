@@ -38,7 +38,7 @@ export function ConnectCard(): ReactElement {
     const confirmed = await confirm({
       title: "Disconnect mailbox?",
       description:
-        "JobPilot will stop reading new mail. Verification codes will fall back to asking you.",
+        "OpenApply will stop reading new mail. Verification codes will fall back to asking you.",
       confirmLabel: "Disconnect",
       destructive: true,
     });
@@ -51,7 +51,7 @@ export function ConnectCard(): ReactElement {
     return (
       <SectionCard
         title="Email integration"
-        description="Connect a mailbox so JobPilot can track replies, auto-fill verification codes, and send networking messages."
+        description="Connect a mailbox so OpenApply can track replies, auto-fill verification codes, and send networking messages."
       >
         <LoadingSpinner />
       </SectionCard>
@@ -66,7 +66,7 @@ export function ConnectCard(): ReactElement {
     return (
       <SectionCard
         title="Email integration"
-        description="JobPilot reads new mail to track replies and auto-fill verification codes, and sends networking emails on your behalf."
+        description="OpenApply reads new mail to track replies and auto-fill verification codes, and sends networking emails on your behalf."
       >
         <Stack spacing={1.5}>
           <Box>
@@ -108,7 +108,7 @@ export function ConnectCard(): ReactElement {
   return (
     <SectionCard
       title="Email integration"
-      description="Connect Gmail so JobPilot can track recruiter replies, auto-fill verification codes, and send networking emails."
+      description="Connect Gmail so OpenApply can track recruiter replies, auto-fill verification codes, and send networking emails."
     >
       <Stack spacing={1.5} sx={{ maxWidth: 360 }}>
         <Select size="small" value={provider} onChange={(e) => setProvider(e.target.value)}>

@@ -1,13 +1,23 @@
-// Only the wizard's Personal step edits profile fields now; the rest live in
-// Settings, so issues on them (shouldn't happen - they're optional) get no step.
+// Route validation failures back to the wizard step that owns the field.
 const FIELD_TO_STEP: Record<string, number> = {
   firstName: 1,
   lastName: 1,
-  email: 1,
+  contactEmail: 1,
   phone: 1,
   website: 1,
   linkedin: 1,
   github: 1,
+  street: 1,
+  city: 1,
+  state: 1,
+  zipCode: 1,
+  country: 1,
+  usAuthorized: 2,
+  requiresSponsorship: 2,
+  preferredLocations: 2,
+  salaryPreferences: 3,
+  references: 3,
+  autoApply: 3,
 };
 
 export interface ValidationIssue {

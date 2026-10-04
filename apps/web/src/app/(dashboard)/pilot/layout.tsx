@@ -22,7 +22,7 @@ export default function PilotLayout(props: PilotLayoutProps): ReactElement {
       <PageHeader
         eyebrow="Workspace"
         title="Pilot"
-        description="Run JobPilot autonomously: set your instructions, watch its journal, and answer its questions."
+        description="Run OpenApply autonomously: set your instructions, watch its journal, and answer its questions."
         actions={
           <LinkButton
             href="/settings/notifications"

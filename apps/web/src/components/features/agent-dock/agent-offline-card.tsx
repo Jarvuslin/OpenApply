@@ -4,7 +4,6 @@ import type { ReactElement } from "react";
 import { Button, Stack, Typography } from "@mui/material";
 import { CopyField } from "@/components/ui/display";
 import {
-  formatSkillCommand,
   providerDisplayName,
   TERMINAL_PROTOCOL_URL,
   type TerminalProviderId,
@@ -30,7 +29,7 @@ export function AgentOfflineCard(props: AgentOfflineCardProps): ReactElement {
       <Stack spacing={0.5}>
         <Typography variant="body1Strong">Agent is offline</Typography>
         <Typography variant="body2Muted">
-          Your JobPilot agent is installed but not running. Start it and it reconnects here
+          Your OpenApply agent is installed but not running. Start it and it reconnects here
           automatically.
         </Typography>
       </Stack>
@@ -49,17 +48,23 @@ export function AgentOfflineCard(props: AgentOfflineCardProps): ReactElement {
       )}
 
       <Stack spacing={0.5}>
-        <Typography variant="captionMuted">In {providerLabel}, run setup:</Typography>
+        <Typography variant="captionMuted">
+          Start the local host for {providerLabel} from the repository root:
+        </Typography>
         <CopyField
-          value={formatSkillCommand(provider, "setup")}
+          value="./scripts/start-mvp.ps1"
           copyMessage="Command copied"
           ariaLabel="Copy setup command"
         />
       </Stack>
 
       <Stack spacing={0.5}>
-        <Typography variant="captionMuted">Or start it directly in any shell:</Typography>
-        <CopyField value="jobpilot" copyMessage="Command copied" ariaLabel="Copy start command" />
+        <Typography variant="captionMuted">If it needs rebuilding, run:</Typography>
+        <CopyField
+          value="dotnet build apps/terminal"
+          copyMessage="Command copied"
+          ariaLabel="Copy start command"
+        />
       </Stack>
 
       <RecheckButton onClick={onRecheck} />

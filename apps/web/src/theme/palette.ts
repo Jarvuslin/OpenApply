@@ -1,53 +1,35 @@
-// Warm-carbon ladder: near-black with a whisper of warmth - low saturation so
-// large surfaces stay carbon, never brown.
+// A quiet paper workspace; colour is reserved for meaningful status.
 export const surfaces = {
-  base: "#0B0B0A",
-  card: "#151413",
-  elevated: "#201E1B",
-  hover: "#2B2925",
+  base: "#FAFAF9",
+  card: "#FFFFFF",
+  elevated: "#F3F3F1",
+  hover: "#EDEDEB",
 } as const;
-
-// Brand ramp: flame (primary/dark) + thrust blue (secondary) - the Afterburner duotone.
-// Green is reserved for go/success - see `feedback.success` / `stages.submitted`.
-export const accent = {
-  primary: "#FF6A3D",
-  secondary: "#3B82F6",
-  dark: "#D9532A",
-} as const;
-
+export const accent = { primary: "#202120", secondary: "#3669C9", dark: "#3B3D3B" } as const;
 export const textColors = {
-  primary: "#F4F2EE",
-  secondary: "#A7A49D",
-  disabled: "#6C6860",
-  // Between primary and secondary, so bold-at-primary still reads as emphasis in /docs prose.
-  prose: "#D6D3CC",
+  primary: "#252725",
+  secondary: "#666A66",
+  disabled: "#8A8E89",
+  prose: "#464A46",
 } as const;
-
 export const feedback = {
-  error: "#E5484D",
-  success: "#16D98A",
-  info: "#3B82F6",
-  warning: "#FFB020",
+  error: "#BF4141",
+  success: "#27815B",
+  info: "#3669C9",
+  warning: "#A5681D",
 } as const;
-
-export const line = {
-  divider: "#21201C",
-  border: "#38342E",
-  borderHi: "#4A463F",
-} as const;
-
+export const line = { divider: "#EAECE7", border: "#DDE0DA", borderHi: "#BEC4BB" } as const;
 export const stages = {
-  queued: "#8A93A0",
+  queued: "#7B827B",
   applying: accent.secondary,
   submitted: feedback.success,
   interviewing: feedback.warning,
   rejected: feedback.error,
 } as const;
-
 export const editorial = {
-  paper: textColors.primary,
-  ink: surfaces.base,
+  paper: "#FFFFFF",
+  ink: textColors.primary,
   thrust: accent.secondary,
-  flame: accent.primary,
+  flame: "#E86942",
   amber: feedback.warning,
 } as const;

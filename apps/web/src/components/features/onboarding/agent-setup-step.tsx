@@ -32,12 +32,12 @@ export function AgentSetupStep(): ReactElement {
   return (
     <Stack spacing={2}>
       <Typography variant="body2Muted">
-        The agent runs on your machine and does the actual searching and applying. Add the JobPilot
+        The agent runs on your machine and does the actual searching and applying. Add the OpenApply
         plugin to Claude Code or Codex, then run setup - it installs and starts everything.
       </Typography>
       {health === "degraded" && status?.detail && (
         <Alert severity="warning">
-          A JobPilot host is running but broken: {status.detail} Re-run setup to reinstall.
+          A OpenApply host is running but broken: {status.detail} Re-run setup to reinstall.
         </Alert>
       )}
       <PluginInstallCommands />

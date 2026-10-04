@@ -7,7 +7,7 @@ import { SectionEyebrow } from "../section-eyebrow";
 const FACTS = [
   {
     title: "Your subscription",
-    body: "The agent runs on your Claude or Codex plan. JobPilot ships no model keys and adds no per-job fees.",
+    body: "The agent runs on your Claude or Codex plan. OpenApply ships no model keys and adds no per-job fees.",
   },
   {
     title: "Your machine",
@@ -19,7 +19,7 @@ const FACTS = [
   },
   {
     title: "Your own Gmail client",
-    body: "Email runs through your personal Google OAuth client. No shared app sits between JobPilot and your mail.",
+    body: "Email runs through your personal Google OAuth client. No shared app sits between OpenApply and your mail.",
   },
 ];
 

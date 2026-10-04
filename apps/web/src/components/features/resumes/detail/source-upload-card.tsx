@@ -24,7 +24,7 @@ export function SourceUploadCard(props: SourceUploadCardProps): ReactElement {
   const upload = useApiMutation<{ id: string }, File>(
     (file) => api.resumes({ id: resume.id }).source.post({ file }),
     {
-      successMessage: "Source PDF uploaded",
+      successMessage: "Source document uploaded",
       invalidate: invalidations.resume,
     },
   );
@@ -32,18 +32,18 @@ export function SourceUploadCard(props: SourceUploadCardProps): ReactElement {
   const remove = useApiMutation<{ id: string }, void>(
     () => api.resumes({ id: resume.id }).source.delete(),
     {
-      successMessage: "Source PDF removed",
+      successMessage: "Source document removed",
       invalidate: invalidations.resume,
     },
   );
 
   return (
     <SectionCard
-      title="Source PDF"
+      title="Source document"
       description={
         resume.sourceFilename
-          ? "The PDF this resume was bootstrapped from. Extract structured fields from it, or tailor it for a specific job."
-          : "Upload a PDF to bootstrap this resume, or fill out the editor below directly."
+          ? "The document this resume was bootstrapped from. Extract structured fields from it, or tailor it for a specific job."
+          : "Upload PDF, DOCX or TXT to bootstrap this resume, or fill out the editor below directly."
       }
     >
       <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
@@ -60,7 +60,7 @@ export function SourceUploadCard(props: SourceUploadCardProps): ReactElement {
             </Box>
             <ExtractResumeButton resume={resume} />
             <FileUpload
-              accept="application/pdf"
+              accept=".pdf,.docx,.txt"
               maxBytes={MAX_RESUME_BYTES}
               loading={upload.isPending}
               label="Replace"
@@ -70,17 +70,17 @@ export function SourceUploadCard(props: SourceUploadCardProps): ReactElement {
             <IconButton
               onClick={() => remove.mutate()}
               disabled={remove.isPending}
-              aria-label="Remove source PDF"
+              aria-label="Remove source document"
             >
               <Delete fontSize="md" />
             </IconButton>
           </>
         ) : (
           <FileUpload
-            accept="application/pdf"
+            accept=".pdf,.docx,.txt"
             maxBytes={MAX_RESUME_BYTES}
             loading={upload.isPending}
-            label="Upload PDF"
+            label="Upload resume"
             onFile={(f) => upload.mutate(f)}
             onError={(msg) => toast.error(msg)}
           />

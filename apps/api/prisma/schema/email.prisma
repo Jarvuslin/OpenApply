@@ -73,6 +73,7 @@ model EmailMessage {
   threadId    String?      @map("thread_id")
   subject     String
   fromAddress String       @map("from_address")
+  toHeader    String?      @map("to_header")
   fromName    String?      @map("from_name")
   fromDomain  String       @map("from_domain")
   snippet     String

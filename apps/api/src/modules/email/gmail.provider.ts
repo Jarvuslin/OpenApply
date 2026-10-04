@@ -232,6 +232,7 @@ class GmailProvider implements MailboxProvider {
           threadId: msg.data.threadId ?? null,
           subject: headerValue(headers, "Subject"),
           fromAddress: email,
+          toHeader: headerValue(headers, "To") || null,
           fromName: name,
           fromDomain: domainOf(email),
           snippet: msg.data.snippet ?? "",

@@ -2,7 +2,7 @@ import { Button, Heading, Link, Text } from "@react-email/components";
 import { EmailLayout } from "./layout";
 import { body, button, fineprint, heading } from "./styles";
 
-export const verificationEmailSubject = "Verify your email for JobPilot";
+export const verificationEmailSubject = "Verify your email for OpenApply";
 
 interface VerificationEmailProps {
   link: string;
@@ -11,12 +11,12 @@ interface VerificationEmailProps {
 export function VerificationEmail(props: VerificationEmailProps) {
   const { link } = props;
   return (
-    <EmailLayout preview="Confirm your email address to start using JobPilot">
+    <EmailLayout preview="Confirm your email address to start using OpenApply">
       <Heading as="h2" style={heading}>
         Confirm your email
       </Heading>
       <Text style={body}>
-        Welcome to JobPilot! Confirm this is your email address to activate your account.
+        Welcome to OpenApply! Confirm this is your email address to activate your account.
       </Text>
       <Button href={link} style={button}>
         Verify email

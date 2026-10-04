@@ -1,148 +1,108 @@
 "use client";
-
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { USER_DEFAULT_VALUES } from "@jobpilot/contracts/user";
-import { CheckCircle, ErrorOutlined, HourglassEmpty } from "@mui/icons-material";
 import { Alert, Button, CircularProgress, Stack, Typography } from "@mui/material";
 import { api } from "@/api/client";
-import { useApiMutation } from "@/api/hooks";
-import { invalidations } from "@/api/query-keys";
-import { useResumeExtraction } from "@/components/features/resumes/use-resume-extraction";
+import { apiErrorMessage } from "@/api/error";
+import { extractUpload } from "@/components/features/resumes/extract-upload";
 import { FileUpload } from "@/components/ui/form";
 import { withForm } from "@/components/ui/form/tanstack";
 import { MAX_RESUME_BYTES } from "@/lib/constants";
-import { useAgent, useAgentAvailable } from "@/providers/agent-provider";
-import { useToast } from "@/providers/notification-provider";
 import { applyBasicsToForm } from "./map-basics-to-profile";
-
-type StepState = "idle" | "uploading" | "extracting" | "done";
 
 export const ResumeUploadStep = withForm({
   defaultValues: USER_DEFAULT_VALUES,
   props: { onContinue: () => {} },
   render: function ResumeUploadStep({ form, onContinue }) {
-    const toast = useToast();
-    const agent = useAgent();
-    const agentAvailable = useAgentAvailable();
-    const [state, setState] = useState<StepState>("idle");
-    const [resumeId, setResumeId] = useState<string | null>(null);
-
-    const startExtraction = async (id: string): Promise<void> => {
-      setState("extracting");
-      await agent.injectSkill("extract-resume", String(id));
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState("");
+    const [done, setDone] = useState(false);
+    const [uploadedId, setUploadedId] = useState(form.getFieldValue("primaryResumeId"));
+    const read = async (id: string) => {
+      setBusy(true);
+      setError("");
+      try {
+        const content = await extractUpload(id);
+        applyBasicsToForm(form, content.basics);
+        setDone(true);
+      } catch (reason) {
+        setError(
+          reason instanceof Error
+            ? reason.message
+            : "Reading failed. Your file is saved; retry below.",
+        );
+      } finally {
+        setBusy(false);
+      }
     };
-
-    const upload = useApiMutation<{ id: string }, File>(
-      (file) => api.resumes.upload.post({ file }),
-      {
-        successMessage: "Resume uploaded",
-        invalidate: invalidations.resume,
-        onSuccess: ({ id }) => {
-          setResumeId(id);
-          form.setFieldValue("primaryResumeId", id);
-          // Auto-fill needs the local agent; on mobile just keep the upload and move on.
-          if (agentAvailable) {
-            void startExtraction(id);
-          } else {
-            toast.info(
-              "Uploaded. Open JobPilot on your desktop to auto-fill your profile from it.",
-            );
-            onContinue();
-          }
-        },
-      },
-    );
-
-    const { content } = useResumeExtraction(resumeId, state === "extracting");
-
-    // Complete on content presence (not just a delivered event); the "done" state then blocks re-entry.
-    useEffect(() => {
-      if (state !== "extracting" || !content) {
-        return;
+    const upload = async (file: File) => {
+      setBusy(true);
+      setError("");
+      setDone(false);
+      try {
+        const uploaded = await api.resumes.upload.post({ file });
+        if (uploaded.error) throw new Error(apiErrorMessage(uploaded.error));
+        if (!uploaded.data) throw new Error("Upload failed. Please retry.");
+        setUploadedId(uploaded.data.id);
+        form.setFieldValue("primaryResumeId", uploaded.data.id);
+        await read(uploaded.data.id);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Resume import failed.");
+      } finally {
+        setBusy(false);
       }
-      const basics = content.basics;
-      if (basics && basics.name.trim().length > 0) {
-        applyBasicsToForm(form, basics);
-      }
-      setState("done");
-      // extract-resume chains review-resume itself, so onboarding never waits on the suggestion.
-      onContinue();
-    }, [content, state, form, onContinue]);
-
-    const retryInject = async (): Promise<void> => {
-      if (resumeId === null) {
-        return;
-      }
-      await startExtraction(resumeId);
     };
-
-    const isExtracting = state === "extracting";
-
     return (
-      <Stack spacing={2}>
-        <Stack spacing={0.5}>
-          <Typography variant="h4">Upload your resume</Typography>
-          <Typography variant="body2Muted">
-            We&rsquo;ll read your PDF and fill in the rest. You can edit anything afterwards.
+      <Stack spacing={3}>
+        <Stack spacing={1}>
+          <Typography variant="h4">Start with your experience</Typography>
+          <Typography color="text.secondary">
+            Drop your resume to fill the fields we can find, or enter everything yourself. You
+            review the remaining answers before applying.
           </Typography>
         </Stack>
-
         <FileUpload
           variant="dropzone"
-          accept="application/pdf"
+          accept=".pdf,.docx,.txt"
           maxBytes={MAX_RESUME_BYTES}
-          loading={upload.isPending}
-          description="Click or drop a PDF here (5 MB max)"
-          onFile={(f) => {
-            setState("uploading");
-            upload.mutate(f);
-          }}
-          onError={(msg) => toast.error(msg)}
-          disabled={isExtracting}
+          loading={busy}
+          disabled={busy}
+          description="PDF, Word (.docx) or text · up to 5 MB"
+          onFile={(file) => void upload(file)}
+          onError={setError}
         />
-
-        {isExtracting && (
-          <Alert icon={<CircularProgress size={18} />} severity="info" variant="outlined">
-            Reading your resume in the terminal fields will autofill when it finishes.
+        {busy && (
+          <Alert icon={<CircularProgress size={18} />} severity="info">
+            Reading the document and structuring it with your Claude subscription. This can take a
+            minute.
           </Alert>
         )}
-
-        {isExtracting && (
-          <Alert
-            severity="warning"
-            icon={<HourglassEmpty fontSize="md" />}
-            action={
-              <Button color="inherit" size="small" onClick={() => retryInject()}>
-                Retry
-              </Button>
-            }
-          >
-            Still extracting. Check the terminal in the dock for progress, then continue or skip.
-          </Alert>
-        )}
-
-        {state === "done" && (
-          <Alert severity="success" icon={<CheckCircle fontSize="md" />}>
-            Resume parsed. Moving on
-          </Alert>
-        )}
-
-        {upload.error && (
-          <Alert severity="error" icon={<ErrorOutlined fontSize="md" />}>
-            {upload.error.message}
-          </Alert>
-        )}
-
-        <Stack direction="row" spacing={1.5} sx={{ justifyContent: "flex-end" }}>
-          <Button variant="text" onClick={onContinue} disabled={isExtracting}>
-            Skip &mdash; fill manually
+        {error && <Alert severity="error">{error}</Alert>}
+        {uploadedId && !done && (
+          <Button disabled={busy} onClick={() => void read(uploadedId)}>
+            Retry reading saved resume
           </Button>
-          {(isExtracting || state === "done") && (
+        )}
+        {done && (
+          <Alert severity="success">
+            Resume imported. Review the prefilled answers next. Your experience and education are
+            available in the resume editor.
+          </Alert>
+        )}
+        <Stack direction="row" spacing={2} sx={{ justifyContent: "flex-end" }}>
+          <Button onClick={onContinue} disabled={busy}>
+            Fill manually
+          </Button>
+          {done && (
             <Button variant="contained" onClick={onContinue}>
-              Continue
+              Review my profile
             </Button>
           )}
         </Stack>
+        <Typography variant="caption" color="text.secondary">
+          Document extraction uses open-source PDF.js and Mammoth. Scanned image-only PDFs need OCR
+          and are not supported in this MVP.
+        </Typography>
       </Stack>
     );
   },

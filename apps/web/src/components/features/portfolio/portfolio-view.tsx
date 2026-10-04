@@ -34,7 +34,7 @@ export function PortfolioView(props: PortfolioViewProps): ReactElement {
             <Typography variant="body2Muted">
               Built with{" "}
               <MuiLink href="/" sx={{ fontWeight: 600 }}>
-                JobPilot
+                OpenApply
               </MuiLink>{" "}
               · see the <MuiLink href="/leaderboard">trending leaderboard</MuiLink>
             </Typography>

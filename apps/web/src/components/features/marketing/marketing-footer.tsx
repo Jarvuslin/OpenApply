@@ -87,13 +87,13 @@ export function MarketingFooter(): ReactElement {
           </Grid>
           <Grid size={{ xs: 6, md: 3 }}>
             <FooterColumn title="Resources">
-              <ExternalFooterLink href="https://github.com/suxrobGM/jobpilot" label="GitHub" />
+              <ExternalFooterLink href="https://github.com/Jarvuslin/OpenApply" label="GitHub" />
               <ExternalFooterLink
-                href="https://github.com/suxrobGM/jobpilot/blob/main/CHANGELOG.md"
+                href="https://github.com/Jarvuslin/OpenApply/blob/main/CHANGELOG.md"
                 label="Changelog"
               />
               <ExternalFooterLink
-                href="https://github.com/suxrobGM/jobpilot/blob/main/docs/architecture.md"
+                href="https://github.com/Jarvuslin/OpenApply/blob/main/docs/architecture.md"
                 label="Architecture"
               />
             </FooterColumn>

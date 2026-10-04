@@ -3,6 +3,33 @@ import { paginationQuerySchema } from "./pagination";
 
 export const JOB_LISTING_STATUSES = ["published", "hidden"] as const;
 export const jobListingStatusSchema = z.enum(JOB_LISTING_STATUSES);
+export const JOB_LEVELS = [
+  "intern",
+  "entry",
+  "mid",
+  "senior",
+  "lead",
+  "executive",
+  "unknown",
+] as const;
+export const JOB_LEVEL_LABELS: Record<(typeof JOB_LEVELS)[number], string> = {
+  intern: "Internship",
+  entry: "Entry / junior",
+  mid: "Intermediate / mid",
+  senior: "Senior",
+  lead: "Lead / staff / principal",
+  executive: "Manager / director / executive",
+  unknown: "Not specified",
+};
+export function jobLevelFromTitle(title: string): (typeof JOB_LEVELS)[number] {
+  if (/\b(intern|internship|co-op)\b/i.test(title)) return "intern";
+  if (/\b(manager|director|head|vp|vice president|chief)\b/i.test(title)) return "executive";
+  if (/\b(lead|staff|principal)\b/i.test(title)) return "lead";
+  if (/\b(senior|sr)\b/i.test(title)) return "senior";
+  if (/\b(intermediate|mid|engineer ii|developer ii)\b/i.test(title)) return "mid";
+  if (/\b(junior|jr|entry|new grad|early career)\b/i.test(title)) return "entry";
+  return "unknown";
+}
 
 /** Capped: a crawler will happily follow /jobs?page=50000 into an unbounded OFFSET scan. */
 export const JOB_LISTING_MAX_PAGE = 500;
@@ -26,6 +53,8 @@ export const jobListingQuerySchema = paginationQuerySchema.extend({
   location: z.string().trim().min(1).optional(),
   remote: z.stringbool().optional(),
   board: z.string().trim().min(1).optional(),
+  level: z.enum(JOB_LEVELS).optional(),
+  maxYears: z.coerce.number().int().min(0).max(50).optional(),
   /**
    * Tech entries; a listing matches if it has ANY of them. Accepts both shapes because Elysia's
    * query parser already splits `?tech=React,TypeScript` into an array but hands a lone value

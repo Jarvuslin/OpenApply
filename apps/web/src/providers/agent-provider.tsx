@@ -47,7 +47,7 @@ const AgentDockContext = createContext<AgentDockContextValue | null>(null);
 
 function describeInjectError(error: unknown): string {
   if (error instanceof TypeError) {
-    return "The JobPilot agent isn't reachable. Open the agent dock to install and start it, then try again.";
+    return "The OpenApply agent isn't reachable. Open the agent dock to install and start it, then try again.";
   }
 
   if (error instanceof TerminalApiError) {
@@ -91,7 +91,7 @@ export function AgentProvider(props: PropsWithChildren): ReactElement {
       toast.error(
         error instanceof TerminalApiError
           ? `Couldn't stop the terminal: ${error.message}`
-          : "The JobPilot agent isn't reachable, so there is nothing to stop.",
+          : "The OpenApply agent isn't reachable, so there is nothing to stop.",
       );
       return false;
     }

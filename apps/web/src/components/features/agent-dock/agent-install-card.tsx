@@ -21,10 +21,10 @@ export function AgentInstallCard(props: AgentInstallCardProps): ReactElement {
   return (
     <Stack spacing={2} sx={{ flex: 1, minHeight: 0, p: 2, overflowY: "auto" }}>
       <Stack spacing={0.5}>
-        <Typography variant="body1Strong">{title ?? "Install the JobPilot agent"}</Typography>
+        <Typography variant="body1Strong">{title ?? "Install the OpenApply agent"}</Typography>
         <Typography variant="body2Muted">
           {description ??
-            "Add the JobPilot plugin to Claude Code or Codex, then run setup - it installs and starts the local agent, which connects here automatically."}
+            "Follow the OpenApply README to configure the local workspace, then start its terminal host."}
         </Typography>
         {detail && (
           <Typography variant="captionMuted" sx={{ color: "error.main" }}>

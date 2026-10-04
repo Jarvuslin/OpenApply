@@ -35,7 +35,7 @@ export function EmailLayout(props: EmailLayoutProps) {
       <Preview>{preview}</Preview>
       <Body style={main}>
         <Container style={container}>
-          <Text style={wordmark}>JobPilot</Text>
+          <Text style={wordmark}>OpenApply</Text>
           <Hr style={divider} />
           {children}
           <Hr style={divider} />

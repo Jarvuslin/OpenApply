@@ -129,6 +129,7 @@ export class JobListingPublisher {
 /** Only non-empty values, so a later thinner scrape can enrich a listing but never blank it out. */
 function enrich(draft: ListingDraft) {
   return {
+    ...(draft.level !== "unknown" && { level: draft.level }),
     ...(draft.location && { location: draft.location }),
     ...(draft.salary && { salary: draft.salary }),
     ...(draft.employmentType && { employmentType: draft.employmentType }),

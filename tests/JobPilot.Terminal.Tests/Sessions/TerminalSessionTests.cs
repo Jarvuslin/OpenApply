@@ -185,6 +185,21 @@ public sealed class TerminalSessionTests : IDisposable
         Assert.Equal(["$pilot"u8.ToArray(), Enter, Enter], Live.Writes);
     }
 
+    [Theory]
+    [InlineData("claude")]
+    [InlineData("codex")]
+    public async Task SendCommand_PreservesLongMultilineUnicodePromptAsOnePaste(string provider)
+    {
+        Start(Provider.Find(provider));
+        var command = "START résumé\n" + new string('x', 2000) + "\nEND";
+
+        await session.SendCommandAsync(command, ct: TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, Live.Writes.Count);
+        Assert.Equal("\e[200~" + command + "\e[201~", System.Text.Encoding.UTF8.GetString(Live.Writes[0]));
+        Assert.Equal(Enter, Live.Writes[1]);
+    }
+
     [Fact]
     public async Task SendCommand_IsRejected_WhenStoppedOrForAnotherProvider()
     {

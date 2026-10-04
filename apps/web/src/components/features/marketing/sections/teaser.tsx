@@ -60,7 +60,7 @@ export function Teaser(): ReactElement {
             >
               <IconButton
                 onClick={play}
-                aria-label="Play the JobPilot teaser"
+                aria-label="Play the OpenApply teaser"
                 sx={{
                   width: { xs: 64, md: 84 },
                   height: { xs: 64, md: 84 },

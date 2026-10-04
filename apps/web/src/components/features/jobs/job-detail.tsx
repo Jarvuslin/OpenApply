@@ -43,7 +43,7 @@ export function JobDetail(props: JobDetailProps): ReactElement {
         {/* CTA is first in source so it leads on a phone; `order` moves it right on md+. */}
         <Grid size={{ xs: 12, md: 4 }} sx={{ order: { xs: 1, md: 2 } }}>
           <Stack spacing={3}>
-            <ApplyCard />
+            <ApplyCard slug={job.slug} />
             <SkillsCard job={job} />
           </Stack>
         </Grid>
@@ -134,20 +134,20 @@ function BulletList(props: { items: string[] }): ReactElement {
   );
 }
 
-function ApplyCard(): ReactElement {
+function ApplyCard({ slug }: { slug: string }): ReactElement {
   return (
     <Card variant="accent">
       <CardContent>
         <Stack spacing={1.5}>
           <Typography variant="h4" component="h3">
-            Apply with JobPilot
+            Apply with OpenApply
           </Typography>
           <Typography variant="body2Muted">
             Your own AI agent tailors your resume and fills the form - on your machine, on your
             Claude or Codex plan.
           </Typography>
-          <LinkButton href="/install" variant="contained" fullWidth>
-            Get the agent
+          <LinkButton href={`/mvp?job=${encodeURIComponent(slug)}`} variant="contained" fullWidth>
+            Review and apply
           </LinkButton>
         </Stack>
       </CardContent>

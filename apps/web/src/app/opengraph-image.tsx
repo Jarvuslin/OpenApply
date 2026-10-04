@@ -4,7 +4,7 @@ import { accent, feedback, surfaces, textColors } from "@/theme/palette";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = "JobPilot - your job search on autopilot";
+export const alt = "OpenApply - your job search on autopilot";
 
 // Satori renders this - inline styles only, no MUI/emotion, every multi-child div is flex.
 export default function OpenGraphImage(): ImageResponse {
@@ -33,7 +33,7 @@ export default function OpenGraphImage(): ImageResponse {
       <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
         {/* biome-ignore lint/performance/noImgElement: this is a next/og data-URI SVG, not a Next <Image>. */}
         <img width={64} height={64} src={markDataUri(64)} alt="" />
-        <div style={{ color: textColors.primary, fontSize: 40, fontWeight: 700 }}>JobPilot</div>
+        <div style={{ color: textColors.primary, fontSize: 40, fontWeight: 700 }}>OpenApply</div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
         <div
@@ -53,7 +53,7 @@ export default function OpenGraphImage(): ImageResponse {
         </div>
       </div>
       <div style={{ display: "flex", color: textColors.disabled, fontSize: 24 }}>
-        jobpilot.suxrobgm.net
+        localhost:4100
       </div>
     </div>,
     { ...size },

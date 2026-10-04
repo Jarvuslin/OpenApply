@@ -19,7 +19,7 @@ import { useConfirm } from "@/providers/confirm-provider";
 const shortScope = (scope: string): string => scope.split("/").pop() ?? scope;
 
 const CARD_DESCRIPTION =
-  "JobPilot connects Gmail through your own Google OAuth app, so it needs no Google verification. Create one in Google Cloud, then paste its Client ID and secret here.";
+  "Connect your personal Gmail through your own Google OAuth app. Create it in Google Cloud, then save its Client ID and secret here. Your Gmail password stays with Google.";
 
 /**
  * Step 1 - the user's own Google OAuth app. Reads its config and the mailbox
@@ -70,7 +70,7 @@ function OAuthClientForm(props: OAuthClientFormProps): ReactElement {
   const handleRemove = async (): Promise<void> => {
     const confirmed = await confirm({
       title: "Remove OAuth client?",
-      description: "JobPilot won't be able to connect Gmail until you add a client again.",
+      description: "OpenApply won't be able to connect Gmail until you add a client again.",
       confirmLabel: "Remove",
       destructive: true,
     });
@@ -145,8 +145,9 @@ function OAuthClientForm(props: OAuthClientFormProps): ReactElement {
             ))}
           </Stack>
           <Typography variant="captionMuted" sx={{ display: "block", mt: 0.5 }}>
-            gmail.readonly is a restricted scope, but works in your own Testing-mode project without
-            a CASA audit.
+            Personal testing does not require Google verification. In Testing mode, Gmail access
+            expires after 7 days and you will need to reconnect. Read access supports verification
+            emails; send access supports the existing networking features.
           </Typography>
         </Box>
 

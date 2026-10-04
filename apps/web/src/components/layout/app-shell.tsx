@@ -28,6 +28,7 @@ export function AppShell(props: PropsWithChildren): ReactElement {
         component="main"
         sx={{
           flex: 1,
+          minWidth: 0,
           height: "100%",
           overflowY: "auto",
           pb: isDesktop ? 0 : `${MOBILE_NAV_HEIGHT}px`,

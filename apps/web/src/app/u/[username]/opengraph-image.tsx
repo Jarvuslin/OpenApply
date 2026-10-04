@@ -6,7 +6,7 @@ import { accent, feedback, surfaces, textColors } from "@/theme/palette";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = "JobPilot portfolio";
+export const alt = "OpenApply portfolio";
 
 interface OgProps {
   params: Promise<{ username: string }>;
@@ -20,7 +20,7 @@ export default async function PortfolioOgImage(props: OgProps): Promise<ImageRes
   const options = await getPublicFetchOptions();
 
   // A down API must yield the generic card, never a 500 that breaks the link unfurl.
-  let name = "JobPilot portfolio";
+  let name = "OpenApply portfolio";
   let headline: string | null = null;
   let applications: number | null = null;
   try {
@@ -59,7 +59,7 @@ export default async function PortfolioOgImage(props: OgProps): Promise<ImageRes
       <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
         {/* biome-ignore lint/performance/noImgElement: this is a next/og data-URI SVG, not a Next <Image>. */}
         <img width={56} height={56} src={markDataUri(56)} alt="" />
-        <div style={{ color: textColors.primary, fontSize: 34, fontWeight: 700 }}>JobPilot</div>
+        <div style={{ color: textColors.primary, fontSize: 34, fontWeight: 700 }}>OpenApply</div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         <div
@@ -89,7 +89,7 @@ export default async function PortfolioOgImage(props: OgProps): Promise<ImageRes
           fontSize: 24,
         }}
       >
-        <div style={{ display: "flex" }}>jobpilot.suxrobgm.net/u/{username}</div>
+        <div style={{ display: "flex" }}>OpenApply / {username}</div>
         {applications !== null && (
           <div style={{ display: "flex", color: accent.primary }}>
             {applications} applications tracked

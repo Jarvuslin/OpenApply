@@ -1,8 +1,22 @@
 "use client";
 
 import { type ReactElement, type SubmitEvent, useRef } from "react";
-import { parseTechParam, serializeTechParam } from "@jobpilot/contracts/job-listing";
-import { Box, Button, Card, Stack, TextField, ToggleButton } from "@mui/material";
+import {
+  JOB_LEVEL_LABELS,
+  JOB_LEVELS,
+  parseTechParam,
+  serializeTechParam,
+} from "@jobpilot/contracts/job-listing";
+import {
+  Box,
+  Button,
+  Card,
+  MenuItem,
+  Stack,
+  TextField,
+  ToggleButton,
+  Typography,
+} from "@mui/material";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MultiSelect } from "@/components/ui/form";
 import { ActiveFilters } from "./active-filters";
@@ -36,7 +50,7 @@ export function JobFilters(props: JobFiltersProps): ReactElement {
     const next = new URLSearchParams(params);
     const data = form.current ? new FormData(form.current) : null;
 
-    for (const key of ["q", "location"] as const) {
+    for (const key of ["q", "location", "level", "maxYears"] as const) {
       patch[key] ??= String(data?.get(key) ?? "").trim() || null;
     }
     for (const [key, value] of Object.entries(patch)) {
@@ -99,6 +113,32 @@ export function JobFilters(props: JobFiltersProps): ReactElement {
               </Button>
             </Stack>
           </Stack>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+            <TextField
+              name="level"
+              label="Job level"
+              select
+              defaultValue={params.get("level") ?? ""}
+              sx={{ minWidth: 220 }}
+            >
+              <MenuItem value="">Any level</MenuItem>
+              {JOB_LEVELS.map((value) => (
+                <MenuItem key={value} value={value}>
+                  {JOB_LEVEL_LABELS[value]}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              name="maxYears"
+              label="Max. required years"
+              type="number"
+              defaultValue={params.get("maxYears") ?? ""}
+              slotProps={{ htmlInput: { min: 0, max: 50, step: 1 } }}
+            />
+          </Stack>
+          <Typography variant="captionMuted">
+            Levels are inferred from titles. A years filter excludes unspecified experience.
+          </Typography>
           <ActiveFilters />
         </Stack>
       </Box>

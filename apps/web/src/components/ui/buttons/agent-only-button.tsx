@@ -4,7 +4,7 @@ import type { ReactElement, ReactNode } from "react";
 import { Box, Button, type ButtonProps, Tooltip } from "@mui/material";
 import { useAgentAvailable } from "@/providers/agent-provider";
 
-const UNAVAILABLE = "Open JobPilot on your desktop to run this.";
+const UNAVAILABLE = "Open OpenApply on your desktop to run this.";
 
 interface AgentOnlyButtonProps extends ButtonProps {
   children: ReactNode;

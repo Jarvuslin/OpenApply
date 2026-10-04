@@ -4,6 +4,7 @@
  * the part that unit-tests with no database.
  */
 
+import { type JOB_LEVELS, jobLevelFromTitle } from "@jobpilot/contracts/job-listing";
 import { z } from "zod/v4";
 import { MAX_YEARS_EXPERIENCE } from "@/modules/scoring/scoring.schema";
 import { canonicalizeUrl, dedupeKey, listingSlug, normalizeListingLocation } from "./dedupe";
@@ -32,6 +33,8 @@ const digestSchema = z.object({
 
 /** The subset of a `Job` a listing may read. Anything user-identifying is absent by design. */
 export interface ListingSourceJob {
+  /** Set only by a validated public ATS feed adapter, never from a user request. */
+  publicFeed?: boolean;
   title: string;
   company: string;
   url: string;
@@ -45,6 +48,7 @@ export interface ListingSourceJob {
 }
 
 export interface ListingDraft {
+  level: (typeof JOB_LEVELS)[number];
   dedupeKey: string;
   slug: string;
   title: string;
@@ -101,7 +105,7 @@ function yearsExperience(value: number | undefined): number | null {
     return null;
   }
   const years = Math.trunc(value);
-  return years > 0 && years <= MAX_YEARS_EXPERIENCE ? years : null;
+  return years >= 0 && years <= MAX_YEARS_EXPERIENCE ? years : null;
 }
 
 /**
@@ -124,7 +128,7 @@ export function buildListingDraft(job: ListingSourceJob): ListingDraft | null {
   const digest = parseDigest(job.digest);
   // A posting with no named skills has nothing to filter or match on, so it never gets published.
   const skills = (digest.skills ?? []).map((skill) => skill.trim()).filter(Boolean);
-  if (skills.length === 0) {
+  if (skills.length === 0 && !(job.publicFeed && (job.description?.trim().length ?? 0) >= 80)) {
     return null;
   }
 
@@ -132,6 +136,7 @@ export function buildListingDraft(job: ListingSourceJob): ListingDraft | null {
   const key = dedupeKey({ title, company, location });
 
   return {
+    level: jobLevelFromTitle(title),
     dedupeKey: key,
     slug: listingSlug({ title, company, location }, key),
     title,

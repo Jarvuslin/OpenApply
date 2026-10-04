@@ -19,16 +19,16 @@ export const motion = {
 
 export const shadows = {
   sm: "none",
-  md: "0 4px 14px rgba(0,0,0,0.45), 0 0 0 0.5px rgba(255,255,255,0.04)",
-  lg: "0 18px 36px -10px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(255,255,255,0.05)",
+  md: "0 4px 16px rgba(25,30,25,0.06)",
+  lg: "0 16px 48px rgba(25,30,25,0.12)",
   focus: `0 0 0 2px ${alpha(accent.primary, 0.5)}`,
 } as const;
 
 export const radii = {
-  xs: 2,
-  sm: 3,
-  md: 6,
-  lg: 10,
+  xs: 4,
+  sm: 7,
+  md: 12,
+  lg: 16,
   pill: 999,
 } as const;
 

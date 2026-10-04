@@ -38,9 +38,10 @@ export interface NavGroup {
 
 const navGroups: NavGroup[] = [
   {
-    label: "Core",
+    label: "Workspace",
     items: [
-      { label: "Workspace", href: "/workspace", icon: Dashboard, primary: true },
+      { label: "Assistant", href: "/mvp", icon: BusinessCenter },
+      { label: "Applications", href: "/workspace", icon: Dashboard, primary: true },
       { label: "Pilot", href: "/pilot", icon: SmartToy, badge: "questions", primary: true },
       { label: "Inbox", href: "/inbox", icon: Inbox, primary: true },
       { label: "Analytics", href: "/analytics", icon: Insights, primary: true },
@@ -95,8 +96,8 @@ export const feedbackLinks: NavItem[] = [
   { label: "Feature Request", href: FEATURE_REQUEST_URL, icon: Lightbulb },
 ];
 
-export const APP_TITLE = "JobPilot";
-export const RAIL_WIDTH = 56;
+export const APP_TITLE = "OpenApply";
+export const RAIL_WIDTH = 208;
 export const DOCK_COLLAPSED = 56;
 export const DOCK_EXPANDED = 380;
 export const DOCK_MIN_EXPANDED = 320;

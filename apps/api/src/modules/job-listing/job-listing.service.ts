@@ -19,6 +19,8 @@ const SUMMARY_SELECT = {
   id: true,
   slug: true,
   title: true,
+  level: true,
+  yearsExperience: true,
   company: true,
   location: true,
   remote: true,
@@ -138,13 +140,15 @@ export class JobListingService {
   }
 
   private async where(query: AdminJobListingQuery): Promise<Prisma.JobListingWhereInput> {
-    const { q, location, remote, board, tech, status } = query;
+    const { q, location, remote, board, tech, status, level, maxYears } = query;
     // `hasSome` is exact, so the request is expanded into the casings actually stored.
     const skills = tech?.length
       ? resolveSkillFilter(tech, (await this.skillVocabulary()).variants)
       : [];
 
     return {
+      ...(level && { level }),
+      ...(maxYears !== undefined && { yearsExperience: { lte: maxYears } }),
       ...(status && { status }),
       ...(remote !== undefined && { remote }),
       ...(location && { location: { contains: location, mode: "insensitive" } }),

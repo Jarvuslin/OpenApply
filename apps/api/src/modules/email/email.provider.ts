@@ -38,6 +38,8 @@ export interface NormalizedMessage {
   subject: string;
   /** Sender email, lowercased. */
   fromAddress: string;
+  /** Original To header for matching a verification to the requested signup address. */
+  toHeader?: string | null;
   /** Sender display name (e.g. "Jane @ Acme"), or `null` if absent. */
   fromName: string | null;
   /** Lowercased domain portion of `fromAddress` - used for matching. */

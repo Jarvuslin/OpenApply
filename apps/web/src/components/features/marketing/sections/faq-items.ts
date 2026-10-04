@@ -2,7 +2,7 @@
 export const FAQ_ITEMS = [
   {
     q: "What does it cost?",
-    a: "Nothing. JobPilot is free and MIT-licensed, and the whole project is one public repository on GitHub. Your only cost is the Claude or Codex subscription you already have.",
+    a: "Nothing. OpenApply is free and MIT-licensed, and the whole project is one public repository on GitHub. Your only cost is the Claude or Codex subscription you already have.",
   },
   {
     q: "Do I need an API key?",
@@ -10,7 +10,7 @@ export const FAQ_ITEMS = [
   },
   {
     q: "Which AI model should I use?",
-    a: "A mid-tier one: Claude Sonnet 5.5 or GPT 6 Luna. Avoid top-tier models like Claude Opus 5.5. Applying to jobs is reading postings and filling forms, not hard reasoning, so the top tier eats your weekly usage limits far faster without applying to more jobs. JobPilot starts Claude Code on the latest Sonnet and Codex on GPT 6 Luna for you.",
+    a: "A mid-tier one: Claude Sonnet 5.5 or GPT 6 Luna. Avoid top-tier models like Claude Opus 5.5. Applying to jobs is reading postings and filling forms, not hard reasoning, so the top tier eats your weekly usage limits far faster without applying to more jobs. OpenApply starts Claude Code on the latest Sonnet and Codex on GPT 6 Luna for you.",
   },
   {
     q: "Where does the agent run?",

@@ -35,7 +35,7 @@ export async function generateMetadata(props: JobPageProps): Promise<Metadata> {
     title,
     description:
       job.descriptionExcerpt ??
-      `${job.title} at ${job.company}. Apply with your own JobPilot AI agent.`,
+      `${job.title} at ${job.company}. Apply with your own OpenApply AI agent.`,
     alternates: { canonical: `/jobs/${job.slug}` },
     openGraph: { title, type: "article" },
   };

@@ -9,7 +9,7 @@ interface AuthCardProps extends PropsWithChildren {
 
 /**
  * Centered, full-height frame for the unauthenticated login/register screens.
- * Renders the JobPilot wordmark above a single card so both pages share one
+ * Renders the OpenApply wordmark above a single card so both pages share one
  * look without pulling in the app rail/shell.
  */
 export function AuthCard(props: AuthCardProps): ReactElement {
@@ -30,7 +30,7 @@ export function AuthCard(props: AuthCardProps): ReactElement {
           <Stack spacing={1} sx={{ alignItems: "center", textAlign: "center" }}>
             <JobPilotMark size={48} />
             <Typography variant="h1" sx={{ fontSize: "2rem", letterSpacing: "-0.035em" }}>
-              JobPilot
+              OpenApply
             </Typography>
             <Typography variant="body2Muted">
               Your autonomous copilot for the whole job search

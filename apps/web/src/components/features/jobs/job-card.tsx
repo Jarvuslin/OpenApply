@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { JOB_LEVEL_LABELS } from "@jobpilot/contracts/job-listing";
 import { Card, CardActionArea, CardContent, Chip, Stack, Typography } from "@mui/material";
 import type { Route } from "next";
 import type { JobListingSummaryDto } from "@/api/types";
@@ -44,6 +45,12 @@ export function JobCard(props: JobCardProps): ReactElement {
           </Stack>
 
           <SkillChips skills={job.skills} max={maxSkills} />
+          <Typography variant="captionMuted">
+            {JOB_LEVEL_LABELS[job.level]} ·{" "}
+            {job.yearsExperience === null
+              ? "Years not specified"
+              : `${job.yearsExperience}+ years listed`}
+          </Typography>
 
           <Stack
             direction="row"

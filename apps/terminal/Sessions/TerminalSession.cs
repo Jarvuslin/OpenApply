@@ -159,7 +159,13 @@ public sealed class TerminalSession : IDisposable
 
             process = current;
             submitKeyPresses = activeProvider.SubmitKeyPresses(command);
-            process.Write(Encoding.UTF8.GetBytes(command));
+            // A long raw write can be split into separate key events by ConPTY/the
+            // provider's paste detector. Frame prose and multiline input as one paste;
+            // keep short skill commands raw so autocomplete still works.
+            var input = command.Length > 256 || command.Contains('\n') || command.Contains('\r')
+                ? $"\e[200~{command}\e[201~"
+                : command;
+            process.Write(Encoding.UTF8.GetBytes(input));
         }
 
         for (var press = 0; press < submitKeyPresses; press++)

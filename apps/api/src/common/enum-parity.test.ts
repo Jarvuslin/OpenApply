@@ -12,7 +12,7 @@ import {
 } from "@jobpilot/contracts/campaign";
 import { COVER_LETTER_SOURCES } from "@jobpilot/contracts/cover-letter";
 import { CLASSIFICATIONS, EMAIL_PROVIDERS, REVIEW_STATUSES } from "@jobpilot/contracts/email";
-import { JOB_LISTING_STATUSES } from "@jobpilot/contracts/job-listing";
+import { JOB_LEVELS, JOB_LISTING_STATUSES } from "@jobpilot/contracts/job-listing";
 import {
   CONTACT_DISCOVERY_SOURCES,
   CONTACT_EMAIL_SOURCES,
@@ -41,6 +41,7 @@ import { describe, expect, it } from "bun:test";
 // The web cannot import the generated Prisma client, so `@jobpilot/contracts` keeps its own copy of
 // every DB enum's values. This is the only thing stopping the two from drifting.
 const PAIRS: [string, readonly string[], Record<string, string>][] = [
+  ["JobLevel", JOB_LEVELS, prismaEnums.JobLevel],
   ["ApplicationStatus", APPLICATION_STATUSES, prismaEnums.ApplicationStatus],
   ["ApplicationSource", APPLICATION_SOURCES, prismaEnums.ApplicationSource],
   ["ApplicationEventKind", APPLICATION_EVENT_KINDS, prismaEnums.ApplicationEventKind],

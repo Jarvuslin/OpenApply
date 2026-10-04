@@ -38,12 +38,25 @@ Look for a verification message from the last 5 minutes (`<since>` = now minus 5
 jobpilot-api GET /api/email/messages --query classification=verification --query "domainHint=$BOARD_DOMAIN" --query "since=<since>"
 ```
 
-Read `.items`. Empty → `sleep 5` and call again, up to 6 attempts (~30s).
+Use the actual verification request timestamp as `since` when the caller supplies
+it. Check the signup recipient and employer tenant; an ambiguous message is not
+a usable code. Never reuse an older code for a new request.
+
+Read `.items`. Empty → `sleep 5`, POST /api/email/sync again, then query again,
+up to 6 attempts. Re-querying the database without syncing cannot see new mail.
 
 If still nothing, also look for unclassified messages whose body matches the board domain (Gmail may have arrived but `scan-inbox` hasn't classified it yet). Classify inline:
 
+Fetch again **without** the classification filter:
+`jobpilot-api GET /api/email/messages --query "domainHint=$BOARD_DOMAIN" --query "since=<since>"`.
+Require the sender domain to match the expected verification sender domain or its
+subdomain. Body mentions alone are not proof of origin. If the portal uses a
+different mail provider and its sender cannot be established, return `{}`.
+
 1. Read `.items[0]` (most recent first).
-2. Inspect `subject`, `fromAddress`, `snippet`, `rawBody`.
+2. Inspect `subject`, `fromAddress`, `toHeader`, `snippet`, `rawBody`.
+   Compare the parsed To address with the caller's signup email exactly (case-insensitive).
+   A missing recipient header or several plausible tenant messages means return `{}`.
 3. If it's not a real verification for `$BOARD_DOMAIN`, print `{}` and exit.
 4. Extract:
    - **`verificationCode`** - 4-8 characters, usually digits. Patterns: `\b\d{4,8}\b`, `code is (\S+)`, `verification code:\s*(\S+)`.

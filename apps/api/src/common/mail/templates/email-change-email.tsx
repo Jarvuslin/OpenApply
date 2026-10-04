@@ -2,7 +2,7 @@ import { Button, Heading, Link, Text } from "@react-email/components";
 import { EmailLayout } from "./layout";
 import { body, button, fineprint, heading } from "./styles";
 
-export const emailChangeEmailSubject = "Confirm your new email for JobPilot";
+export const emailChangeEmailSubject = "Confirm your new email for OpenApply";
 
 interface EmailChangeEmailProps {
   link: string;
@@ -12,13 +12,13 @@ interface EmailChangeEmailProps {
 export function EmailChangeEmail(props: EmailChangeEmailProps) {
   const { link } = props;
   return (
-    <EmailLayout preview="Confirm your new JobPilot sign-in email">
+    <EmailLayout preview="Confirm your new OpenApply sign-in email">
       <Heading as="h2" style={heading}>
         Confirm your new email
       </Heading>
       <Text style={body}>
-        Confirm this is your new sign-in address. Your JobPilot login email switches to this address
-        once you confirm - until then, the old one keeps working.
+        Confirm this is your new sign-in address. Your OpenApply login email switches to this
+        address once you confirm - until then, the old one keeps working.
       </Text>
       <Button href={link} style={button}>
         Confirm new email

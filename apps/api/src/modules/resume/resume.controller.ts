@@ -1,6 +1,8 @@
+import { resumeDataSchema } from "@jobpilot/contracts/resume";
 import { idParam } from "@jobpilot/contracts/shared";
 import { resumeChannel } from "@jobpilot/contracts/sse";
 import { Elysia } from "elysia";
+import { z } from "zod/v4";
 import { container } from "@/common/di/container";
 import { badRequest } from "@/common/errors";
 import { authGuard } from "@/common/middleware";
@@ -39,6 +41,12 @@ export const resumeController = new Elysia({
   detail: { tags: ["Resumes"] },
 })
   .use(authGuard)
+  .post("/:id/extract", ({ user, params }) => svc.extract(user.id, params.id), {
+    beforeHandle: rateLimit(RATE_LIMITS.localExtraction),
+    params: idParam,
+    response: z.object({ content: resumeDataSchema }),
+    detail: { summary: "Read a resume locally using PDF.js/Mammoth and the Claude subscription" },
+  })
   .get("/", ({ user }) => svc.list(user.id), {
     response: resumeListSchema,
     detail: {

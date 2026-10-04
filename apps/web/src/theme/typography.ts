@@ -9,7 +9,7 @@ export const fontFamilies = {
 } as const;
 
 // The display role is Archivo widened to its expanded width axis (athletic headers).
-const displayStretch = "125%";
+const displayStretch = "100%";
 
 /** /docs prose metrics; `docsH4` reuses the size so an h4 sits flush with the prose around it. */
 const docsBody = {
@@ -30,7 +30,7 @@ export const typography: TypographyVariantsOptions = {
   h1: {
     fontFamily: fontFamilies.display,
     fontStretch: displayStretch,
-    fontWeight: 700,
+    fontWeight: 600,
     fontSize: "2.25rem",
     lineHeight: 1.05,
     letterSpacing: "-0.025em",
@@ -38,7 +38,7 @@ export const typography: TypographyVariantsOptions = {
   h2: {
     fontFamily: fontFamilies.display,
     fontStretch: displayStretch,
-    fontWeight: 700,
+    fontWeight: 600,
     fontSize: "1.75rem",
     lineHeight: 1.15,
     letterSpacing: "-0.02em",
@@ -165,7 +165,7 @@ export const typography: TypographyVariantsOptions = {
   displayLg: {
     fontFamily: fontFamilies.display,
     fontStretch: displayStretch,
-    fontWeight: 700,
+    fontWeight: 600,
     // Plain clamp() keeps this out of responsiveFontSizes; bounds track hero.tsx's h1 (2rem→2.9rem).
     fontSize: "clamp(2rem, 1.4rem + 2.4vw, 2.9rem)",
     lineHeight: 1.1,
@@ -174,7 +174,7 @@ export const typography: TypographyVariantsOptions = {
   displayMd: {
     fontFamily: fontFamilies.display,
     fontStretch: displayStretch,
-    fontWeight: 700,
+    fontWeight: 600,
     // Min tracks job-detail.tsx's 1.75rem heading; max matches the cta-band h2 ceiling.
     fontSize: "clamp(1.75rem, 1.3rem + 2vw, 2.5rem)",
     lineHeight: 1.15,
@@ -184,7 +184,7 @@ export const typography: TypographyVariantsOptions = {
   docsBody,
   docsH1: {
     ...docsHeading,
-    fontWeight: 700,
+    fontWeight: 600,
     fontSize: "1.625rem",
     lineHeight: 1.25,
     letterSpacing: "-0.015em",

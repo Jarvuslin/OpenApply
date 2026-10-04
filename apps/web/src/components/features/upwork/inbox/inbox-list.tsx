@@ -192,7 +192,7 @@ function InboxEmptyState(props: InboxEmptyStateProps): ReactElement {
       description={
         agentAvailable
           ? "Run Sync to pull your invitations, offers and messages from Upwork."
-          : "Open JobPilot on your desktop to sync your Upwork inbox."
+          : "Open OpenApply on your desktop to sync your Upwork inbox."
       }
     />
   );

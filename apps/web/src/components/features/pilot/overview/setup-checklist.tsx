@@ -53,7 +53,7 @@ export function PilotSetupChecklist(props: PilotSetupChecklistProps): ReactNode 
     {
       id: "host",
       label: "Start the agent host",
-      description: "The pilot runs on your machine through the JobPilot terminal.",
+      description: "The pilot runs on your machine through the OpenApply terminal.",
       done: hostReady,
       action: agentAvailable ? (
         <Button size="small" variant="outlined" onClick={dock.expand}>

@@ -37,5 +37,13 @@ dist/
 .VSCodeCounter/
 
 .env
+.env.*
+!.env.example
+**/storage/
+/console-*.log
+/page-*.yml
+/test-results/
+/playwright-report/
+/screenshots/
 
 __pycache__/
