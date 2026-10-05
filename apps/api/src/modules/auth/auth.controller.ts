@@ -18,6 +18,7 @@ import { clearAuthCookies, REFRESH_COOKIE, setAuthCookies } from "./auth.cookies
 import {
   apiTokenListSchema,
   apiTokenMintedSchema,
+  authOptionsSchema,
   authSessionSchema,
   meSchema,
 } from "./auth.schema";
@@ -41,6 +42,21 @@ const limitEmailResend = rateLimit(RATE_LIMITS.emailResend);
 
 export const authController = new Elysia({ prefix: "/auth", detail: { tags: ["Auth"] } })
   // --- public ---
+  .get(
+    "/options",
+    ({ set }) => {
+      set.headers["cache-control"] = "no-store";
+      return authService.options();
+    },
+    {
+      response: authOptionsSchema,
+      detail: {
+        summary: "Available sign-in methods",
+        description:
+          "Public provider readiness and email delivery mode. No credentials or account data.",
+      },
+    },
+  )
   .post(
     "/register",
     async ({ body, cookie }) => {

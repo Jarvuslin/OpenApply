@@ -1,0 +1,14 @@
+# Build this fork from source without relying on upstream images or a release.
+# Run from deploy/: docker compose -f docker-compose.yml -f docker-compose.build.yml build
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${APP_URL:?Set APP_URL to the public HTTPS origin}
+        NEXT_PUBLIC_TERMINAL_URL: http://localhost:4102

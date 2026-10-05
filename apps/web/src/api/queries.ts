@@ -37,6 +37,7 @@ export const OPTIONS_PAGE: PaginationQuery = { page: 1, limit: MAX_PAGE_SIZE };
  */
 
 export const authQueries = {
+  options: () => ({ queryKey: queryKeys.auth.options(), queryFn: () => api.auth.options.get() }),
   me: () => ({ queryKey: queryKeys.auth.me(), queryFn: () => api.auth.me.get() }),
 };
 

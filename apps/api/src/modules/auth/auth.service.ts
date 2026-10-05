@@ -14,6 +14,7 @@ import { randomUsername } from "@/common/utils/username";
 import { env } from "@/env";
 import { PrismaClient, type User, UserRole } from "@/generated/prisma/client";
 import { meUser, principal, publicUser } from "./auth.mapper";
+import { authOptions } from "./auth-options";
 
 const REFRESH_TTL_MS = durationToMs(env.REFRESH_TOKEN_EXPIRY, 30 * 86_400_000);
 
@@ -21,6 +22,10 @@ const REFRESH_TTL_MS = durationToMs(env.REFRESH_TOKEN_EXPIRY, 30 * 86_400_000);
 @singleton()
 export class AuthService {
   constructor(private readonly prisma: PrismaClient) {}
+
+  options() {
+    return authOptions(env);
+  }
 
   /** Mint an access JWT + a persisted (hashed) rotating refresh token. */
   private async issueTokens(user: User) {
@@ -46,7 +51,7 @@ export class AuthService {
     const user = await this.createUserAccount({
       email: input.email,
       passwordHash: await hashPassword(input.password),
-      emailVerified: env.NODE_ENV === "development",
+      emailVerified: !this.options().emailVerificationRequired,
     });
     return this.issueSession(user);
   }

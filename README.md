@@ -22,6 +22,10 @@ A personal workspace for finding roles, improving your résumé, and preparing j
 
 ## Setup
 
+For Google, GitHub, or email/password login, see [sign-in setup](docs/auth-setup.md).
+Email/password works locally without provider keys. Google and GitHub buttons
+become available after their OAuth credentials are configured on the API.
+
 One codebase automatically selects the local runtime:
 
 | Machine | Browser VM | Validation |

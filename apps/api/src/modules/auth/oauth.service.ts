@@ -33,7 +33,7 @@ export class OAuthService {
     return {
       clientId,
       clientSecret,
-      redirectUri: `${env.AUTH_OAUTH_REDIRECT_BASE}/api/auth/providers/${provider}/callback`,
+      redirectUri: `${env.AUTH_OAUTH_REDIRECT_BASE.replace(/\/$/, "")}/api/auth/providers/${provider}/callback`,
     };
   }
 
@@ -137,7 +137,7 @@ export class OAuthService {
       if (existing.userId === userId) {
         return; // Already linked here - idempotent success.
       }
-      throw new Error("This account is already linked to another JobPilot user");
+      throw new Error("This account is already linked to another OpenApply user");
     }
     if (mine) {
       throw new Error(`A ${providerName} account is already linked - unlink it first`);

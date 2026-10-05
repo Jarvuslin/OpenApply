@@ -16,7 +16,8 @@ export function oauthStartUrl(provider: OAuthProviderInput, intent?: "link"): st
 /** Copy for every contract slug (Record over the union so a new slug fails the build);
  *  unknown reasons are provider prose and pass through as-is. */
 const REASON_COPY: Record<OAuthErrorReason, string> = {
-  provider_not_configured: "This sign-in provider isn't configured yet.",
+  provider_not_configured:
+    "This sign-in provider isn't set up on this server. Sign in with email and password, or create an account.",
   email_unverified:
     "Your email isn't verified with that provider, so it can't be used to sign in here.",
   access_denied: "Sign-in was cancelled.",

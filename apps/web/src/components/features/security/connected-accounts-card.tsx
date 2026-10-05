@@ -10,6 +10,7 @@ import type { UnlinkOAuthResponse } from "@/api/types";
 import { OAUTH_PROVIDERS, oauthStartUrl, resolveOauthReason } from "@/components/features/auth";
 import { SectionCard } from "@/components/ui/layout/section-card";
 import { useSession } from "@/hooks/use-auth";
+import { useAuthOptions } from "@/hooks/use-auth-options";
 import { useConfirm } from "@/providers/confirm-provider";
 
 interface ConnectedAccountsCardProps {
@@ -22,6 +23,7 @@ interface ConnectedAccountsCardProps {
 export function ConnectedAccountsCard(props: ConnectedAccountsCardProps): ReactElement {
   const { oauthResult, provider, reason } = props;
   const { user } = useSession();
+  const options = useAuthOptions();
   const confirm = useConfirm();
 
   const linked = user?.providers ?? [];
@@ -76,7 +78,11 @@ export function ConnectedAccountsCard(props: ConnectedAccountsCardProps): ReactE
               <Box>
                 <Typography variant="body2Strong">{label}</Typography>
                 <Typography variant="captionMuted">
-                  {isLinked ? "Connected" : "Not connected"}
+                  {isLinked
+                    ? "Connected"
+                    : options.data?.providers[id]
+                      ? "Not connected"
+                      : "Not set up on this server"}
                 </Typography>
               </Box>
               {isLinked ? (
@@ -97,7 +103,11 @@ export function ConnectedAccountsCard(props: ConnectedAccountsCardProps): ReactE
                   </span>
                 </Tooltip>
               ) : (
-                <Button variant="outlined" onClick={() => link(id)}>
+                <Button
+                  variant="outlined"
+                  disabled={!options.data?.providers[id]}
+                  onClick={() => link(id)}
+                >
                   Link
                 </Button>
               )}

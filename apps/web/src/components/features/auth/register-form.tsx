@@ -5,12 +5,14 @@ import { type RegisterInput, RegisterSchema } from "@jobpilot/contracts/auth";
 import { Alert, Link, Stack, Typography } from "@mui/material";
 import { useAppForm } from "@/components/ui/form/tanstack";
 import { useAuthActions } from "@/hooks/use-auth";
+import { useAuthOptions } from "@/hooks/use-auth-options";
 import { OAuthButtons } from "./oauth-buttons";
 
 const DEFAULT_VALUES: RegisterInput = { email: "", password: "" };
 
 export function RegisterForm(): ReactElement {
   const { register } = useAuthActions();
+  const options = useAuthOptions();
 
   const form = useAppForm({
     defaultValues: DEFAULT_VALUES,
@@ -29,6 +31,16 @@ export function RegisterForm(): ReactElement {
     >
       <Stack spacing={2.5}>
         {register.error && <Alert severity="error">{register.error.message}</Alert>}
+        {options.data && !options.data.emailVerificationRequired && (
+          <Alert severity="info">
+            Local development: email verification is skipped for new accounts.
+          </Alert>
+        )}
+        {options.data?.emailVerificationRequired && options.data.emailDelivery === "console" && (
+          <Alert severity="info">
+            Local email delivery: verification links appear in the API log.
+          </Alert>
+        )}
 
         <form.AppField name="email">
           {(field) => (

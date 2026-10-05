@@ -3,7 +3,8 @@
 import type { ReactElement } from "react";
 import type { OAuthProviderInput } from "@jobpilot/contracts/auth";
 import { GitHub, Google } from "@mui/icons-material";
-import { Button, Divider, Stack, Typography } from "@mui/material";
+import { Alert, Button, Divider, Stack, Typography } from "@mui/material";
+import { useAuthOptions } from "@/hooks/use-auth-options";
 import { OAUTH_PROVIDERS, oauthStartUrl } from "./oauth";
 
 const ICONS: Record<OAuthProviderInput, ReactElement> = {
@@ -13,6 +14,10 @@ const ICONS: Record<OAuthProviderInput, ReactElement> = {
 
 /** Google/GitHub sign-in buttons; the API drives the whole redirect flow. */
 export function OAuthButtons(): ReactElement {
+  const options = useAuthOptions();
+  const unavailable = options.data
+    ? OAUTH_PROVIDERS.filter(({ id }) => !options.data?.providers[id]).map(({ label }) => label)
+    : [];
   return (
     <Stack spacing={2}>
       <Divider>
@@ -25,6 +30,7 @@ export function OAuthButtons(): ReactElement {
             variant="outlined"
             fullWidth
             startIcon={ICONS[id]}
+            disabled={!options.data?.providers[id]}
             onClick={() => {
               window.location.href = oauthStartUrl(id);
             }}
@@ -33,6 +39,27 @@ export function OAuthButtons(): ReactElement {
           </Button>
         ))}
       </Stack>
+      {options.isLoading && (
+        <Typography variant="captionMuted">Checking sign-in options…</Typography>
+      )}
+      {options.error && (
+        <Alert
+          severity="warning"
+          action={
+            <Button color="inherit" onClick={() => void options.refetch()}>
+              Retry
+            </Button>
+          }
+        >
+          Could not check sign-in options. Check that the OpenApply backend is running.
+        </Alert>
+      )}
+      {unavailable.length > 0 && (
+        <Typography variant="captionMuted">
+          {unavailable.join(" and ")} sign-in is not set up on this server. Use email and password,
+          or create an account.
+        </Typography>
+      )}
     </Stack>
   );
 }

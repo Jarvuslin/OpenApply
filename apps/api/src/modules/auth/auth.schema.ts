@@ -5,6 +5,13 @@ import { z } from "zod/v4";
 
 export const oauthProviderParams = z.object({ provider: OAuthProviderSchema });
 
+export const authOptionsSchema = z.object({
+  providers: z.object({ google: z.boolean(), github: z.boolean() }),
+  emailPassword: z.boolean(),
+  emailDelivery: z.enum(["email", "console"]),
+  emailVerificationRequired: z.boolean(),
+});
+
 export const oauthStartQuery = z.object({
   intent: z.enum(["login", "link"]).default("login"),
 });

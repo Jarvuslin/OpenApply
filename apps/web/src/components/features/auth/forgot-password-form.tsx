@@ -7,10 +7,12 @@ import { api } from "@/api/client";
 import { useApiMutation } from "@/api/hooks";
 import type { ForgotPasswordResponse } from "@/api/types";
 import { useAppForm } from "@/components/ui/form/tanstack";
+import { useAuthOptions } from "@/hooks/use-auth-options";
 
 const DEFAULT_VALUES: ForgotPasswordInput = { email: "" };
 
 export function ForgotPasswordForm(): ReactElement {
+  const options = useAuthOptions();
   const forgotPassword = useApiMutation<ForgotPasswordResponse, ForgotPasswordInput>((body) =>
     api.auth.password.forgot.post(body),
   );
@@ -25,8 +27,11 @@ export function ForgotPasswordForm(): ReactElement {
     return (
       <Stack spacing={2.5}>
         <Alert severity="success">
-          If an account exists for that address, we&apos;ve sent a password reset link. Check your
-          inbox.
+          {options.data?.emailDelivery === "console"
+            ? "If an account exists, its reset link was written to the local API log. This server has no email delivery configured."
+            : options.data?.emailDelivery === "email"
+              ? "If an account exists for that address, we've sent a password reset link. Check your inbox."
+              : "Your request was accepted. A reset link is available through this server's configured email delivery method if the account exists."}
         </Alert>
         <Typography variant="body2Muted" sx={{ textAlign: "center" }}>
           <Link href="/login" color="primary">
