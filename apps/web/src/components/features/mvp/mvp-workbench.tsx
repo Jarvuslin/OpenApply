@@ -29,6 +29,7 @@ import { apiErrorMessage } from "@/api/error";
 import { EmailSection } from "@/components/features/settings/sections/email-section";
 import { getStatus, injectCommand } from "@/lib/terminal";
 import { useAgentDock } from "@/providers/agent-provider";
+import { RuntimeStatus } from "./runtime-status";
 import { WorkspaceJobs } from "./workspace-jobs";
 import { WorkspaceTabs } from "./workspace-tabs";
 
@@ -496,6 +497,7 @@ export function MvpWorkbench() {
         )}
         {tab === "connections" && (
           <Stack spacing={3} sx={{ maxWidth: 800, mx: "auto" }}>
+            <RuntimeStatus />
             <Stack spacing={1}>
               <MailOutlined />
               <Typography variant="h2">Keep the loop connected.</Typography>

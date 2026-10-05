@@ -1,0 +1,33 @@
+name: Platform checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  runtime:
+    env:
+      DOTNET_EnableWriteXorExecute: "0"
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-14, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+      - name: Runtime and environment tests
+        run: node --test scripts/runtime.test.mjs
+      - name: Terminal tests
+        run: dotnet test -c Release
+      - name: Validate Mac VM configuration (no VM boot)
+        if: runner.os == 'macOS'
+        run: |
+          brew install lima
+          limactl validate scripts/lima.yaml

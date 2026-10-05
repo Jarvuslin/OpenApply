@@ -29,6 +29,8 @@ public sealed record StatusResponse
     public bool CanUpdate { get; init; }
 
     public required PilotStatus Pilot { get; init; }
+
+    public HostRuntime Runtime { get; init; } = HostRuntime.Current();
 }
 
 public sealed class HostStatus(TerminalSession session, HostInstall install, UrlScheme scheme, PilotLoop pilot)

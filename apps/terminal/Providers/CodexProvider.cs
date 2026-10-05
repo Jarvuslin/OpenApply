@@ -68,7 +68,8 @@ internal sealed partial class CodexProvider : Provider
         List<string> overrides = [.. settings?.ConfigOverrides ?? []];
         foreach (var (name, server) in mcp?.McpServers ?? [])
         {
-            overrides.AddRange(McpOverrides(name, server, logger, resolveExecutable));
+            var resolved = server with { Args = server.Args?.Select(arg => arg.Replace("${CLAUDE_PLUGIN_ROOT}", pluginDir, StringComparison.Ordinal)).ToArray() };
+            overrides.AddRange(McpOverrides(name, resolved, logger, resolveExecutable));
         }
 
         return [.. overrides];

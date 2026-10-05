@@ -1,18 +1,8 @@
 {
   "mcpServers": {
     "playwright": {
-      "command": "wsl",
-      "args": [
-        "-d",
-        "JobPilot-MVP",
-        "--",
-        "node",
-        "/home/pilot/jobpilot-tools/node_modules/@playwright/mcp/cli.js",
-        "--cdp-endpoint",
-        "http://127.0.0.1:9222",
-        "--output-dir",
-        "."
-      ]
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/bin/openapply-browser.mjs"]
     }
   }
 }

@@ -14,7 +14,7 @@ id pilot >/dev/null 2>&1 || adduser -D pilot
 if [ ! -f /home/pilot/jobpilot-tools/node_modules/@playwright/mcp/cli.js ]; then
   (cd /home/pilot && npm install --prefix /home/pilot/jobpilot-tools --ignore-scripts --no-audit --no-fund @playwright/mcp@0.0.83)
 fi
-mkdir -p /home/pilot/browser
+mkdir -p /home/pilot/browser /home/pilot/openapply
 chown -R pilot:pilot /home/pilot
 pgrep Xvfb >/dev/null || (nohup Xvfb :99 -screen 0 1366x900x24 -nolisten tcp >/tmp/jobpilot-display.log 2>&1 </dev/null &)
 sleep 1

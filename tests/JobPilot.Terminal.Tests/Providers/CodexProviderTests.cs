@@ -15,6 +15,15 @@ public sealed class CodexProviderTests : IDisposable
         CodexProvider.ConfigOverrides(temp.Root, NullLogger.Instance, resolve);
 
     [Fact]
+    public void ConfigOverrides_ResolvesPluginRootWithoutShellExpansion()
+    {
+        temp.File(".mcp.json", """{"mcpServers":{"playwright":{"command":"node","args":["${CLAUDE_PLUGIN_ROOT}/bin/openapply-browser.mjs"]}}}""");
+        var overrides = Overrides(_ => "/usr/bin/node");
+        Assert.DoesNotContain(overrides, value => value.Contains("${CLAUDE_PLUGIN_ROOT}", StringComparison.Ordinal));
+        Assert.Contains(overrides, value => value.Contains("openapply-browser.mjs", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void ConfigOverrides_TranslatesAStdioMcpServer()
     {
         temp.File(

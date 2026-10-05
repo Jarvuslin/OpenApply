@@ -35,6 +35,12 @@ export interface PilotHealth {
 }
 
 export interface SessionStatus {
+  runtime?: {
+    platform: string;
+    architecture: string;
+    backend: string;
+    support: string;
+  };
   /** "ok", or "degraded" when the host runs but sessions can't start (e.g. plugin tree missing). */
   status: string;
   session: "running" | "stopped";

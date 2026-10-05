@@ -4,8 +4,8 @@ export function orderedInstallCommands() {
   return [
     { label: "Clone (GitHub access required)", command: `git clone ${GITHUB_URL}.git` },
     {
-      label: "Start after setup (PowerShell, repository root)",
-      command: "./scripts/start-mvp.ps1",
+      label: "Start after setup (repository root)",
+      command: "node scripts/openapply.mjs start",
     },
   ];
 }

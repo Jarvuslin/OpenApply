@@ -1,0 +1,4 @@
+#!/bin/sh
+dir=$(dirname "$0")
+command -v cygpath >/dev/null 2>&1 && dir=$(cygpath -m "$dir")
+MSYS_NO_PATHCONV=1 exec node "$dir/stage.mjs" "$@"

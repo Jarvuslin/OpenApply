@@ -1,0 +1,38 @@
+# Native guest architecture is selected by Lima; no host folders are mounted.
+minimumLimaVersion: "2.0.0"
+vmType: vz
+arch: default
+cpus: 2
+memory: 4GiB
+disk: 30GiB
+mounts: []
+containerd:
+  system: false
+  user: false
+images:
+  - location: "https://dl-cdn.alpinelinux.org/alpine/v3.23/releases/cloud/nocloud_alpine-3.23.4-x86_64-uefi-cloudinit-r0.qcow2"
+    arch: x86_64
+    digest: "sha512:849196e26640b33fb1f106d46cebdf341c715f7f49363564eacece8097464b6af7041618e94c4eb1a006394663252a86c0fb3158fee5d0ffb094899730679a71"
+  - location: "https://dl-cdn.alpinelinux.org/alpine/v3.23/releases/cloud/nocloud_alpine-3.23.4-aarch64-uefi-cloudinit-r0.qcow2"
+    arch: aarch64
+    digest: "sha512:737b0eb365944ffcf6da477c059c105bbde222942fd5a8380c07db088365b18dbc60a0f2824ea9a3904d57e194e0d05a7074302c3ebc104d0aecb6ddc6ffd91c"
+portForwards:
+  - guestPort: 5433
+    hostPort: 5433
+    hostIP: "127.0.0.1"
+  - guestPort: 9222
+    hostPort: 9222
+    hostIP: "127.0.0.1"
+  - guestPort: 6080
+    hostPort: 6080
+    hostIP: "127.0.0.1"
+  - guestPortRange: [1, 65535]
+    ignore: true
+provision:
+  - mode: system
+    script: |
+      #!/bin/sh
+      set -eu
+      sed -i '/\/community/s/^#//' /etc/apk/repositories
+      apk add --no-cache bash nodejs npm chromium xvfb x11vnc novnc websockify postgresql18 postgresql18-client font-noto sudo
+      echo openapply-lima-v1 > /etc/openapply-runtime

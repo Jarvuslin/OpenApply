@@ -52,7 +52,7 @@ export function AgentOfflineCard(props: AgentOfflineCardProps): ReactElement {
           Start the local host for {providerLabel} from the repository root:
         </Typography>
         <CopyField
-          value="./scripts/start-mvp.ps1"
+          value="node scripts/openapply.mjs start"
           copyMessage="Command copied"
           ariaLabel="Copy setup command"
         />

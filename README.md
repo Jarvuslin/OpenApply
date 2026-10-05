@@ -5,7 +5,7 @@
 
 A personal workspace for finding roles, improving your résumé, and preparing job applications with a local agent.
 
-[Setup](#clone-and-setup-windows) · [Current capabilities](#current-capabilities) · [Architecture](docs/architecture.md) · [MIT license](LICENSE)
+[Setup](#setup) · [Mac beta](#clone-and-setup-mac-beta) · [Current capabilities](#current-capabilities) · [Architecture](docs/architecture.md) · [MIT license](LICENSE)
 </div>
 
 ## Current capabilities
@@ -14,15 +14,71 @@ A personal workspace for finding roles, improving your résumé, and preparing j
 - PDF, DOCX and TXT résumé extraction through a locally authenticated Claude Code session; manual entry is also available.
 - Original résumé preservation, tailored variants, PDF export and a before/after rewrite review.
 - A job board importing public Ashby and Greenhouse company feeds, with location, level and required-experience filters.
-- An embedded Claude Code terminal and a persistent, headed Chromium browser in a WSL2 VM, visible through noVNC.
+- An embedded Claude Code terminal and a persistent, headed Chromium browser in a WSL2 VM (Windows) or Lima VM (Mac beta), visible through noVNC.
 - A preparation-only trial that inspects a real posting and form, generates a résumé variant and records missing answers.
 - Existing campaign, credential-vault, inbox and Pilot infrastructure inherited from JobPilot.
 
 **Status: development MVP.** Fully unattended signup → email activation → application submission has not passed an independent end-to-end test. CAPTCHA solving is disabled; blocking challenges, MFA and missing facts pause the flow. Public feed availability does not guarantee that an employer form will accept automation. Claude is the tested local provider; Codex integration is inherited and its Windows launcher still needs validation. No hosted OpenApply service or OpenApply installer release is published.
 
-## Clone and setup (Windows)
+## Setup
 
-The VM configuration currently targets **Windows x64 + WSL2 + Alpine Linux**. Web/API code can run on other platforms, but the bundled VM scripts and browser MCP command require adaptation. Run the following commands in PowerShell from the repository root unless noted.
+One codebase automatically selects the local runtime:
+
+| Machine | Browser VM | Validation |
+| --- | --- | --- |
+| Windows x64 | Existing WSL2 / Alpine | Local development checks |
+| Apple Silicon Mac, macOS 14+ | Lima / native ARM64 Alpine | Beta; real-device acceptance pending |
+| Intel Mac, macOS 14+ | Lima / native x86-64 Alpine | Beta; separate Intel acceptance pending |
+
+Detection runs on the local host. Connections displays the host OS, architecture
+and runtime. Linux hosts and Windows ARM are not supported by this launcher.
+The Mac beta is source-based; no signed/notarized application bundle is provided.
+
+### Clone and setup (Mac beta)
+
+Install Git, Node.js 22+, Bun, .NET SDK 10, Claude Code, and
+[Lima 2+](https://lima-vm.io/docs/installation/). If you already use Homebrew,
+`brew install lima` installs the VM manager. Use native ARM64 tools on Apple
+Silicon. Run `claude` once and complete your own login.
+
+```sh
+git clone https://github.com/Jarvuslin/OpenApply.git
+cd OpenApply
+bun install --frozen-lockfile
+node scripts/openapply.mjs doctor
+node scripts/openapply.mjs setup
+node scripts/openapply.mjs start
+```
+
+Setup generates local secrets without overwriting existing files, downloads a
+checksum-pinned Alpine cloud image, creates the `openapply` Lima VM, installs
+browser/database packages, applies database migrations and builds the terminal.
+Initial downloads may take several minutes. If VM provisioning fails, inspect
+Lima's logs before retrying; the setup command does not delete existing VMs.
+
+Open **http://localhost:4100/mvp**. The agent and résumé extraction run on your
+Mac using your Claude login; Chromium runs inside Linux. The VM does not mount
+your home directory. `openapply-stage "<resume path>"` copies an explicitly
+selected document to the VM for the agent's upload tool.
+
+Keep the start terminal open. **Ctrl+C** stops the app processes. Then stop the VM:
+
+```sh
+node scripts/openapply.mjs stop
+```
+
+VM data and cookies persist. For diagnostics, use
+`limactl shell openapply -- sudo cat /tmp/openapply-start.log`.
+Ports 5433, 9222 and 6080 must be free before starting a stopped VM. Setup does not
+connect Gmail or submit applications. Follow the Gmail instructions below.
+
+**Mac support remains beta until the [real-device acceptance checklist](docs/mac-beta.md)
+passes.** CI checks both Mac architectures' host code and configuration; it does
+not boot the browser VM or prove an unattended employer application works.
+
+### Clone and setup (Windows)
+
+The Windows runtime uses **Windows x64 + WSL2 + Alpine Linux**. Run the following commands in PowerShell from the repository root unless noted.
 
 ### 1. Prerequisites
 
@@ -36,6 +92,9 @@ Install:
 - [Claude Code](https://code.claude.com/docs/en/setup), available as `claude` on PATH
 
 Run `claude` once and sign in with your own account. Subscription limits and provider terms still apply. This project does not include access to any model account.
+
+After the Windows setup below, you can also use the shared commands
+`node scripts/openapply.mjs start`, `doctor` and `stop`; they select WSL automatically.
 
 ```powershell
 git clone https://github.com/Jarvuslin/OpenApply.git
@@ -108,6 +167,10 @@ This setup is for your own trusted machine: PostgreSQL uses local trust authenti
 
 Personal data is stored in the VM database, the VM browser profile and `apps/api/storage/`. `.env*`, storage, `.temp/`, browser snapshots and logs are ignored by Git. Back up your database and encryption key together. Review generated résumé changes; the model can still make factual or editorial mistakes.
 
+Staged application files live in `/home/pilot/openapply` inside the VM and persist
+across restarts; remove them when no longer needed. Staging does not send files
+to an employer.
+
 ## Development checks
 
 ```powershell
@@ -116,6 +179,7 @@ bun run knip
 bun run --cwd apps/api typecheck
 bun run --cwd apps/web typecheck
 bun run test
+node --test scripts/runtime.test.mjs
 dotnet test -c Release
 ```
 
