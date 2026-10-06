@@ -7,10 +7,6 @@ import { useApiMutation } from "@/api/hooks";
 import type { ResendVerificationResponse } from "@/api/types";
 import { useSession } from "@/hooks/use-auth";
 
-/**
- * Non-blocking nudge for signed-in, unverified users. Applying and networking are
- * gated server-side until the address is verified; everything else works.
- */
 export function VerifyEmailBanner(): ReactElement | null {
   const { user } = useSession();
   const [dismissed, setDismissed] = useState(false);
@@ -39,7 +35,7 @@ export function VerifyEmailBanner(): ReactElement | null {
         </Button>
       }
     >
-      Verify your email ({user.email}) to unlock applying and networking.
+      Verify your email ({user.email}) to unlock applying.
     </Alert>
   );
 }

@@ -47,8 +47,7 @@ function DigestCounts(props: DigestCountsProps): ReactElement {
   const parts = [
     `${countOf(detail, "applicationsCreated")} applied`,
     `${countOf(detail, "jobsFailed") + countOf(detail, "jobsSkipped")} not applied`,
-    `${countOf(detail, "networkingSent")} networking (${countOf(detail, "networkingReplies")} replies)`,
-    `${countOf(detail, "promotionsPosted")} posts`,
+
     `${countOf(detail, "openQuestions")} open`,
   ];
   return <Typography variant="captionMuted">{parts.join(" · ")}</Typography>;

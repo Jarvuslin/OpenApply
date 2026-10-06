@@ -10,16 +10,7 @@ import {
   MAX_PAGE_SIZE,
   type PaginationQuery,
 } from "@jobpilot/contracts/pagination";
-import type {
-  PilotJournalKind,
-  PilotQuestionStatus,
-  PromotionStatus,
-} from "@jobpilot/contracts/pilot";
-import type {
-  UpworkInboxKind,
-  UpworkInboxStatus,
-  UpworkProposalStatus,
-} from "@jobpilot/contracts/upwork";
+import type { PilotJournalKind, PilotQuestionStatus } from "@jobpilot/contracts/pilot";
 import { api } from "@/api/client";
 import { queryKeys } from "@/api/query-keys";
 
@@ -43,21 +34,6 @@ export const authQueries = {
 
 export const userQueries = {
   detail: () => ({ queryKey: queryKeys.user.detail(), queryFn: () => api.user.get() }),
-  portfolio: () => ({
-    queryKey: queryKeys.user.portfolio(),
-    queryFn: () => api.user.portfolio.get(),
-  }),
-  portfolioPreview: () => ({
-    queryKey: queryKeys.user.portfolioPreview(),
-    queryFn: () => api.user.portfolio.preview.get(),
-  }),
-};
-
-export const leaderboardQueries = {
-  list: (window: "week" | "month" | "all") => ({
-    queryKey: queryKeys.leaderboard.list(window),
-    queryFn: () => api.public.portfolio.leaderboard.get({ query: { window } }),
-  }),
 };
 
 export const credentialQueries = {
@@ -132,10 +108,6 @@ export const campaignQueries = {
     queryKey: queryKeys.campaigns.reasons(id),
     queryFn: () => api.campaigns({ id }).jobs.reasons.get(),
   }),
-  networking: (campaignId: string, query: PaginationQuery = OPTIONS_PAGE) => ({
-    queryKey: queryKeys.campaigns.networking(campaignId, query),
-    queryFn: () => api.campaigns({ id: campaignId }).networking.get({ query }),
-  }),
 };
 
 /** The inbox list filter: a review status, or "all" for no filter. */
@@ -157,45 +129,6 @@ export const emailQueries = {
   message: (messageId: string) => ({
     queryKey: queryKeys.email.message(messageId),
     queryFn: () => api.email.messages({ id: messageId }).get(),
-  }),
-};
-
-export const upworkProposalQueries = {
-  list: (query: PaginationQuery & { status?: UpworkProposalStatus }) => ({
-    queryKey: queryKeys.upworkProposals.list(query),
-    queryFn: () => api.upwork.proposals.get({ query }),
-  }),
-  detail: (id: string) => ({
-    queryKey: queryKeys.upworkProposals.detail(id),
-    queryFn: () => api.upwork.proposals({ id }).get(),
-  }),
-};
-
-export const upworkProfileQueries = {
-  detail: () => ({
-    queryKey: queryKeys.upworkProfile.detail(),
-    queryFn: () => api.upwork.profile.get(),
-  }),
-};
-
-export const upworkAccountQueries = {
-  detail: () => ({
-    queryKey: queryKeys.upworkAccount.detail(),
-    queryFn: () => api.upwork.account.get(),
-  }),
-};
-
-export const upworkInboxQueries = {
-  list: (query: PaginationQuery & { kind?: UpworkInboxKind; status?: UpworkInboxStatus }) => ({
-    queryKey: queryKeys.upworkInbox.list(query),
-    queryFn: () => api.upwork.inbox.get({ query }),
-  }),
-};
-
-export const coverLetterQueries = {
-  list: (query: PaginationQuery) => ({
-    queryKey: queryKeys.coverLetters.list(query),
-    queryFn: () => api["cover-letters"].get({ query }),
   }),
 };
 
@@ -246,10 +179,7 @@ export const pilotQueries = {
     queryKey: queryKeys.pilot.questions({ status: status ?? "all" }),
     queryFn: () => api.pilot.questions.get({ query: status ? { status } : {} }),
   }),
-  promotions: (status?: PromotionStatus, page: PaginationQuery = OPTIONS_PAGE) => ({
-    queryKey: queryKeys.pilot.promotions({ status: status ?? "all", ...page }),
-    queryFn: () => api.pilot.promotions.get({ query: { ...page, ...(status && { status }) } }),
-  }),
+
   pushKey: () => ({
     queryKey: queryKeys.pilot.pushKey(),
     queryFn: () => api.push["vapid-key"].get(),

@@ -2,7 +2,7 @@
 name: job-worker
 description: >-
   Internal per-job worker for JobPilot apply/score loops. The auto-apply, apply,
-  resume, search, and upwork-search skills delegate ONE job to it; it does the
+  resume and search skills delegate ONE job to it; it does the
   heavy browser work in isolated context and returns only a compact JSON result.
   Not for direct user invocation.
 tools: Bash, Read, Skill, mcp__plugin_jobpilot_playwright__*

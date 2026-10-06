@@ -11,7 +11,6 @@ import type {
 /** Campaign kinds whose scored `pending` rows the pilot promotes: auto-apply and pasted links. */
 export const PROMOTABLE_SOURCES: CampaignSource[] = ["auto_apply", "apply"];
 
-/** A function rather than a service method, so the job and networking services need not inject one. */
 export async function ensureCampaignOwned(
   prisma: PrismaClient,
   userId: string,

@@ -7,7 +7,6 @@ import {
   emailBodyWhere,
   journalDigestOldWhere,
   journalOldWhere,
-  promotionPostWhere,
   questionTerminalWhere,
   type RetentionCutoffs,
   refreshTokenWhere,
@@ -47,10 +46,7 @@ const RULES = [
     key: "refreshTokens",
     run: (db, c) => db.refreshToken.deleteMany({ where: refreshTokenWhere(c) }),
   },
-  {
-    key: "promotions",
-    run: (db, c) => db.promotionPost.deleteMany({ where: promotionPostWhere(c) }),
-  },
+
   {
     key: "emailBodiesBlanked",
     run: (db, c) => db.emailMessage.updateMany({ where: emailBodyWhere(c), data: { rawBody: "" } }),

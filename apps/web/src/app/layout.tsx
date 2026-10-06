@@ -42,8 +42,7 @@ export const metadata: Metadata = {
     "Claude Code",
     "Codex",
     "resume tailoring",
-    "AI recruiter networking",
-    "Upwork proposals",
+
     "job board automation",
   ],
   authors: [{ name: "OpenApply contributors", url: "https://github.com/Jarvuslin/OpenApply" }],

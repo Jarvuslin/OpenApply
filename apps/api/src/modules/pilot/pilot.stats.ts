@@ -14,14 +14,6 @@ export function countAppliedToday(
   return prisma.application.count({ where: { userId, appliedAt: { gte: startOfDay(now) } } });
 }
 
-export function countSentToday(
-  prisma: Pick<PrismaClient, "networkingMessage">,
-  userId: string,
-  now: Date,
-): Promise<number> {
-  return prisma.networkingMessage.count({ where: { userId, sentAt: { gte: startOfDay(now) } } });
-}
-
 /** Today's skipped and failed jobs, with skip reasons bucketed most frequent first. */
 export async function countTodayOutcomes(
   prisma: Pick<PrismaClient, "job">,

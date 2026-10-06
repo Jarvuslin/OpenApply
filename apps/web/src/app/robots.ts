@@ -17,18 +17,18 @@ export default function robots(): MetadataRoute.Robots {
         disallow: [
           "/admin",
           "/pilot",
-          "/portfolio",
+
           "/workspace",
           "/campaigns",
           "/applications",
           "/analytics",
           "/inbox",
-          "/networking",
+
           "/documents",
           "/resumes",
           "/cover-letters",
           "/boards",
-          "/upwork",
+
           "/settings",
           "/onboarding",
         ],

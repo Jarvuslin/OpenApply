@@ -170,34 +170,8 @@ export const USER_DEFAULT_VALUES: UserWithAutoApplyInput = {
 };
 
 /** The /u/[username] slug. Lowercased; letters, digits, and interior hyphens only. */
-export const usernameSchema = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .min(3, "At least 3 characters")
-  .max(30, "At most 30 characters")
-  .regex(
-    /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/,
-    "Use letters, numbers, and hyphens (no leading/trailing hyphen)",
-  );
 
 export const AVAILABILITY = ["open", "not_looking"] as const;
 export const availabilitySchema = z.enum(AVAILABILITY);
 
-export type Availability = z.infer<typeof availabilitySchema>;
-
 /** What the owner has chosen to publish; every flag is opt-in. */
-export const portfolioVisibilitySchema = z.object({
-  showResume: z.boolean(),
-  showWebsite: z.boolean(),
-  showLinkedin: z.boolean(),
-  showGithub: z.boolean(),
-});
-
-/** Partial update of the user's portfolio settings; every field optional. */
-export const portfolioSettingsPatchSchema = portfolioVisibilitySchema.partial().extend({
-  username: usernameSchema.optional(),
-  availability: availabilitySchema.nullable().optional(),
-});
-
-export type PortfolioSettingsPatch = z.infer<typeof portfolioSettingsPatchSchema>;

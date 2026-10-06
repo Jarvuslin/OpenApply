@@ -8,7 +8,7 @@ export const metadata = buildDocsMetadata("campaigns-and-skills", {
 # Campaigns & skills
 
 A campaign is one run of the agent against a goal: find jobs, apply to them,
-or reach the people hiring. Skills are the units of work the agent performs.
+and track your applications. Skills are the units of work the agent performs.
 [The Pilot](/docs/pilot) runs all of this for you; everything below is the
 same work driven by hand.
 
@@ -16,7 +16,7 @@ You don't type skill names. After `setup`, every skill is dispatched by an
 action in the dashboard (creating a campaign, applying to a job, scanning your
 inbox) and the agent carries it out in the dock while you watch.
 
-## The four campaign modes
+## The three campaign modes
 
 **Search.** The agent searches a board and scores every role against your
 resume, but doesn't apply. You review the ranked list on the campaign page
@@ -32,30 +32,19 @@ This is what the composer opens on.
 campaign dialog instead of picking a board - the agent reviews fit, tailors
 your resume, and applies to each one in turn. No board or base resume needed.
 
-**Networking.** The agent finds the hiring manager or recruiter behind a role
-and drafts a personalized email or LinkedIn message. Nothing is sent without
-your approval.
-
 ## What each dashboard action runs
 
 | In the dashboard | What the agent does |
 | --- | --- |
 | **New campaign → Search** (`search`) | Searches a board and ranks every result against your resume. |
 | **New campaign → Auto-apply** (`auto-apply`) | Searches, then applies one job at a time until done, paused, or capped. |
-| **New campaign → Networking** (`networking`) | Finds the hiring contact for each role and drafts a personalized message. |
-| **New campaign** on Upwork (`upwork-search`) | Searches Upwork, filters out low-quality clients, ranks the rest. |
 | **New campaign → Apply to links** (`apply`) | Applies to each pasted job after a fit review. |
 | **Campaign → Resume** (`resume-campaign`) | Picks a paused campaign back up on its remaining approved jobs. |
 | **Campaign → Rescan skipped** (`rescan-skipped`) | Re-scores skipped jobs and promotes the wrongly dropped ones. |
 | **Campaign → Retry failed** (`auto-apply`) | Re-runs the applications that errored out. |
 | **Inbox → Scan pending** (`scan-inbox`) | Classifies new mail, matches it to applications, proposes status moves. |
-| **Networking → Regenerate** (`networking`) | Rewrites a drafted message. |
 | Uploading a resume, or **Extract from PDF** (`extract-resume`) | Parses the PDF into the structured editor. |
 | **Resume → Tailor** (`tailor-resume`) | Rewrites a resume variant against one job description. |
-| **Upwork → Proposal** (`upwork-proposal`) | Drafts a short, targeted proposal for one posting. |
-| **Upwork → Submit** (`upwork-submit`) | Submits a draft, after showing the Connects cost and asking. |
-| **Upwork → Profile** (`upwork-profile`) | Improves your Upwork title, overview and skills; writes back on approval. |
-| **Upwork → Inbox sync** (`upwork-sync`) | Pulls invitations, offers, messages and your Connects balance. |
 | **Pilot → Start** (`pilot`) | Runs [Pilot](/docs/pilot) cycles on a loop until you stop it. |
 
 Uploading a PDF during onboarding or from the resumes list starts extraction on
@@ -65,8 +54,7 @@ an **Extract from PDF** button (**Re-extract from PDF** once there's content).
 The rest run on their own, mid-job. `tailor-resume` picks or creates the right
 resume variant per application, and `cover-letter` drafts a letter when a form
 asks for one. `get-code` pulls verification codes from your mailbox during
-logins, and `solve-captcha` handles captchas. `interview` drafts availability
-replies and builds prep sheets,
+logins, and `solve-captcha` handles captchas. The Pilot drafts availability replies for review.
 `review-resume` leaves a [suggested rewrite](/docs/getting-started) on the
 resume page after an upload, and `humanizer` keeps generated text reading
 naturally.
@@ -105,26 +93,5 @@ too much:
   re-scores the campaign's skipped jobs and promotes the ones dropped for bad
   reasons, such as a sparse job description or a mislabeled location, back to
   approved. You can also select individual skipped rows and rescan just those.
-
-## Upwork
-
-Upwork runs on Upwork's own MCP connector rather than a browser, so there is no
-password to store. Connect it once: run `/mcp` in the terminal, pick `upwork`,
-and sign in with your Upwork account.
-
-You're picking clients as much as jobs here, and nothing is sent without you:
-
-- `upwork-search` filters on payment verification, spend, hires and how many
-  proposals a job already has, then ranks what's left against your profile. It
-  saves recommendations; it never submits.
-- `upwork-proposal` drafts a short proposal for a specific job, written for
-  your review before you send it.
-- `upwork-submit` sends that draft. It shows the Connects cost and your
-  balance, and waits for your yes.
-- `upwork-profile` proposes a better title, overview and skill set and writes
-  them back after you approve. Your portfolio and hourly rate are suggested
-  too, but Upwork has no write access for those, so you copy them across.
-- `upwork-sync` fills the Upwork inbox with your invitations, offers and unread
-  messages.
 
 Next up: [Email setup](/docs/email-setup), so replies land on your pipeline.

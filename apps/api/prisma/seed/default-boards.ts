@@ -70,11 +70,4 @@ export const DEFAULT_BOARDS: Prisma.JobBoardCreateManyInput[] = [
     searchUrl: "https://4dayweek.io/remote-jobs",
     sortOrder: 10,
   },
-  // Picker-only, never default: the upwork-* skills are opt-in for freelancers.
-  {
-    name: "Upwork",
-    domain: "upwork.com",
-    searchUrl: "https://www.upwork.com/nx/search/jobs/",
-    sortOrder: 11,
-  },
 ];

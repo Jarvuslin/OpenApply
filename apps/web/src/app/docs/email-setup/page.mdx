@@ -8,7 +8,7 @@ export const metadata = buildDocsMetadata("email-setup", {
 
 Connecting email powers the inbox (recruiter replies are classified and
 matched to applications), verification codes (the agent reads sign-in codes
-during applies), and networking (messages are sent from your own address).
+during applies), and approved interview replies.
 
 OpenApply connects to Gmail with **your own** Google OAuth client. It ships no
 shared client, so nothing about your mail passes through anyone else's Google
@@ -27,7 +27,7 @@ user and takes about five minutes.
    [Google Auth Platform → Data access](https://console.cloud.google.com/auth/scopes):
    **Add or remove scopes**, search for each, tick both Gmail API rows, then
    **Save**. `readonly` powers reply tracking and verification codes; `send`
-   powers networking email.
+   powers approved interview replies.
 5. Keep the app in Testing mode and add your Gmail address under
    [Audience → Test users](https://console.cloud.google.com/auth/audience).
    It's your own project with you as the only user, so Google verification is
@@ -56,7 +56,7 @@ connected account is tied to your profile only.
   Gmail scope isn't on the consent screen. Add both under **Data access**,
   then disconnect and reconnect in **Settings → Email** so a new token with
   the right scopes is issued.
-- **Mailbox connects read-only, or networking can't send.** The token was
+- **Mailbox connects read-only, or replies cannot be sent.** The token was
   issued without `gmail.send`. Add the scope under **Data access**, then use
   **Reconnect to enable sending** in **Settings → Email**.
 - **Google 500 after publishing.** A published app using restricted Gmail

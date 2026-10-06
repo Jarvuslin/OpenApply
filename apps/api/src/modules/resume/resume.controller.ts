@@ -161,17 +161,3 @@ export const resumeController = new Elysia({
       description: "Removes the resume's uploaded source file and clears its source metadata.",
     },
   });
-
-/** Unauthenticated, for recipient-reachable links such as networking emails. */
-export const publicResumeController = new Elysia({
-  prefix: "/public/resumes",
-  detail: { tags: ["Resumes"] },
-}).get("/:id/pdf", ({ params }) => svc.renderPublicPdf(params.id), {
-  params: idParam,
-  beforeHandle: rateLimit(RATE_LIMITS.publicResumePdf),
-  detail: {
-    summary: "Render resume PDF (public)",
-    description:
-      "Streams a resume as a PDF without authentication, keyed by the resume's unguessable uuid.",
-  },
-});

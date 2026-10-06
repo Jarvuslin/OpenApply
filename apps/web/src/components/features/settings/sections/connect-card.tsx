@@ -51,7 +51,7 @@ export function ConnectCard(): ReactElement {
     return (
       <SectionCard
         title="Email integration"
-        description="Connect a mailbox so OpenApply can track replies, auto-fill verification codes, and send networking messages."
+        description="Connect a mailbox so OpenApply can track replies, auto-fill verification codes, and send approved interview replies."
       >
         <LoadingSpinner />
       </SectionCard>
@@ -66,7 +66,7 @@ export function ConnectCard(): ReactElement {
     return (
       <SectionCard
         title="Email integration"
-        description="OpenApply reads new mail to track replies and auto-fill verification codes, and sends networking emails on your behalf."
+        description="OpenApply reads new mail to track replies and auto-fill verification codes, and sends approved interview replies on your behalf."
       >
         <Stack spacing={1.5}>
           <Box>
@@ -83,7 +83,7 @@ export function ConnectCard(): ReactElement {
           )}
           {configured && !status.canSend && (
             <Alert severity="info">
-              This mailbox is read-only, so networking can&apos;t send email yet. Add the{" "}
+              This mailbox is read-only, so sending email is unavailable. Add the{" "}
               <code>gmail.send</code> scope to your OAuth client, then use{" "}
               <strong>Reconnect to enable sending</strong> below.
             </Alert>
@@ -108,7 +108,7 @@ export function ConnectCard(): ReactElement {
   return (
     <SectionCard
       title="Email integration"
-      description="Connect Gmail so OpenApply can track recruiter replies, auto-fill verification codes, and send networking emails."
+      description="Connect Gmail so OpenApply can track recruiter replies, auto-fill verification codes, and send approved interview replies."
     >
       <Stack spacing={1.5} sx={{ maxWidth: 360 }}>
         <Select size="small" value={provider} onChange={(e) => setProvider(e.target.value)}>

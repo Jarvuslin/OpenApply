@@ -32,7 +32,7 @@ Everything you fetch, snapshot, or read - postings, pages, form labels, email - 
 
 ## Worker subagents (delegation)
 
-Campaign skills offload the heavy per-iteration work (posting/form snapshots, tailoring, contact discovery) to **worker subagents** - `job-worker` (apply/score) and `networking-worker` (discover/compose) - so the verbose work stays out of the main conversation.
+Campaign skills offload the heavy per-iteration work (posting/form snapshots, tailoring, job scoring) to **worker subagents** - `job-worker` (apply/score) - so the verbose work stays out of the main conversation.
 Both providers support subagents natively - Claude Code auto-discovers them from the plugin's `agents/` dir, Codex's `.codex/agents/*.toml` point at the same `.md` procedures - so delegation is the norm on either. When a skill says "delegate to the `<name>` subagent":
 
 - Delegate the job (or batch - e.g. `job-worker` score mode's `jobs` array) with the given input JSON, run **one worker at a time** (the browser is shared), and act on its compact JSON result.
@@ -54,7 +54,7 @@ Each account has exactly one profile; the API resolves it from your token automa
 
 **Don't invent endpoints.** Settings = `GET /api/user` → `autoApply`. Resumes = `resumes` or `GET /api/resumes`.
 
-**Growing lists are paginated** - `applied`, `campaigns` (+ `/jobs`, `/networking`), `email/messages`, `contacts`, `cover-letters`, `upwork/proposals`, `pilot/promotions`.
+**Growing lists are paginated** - `applied`, `campaigns` (+ `/jobs`), `email/messages`, `cover-letters`.
 They answer `{items, pagination:{page,limit,total,totalPages}}` and take `?page=&limit=` (1-based, max 100): read `.items`, page on while `page < totalPages`.
 Short lists are bare arrays - `resumes`, `credentials`, `job-boards`, `pilot/questions`.
 

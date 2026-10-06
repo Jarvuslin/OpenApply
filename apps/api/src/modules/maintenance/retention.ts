@@ -75,13 +75,6 @@ export function refreshTokenWhere(c: RetentionCutoffs): Prisma.RefreshTokenWhere
   return { OR: [{ expiresAt: { lt: c.token } }, { revokedAt: { lt: c.token } }] };
 }
 
-export function promotionPostWhere(c: RetentionCutoffs): Prisma.PromotionPostWhereInput {
-  return {
-    status: { in: ["declined", "skipped", "expired", "failed"] },
-    updatedAt: { lt: c.promotion },
-  };
-}
-
 export function emailBodyWhere(c: RetentionCutoffs): Prisma.EmailMessageWhereInput {
   // Blank, never delete: rawBody powers the inbox dialog (falls back to snippet) and re-sync dedupe.
   // Scanned only: the inbox review queue has no age bound, so an old unscanned message still needs its body.

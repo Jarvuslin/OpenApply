@@ -1,6 +1,9 @@
 import { randomBytes } from "node:crypto";
-import type { EmailProvider, OAuthClientUpsertInput } from "@jobpilot/contracts/email";
-import type { SendEmailInput } from "@jobpilot/contracts/networking";
+import type {
+  EmailProvider,
+  OAuthClientUpsertInput,
+  SendEmailInput,
+} from "@jobpilot/contracts/email";
 import { singleton } from "tsyringe";
 import { CryptoService, SECRET_CONTEXTS } from "@/common/crypto";
 import { badRequest, conflict, ErrorCodes, HttpError, unprocessable } from "@/common/errors";
@@ -44,12 +47,6 @@ export class EmailAccountService {
     return { disconnected: true };
   }
 
-  /**
-   * Send an outbound email from the user's connected mailbox. Used by the
-   * networking skill (and the networking board's "approve & send" action). Refreshes
-   * an expired token first and 4xxs with an actionable message when the account
-   * lacks send scope (needs reconnecting).
-   */
   async send(userId: string, body: SendEmailInput) {
     const loaded = await loadFreshAccount(this.prisma, this.crypto, userId);
     if (!loaded) {

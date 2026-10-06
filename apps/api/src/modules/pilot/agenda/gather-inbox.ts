@@ -1,13 +1,8 @@
-import { campaignConfigSchema } from "@jobpilot/contracts/campaign";
 import type { AgendaPayload } from "@jobpilot/contracts/pilot";
-import { HOUR_MS } from "@/common/date/buckets";
 import type { PrismaClient } from "@/generated/prisma/client";
-import { CRASH_OUTCOMES, claimDamped, GATHER_CAP, latestClaim } from "./claims";
+import { CRASH_OUTCOMES, GATHER_CAP } from "./claims";
 
 const INBOX_BATCH = 10;
-const UPWORK_SYNC_STALE_MS = 6 * HOUR_MS;
-/** Marks an ApplicationEvent note as a generated interview prep sheet. */
-const INTERVIEW_PREP_MARKER = "[interview-prep]";
 
 /** Answered questions no open or finished claim has consumed yet. */
 export async function gatherAnsweredQuestions(
@@ -117,56 +112,3 @@ export async function gatherInterviewReplies(
 }
 
 /** Interviewing applications without a prep sheet yet. */
-export async function gatherInterviewPreps(
-  prisma: PrismaClient,
-  userId: string,
-): Promise<AgendaPayload<"interview.prep">[]> {
-  const apps = await prisma.application.findMany({
-    where: {
-      userId,
-      status: "interviewing",
-      events: { none: { kind: "note", note: { startsWith: INTERVIEW_PREP_MARKER } } },
-    },
-    select: {
-      id: true,
-      company: true,
-      title: true,
-      url: true,
-      campaign: { select: { config: true } },
-    },
-  });
-  return apps.map((app) => ({
-    applicationId: app.id,
-    company: app.company,
-    jobTitle: app.title,
-    jobUrl: app.url,
-    resumeId: app.campaign
-      ? (campaignConfigSchema.parse(app.campaign.config).resumeId ?? null)
-      : null,
-  }));
-}
-
-/**
- * A stale Upwork mirror, or none yet. Only for users with Upwork rows: nothing here can tell whether
- * the MCP is connected, so the claim damper is what stops "not connected" repeating every cycle.
- */
-export async function gatherUpworkSync(
-  prisma: PrismaClient,
-  userId: string,
-  now: Date,
-): Promise<AgendaPayload<"upwork.syncInbox"> | null> {
-  const [account, profileCount] = await Promise.all([
-    prisma.upworkAccount.findUnique({ where: { userId }, select: { lastSyncedAt: true } }),
-    prisma.upworkProfile.count({ where: { userId } }),
-  ]);
-  if (!account && profileCount === 0) return null;
-
-  const lastSyncedAt = account?.lastSyncedAt ?? null;
-  const fresh = lastSyncedAt && now.getTime() - lastSyncedAt.getTime() < UPWORK_SYNC_STALE_MS;
-  if (fresh) return null;
-  const lastClaim = await latestClaim(prisma, userId, "upwork.syncInbox");
-  if (claimDamped(lastClaim, now, UPWORK_SYNC_STALE_MS)) return null;
-
-  const unreadCount = await prisma.upworkInboxItem.count({ where: { userId, status: "unread" } });
-  return { lastSyncedAt, unreadCount };
-}

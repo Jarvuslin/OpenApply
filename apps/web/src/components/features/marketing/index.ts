@@ -1,6 +1,5 @@
 export { MarketingFooter } from "./marketing-footer";
 export { MarketingNav } from "./marketing-nav";
-export { MarketingShell } from "./marketing-shell";
 export { Section } from "./section";
 export { SectionEyebrow } from "./section-eyebrow";
 export { BoardStrip } from "./sections/board-strip";

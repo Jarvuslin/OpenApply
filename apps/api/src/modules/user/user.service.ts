@@ -1,14 +1,12 @@
 import {
-  type PortfolioSettingsPatch,
   type SalaryCurrency,
   type SalaryPeriod,
   type UserWithAutoApplyInput,
 } from "@jobpilot/contracts/user";
 import { singleton } from "tsyringe";
-import { conflict, findOwned, notFound } from "@/common/errors";
+import { findOwned } from "@/common/errors";
 import { resumePath } from "@/common/storage/storage";
 import { Prisma, PrismaClient } from "@/generated/prisma/client";
-import { PORTFOLIO_SETTINGS_SELECT } from "./user.mapper";
 
 const USER_SCALAR_SELECT = {
   id: true,
@@ -210,49 +208,6 @@ export class UserService {
     return { primaryResumeId: resumeId };
   }
 
-  async getPortfolioSettings(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: PORTFOLIO_SETTINGS_SELECT,
-    });
-    if (!user) throw notFound("User not found");
-    return user;
-  }
-
   /** Free when no other user holds it; the caller's own current username also reads as free.
    *  `username` arrives already normalized by `usernameSchema` on the route. */
-  async checkUsername(userId: string, username: string) {
-    const owner = await this.prisma.user.findUnique({
-      where: { username },
-      select: { id: true },
-    });
-    return { available: !owner || owner.id === userId };
-  }
-
-  async updatePortfolioSettings(userId: string, body: PortfolioSettingsPatch) {
-    if (body.username !== undefined) {
-      const taken = await this.prisma.user.findUnique({
-        where: { username: body.username },
-        select: { id: true },
-      });
-      if (taken && taken.id !== userId) {
-        throw conflict("That username is already taken.");
-      }
-    }
-
-    const updated = await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        ...(body.username !== undefined && { username: body.username }),
-        ...(body.availability !== undefined && { availability: body.availability }),
-        ...(body.showResume !== undefined && { showResume: body.showResume }),
-        ...(body.showWebsite !== undefined && { showWebsite: body.showWebsite }),
-        ...(body.showLinkedin !== undefined && { showLinkedin: body.showLinkedin }),
-        ...(body.showGithub !== undefined && { showGithub: body.showGithub }),
-      },
-      select: PORTFOLIO_SETTINGS_SELECT,
-    });
-
-    return updated;
-  }
 }

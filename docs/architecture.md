@@ -41,14 +41,14 @@ There are three reasons for the split:
 
 Your data lives at [jobpilot.suxrobgm.net](https://jobpilot.suxrobgm.net):
 your profile, resumes and tailored variants, campaigns, the application
-pipeline, recruiter inbox, networking contacts, and analytics. The site also
+pipeline, recruiter inbox and analytics. The site also
 has a built-in terminal panel (the "agent dock") where you can see and control
 the agent running on your machine.
 
 ### 2. The agent (the plugin)
 
 The JobPilot plugin teaches Claude Code or Codex a set of **skills**: commands
-like `search`, `auto-apply`, `cover-letter`, or `networking`. When you run
+like `search`, `auto-apply`, or `cover-letter`. When you run
 one, the agent:
 
 - reads your profile and resume from the dashboard,
@@ -101,8 +101,7 @@ first (`search`, `apply`) or proceeds on its own up to a cap you set
 ## The Pilot: fully autonomous mode
 
 Everything above still works by hand, but you can also hand the whole loop
-over. Write your instructions once (goals, daily caps, saved searches,
-networking autonomy, approved posting platforms) and the Pilot repeats one
+over. Write your instructions once (goals, daily caps, and saved searches) and the Pilot repeats one
 cycle for as long as it's enabled:
 
 ```text
@@ -136,10 +135,7 @@ time-sensitive happens instead of waiting for the next scheduled check.
 Anything the Pilot isn't sure about (a salary question, an unexpected form
 field, an interview invite) is sent to your phone as a question in the form of
 a one-tap card, and the affected job is parked until you answer. The important
-limits are more than instructions to the AI. Daily apply and networking caps,
-"never send a LinkedIn message automatically," and "never publish a post
-without my approval" are enforced by the dashboard itself, so they hold even
-if a cycle goes off-script.
+limits are more than instructions to the AI. The daily apply cap is enforced by the API.
 
 ## Where your data lives
 

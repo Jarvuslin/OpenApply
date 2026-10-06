@@ -20,9 +20,6 @@ describe("AgendaService morning digest", () => {
         digestApps: 3,
         jobsFailed: 1,
         jobsSkipped: 2,
-        networkingSent: 4,
-        networkingReplies: 1,
-        promotionsPosted: 1,
       },
       MORNING,
       5,
@@ -37,9 +34,6 @@ describe("AgendaService morning digest", () => {
       jobsFailed: 1,
       jobsSkipped: 2,
       openQuestions: 5,
-      networkingSent: 4,
-      networkingReplies: 1,
-      promotionsPosted: 1,
     });
     expect(rec.pushes[0]?.payload).toMatchObject({
       title: "Your Pilot's morning digest",

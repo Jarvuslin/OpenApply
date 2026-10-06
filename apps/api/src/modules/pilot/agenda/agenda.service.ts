@@ -1,7 +1,5 @@
 import {
   type AgendaResponse,
-  channelAutonomy,
-  networkingMode,
   type PilotInstructionsConfig,
   pilotInstructionsConfigSchema,
 } from "@jobpilot/contracts/pilot";
@@ -13,7 +11,7 @@ import { PrismaClient } from "@/generated/prisma/client";
 import { CampaignJobService } from "@/modules/campaign/jobs/job.service";
 import { EmailSyncService } from "@/modules/email/sync/sync.service";
 import { PilotJournalService } from "../journal.service";
-import { countAppliedToday, countSentToday } from "../pilot.stats";
+import { countAppliedToday } from "../pilot.stats";
 import { type AgendaInput, buildAgenda, isPipelineQuiet } from "./build";
 import { writeDigestIfDue } from "./digest";
 import {
@@ -22,25 +20,8 @@ import {
   gatherQueueDrains,
   gatherScorePending,
 } from "./gather-campaigns";
-import {
-  gatherAnsweredQuestions,
-  gatherInbox,
-  gatherInterviewPreps,
-  gatherInterviewReplies,
-  gatherUpworkSync,
-} from "./gather-inbox";
-import {
-  attachWarmContacts,
-  gatherApprovedJobs,
-  gatherBoardHealth,
-  gatherWarmIntroCandidates,
-} from "./gather-jobs";
-import {
-  gatherApprovedNetworking,
-  gatherApprovedPromotions,
-  gatherDuePlatforms,
-  gatherFollowups,
-} from "./gather-outreach";
+import { gatherAnsweredQuestions, gatherInbox, gatherInterviewReplies } from "./gather-inbox";
+import { gatherApprovedJobs, gatherBoardHealth } from "./gather-jobs";
 import { gatherBootstrap, gatherDueSearches } from "./gather-searches";
 import { finalizeIdleCampaigns, promoteScoredPendingJobs, runExpiry } from "./maintenance";
 import { parseAgendaSnapshot } from "./snapshot";
@@ -142,9 +123,6 @@ export class AgendaService {
     now: Date,
   ): Promise<Gathered> {
     const { prisma } = this;
-    // Off channels skip their reads entirely; sends and followups only ever act on email.
-    const emailOn = channelAutonomy(config, "email") !== null;
-    const outreachOn = networkingMode(config) !== null;
 
     const { searchCount, ...base } = await allNamed({
       openQuestions: prisma.pilotQuestion.count({ where: { userId, status: "open" } }),
@@ -153,7 +131,7 @@ export class AgendaService {
       }),
       searchCount: prisma.pilotSearch.count({ where: { userId } }),
       appliedToday: countAppliedToday(prisma, userId, now),
-      networkingSentToday: outreachOn ? countSentToday(prisma, userId, now) : 0,
+
       answeredQuestions: gatherAnsweredQuestions(prisma, userId),
       approvedJobs: gatherApprovedJobs(prisma, userId),
       queueDrains: gatherQueueDrains(prisma, userId, config.minScore, now),
@@ -161,30 +139,15 @@ export class AgendaService {
       boardHealth: gatherBoardHealth(prisma, userId),
       inbox: gatherInbox(prisma, userId),
       interviewReplies: gatherInterviewReplies(prisma, userId),
-      interviewPreps: gatherInterviewPreps(prisma, userId),
-      upworkSync: gatherUpworkSync(prisma, userId, now),
-      approvedNetworking: emailOn ? gatherApprovedNetworking(prisma, userId) : [],
-      followups: emailOn ? gatherFollowups(prisma, userId, config, now) : [],
-      approvedPromotions: gatherApprovedPromotions(prisma, userId, now),
-      duePlatforms: gatherDuePlatforms(prisma, userId, config, now),
     });
 
-    const canSend = base.networkingSentToday < config.networking.dailyCap;
     const hungry = base.appliedToday < config.dailyApplyCap;
     // Scoring and discovery only matter once nothing approved is left to apply to.
     const drained = base.approvedJobs.length === 0;
-    const [warmIntroCandidates, searches, scorePending] = await Promise.all([
-      outreachOn && canSend
-        ? gatherWarmIntroCandidates(prisma, userId, now, base.approvedJobs)
-        : [],
+    const [searches, scorePending] = await Promise.all([
       drained ? gatherDueSearches(prisma, userId, now, hungry) : NO_DUE_SEARCHES,
       drained ? gatherScorePending(prisma, userId, config.minScore, now) : [],
     ]);
-    // A job can sit in both lists; the Set keeps one contacts pass per job.
-    await attachWarmContacts(prisma, userId, [
-      ...new Set([...base.approvedJobs, ...warmIntroCandidates]),
-    ]);
-
     const quiet = isPipelineQuiet({ ...base, ...searches, scorePending });
     // Blank goals need no item: emptyReason "awaitingSetup" already says so.
     const canBootstrap = quiet && searchCount === 0 && goals !== "";
@@ -199,7 +162,7 @@ export class AgendaService {
       ...base,
       ...searches,
       ...reviews,
-      warmIntroCandidates,
+
       scorePending,
       bootstrap,
       awaitingSetup: searchCount === 0 || goals === "",

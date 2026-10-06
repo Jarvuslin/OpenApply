@@ -6,16 +6,12 @@ import {
 import type { z } from "zod/v4";
 import type { AgendaInput } from "./build";
 import type { AgendaJob } from "./gather-jobs";
-import type { Followup } from "./gather-outreach";
 
 type ConfigOverrides = z.input<typeof pilotInstructionsConfigSchema>;
-type WarmContact = NonNullable<AgendaJob["warmContacts"]>[number];
 
-// Networking is off by default, but these suites exercise it, so both channels start on here.
 export const cfg = (over: ConfigOverrides = {}): PilotInstructionsConfig =>
   pilotInstructionsConfigSchema.parse({
     ...over,
-    networking: { email: "review", linkedIn: "draft", ...over.networking },
   });
 
 const NOW = new Date("2026-07-15T12:00:00.000Z");
@@ -27,12 +23,12 @@ export const base = (over: Partial<AgendaInput> = {}): AgendaInput => ({
   openQuestions: 0,
   activeClaims: 0,
   appliedToday: 0,
-  networkingSentToday: 0,
+
   awaitingSetup: true,
   nextSearchRunAt: null,
   answeredQuestions: [],
   approvedJobs: [],
-  warmIntroCandidates: [],
+
   dueQueries: [],
   scorePending: [],
   queueDrains: [],
@@ -40,12 +36,7 @@ export const base = (over: Partial<AgendaInput> = {}): AgendaInput => ({
   boardHealth: [],
   inbox: { messageIds: [], count: 0 },
   interviewReplies: [],
-  interviewPreps: [],
-  upworkSync: null,
-  approvedNetworking: [],
-  followups: [],
-  approvedPromotions: [],
-  duePlatforms: [],
+
   strategyReviews: [],
   rescanSkipped: [],
   retryFailed: [],
@@ -65,16 +56,7 @@ export const job = (key: string, matchScore: number | null, over: Partial<Agenda
   ...over,
 });
 
-export const contact = (id: string): WarmContact => ({
-  id,
-  name: "Insider",
-  title: null,
-  email: `${id}@acme.test`,
-});
-
 /** A job strong enough for the warm-intro pool. */
-export const hotJob = (key: string, matchScore: number, warmContacts?: WarmContact[]) =>
-  job(key, matchScore, { company: "Acme", warmContacts });
 
 export const question = (id: string): AgendaPayload<"question.answered"> => ({
   questionId: id,
@@ -83,27 +65,6 @@ export const question = (id: string): AgendaPayload<"question.answered"> => ({
   subjectId: null,
   prompt: "Which start date?",
   answer: "Two weeks",
-});
-
-export const send = (messageId: string): AgendaPayload<"networking.send"> => ({
-  campaignId: "c1",
-  messageId,
-  contactId: `ct-${messageId}`,
-  contactName: "Dana Recruiter",
-  contactEmail: "dana@acme.test",
-  subject: "Hi",
-  body: "hello",
-});
-
-export const followup = (messageId: string): Followup => ({
-  campaignId: "c1",
-  messageId,
-  contactId: `ct-${messageId}`,
-  contactName: "Dana Recruiter",
-  contactEmail: "dana@acme.test",
-  subject: "Hi",
-  sentAt: new Date("2026-07-08T12:00:00.000Z"),
-  daysSince: 7,
 });
 
 export const reply = (emailMessageId: string): AgendaPayload<"interview.reply"> => ({
@@ -115,14 +76,6 @@ export const reply = (emailMessageId: string): AgendaPayload<"interview.reply"> 
   receivedAt: new Date("2026-07-14T12:00:00.000Z"),
   company: "Acme",
   jobTitle: "Engineer",
-});
-
-export const prep = (applicationId: string): AgendaPayload<"interview.prep"> => ({
-  applicationId,
-  company: "Acme",
-  jobTitle: "Engineer",
-  jobUrl: "https://x/1",
-  resumeId: null,
 });
 
 export const boardHealth = (board: string): AgendaPayload<"board.health"> => ({

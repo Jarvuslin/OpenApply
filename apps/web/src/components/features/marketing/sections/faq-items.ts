@@ -18,11 +18,11 @@ export const FAQ_ITEMS = [
   },
   {
     q: "Which job boards are supported?",
-    a: "Eleven are built in, among them LinkedIn, Indeed, HN Who's Hiring, and Upwork. And since the agent drives a real browser, you can add any other board from the boards page. It isn't limited to a fixed list.",
+    a: "Public job sources help you find openings. Applications run on employer careers pages.",
   },
   {
     q: "Can it read and send email?",
-    a: "Yes, if you connect Gmail through your own Google OAuth client, so no shared app ever touches your mail. That's how it sorts recruiter replies, fetches verification codes, and sends networking messages.",
+    a: "Yes, if you connect Gmail through your own Google OAuth client, so no shared app ever touches your mail. That's how it sorts recruiter replies, fetches verification codes, and sends approved interview replies.",
   },
   {
     q: "What about captchas?",

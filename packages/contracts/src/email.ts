@@ -58,3 +58,21 @@ export type ReviewStatus = z.infer<typeof reviewStatusSchema>;
 export type ScanMessageInput = z.infer<typeof scanMessageSchema>;
 export type ApproveInput = z.infer<typeof approveSchema>;
 export type OAuthClientUpsertInput = z.infer<typeof oauthClientUpsertSchema>;
+
+export const sendEmailSchema = z.object({
+  to: z.email(),
+  subject: z.string().default(""),
+  body: z.string().default(""),
+  threadId: z.string().optional(),
+  attachments: z
+    .array(
+      z.object({
+        filename: z.string().min(1),
+        mimeType: z.string().min(1),
+        contentBase64: z.string().min(1),
+      }),
+    )
+    .optional(),
+});
+
+export type SendEmailInput = z.infer<typeof sendEmailSchema>;

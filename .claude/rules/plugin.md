@@ -16,7 +16,7 @@ archives as `JOBPILOT_SKILLS_ROOT`. No generation step. Edit here directly.
 | `skills/<name>/SKILL.md` | One skill per directory. |
 | `skills/_shared/*.md` | Reference docs. No `SKILL.md`, so not listed as a skill. Link as `../_shared/<doc>.md`. |
 | `skills/pilot/kinds/<kind>.md` | One file per agenda kind. `pilot/SKILL.md` is re-read every cycle, so it holds only the loop. |
-| `agents/*.md` | `job-worker` and `networking-worker` subagents. Source of truth. Codex `.codex/agents/*.toml` files point back at it. |
+| `agents/*.md` | `job-worker` subagent. Source of truth. Codex `.codex/agents/*.toml` files point back at it. |
 
 Resume skills: `extract-resume` parses the PDF and chains `review-resume` on a first extraction.
 `review-resume` saves one `Suggested rewrite` variant and never edits a base. `tailor-resume`

@@ -120,16 +120,6 @@ export class ApplicationService {
               },
               orderBy: { receivedAt: "desc" },
             },
-            contacts: {
-              select: {
-                id: true,
-                name: true,
-                title: true,
-                company: true,
-                email: true,
-                linkedinUrl: true,
-              },
-            },
           },
         }),
       { id, userId },

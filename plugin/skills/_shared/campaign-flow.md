@@ -1,7 +1,7 @@
 # Campaign Flow - Shared Mechanics and Rules
 
 The blocks every campaign skill shares (`apply`, `auto-apply`, `resume-campaign`, `search`,
-`upwork-search`, `networking`, and the pilot's campaign items). Load profile, resume, and
+and the pilot's campaign items). Load profile, resume, and
 credentials per `./setup.md` first; each skill states only its deltas from what's here.
 
 ## Applied-check (dedupe before opening a tab)
@@ -13,8 +13,7 @@ jobpilot-api GET /api/applied/check --query "url=<job-url>" --query "title=<titl
 Exact URL match plus fuzzy title+company over a 30-day window; `.match.kind` is `url` or
 `fuzzy` (with a score). Default handling for apply flows on `.applied`: create the Job as
 `pending`, POST its `/result` with `{outcome:"skipped", skipReason:"Already applied (<kind>)"}`,
-and move on without opening a tab. Skills that deviate (e.g. `networking` keeps applied jobs and
-records `.match.application.id` as `relatedAppId`) say so inline.
+and move on without opening a tab.
 
 The server enforces the same rule: moving a job into `applying` - the `PATCH` below or the
 pilot's claim - 409s on a duplicate with a message opening `Already applied (<kind>)`. That is the

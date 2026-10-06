@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactElement, ReactNode } from "react";
-import { networkingMode, type PilotState } from "@jobpilot/contracts/pilot";
+import type { PilotState } from "@jobpilot/contracts/pilot";
 import { Grid, LinearProgress, Stack, Typography } from "@mui/material";
 import { useApiQuery } from "@/api/hooks";
 import { pilotQueries } from "@/api/queries";
@@ -99,9 +99,8 @@ interface TodayPanelProps {
 
 export function TodayPanel(props: TodayPanelProps): ReactElement {
   const { state } = props;
-  const { appliedToday, capReached, networkingSentToday } = state;
-  const { dailyApplyCap, minScore, networking } = state.instructionsConfig;
-  const outreachOn = networkingMode(state.instructionsConfig) !== null;
+  const { appliedToday, capReached } = state;
+  const { dailyApplyCap, minScore } = state.instructionsConfig;
 
   return (
     <Stack spacing={2}>
@@ -114,29 +113,15 @@ export function TodayPanel(props: TodayPanelProps): ReactElement {
             Daily apply cap is 0 - the pilot won't apply until you raise it.
           </Typography>
         )}
-        {outreachOn && networking.dailyCap > 0 && (
-          <Meter
-            label="Networked"
-            value={networkingSentToday}
-            cap={networking.dailyCap}
-            spent={networkingSentToday >= networking.dailyCap}
-          />
-        )}
+
         <TodayOutcomes appliedToday={appliedToday} />
       </Stack>
       <Grid container spacing={1.5}>
-        <Grid size={4}>
+        <Grid size={6}>
           <StatCard label="Min score" value={minScore} />
         </Grid>
-        <Grid size={4}>
+        <Grid size={6}>
           <StatCard label="Daily cap" value={dailyApplyCap} />
-        </Grid>
-        <Grid size={4}>
-          <StatCard
-            label="Networking"
-            value={outreachOn ? networking.dailyCap : "Off"}
-            hint={outreachOn ? "per day" : "disabled"}
-          />
         </Grid>
       </Grid>
     </Stack>

@@ -9,7 +9,7 @@ export const PUBLIC_ROUTES = [
   "/docs",
   "/install",
   "/jobs",
-  "/leaderboard",
+
   "/login",
   "/register",
 ] as const;

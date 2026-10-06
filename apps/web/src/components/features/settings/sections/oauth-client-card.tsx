@@ -147,7 +147,7 @@ function OAuthClientForm(props: OAuthClientFormProps): ReactElement {
           <Typography variant="captionMuted" sx={{ display: "block", mt: 0.5 }}>
             Personal testing does not require Google verification. In Testing mode, Gmail access
             expires after 7 days and you will need to reconnect. Read access supports verification
-            emails; send access supports the existing networking features.
+            emails; send access supports approved interview replies.
           </Typography>
         </Box>
 

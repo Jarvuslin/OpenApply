@@ -1,9 +1,4 @@
-import {
-  availabilitySchema,
-  portfolioVisibilitySchema,
-  SALARY_CURRENCIES,
-  SALARY_PERIODS,
-} from "@jobpilot/contracts/user";
+import { SALARY_CURRENCIES, SALARY_PERIODS } from "@jobpilot/contracts/user";
 import { z } from "zod/v4";
 
 /** A reference row attached to the user. */
@@ -94,13 +89,4 @@ export const primaryResumeSetSchema = z.object({
   primaryResumeId: z.uuid().nullable(),
 });
 
-/** Current public-portfolio settings (from the `users` row). Username is always assigned. */
-export const portfolioSettingsSchema = portfolioVisibilitySchema.extend({
-  username: z.string(),
-  availability: availabilitySchema.nullable(),
-});
-
 /** Whether a candidate username is free to claim. */
-export const usernameAvailabilitySchema = z.object({
-  available: z.boolean(),
-});

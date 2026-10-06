@@ -194,13 +194,6 @@ export class ResumeService {
   }
 
   /** Unauthenticated: the resume's v4 uuid is the capability token. */
-  async renderPublicPdf(id: string) {
-    const resume = await this.prisma.resume.findUnique({ where: { id } });
-    if (!resume) {
-      throw notFound("Resume not found");
-    }
-    return this.streamPdf(resume);
-  }
 
   /** Rendered from structured content when there is some, else the uploaded source. */
   private async streamPdf(resume: Resume): Promise<Response> {

@@ -6,10 +6,7 @@ import { Autorenew, Clear, Replay } from "@mui/icons-material";
 import { Box, Button, Stack, TextField, Typography } from "@mui/material";
 import type { GridRowSelectionModel } from "@mui/x-data-grid";
 import { useQueryClient } from "@tanstack/react-query";
-import type { Route } from "next";
-import { useRouter } from "next/navigation";
 import { api } from "@/api/client";
-import { apiErrorMessage } from "@/api/error";
 import { useApiMutation, useApiQuery } from "@/api/hooks";
 import { campaignQueries } from "@/api/queries";
 import { invalidations } from "@/api/query-keys";
@@ -22,7 +19,6 @@ import { useAgent, useAgentAvailable } from "@/providers/agent-provider";
 import { useToast } from "@/providers/notification-provider";
 import { plural } from "@/utils/format";
 import { EMPTY_SELECTION, resolveSelectedRows } from "@/utils/grid-selection";
-import { UPWORK_DOMAIN } from "../constants";
 import { CampaignJobsTable, isReapplicable } from "./jobs-table";
 
 const STATUS_OPTIONS: ReadonlyArray<SelectFieldOption<CampaignJobStatus>> =
@@ -43,15 +39,13 @@ export function CampaignJobsPanel(props: CampaignJobsPanelProps): ReactElement {
   const agent = useAgent();
   const agentAvailable = useAgentAvailable();
   const toast = useToast();
-  const router = useRouter();
+
   const queryClient = useQueryClient();
 
   const [statusFilter, setStatusFilter] = useState<CampaignJobStatus | null>(null);
   const [search, setSearch] = useState("");
   const pagination = usePaginationParams({ prefix: "jobs" });
   const [selection, setSelection] = useState<GridRowSelectionModel>(EMPTY_SELECTION);
-
-  const isUpwork = campaign.config.board === UPWORK_DOMAIN;
 
   // Filters run server-side, so they cover the whole campaign rather than the loaded page.
   const term = useDebouncedValue(search.trim(), SEARCH_DEBOUNCE_MS);
@@ -133,26 +127,6 @@ export function CampaignJobsPanel(props: CampaignJobsPanelProps): ReactElement {
     void agent.injectSkill("apply", job.url);
   };
 
-  // Upwork recommendations are recommend-only: seed a proposal draft from the
-  // recommendation, then hand off to the upwork-proposal skill to write it.
-  const draftProposal = async (job: CampaignJobDto): Promise<void> => {
-    const res = await api.upwork.proposals.post({
-      jobTitle: job.title,
-      clientName: job.company || null,
-      jobUrl: job.url,
-      jobDescription: job.description ?? "",
-      source: "search",
-      campaignId: job.campaignId,
-      jobKey: job.key,
-    });
-    if (res.error || !res.data) {
-      toast.error(apiErrorMessage(res.error, "Could not create the proposal draft"));
-      return;
-    }
-    void agent.injectSkill("upwork-proposal", String(res.data.id));
-    router.push(`/upwork/${res.data.id}` as Route);
-  };
-
   return (
     <SectionCard title="Jobs" description="Updated live as the campaign progresses.">
       <Stack
@@ -218,9 +192,7 @@ export function CampaignJobsPanel(props: CampaignJobsPanelProps): ReactElement {
       <CampaignJobsTable
         rows={visible}
         loading={jobs.isLoading}
-        onApplyJob={!isUpwork && agentAvailable ? applyJob : undefined}
-        onDraftProposal={isUpwork && agentAvailable ? draftProposal : undefined}
-        showReason={isUpwork}
+        onApplyJob={agentAvailable ? applyJob : undefined}
         checkboxSelection={canReapply}
         rowSelectionModel={selection}
         onRowSelectionModelChange={setSelection}

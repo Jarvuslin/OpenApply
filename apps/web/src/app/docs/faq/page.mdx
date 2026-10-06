@@ -43,31 +43,24 @@ once. [Getting started](/docs/getting-started) explains why.
 
 ## Which job boards are supported?
 
-Any board. Every new account starts with LinkedIn, Indeed, Hiring Cafe, and
-We Work Remotely, and the board picker offers Wellfound, Y Combinator (Work
-at a Startup), Welcome to the Jungle, Hacker News "Who's Hiring", Remote OK,
-4 Day Week, and Upwork. Add any other board from the boards page. The agent
-drives a real browser, so it isn't limited to a fixed list.
+Use an employer careers page or ATS. Discovery sources are listed in the job picker.
 
 ## How many jobs does the Pilot apply to per day?
 
 Up to your daily apply cap, one application per cycle. The cap is enforced by
 the server, not just by the AI's instructions, so it holds even if a cycle
-goes off-script. The same is true of the networking cap.
+goes off-script.
 
 ## How does the Pilot decide what to do first?
 
 The server ranks the agenda every cycle: your answered questions come first,
 then interview replies, then applications ordered by match score, then
-networking, then discovery of new postings. You steer it with your goals text
+discovery of new postings. You steer it with your goals text
 and limits. See [the Pilot](/docs/pilot).
 
 ## Does the Pilot ever send messages or post publicly without me?
 
-Only what you explicitly set to auto: applications within your cap, and
-networking emails if you chose the "auto" autonomy level. LinkedIn messages
-and public self-promotion posts always wait for your approval, and interview
-replies are always drafted for review. Those rules are enforced server-side.
+The Pilot applies within your configured limits. Interview replies are drafted for review.
 
 ## What happens if my computer sleeps or crashes mid-cycle?
 
@@ -100,7 +93,7 @@ under **Settings → Notifications** to get questions as a push on your phone.
 
 Yes, through your own Google OAuth client. See
 [Email setup](/docs/email-setup). Reading powers the inbox and verification
-codes; sending powers networking. It can never delete mail, and it works
+codes. Sending supports approved interview replies. It can never delete mail, and it works
 without email too; you just lose those features.
 
 ## What about captchas?
@@ -158,7 +151,6 @@ number more than another resume edit:
   that say so outright; most enforce it silently.
 - Apply to fewer employers that fit you better. Fifty applications to employers
   that filter you out produce fifty rejections.
-- Use `networking`. A referral routes around the automated screen entirely.
 - Connect your mailbox so rejections land on your pipeline and your response
   rate becomes a number you can watch.
 

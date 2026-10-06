@@ -177,7 +177,7 @@ const reviewMarkerSchema = z.object({ type: z.string().optional() }).loose();
 export async function gatherCampaignReviews(prisma: PrismaClient, userId: string, now: Date) {
   const [campaigns, markers] = await Promise.all([
     prisma.campaign.findMany({
-      where: { userId, status: "in_progress", source: { not: "networking" } },
+      where: { userId, status: "in_progress", source: { in: ["search", "auto_apply", "apply"] } },
       select: { campaignId: true, query: true, config: true, source: true },
     }),
     prisma.pilotJournalEntry.findMany({

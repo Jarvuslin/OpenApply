@@ -97,7 +97,7 @@ flowchart LR
 ### Components
 
 - **[apps/web/](../apps/web/)**: Next.js UI covering the pipeline, campaigns
-  with live per-job progress, inbox, networking, resume studio, Upwork (proposals, profile, inbox),
+  with live per-job progress, inbox, resume studio,
   analytics, settings, and the agent dock (an xterm.js panel that installs,
   launches, and monitors the local agent). Browser and server both call the
   API directly via `API_BASE_URL`, with no proxy in between.
@@ -130,7 +130,7 @@ Claude.
   `skills/_shared/` (no `SKILL.md`, so neither provider lists them as skills).
   Skills reference siblings by name and shared docs by relative path
   (`../_shared/<doc>.md`), so the same text serves both providers.
-- `agents/*.md`: worker subagents (`job-worker`, `networking-worker`) that
+- `agents/*.md`: worker subagents (`job-worker`) that
   campaign skills delegate per-iteration work to, isolating heavy browser
   output. Claude auto-discovers them; [.codex/agents/](../.codex/agents/)
   point at the same `.md` bodies. Runtimes without subagents run inline.
@@ -187,7 +187,7 @@ sequenceDiagram
 Skills mutate through `/api/campaigns/*`; the web opens
 `EventSource /api/campaigns/[id]/events` and invalidates the TanStack Query
 cache on each event, refetching canonical state from PostgreSQL. Five more
-channels (`workspace`, `inbox`, `resume`, `upwork`, `pilot`) follow the same
+channels (`workspace`, `inbox`, `resume`, `pilot`) follow the same
 pattern; they are defined in `packages/contracts/src/sse/channels/`.
 
 ### Skills layer

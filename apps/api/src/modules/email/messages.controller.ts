@@ -92,7 +92,7 @@ export const emailMessagesController = new Elysia({
     detail: {
       summary: "Sync inbox messages",
       description:
-        "Fetches new messages from the connected mailbox, persists them, links any networking replies, emits inbox sync events, and returns the fetched and newly inserted counts.",
+        "Fetches new messages from the connected mailbox, persists them, emits inbox sync events, and returns the fetched and newly inserted counts.",
     },
   })
   .get("/events", ({ headers, user }) => sseStream(inboxChannel, { userId: user.id }, headers), {

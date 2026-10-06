@@ -81,7 +81,7 @@ export function PilotSetupChecklist(props: PilotSetupChecklistProps): ReactNode 
       label: needsReauth ? "Reconnect your mailbox" : "Connect your mailbox",
       description: needsReauth
         ? "Google rejected the mailbox's access grant - mail sync, verification codes, and sending are paused."
-        : "The pilot reads replies, fetches verification codes, and sends networking email through it.",
+        : "The pilot reads replies, fetches verification codes, and sends approved interview replies through it.",
       done: emailOk,
       action: (
         <LinkButton size="small" variant="outlined" href="/settings/email">

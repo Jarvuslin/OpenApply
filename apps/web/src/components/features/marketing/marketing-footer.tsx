@@ -79,7 +79,7 @@ export function MarketingFooter(): ReactElement {
           <Grid size={{ xs: 6, md: 3 }}>
             <FooterColumn title="Product">
               <InternalLink href="/jobs" label="Browse jobs" />
-              <InternalLink href="/leaderboard" label="Leaderboard" />
+
               <InternalLink href="/docs" label="Docs" />
               <InternalLink href="/login" label="Sign in" />
               <InternalLink href="/register" label="Create account" />

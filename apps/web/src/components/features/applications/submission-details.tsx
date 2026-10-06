@@ -1,5 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
-import { Description, Mail, Person, PictureAsPdf } from "@mui/icons-material";
+import { Description, Mail, PictureAsPdf } from "@mui/icons-material";
 import {
   Accordion,
   AccordionDetails,
@@ -146,20 +146,10 @@ function CorrespondenceCard(props: SubmissionDetailsProps): ReactElement {
         action={<RelativeTime value={m.receivedAt} />}
       />
     )),
-    ...app.contacts.map((c) => (
-      <ItemRow
-        key={c.id}
-        icon={<Person fontSize="sm" />}
-        primary={
-          c.linkedinUrl ? <ExternalLink href={c.linkedinUrl}>{c.name}</ExternalLink> : c.name
-        }
-        secondary={[c.title, c.email].filter(Boolean).join(" · ")}
-      />
-    )),
   ];
 
   return (
-    <SectionCard title="Correspondence" description="Matched mail and contacts at this company.">
+    <SectionCard title="Correspondence" description="Matched mail at this company.">
       {rows.length > 0 ? (
         <ItemList>{rows}</ItemList>
       ) : (

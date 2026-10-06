@@ -45,8 +45,7 @@ const snapshot: AgendaResponse = {
     dailyApplyCap: 10,
     appliedToday: 0,
     capReached: false,
-    dailyNetworkingCap: 5,
-    networkingSentToday: 0,
+
     resetsAt: now,
   },
   emptyReason: null,

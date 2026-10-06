@@ -1,8 +1,4 @@
 import { z } from "zod/v4";
-import { networkingModeSchema } from "../networking";
-
-// An "off" channel is never emitted, so a worker only ever sees a resolved channel and mode.
-const outgoingMode = networkingModeSchema.shape;
 
 const AGENDA_ITEM_KINDS = [
   "question.answered",
@@ -11,44 +7,32 @@ const AGENDA_ITEM_KINDS = [
   "campaign.scorePending",
   "campaign.reviewPaused",
   "inbox.review",
-  "networking.send",
-  "networking.followup",
-  "networking.warmIntro",
-  "promo.compose",
-  "promo.post",
+
   "interview.reply",
-  "interview.prep",
+
   "queue.drain",
   "board.health",
   "campaign.strategyReview",
   "job.rescanSkipped",
   "job.retryFailed",
   "strategy.bootstrap",
-  "upwork.syncInbox",
 ] as const;
 
 const AGENDA_SUBJECT_TYPES = [
   "job",
   "campaign",
   "question",
-  "networking",
+
   "inbox",
-  "promotion",
+
   "application",
   "email",
   "board",
   "pilot",
-  "upwork",
 ] as const;
 
 const nullableString = z.string().nullable();
 const optionalString = z.string().optional();
-const warmContactSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  title: nullableString,
-  email: nullableString,
-});
 
 const agendaItem = <K extends (typeof AGENDA_ITEM_KINDS)[number], P extends z.ZodType>(
   kind: K,
@@ -86,7 +70,6 @@ export const agendaClaimFieldsSchema = z.discriminatedUnion("kind", [
       digest: nullableString,
       resumeId: optionalString,
       matchScore: z.number().nullable(),
-      warmContacts: z.array(warmContactSchema).optional(),
     }),
   ),
   agendaItem(
@@ -132,64 +115,7 @@ export const agendaClaimFieldsSchema = z.discriminatedUnion("kind", [
     "inbox",
     z.object({ messageIds: z.array(z.string()), count: z.number().int() }),
   ),
-  agendaItem(
-    "networking.send",
-    "networking",
-    z.object({
-      campaignId: z.string(),
-      messageId: z.string(),
-      contactId: z.string(),
-      contactName: z.string(),
-      contactEmail: z.string(),
-      subject: nullableString,
-      body: z.string(),
-    }),
-  ),
-  agendaItem(
-    "networking.followup",
-    "networking",
-    z.object({
-      campaignId: z.string(),
-      messageId: z.string(),
-      contactId: z.string(),
-      contactName: z.string(),
-      contactEmail: z.string(),
-      subject: nullableString,
-      sentAt: z.date(),
-      daysSince: z.number().int(),
-      ...outgoingMode,
-    }),
-  ),
-  agendaItem(
-    "networking.warmIntro",
-    "networking",
-    z.object({
-      campaignId: z.string(),
-      jobKey: z.string(),
-      company: nullableString,
-      jobTitle: z.string(),
-      jobUrl: z.string(),
-      // Empty when nobody at the company is known yet; the worker discovers one.
-      contacts: z.array(warmContactSchema).default([]),
-      ...outgoingMode,
-    }),
-  ),
-  agendaItem(
-    "promo.compose",
-    "promotion",
-    z.object({ platform: z.string(), target: optionalString }),
-  ),
-  agendaItem(
-    "promo.post",
-    "promotion",
-    z.object({
-      promotionId: z.string(),
-      platform: z.string(),
-      target: nullableString,
-      title: nullableString,
-      body: z.string(),
-    }),
-  ),
+
   agendaItem(
     "interview.reply",
     "email",
@@ -204,17 +130,7 @@ export const agendaClaimFieldsSchema = z.discriminatedUnion("kind", [
       jobTitle: z.string(),
     }),
   ),
-  agendaItem(
-    "interview.prep",
-    "application",
-    z.object({
-      applicationId: z.string(),
-      company: z.string(),
-      jobTitle: z.string(),
-      jobUrl: nullableString,
-      resumeId: nullableString,
-    }),
-  ),
+
   agendaItem(
     "queue.drain",
     "campaign",
@@ -226,14 +142,7 @@ export const agendaClaimFieldsSchema = z.discriminatedUnion("kind", [
       entries: z.array(z.object({ key: z.string(), url: z.string() })),
     }),
   ),
-  agendaItem(
-    "upwork.syncInbox",
-    "upwork",
-    z.object({
-      lastSyncedAt: z.date().nullable(),
-      unreadCount: z.number().int(),
-    }),
-  ),
+
   agendaItem(
     "board.health",
     "board",
@@ -307,8 +216,7 @@ const agendaContentSchema = z.object({
     dailyApplyCap: z.number().int(),
     appliedToday: z.number().int(),
     capReached: z.boolean(),
-    dailyNetworkingCap: z.number().int(),
-    networkingSentToday: z.number().int(),
+
     resetsAt: z.date(),
   }),
   emptyReason: z.enum(["capReached", "awaitingSetup", "clear"]).nullable(),

@@ -24,9 +24,9 @@ interface CampaignJobsTableProps extends GridPaginationProps {
   loading?: boolean;
   /** When provided, applicable rows get an "Apply" action that calls this. */
   onApplyJob?: (job: CampaignJobDto) => void;
-  /** When provided, applicable rows get a "Draft proposal" action (Upwork). */
+
   onDraftProposal?: (job: CampaignJobDto) => void;
-  /** Show the match-reason column (recommendation rationale, e.g. Upwork). */
+
   showReason?: boolean;
   /** Enables checkbox selection (reapplicable rows only). */
   checkboxSelection?: boolean;

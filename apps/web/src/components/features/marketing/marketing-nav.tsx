@@ -17,7 +17,7 @@ interface NavLink {
 /** `/#how-it-works`, not `#how-it-works`: from /jobs or /docs the bare hash points at nothing. */
 const NAV_LINKS: NavLink[] = [
   { href: "/jobs" as Route, label: "Jobs" },
-  { href: "/leaderboard" as Route, label: "Leaderboard" },
+
   { href: "/docs" as Route, label: "Docs" },
   { href: "/#how-it-works" as Route, label: "How it works" },
   { href: "https://github.com/Jarvuslin/OpenApply" as Route, label: "GitHub", external: true },

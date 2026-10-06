@@ -15,7 +15,6 @@ import { securityController } from "@/modules/auth/security.controller";
 import { campaignController } from "@/modules/campaign/campaign.controller";
 import { campaignJobController } from "@/modules/campaign/jobs/job.controller";
 import { captchaController } from "@/modules/captcha/captcha.controller";
-import { contactController } from "@/modules/contact";
 import { coverLetterController } from "@/modules/cover-letter/cover-letter.controller";
 import { credentialController } from "@/modules/credential/credential.controller";
 import { emailAccountController } from "@/modules/email/account/account.controller";
@@ -28,19 +27,15 @@ import { adminJobListingController, publicJobListingController } from "@/modules
 import { cleanupJob } from "@/modules/maintenance/cleanup.job";
 import { pdfCacheJob } from "@/modules/maintenance/pdf-cache.job";
 import { mvpController } from "@/modules/mvp/mvp.controller";
-import { networkingController } from "@/modules/networking/networking.controller";
 import { pilotAgendaController } from "@/modules/pilot/agenda/agenda.controller";
 import { pilotJournalController } from "@/modules/pilot/journal.controller";
 import { pilotController } from "@/modules/pilot/pilot.controller";
-import { promotionController } from "@/modules/pilot/promotion.controller";
 import { pilotQuestionsController } from "@/modules/pilot/question.controller";
 import { pilotSearchController } from "@/modules/pilot/search.controller";
-import { publicPortfolioController } from "@/modules/portfolio/portfolio.controller";
 import { pushController } from "@/modules/push/push.controller";
-import { publicResumeController, resumeController } from "@/modules/resume/resume.controller";
+import { resumeController } from "@/modules/resume/resume.controller";
 import { resumeVariantController } from "@/modules/resume/variants/variant.controller";
 import { scoringController } from "@/modules/scoring/scoring.controller";
-import { upworkController } from "@/modules/upwork/upwork.controller";
 import { userController } from "@/modules/user/user.controller";
 import { workspaceController } from "@/modules/workspace/workspace.controller";
 import { httpErrorResponses } from "@/types/response";
@@ -66,28 +61,22 @@ const app = new Elysia()
       .use(healthController)
       .use(jobBoardController)
       .use(credentialController)
-      .use(contactController)
       .use(analyticsController)
       .use(captchaController)
       .use(userController)
       .use(resumeController)
       .use(resumeVariantController)
-      .use(publicResumeController)
       .use(publicJobListingController)
-      .use(publicPortfolioController)
       .use(coverLetterController)
       .use(applicationController)
       .use(scoringController)
-      .use(upworkController)
       .use(campaignController)
       .use(campaignJobController)
-      .use(networkingController)
       .use(pilotController)
       .use(pilotSearchController)
       .use(pilotAgendaController)
       .use(pilotJournalController)
       .use(pilotQuestionsController)
-      .use(promotionController)
       .use(pushController)
       .use(workspaceController)
       .use(emailAccountController)

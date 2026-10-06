@@ -17,10 +17,7 @@ import { radii } from "@/theme";
 /** Folds a campaign's summary into a single progress reading, type-aware. */
 function progress(campaign: CampaignDto): { value: number; label: string } {
   const s = campaign.summary;
-  if (s.kind === "networking") {
-    const total = Math.max(s.discovered, 1);
-    return { value: (s.sent / total) * 100, label: `${s.sent}/${s.discovered} sent` };
-  }
+
   const total = Math.max(s.qualified || s.totalFound, 1);
   return { value: (s.applied / total) * 100, label: `${s.applied}/${total} applied` };
 }

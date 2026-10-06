@@ -7,7 +7,6 @@ import { PrismaClient } from "@/generated/prisma/client";
 const RESPONDED_STATUSES = [...INTERVIEW_STATUSES, "offer", "rejected"] as const;
 
 /** Statuses that mean the message left the outbox. */
-const DISPATCHED_MESSAGE_STATUSES = ["sent", "replied", "bounced"] as const;
 
 @singleton()
 export class AnalyticsService {
@@ -26,12 +25,6 @@ export class AnalyticsService {
       timelineRows,
       boardGroupRows,
       failReasonRows,
-      networkingStatusRows,
-      contactCount,
-      networkingWeekSent,
-      networkingWeekReplied,
-      networkingTimelineRows,
-      contactSourceRows,
     ] = await Promise.all([
       this.prisma.job.count({ where: { status: "queued", campaign: { userId } } }),
       this.prisma.application.count({
@@ -77,32 +70,6 @@ export class AnalyticsService {
         orderBy: { _count: { id: "desc" } },
         take: 5,
       }),
-      this.prisma.networkingMessage.groupBy({
-        by: ["status"],
-        where: { userId },
-        _count: { _all: true },
-      }),
-      // Every contact, not just the messaged ones - the tile has to agree with /networking.
-      this.prisma.contact.count({ where: { userId } }),
-      this.prisma.networkingMessage.count({
-        where: {
-          userId,
-          status: { in: [...DISPATCHED_MESSAGE_STATUSES] },
-          sentAt: { gte: weekStart },
-        },
-      }),
-      this.prisma.networkingMessage.count({ where: { userId, repliedAt: { gte: weekStart } } }),
-      this.prisma.networkingMessage.findMany({
-        where: { userId, sentAt: { gte: timelineStart } },
-        select: { sentAt: true },
-      }),
-      this.prisma.contact.groupBy({
-        by: ["discoverySource"],
-        where: { userId, discoverySource: { not: null } },
-        _count: { _all: true },
-        orderBy: { _count: { id: "desc" } },
-        take: 5,
-      }),
     ]);
 
     const statusBreakdown = statusGroupRows.map((r) => ({
@@ -140,28 +107,6 @@ export class AnalyticsService {
         ? Math.round((responded / (totalSubmitted + responded)) * 100)
         : 0;
 
-    const networkingByStatus = new Map(networkingStatusRows.map((r) => [r.status, r._count._all]));
-    const networkingReplied = networkingByStatus.get("replied") ?? 0;
-    const networkingBounced = networkingByStatus.get("bounced") ?? 0;
-    const networkingSent = DISPATCHED_MESSAGE_STATUSES.reduce(
-      (n, status) => n + (networkingByStatus.get(status) ?? 0),
-      0,
-    );
-    const replyRatePct =
-      networkingSent > 0 ? Math.round((networkingReplied / networkingSent) * 100) : 0;
-
-    const topContactSources = contactSourceRows
-      .filter((r) => r.discoverySource)
-      .map((r) => ({
-        source: r.discoverySource as string,
-        count: r._count._all,
-      }));
-
-    const perDaySent = bucketPerDay(
-      networkingTimelineRows.map((r) => r.sentAt as Date),
-      timelineStart,
-    );
-
     const stats = {
       totals: {
         applications: totalApplications,
@@ -181,21 +126,6 @@ export class AnalyticsService {
       perDay,
       topBoards,
       topRejectReasons,
-      networking: {
-        totals: {
-          contacts: contactCount,
-          sent: networkingSent,
-          replied: networkingReplied,
-          bounced: networkingBounced,
-        },
-        thisWeek: {
-          sent: networkingWeekSent,
-          replied: networkingWeekReplied,
-        },
-        replyRatePct,
-        perDaySent,
-        topContactSources,
-      },
     };
 
     return stats;

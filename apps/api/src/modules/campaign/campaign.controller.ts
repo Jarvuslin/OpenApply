@@ -30,7 +30,7 @@ export const campaignController = new Elysia({
     detail: {
       summary: "List campaigns",
       description:
-        "Returns one validated page of owned campaigns with summaries derived from current job or networking rows.",
+        "Returns one validated page of owned campaigns with summaries derived from current job rows.",
     },
   })
   .post(
@@ -55,7 +55,7 @@ export const campaignController = new Elysia({
     detail: {
       summary: "Get campaign",
       description:
-        "Returns one owned campaign with its current derived summary; jobs and networking messages are paginated subresources.",
+        "Returns one owned campaign with its current derived summary; jobs are a paginated subresource.",
     },
   })
   .patch("/:id", ({ user, params, body }) => svc.updateConfig(user.id, params.id, body), {
@@ -83,8 +83,7 @@ export const campaignController = new Elysia({
     response: campaignDeletedSchema,
     detail: {
       summary: "Delete campaign",
-      description:
-        "Deletes the owned campaign and its campaign-scoped jobs, applications, networking messages, and orphaned contacts.",
+      description: "Deletes the owned campaign and its campaign-scoped jobs and applications.",
     },
   })
   .get(
@@ -98,7 +97,7 @@ export const campaignController = new Elysia({
       detail: {
         summary: "Stream campaign events",
         description:
-          "Streams live campaign status, progress, job, and networking updates without persisting an event log.",
+          "Streams live campaign status, progress and job updates without persisting an event log.",
       },
     },
   );

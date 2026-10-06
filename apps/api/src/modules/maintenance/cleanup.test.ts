@@ -30,7 +30,7 @@ function fakePrisma() {
     pilotQuestion: model("pilotQuestion", 5),
     verificationToken: model("verificationToken", 6),
     refreshToken: model("refreshToken", 7),
-    promotionPost: model("promotionPost", 8),
+
     emailMessage: model("emailMessage", 9),
     applicationEvent: model("applicationEvent", 10),
     resumeVariant: model("resumeVariant", 11),
@@ -64,12 +64,6 @@ describe("runRetentionCleanup", () => {
     expect(calls.verificationToken).toHaveLength(1);
     expect(calls.refreshToken).toHaveLength(1);
 
-    expect(calls.promotionPost).toHaveLength(1);
-    const promoWhere = calls.promotionPost?.[0]?.where as { status: { in: string[] } };
-    for (const kept of ["draft", "approved", "posted"]) {
-      expect(promoWhere.status.in).not.toContain(kept);
-    }
-
     // email_messages: blanked via updateMany, never deleted.
     expect(calls.emailMessage).toHaveLength(1);
     expect(calls.emailMessage?.[0]?.data).toEqual({ rawBody: "" });
@@ -94,7 +88,7 @@ describe("runRetentionCleanup", () => {
       questions: 5,
       verificationTokens: 6,
       refreshTokens: 7,
-      promotions: 8,
+
       emailBodiesBlanked: 9,
       applicationEvents: 10,
       resumeVariants: 11,

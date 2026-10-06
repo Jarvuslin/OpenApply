@@ -141,16 +141,8 @@ export async function finalizeIdleCampaigns(
       userId,
       status: "in_progress",
       jobs: { none: { updatedAt: { gt: new Date(now.getTime() - FINALIZE_IDLE_MS) } } },
-      OR: [
-        {
-          source: { not: "networking" },
-          jobs: { none: { status: { in: [...CAMPAIGN_JOB_ACTIVE_STATUSES] } } },
-        },
-        {
-          source: "networking",
-          networkingMessages: { none: { status: { in: ["draft", "approved"] } } },
-        },
-      ],
+      source: { in: ["search", "auto_apply", "apply"] },
+      NOT: { jobs: { some: { status: { in: [...CAMPAIGN_JOB_ACTIVE_STATUSES] } } } },
     },
     select: { campaignId: true, query: true, source: true },
   });

@@ -1,4 +1,4 @@
-import { sendEmailSchema } from "@jobpilot/contracts/networking";
+import { sendEmailSchema } from "@jobpilot/contracts/email";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { authGuard } from "@/common/middleware";

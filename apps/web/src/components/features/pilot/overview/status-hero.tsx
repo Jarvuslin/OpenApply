@@ -34,8 +34,7 @@ export function StatusHero(props: StatusHeroProps): ReactElement {
   const stopWithConfirm = async (): Promise<void> => {
     const ok = await confirm({
       title: "Stop the pilot?",
-      description:
-        "The pilot stops running cycles: no applying, networking, or posting until you start it again.",
+      description: "The pilot stops running cycles: no applying until you start it again.",
       confirmLabel: "Stop",
       destructive: true,
     });
