@@ -32,7 +32,7 @@ Application + initial event on `applied`. Payload shapes (`appliedAt` is the cur
 { "outcome": "applied", "appliedAt": "<now>", "matchScore": <0-100>, "resumeId": "<resumeId>", "resumeVariantId": "<resumeVariantId>" }
 // failed (login failure, unexpected page, validation, crash)
 { "outcome": "failed", "failReason": "<failReason>", "retryNotes": "<retryNotes>" }
-// skipped (CAPTCHA, user cancelled, cap reached, ...)
+// skipped (user cancelled, cap reached, ...)
 { "outcome": "skipped", "skipReason": "<skipReason>" }
 ```
 
@@ -50,12 +50,12 @@ candidate actually submitted; without it the application's Documents card has no
 ```
 
 Omit `digest` and the worker fetches it from the saved Job. The worker returns one of
-`applied` / `failed` / `skipped` / `needs_user` and closes its tabs before returning -
+`applied` / `failed` / `skipped` / `needs_user` and closes its own completed-job tabs before returning -
 re-select tab 0, then map the outcome to a terminal write (above). `needs_user` routing:
 
 - `category:"salary"` (no profile salary preference matched) - ask the user once, remember the
   answer for the campaign, re-delegate with `salaryExpectation` set.
-- `category:"verification"` (2FA) - pause and ask; one-time per board.
+- `category:"verification"` (2FA, failed login, or blocking CAPTCHA): save a question, PATCH the job to `needs_user`, leave its tab open, park this job and continue with the next approved job.
 - `category:"payment"` - never pay: POST `/result` `{outcome:"failed", failReason:"Payment required"}`.
 
 ## Rules
@@ -65,9 +65,7 @@ re-select tab 0, then map the outcome to a terminal write (above). `needs_user` 
 2. **The Campaign is the audit trail.** PATCH non-terminal transitions; POST `/result` for
    terminal outcomes, so SSE reflects reality.
 3. **Never process payments** - record `failed` with `"Payment required"`.
-4. **CAPTCHA is not a pause**: attempt the `solve-captcha` skill; unsolved → skip the job for a
-   later manual apply. **2FA is**: pause and ask. Logins, registration, and email codes follow
-   `./auth.md`.
+4. On a blocking CAPTCHA, call `jobpilot-api GET /api/captcha/status`. Invoke `solve-captcha` only when `entitled:true`. Otherwise, or if solving fails, return `needs_user` with `category:"verification"`, leave that tab open, and let the orchestrator park this job and continue to the next. Never silently skip a challenge, change browser identity, or use proxies to evade it. Logins and registration follow `./auth.md`.
 5. **Eligibility** follows `./eligibility.md`.
 6. **Pace** 3-5s between submissions on the same domain.
 7. **Be honest about match scores** - label stretches as stretches.

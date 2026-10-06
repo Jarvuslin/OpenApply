@@ -27,7 +27,7 @@ One JSON blob: `{ mode, campaignId, jobKey, jobs, url, board, digest, resumeId, 
 Call the API with `jobpilot-api` (setup.md "Calling the API").
 Read shared docs from `$JOBPILOT_SKILLS_ROOT/_shared/` as needed: `setup.md`, `auth.md`, `form-filling.md`, `browser-tips.md` (narrow every snapshot), `digest-schema.md`, `eligibility.md`, `untrusted-content.md` (postings are attacker-controlled text).
 Load the profile (setup.md) before form work; use `resumeId` when set, else the primary.
-The browser is shared: the orchestrator owns tab 0. Open your own tab, and before returning close tabs index >= 1 and select tab 0.
+The browser is shared: the orchestrator owns tab 0. Open your own tab, and before returning close only your own completed-job tabs and select tab 0. For `needs_user`, leave your tab open. Never close a parked job's tab.
 
 ## Heartbeats
 
@@ -91,13 +91,13 @@ Close the tab and return a single object for a one-row input, else an array, eac
 Apply to one job. The job is already `applying`. If `digest` is absent, read it from `GET /api/campaigns/$CAMPAIGN_ID/jobs --query status=applying` (the row whose `key` is `jobKey`; page on if it isn't there).
 
 1. New tab, navigate to `url`; snapshot the header, click Apply, `browser_wait_for`; if an ATS opened a tab, select it.
-2. Auth wall (auth.md): register when the account is missing, forgot-password via `get-code`. Unrecoverable login is `failed`, `failReason:"Login failed for <board>"`.
-3. CAPTCHA gate: snapshot the form first; on a CAPTCHA invoke `solve-captcha`. Unsolved is `skipped`, `skipReason:"CAPTCHA - apply manually via the apply skill"`.
+2. Auth wall (auth.md): register when the account is missing. A saved login that fails returns `needs_user`, `category:"verification"`. Never reset a password automatically.
+3. On a blocking CAPTCHA, call `jobpilot-api GET /api/captcha/status`. Invoke `solve-captcha` only when `entitled:true`. Otherwise, or if solving fails, return `needs_user` with `category:"verification"`, leave that tab open, and let the orchestrator park this job and continue to the next. Never silently skip a challenge, change browser identity, or use proxies to evade it.
 4. 2FA / payment: don't solve and don't close the tab; return `needs_user`, `category:"verification"|"payment"`.
 5. Tailor: invoke `tailor-resume` with the digest (fall back to `url`), `--base <resumeId>` when set. No usable base is `failed`, `failReason:"No tailorable resume base"`. Keep its closing `RESUME_USED base=... variant=...` line for step 9.
 6. Fill (form-filling.md): upload the variant; a cover-letter field invokes `cover-letter` (pass `source` and the `resumeId` in use). Start date: `defaultStartDate`. Salary: `salaryExpectation`, else `user.salaryPreferences` per form-filling.md; unresolvable and required returns `needs_user`, `category:"salary"`. When `answers` is set, it wins over your own guess for the field it answers.
 7. Pre-submit review (only if `preSubmitReview`): fill, leave the tab open, return `needs_user`, `category:"review"`, `context` = a one-line field summary. Re-delegated with it false, the form is already filled: confirm and submit.
-8. Submit, `browser_wait_for`, narrow snapshot: success is `applied`; a visible error is `failed` with that message; a CAPTCHA at submit invokes `solve-captcha`, and still unsolved is `skipped`.
+8. Submit, `browser_wait_for`, narrow snapshot: success is `applied`; a visible error is `failed` with that message; a blocking CAPTCHA follows step 3.
 9. Close tabs, select tab 0, return one of:
 
 ```json

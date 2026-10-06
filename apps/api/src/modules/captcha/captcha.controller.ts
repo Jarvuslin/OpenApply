@@ -1,12 +1,13 @@
 import { captchaSolveSchema } from "@jobpilot/contracts/captcha";
 import { Elysia } from "elysia";
+import { z } from "zod/v4";
 import { container } from "@/common/di/container";
-import { badRequest } from "@/common/errors";
+import { forbidden } from "@/common/errors";
 import { authGuard } from "@/common/middleware";
 import { RATE_LIMITS, rateLimit } from "@/common/rate-limit";
-import { env } from "@/env";
 import { captchaSolveResultSchema } from "./captcha.schema";
 import { CaptchaService } from "./captcha.service";
+import { canUseCaptchaSolver } from "./entitlement";
 
 const svc = container.resolve(CaptchaService);
 
@@ -18,12 +19,16 @@ export const captchaController = new Elysia({
   detail: { tags: ["Captcha"] },
 })
   .use(authGuard)
+  .get("/status", ({ user }) => ({ entitled: canUseCaptchaSolver(user) }), {
+    response: z.object({ entitled: z.boolean() }),
+    detail: { summary: "Check CAPTCHA solver entitlement" },
+  })
   .post(
     "/solve",
     ({ user, body }) => {
-      if (env.MVP_LOCAL_RUNNER)
-        throw badRequest(
-          "CAPTCHA solving is on hold for this MVP. Continue manually in the VM browser.",
+      if (!canUseCaptchaSolver(user))
+        throw forbidden(
+          "CAPTCHA solving is not enabled for your account. Complete verification in the open browser tab.",
         );
       return svc.solve(user.id, body);
     },

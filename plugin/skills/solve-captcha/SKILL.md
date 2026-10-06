@@ -8,6 +8,8 @@ argument-hint: "[url | ref_or_description] (optional; a URL → navigate there f
 
 Clear a CAPTCHA on the **current browser tab**. Return **solved** or **unsolved** (the caller falls back). Authorized use only - the user's own applications. Call the API with `jobpilot-api` (`../_shared/setup.md` "Calling the API").
 
+Before any attempt, call `jobpilot-api GET /api/captcha/status`. If `entitled` is not true, return **unsolved** without interacting with the challenge. The caller must park the job as `needs_user`, category `verification`, and leave its tab open. Never use proxies or change browser identity.
+
 ## 1. Dispatch + identify
 
 If the argument is a URL → `browser_navigate` there first. `browser_resize` to a tall viewport (`1280×1400`) so the widget is fully on-screen, then `browser_snapshot` + `browser_take_screenshot` the captcha and classify:
