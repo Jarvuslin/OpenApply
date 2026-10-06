@@ -4,6 +4,7 @@ import type { z } from "zod/v4";
 import { badRequest } from "@/common/errors";
 import { PrismaClient } from "@/generated/prisma/client";
 import { canUseCaptchaSolver } from "@/modules/captcha/entitlement";
+import { getActiveEmailAccount } from "@/modules/email/account/account-selection";
 import { JobSourcesService } from "@/modules/job-sources/job-sources.service";
 import { PilotJournalService } from "@/modules/pilot/journal.service";
 import { ApplyQueueService } from "./apply-queue.service";
@@ -49,7 +50,7 @@ export class MvpService {
   async readiness(userId: string) {
     const [user, mailbox, unanswered] = await Promise.all([
       this.prisma.user.findUniqueOrThrow({ where: { id: userId } }),
-      this.prisma.emailAccount.findUnique({ where: { userId } }),
+      getActiveEmailAccount(this.prisma, userId),
       this.prisma.pilotQuestion.count({
         where: { userId, subjectType: "onboarding", status: "open" },
       }),

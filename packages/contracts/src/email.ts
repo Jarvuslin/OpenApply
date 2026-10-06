@@ -5,6 +5,17 @@ export const EMAIL_PROVIDERS = ["gmail", "outlook", "imap", "connector"] as cons
 export const emailProviderSchema = z.enum(EMAIL_PROVIDERS);
 export type EmailProvider = z.infer<typeof emailProviderSchema>;
 
+export const EMAIL_RUNTIME_PROVIDERS = ["claude", "codex"] as const;
+export const emailRuntimeProviderSchema = z.enum(EMAIL_RUNTIME_PROVIDERS);
+const mailboxAddressSchema = z.string().trim().toLowerCase().pipe(z.email());
+
+export const registerConnectorAccountSchema = z.object({
+  mailbox: mailboxAddressSchema,
+  runtimeProvider: emailRuntimeProviderSchema,
+  identityVerified: z.boolean().default(false),
+});
+export type RegisterConnectorAccountInput = z.input<typeof registerConnectorAccountSchema>;
+
 export const CLASSIFICATIONS = [
   "interviewing",
   "rejected",
@@ -78,7 +89,9 @@ export const sendEmailSchema = z.object({
 export type SendEmailInput = z.infer<typeof sendEmailSchema>;
 
 export const ingestMessagesSchema = z.object({
-  mailbox: z.email().trim().toLowerCase(),
+  mailbox: mailboxAddressSchema,
+  accountId: z.uuid().optional(),
+  runtimeProvider: emailRuntimeProviderSchema.optional(),
   messages: z
     .array(
       z

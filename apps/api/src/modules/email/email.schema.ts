@@ -2,6 +2,7 @@ import { statusSchema } from "@openapply/contracts/application";
 import {
   classificationSchema,
   emailProviderSchema,
+  emailRuntimeProviderSchema,
   reviewStatusSchema,
 } from "@openapply/contracts/email";
 import { paginatedSchema, paginationQuerySchema } from "@openapply/contracts/pagination";
@@ -9,6 +10,7 @@ import { z } from "zod/v4";
 
 /** What narrows a set of inbox messages, whether the caller wants the rows or just how many. */
 export const messageFilters = z.object({
+  accountId: z.uuid().optional(),
   reviewStatus: reviewStatusSchema.optional(),
   // The literal "null" asks for messages the scan has not classified yet.
   classification: z.union([classificationSchema, z.literal("null")]).optional(),
@@ -29,20 +31,29 @@ export const callbackQuery = z.object({
   error: z.string().optional(),
 });
 
-/** Connection status of the profile's linked mailbox (`account.accountStatus`). */
+export const emailAccountSchema = z.object({
+  id: z.uuid(),
+  provider: emailProviderSchema,
+  email: z.string(),
+  runtimeProvider: emailRuntimeProviderSchema.nullable(),
+  identityVerified: z.boolean(),
+  lastCheckedAt: z.date().nullable(),
+  lastSyncAt: z.date().nullable(),
+  canSend: z.boolean(),
+  needsReauth: z.boolean(),
+  selected: z.boolean(),
+});
+
+export const emailAccountsSchema = z.array(emailAccountSchema);
+
+/** Selected mailbox status; a saved row does not guarantee current connector access. */
 export const accountStatusSchema = z.union([
   z.object({
     connected: z.literal(false),
     canSend: z.boolean(),
   }),
-  z.object({
+  emailAccountSchema.extend({
     connected: z.literal(true),
-    provider: z.string(),
-    email: z.string(),
-    lastSyncAt: z.date().nullable(),
-    canSend: z.boolean(),
-    // True once a token refresh was rejected (invalid_grant): the mailbox must be reconnected.
-    needsReauth: z.boolean(),
   }),
 ]);
 

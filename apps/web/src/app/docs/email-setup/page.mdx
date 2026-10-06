@@ -26,18 +26,39 @@ An installed plugin or a connection in another chat does not by itself verify th
 
 ## Check in OpenApply
 
-Open **Settings → Email**, or the workbench's **Connections** tab. Select **Check Gmail with Claude Code** or **Check Gmail with Codex** for your current agent.
+Open **Settings → Email**, or the workbench's **Connections** tab. Select **Check Gmail**. With Claude Code, OpenApply runs a separate background check and shows its result on this page. Your interactive agent does not need to be open or running.
 
-The `connect-email` skill verifies the mailbox identity and imports recent job mail. It does not classify messages or send email. Only a successful import creates the OpenApply connection; an empty batch is valid after a successful search finds no new mail. The displayed last-sync time records that success, not a guarantee that the provider is still authenticated. Use **Scan pending** in the inbox when you want classification.
+The check performs a bounded search of recent job mail. It does not import, classify, send or delete messages. You can cancel a running check without stopping your interactive agent.
+
+- If the connector provides an authenticated account-profile tool, OpenApply verifies that its mailbox address matches the one you requested before saving it as provider-verified.
+- The standard Claude Gmail connector exposes search tools without an account-profile lookup. OpenApply can check read access through a metadata-only search scoped to the requested address, but that does not prove which Gmail account is signed in. Check the connected account in your provider settings, then explicitly confirm the address in OpenApply. It is saved as user-confirmed, with its identity still unverified.
+
+**Last checked** records the connection check; **last sync** records a separate message import. A successful read check, including a search with zero matches, is not an address verification or a message sync.
+
+If Gmail needs authorization, the result explains the next step. Use **Manage Gmail in Claude** or **Agent sign-in / setup** when needed. OpenApply cannot approve provider sign-in or permission prompts for you.
+
+Codex background Gmail checks are not supported yet. OpenApply reports this explicitly instead of opening its terminal or claiming that an unchecked mailbox is connected. Codex's interactive `connect-email` skill remains available when its tools can verify authenticated mailbox identity and read access.
+
+## Add or change an email
+
+Use **Add email** to enter another Gmail address. Authorize that address in your provider, then select **Check and add**. The new mailbox is saved after a successful check and, when authenticated identity is unavailable, your explicit address confirmation. Adding it preserves your other saved emails and their imported messages.
+
+Use **Change email**, or **Use this email** beside a saved mailbox, to choose the mailbox OpenApply uses. Changing the selection does not switch the Gmail account authorized in Claude or Codex. If the two addresses differ, the check asks you to switch accounts in your provider first. It also does not change your applicant profile or résumé email.
+
+Removing an email deletes only that mailbox's imported records from OpenApply. It does not delete Gmail messages or revoke the provider's Gmail authorization. Inbox lists and verification-code lookups use the selected mailbox unless an explicit owned mailbox is requested.
+
+Automated message imports still require a trustworthy authenticated mailbox identity in the current agent session. Your address confirmation does not replace that requirement. The standard Claude connector currently lacks the profile tool needed for these imports, even when its background read check succeeds.
+
+When the connector meets that identity requirement, use the agent's `connect-email` or `scan-inbox` skill for imports. The former verifies and imports without classifying; the latter can classify messages and update application statuses. **Scan pending** in the inbox requests classification. Reviewing an already imported message does not require a new mailbox connection.
 
 ## Verification and replies
 
-The agent pulls new mail for verification codes and checks the recipient, sender, employer and request time. Missing access or an ambiguous message parks the application and asks for help.
+The agent verifies authenticated mailbox identity before pulling new mail for verification codes, then checks the recipient, sender, employer and request time. A saved user-confirmed address or successful background read check alone does not enable this flow. Missing identity evidence, missing access or an ambiguous message parks the application and asks for help.
 
 Approved interview replies use the connector send tool. Connector accounts cannot use OpenApply's OAuth sync or send endpoints. These return a clear conflict error directing the agent to its connector.
 
 ## Existing OAuth accounts
 
-If a legacy Google OAuth mailbox is already connected, disconnect it in **Settings → Email** before checking the agent connector. Existing OAuth records remain supported by the backend. Google sign-in for your OpenApply account is separate from Gmail access.
+Existing Google OAuth mailboxes can remain saved alongside other addresses. Switching between saved mailboxes preserves their imported messages. A given address cannot use both connection methods at once; replacing that address's connection still requires explicitly removing it first. Google sign-in for your OpenApply account is separate from Gmail access.
 
 Do not paste passwords or connector tokens into the agent conversation. Authenticate through the connector's own setup flow.

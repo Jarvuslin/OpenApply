@@ -15,13 +15,15 @@ statuses, or launch application work.
 
 ## 1. Establish the intended mailbox
 
-Read `user.contactEmail` from `GET /api/user`. If missing, return `needs_user` and direct the user
-to complete their applicant contact email in OpenApply. Do not substitute the OpenApply login,
-a resume address, or an account from another chat.
+Read `GET /api/email/account` and retain the selected mailbox's `id` and `email` for the entire
+run. If none is selected, use `user.contactEmail` from `GET /api/user` only for initial setup.
+If no intended address is available, return `needs_user` and direct the user to add or select
+an email in OpenApply. Do not substitute the OpenApply login, resume address, or another chat's
+account. Do not change `contactEmail` while connecting a mailbox.
 
-Read `GET /api/email/account`. An existing non-connector account requires the user to disconnect
-it in `$OPENAPPLY_WEB/settings/email` before switching. Return `needs_user`; disconnecting can
-remove saved messages, so do not do it automatically.
+A selected non-connector mailbox requires the user to choose a connector mailbox in
+`$OPENAPPLY_WEB/settings/email`. Return `needs_user`. Do not remove or replace existing accounts;
+multiple mailboxes may coexist and switching selection should preserve their imported history.
 
 ## 2. Verify the current agent's Gmail tools
 
@@ -29,15 +31,20 @@ Discover tools actually exposed to this session. Follow mailbox.md's provider se
 when missing. Read the real mailbox address using the connector's authenticated profile/account
 tool. A tool listing, installed plugin, or saved OpenApply row is not proof.
 
-Compare the actual address with `user.contactEmail` and any existing connector account's `email`,
-trimming whitespace and ignoring case only. On mismatch, stop before searching or importing:
-report expected and actual addresses and return `needs_user` to switch Gmail accounts. If the
-intended applicant address is wrong, the user must correct the profile first. Do not equate
+Compare the actual address with the selected mailbox's `email`, or the profile address for
+initial setup, trimming whitespace and ignoring case only. On mismatch, stop before searching
+or importing: report expected and actual addresses and return `needs_user` to switch Gmail
+accounts or choose the intended saved mailbox. Do not equate
 Gmail dots, plus aliases, recipients, or forwarded mail with authenticated account identity.
 
 If profile access fails or no authenticated identity tool exists, return `needs_user` with the
-missing step. Never guess the mailbox or request passwords, cookies, tokens, Google Cloud client
-IDs, or client secrets. Do not modify tool grants or agent allowlists.
+missing step. The standard Claude Gmail connector exposes search tools without a profile lookup;
+its successful background `read_access` check and a user-confirmed saved address
+(`identityVerified: false`) do not satisfy this skill's identity requirement. Explain that
+automated import remains unavailable with those tools; reconnecting alone does not add the
+missing identity tool. Even `identityVerified: true` from an earlier check requires a fresh
+profile response in this session. Never guess the mailbox or request passwords, cookies,
+tokens, Google Cloud client IDs, or client secrets. Do not modify tool grants or agent allowlists.
 
 ## 3. Prove read access and register
 
@@ -51,9 +58,10 @@ a completed successful search found zero matches. Timeout, missing tools, unread
 and incomplete pagination are not an empty inbox. If a later batch fails, report partial
 progress and retain the original search window for retry; do not claim completion.
 
-After all batches succeed, re-read `GET /api/email/account` and require:
+Include the selected `accountId` with each ingest batch. After all batches succeed, re-read
+`GET /api/email/accounts` and require the row for the original verified mailbox:
 
-- `connected: true`, `provider: "connector"`, and the profile-verified mailbox in `email`;
+- `provider: "connector"`, the verified mailbox in `email`, and the original `id` when available;
 - non-null `lastSyncAt`, advanced by this run's successful ingest;
 - actual successful profile and search/read responses in this session, plus successful ingest
   responses. A previously saved account row cannot replace these checks.

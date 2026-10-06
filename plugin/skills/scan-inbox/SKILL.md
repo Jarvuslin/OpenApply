@@ -11,6 +11,8 @@ Classify recent email and link each thread to an existing `Application` when the
 ## Setup
 
 Start with `openapply-api GET /api/health`. Follow `../_shared/setup.md` and `../_shared/mailbox.md`.
+When a message id is supplied, skip Phase 1's connector pull and fetch that stored message in
+Phase 2. Reclassifying an existing owned message does not require reading another mailbox.
 
 ## Phase 1: Confirm Mailbox Connected
 
@@ -18,7 +20,7 @@ Start with `openapply-api GET /api/health`. Follow `../_shared/setup.md` and `..
 openapply-api GET /api/email/account
 ```
 
-Pull recent mail through the agent connector and ingest it per mailbox.md. This creates the first connector account. If tools are missing, explain how to connect Gmail in this running agent. If OAuth is already connected, ask the user to disconnect it first. Never report a successful connection without a successful connector profile read and ingest.
+Retain the selected mailbox address and `id` as `MAILBOX_ID`. Pull recent mail through the agent connector and ingest it per mailbox.md. This can create the first connector account; resolve its verified address from `GET /api/email/accounts` afterward. If tools are missing, explain how to connect Gmail in this running agent. If the selected mailbox uses OAuth, ask the user to select a connector mailbox instead. Do not remove saved accounts. Keep the original `MAILBOX_ID` throughout the scan even if the settings selection changes. Never report a successful import without a successful connector profile read and ingest.
 
 ## Phase 2: Pick the Queue
 
@@ -31,10 +33,10 @@ openapply-api GET "/api/email/messages/<id>"
 **All pending** - no argument. After the connector pull, read the unscanned queue:
 
 ```bash
-openapply-api GET /api/email/messages --query reviewStatus=pending --query classification=null
+openapply-api GET /api/email/messages --query "accountId=$MAILBOX_ID" --query reviewStatus=pending --query classification=null
 ```
 
-Both list routes answer `{items, pagination}`; read `.items`. If it is empty: **"Inbox is already reviewed. Nothing new to classify."** and exit.
+The list route answers `{items, pagination}`; read `.items`. If it is empty: **"Inbox is already reviewed. Nothing new to classify."** and exit. The single-message route returns the message object directly; classify that object without looking for `.items`.
 
 The rest of the skill runs over whatever you fetched. A re-scan overwrites the classification and resets `reviewStatus`, but never undoes an approved status move.
 

@@ -2,11 +2,13 @@ import type { IngestMessagesInput } from "@openapply/contracts/email";
 import { inboxChannel } from "@openapply/contracts/sse";
 import { singleton } from "tsyringe";
 import { CryptoService } from "@/common/crypto";
-import { conflict, ErrorCodes, HttpError, notFound } from "@/common/errors";
+import { ErrorCodes, HttpError, notFound } from "@/common/errors";
 import { logger } from "@/common/logger";
 import { publish } from "@/common/sse";
 import { PrismaClient } from "@/generated/prisma/client";
 import { loadFreshAccount } from "../account/account.utils";
+import { getActiveEmailAccount } from "../account/account-selection";
+import { saveConnectorAccount } from "../account/connector-account";
 import { getProvider, rethrowGmailError } from "../gmail.provider";
 import { storeMessages } from "./store-messages";
 
@@ -23,10 +25,7 @@ export class EmailSyncService {
    * block the agenda.
    */
   async syncIfStale(userId: string, staleMs: number, now: Date): Promise<void> {
-    const account = await this.prisma.emailAccount.findUnique({
-      where: { userId },
-      select: { lastSyncAt: true, provider: true },
-    });
+    const account = await getActiveEmailAccount(this.prisma, userId);
 
     if (!account || account.provider === "connector") {
       return;
@@ -49,15 +48,7 @@ export class EmailSyncService {
   async ingest(userId: string, input: IngestMessagesInput) {
     const inserted = await this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
-      let account = await tx.emailAccount.findUnique({ where: { userId } });
-      if (account && account.provider !== "connector")
-        throw conflict("Disconnect the Google OAuth mailbox before using the agent connector.");
-      if (account && account.email.toLowerCase() !== input.mailbox)
-        throw conflict("Disconnect the current mailbox before switching connector accounts.");
-      if (!account)
-        account = await tx.emailAccount.create({
-          data: { userId, provider: "connector", email: input.mailbox },
-        });
+      const account = await saveConnectorAccount(tx, userId, input);
       const count = await storeMessages(tx, account.id, input.messages);
       await tx.emailAccount.update({
         where: { id: account.id },

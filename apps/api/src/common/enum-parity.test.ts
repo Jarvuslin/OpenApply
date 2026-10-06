@@ -11,7 +11,12 @@ import {
   CAMPAIGN_STATUSES,
 } from "@openapply/contracts/campaign";
 import { COVER_LETTER_SOURCES } from "@openapply/contracts/cover-letter";
-import { CLASSIFICATIONS, EMAIL_PROVIDERS, REVIEW_STATUSES } from "@openapply/contracts/email";
+import {
+  CLASSIFICATIONS,
+  EMAIL_PROVIDERS,
+  EMAIL_RUNTIME_PROVIDERS,
+  REVIEW_STATUSES,
+} from "@openapply/contracts/email";
 import { JOB_LEVELS, JOB_LISTING_STATUSES } from "@openapply/contracts/job-listing";
 import { ATS_PROVIDERS, DISCOVERY_PROVIDERS } from "@openapply/contracts/job-sources";
 import { PILOT_CLAIM_OUTCOMES } from "@openapply/contracts/pilot/claim";
@@ -41,6 +46,7 @@ const PAIRS: [string, readonly string[], Record<string, string>][] = [
   ["CoverLetterSource", COVER_LETTER_SOURCES, prismaEnums.CoverLetterSource],
   ["EmailClassification", CLASSIFICATIONS, prismaEnums.EmailClassification],
   ["EmailProvider", EMAIL_PROVIDERS, prismaEnums.EmailProvider],
+  ["EmailRuntimeProvider", EMAIL_RUNTIME_PROVIDERS, prismaEnums.EmailRuntimeProvider],
   ["EmailReviewStatus", REVIEW_STATUSES, prismaEnums.EmailReviewStatus],
   ["JobListingStatus", JOB_LISTING_STATUSES, prismaEnums.JobListingStatus],
 

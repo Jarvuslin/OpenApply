@@ -1,7 +1,7 @@
 import { ingestMessagesSchema } from "@openapply/contracts/email";
 import type { CryptoService } from "@/common/crypto";
-import type { PrismaClient } from "@/generated/prisma/client";
 import { EmailAccountService } from "../account/account.service";
+import { createMailboxFixture } from "../account/fakes";
 import { EmailSyncService } from "./sync.service";
 import { describe, expect, it } from "bun:test";
 
@@ -16,66 +16,151 @@ const message = {
   rawBody: "Thanks",
   receivedAt: new Date(),
 };
-function fixture(provider?: "gmail" | "connector") {
-  let account: { id: string; provider: string; email: string; lastSyncAt: Date | null } | null =
-    provider ? { id: "account", provider, email: "applicant@example.com", lastSyncAt: null } : null;
-  const saved = new Map<string, object>();
-  const db = {
-    $queryRaw: async () => [],
-    emailAccount: {
-      findUnique: async () => account,
-      create: async ({ data }: { data: { provider: string; email: string } }) =>
-        (account = { id: "account", ...data, lastSyncAt: null }),
-      update: async ({ data }: { data: { lastSyncAt: Date } }) => {
-        if (account) account.lastSyncAt = data.lastSyncAt;
-      },
-    },
-    emailMessage: {
-      createMany: async ({ data }: { data: { accountId: string; providerId: string }[] }) => {
-        let count = 0;
-        for (const m of data) {
-          const id = `${m.accountId}:${m.providerId}`;
-          if (!saved.has(id)) {
-            saved.set(id, m);
-            count++;
-          }
-        }
-        return { count };
-      },
-    },
-  };
-  const prisma = {
-    ...db,
-    $transaction: async <T>(fn: (tx: typeof db) => Promise<T>) => fn(db),
-  } as unknown as PrismaClient;
+function fixture() {
+  const state = createMailboxFixture();
   return {
-    sync: new EmailSyncService(prisma, {} as CryptoService),
-    send: new EmailAccountService(prisma, {} as CryptoService),
-    account: () => account,
-    saved,
+    ...state,
+    sync: new EmailSyncService(state.prisma, {} as CryptoService),
+    send: new EmailAccountService(state.prisma, {} as CryptoService),
   };
 }
 describe("agent mailbox ingest", () => {
   it("creates an account and ignores duplicate provider ids on repeated uploads", async () => {
-    const { sync, account, saved } = fixture();
-    const input = { mailbox: "applicant@example.com", messages: [message, message] };
+    const { sync, accounts, messages, activeForUser } = fixture();
+    const input = {
+      mailbox: "applicant@example.com",
+      runtimeProvider: "claude" as const,
+      messages: [message, message],
+    };
     expect(await sync.ingest("user", input)).toEqual({ fetched: 2, new: 1 });
     expect(await sync.ingest("user", input)).toEqual({ fetched: 2, new: 0 });
-    expect(account()?.provider).toBe("connector");
-    expect(account()?.lastSyncAt).toBeInstanceOf(Date);
-    expect(saved.size).toBe(1);
+    const account = [...accounts.values()][0];
+    expect(account?.provider).toBe("connector");
+    expect(account?.runtimeProvider).toBe("claude");
+    expect(account?.identityVerified).toBe(false);
+    expect(account?.lastCheckedAt).toBeInstanceOf(Date);
+    expect(account?.lastSyncAt).toBeInstanceOf(Date);
+    expect(activeForUser.get("user")).toBe(account?.id);
+    expect(messages.size).toBe(1);
   });
-  it("refuses OAuth and unexpected mailbox identity without writing messages", async () => {
-    for (const provider of ["gmail", "connector"] as const) {
-      const { sync, saved } = fixture(provider);
+
+  it("keeps identical provider IDs in different mailboxes without changing selection", async () => {
+    const { sync, accounts, messages, activeForUser } = fixture();
+    await sync.ingest("user", {
+      mailbox: "first@example.com",
+      runtimeProvider: "claude",
+      messages: [message],
+    });
+    const originalSelection = activeForUser.get("user");
+
+    expect(
+      await sync.ingest("user", {
+        mailbox: "second@example.com",
+        runtimeProvider: "codex",
+        messages: [message],
+      }),
+    ).toEqual({ fetched: 1, new: 1 });
+    expect(
+      await sync.ingest("user", {
+        mailbox: "second@example.com",
+        messages: [message],
+      }),
+    ).toEqual({ fetched: 1, new: 0 });
+
+    expect(accounts.size).toBe(2);
+    expect(messages.size).toBe(2);
+    expect(new Set([...messages.values()].map(({ accountId }) => accountId)).size).toBe(2);
+    expect(activeForUser.get("user")).toBe(originalSelection);
+    expect(
+      [...accounts.values()].find(({ email }) => email === "second@example.com")?.runtimeProvider,
+    ).toBe("codex");
+  });
+
+  it("rejects an OAuth mailbox with the same address but allows another connector mailbox", async () => {
+    const { sync, seedAccount, accounts, messages, activeForUser } = fixture();
+    const oauth = seedAccount(
+      { userId: "user", provider: "gmail", email: "oauth@example.com" },
+      true,
+    );
+
+    await expect(
+      sync.ingest("user", {
+        mailbox: "oauth@example.com",
+        messages: [message],
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+    expect(messages.size).toBe(0);
+    expect(
+      await sync.ingest("user", {
+        mailbox: "connector@example.com",
+        messages: [message],
+      }),
+    ).toEqual({ fetched: 1, new: 1 });
+
+    expect(accounts.size).toBe(2);
+    expect(accounts.get(oauth.id)?.provider).toBe("gmail");
+    expect(activeForUser.get("user")).toBe(oauth.id);
+  });
+
+  it("rejects a verified mailbox that does not match the explicitly requested account", async () => {
+    const { sync, seedAccount, accounts, messages, activeForUser } = fixture();
+    const own = seedAccount({ userId: "user", email: "intended@example.com" }, true);
+
+    await expect(
+      sync.ingest("user", {
+        accountId: own.id,
+        mailbox: "different@example.com",
+        messages: [message],
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+
+    expect(accounts.size).toBe(1);
+    expect(accounts.get(own.id)?.lastCheckedAt).toBeNull();
+    expect(messages.size).toBe(0);
+    expect(activeForUser.get("user")).toBe(own.id);
+  });
+
+  it("rejects foreign or nonexistent account IDs before importing any messages", async () => {
+    const { sync, seedAccount, accounts, messages, activeForUser } = fixture();
+    const foreign = seedAccount({ userId: "other-user", email: "other@example.com" }, true);
+    for (const accountId of [foreign.id, "missing-account"]) {
       await expect(
-        sync.ingest("user", { mailbox: "different@example.com", messages: [message] }),
-      ).rejects.toMatchObject({ status: 409 });
-      expect(saved.size).toBe(0);
+        sync.ingest("user", { accountId, mailbox: "other@example.com", messages: [message] }),
+      ).rejects.toMatchObject({ status: 404 });
     }
+    expect(accounts.size).toBe(1);
+    expect(messages.size).toBe(0);
+    expect(activeForUser.get("other-user")).toBe(foreign.id);
+    expect(activeForUser.get("user")).toBeUndefined();
   });
+
+  it("imports into an explicitly requested saved mailbox without clearing verified identity or changing selection", async () => {
+    const { sync, seedAccount, accounts, messages, activeForUser } = fixture();
+    const selected = seedAccount({ userId: "user", email: "selected@example.com" }, true);
+    const saved = seedAccount({
+      userId: "user",
+      email: "saved@example.com",
+      runtimeProvider: "codex",
+      identityVerified: true,
+    });
+
+    await sync.ingest("user", {
+      accountId: saved.id,
+      mailbox: "SAVED@example.com",
+      messages: [message],
+    });
+
+    expect([...messages.values()].map(({ accountId }) => accountId)).toEqual([saved.id]);
+    expect(accounts.get(saved.id)?.runtimeProvider).toBe("codex");
+    expect(accounts.get(saved.id)?.identityVerified).toBe(true);
+    expect(accounts.get(saved.id)?.lastSyncAt).toBeInstanceOf(Date);
+    expect(accounts.get(selected.id)?.lastSyncAt).toBeNull();
+    expect(activeForUser.get("user")).toBe(selected.id);
+  });
+
   it("requires connector tools for sending and syncing and skips background sync", async () => {
-    const { sync, send } = fixture("connector");
+    const { sync, send, seedAccount } = fixture();
+    seedAccount({ userId: "user", email: "applicant@example.com" }, true);
     await expect(sync.syncInbox("user")).rejects.toMatchObject({ status: 409 });
     await expect(
       send.send("user", { to: "jobs@example.com", subject: "Reply", body: "Thanks" }),

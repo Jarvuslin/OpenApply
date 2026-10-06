@@ -10,7 +10,7 @@ const minutesAgo = (m: number) => new Date(NOW.getTime() - m * 60 * 1000);
 
 function make(account: { lastSyncAt: Date | null } | null, syncImpl?: () => Promise<never>) {
   const prisma = {
-    emailAccount: { findUnique: async () => account },
+    emailAccount: { findFirst: async () => account },
   } as unknown as PrismaClient;
   const svc = new EmailSyncService(prisma, {} as CryptoService);
   let syncs = 0;

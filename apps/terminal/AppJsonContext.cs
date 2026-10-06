@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using OpenApply.Terminal.Inference;
+using OpenApply.Terminal.Connectors;
 using OpenApply.Terminal.Hosting;
 using OpenApply.Terminal.Pilot;
 using OpenApply.Terminal.Providers;
@@ -17,6 +18,9 @@ namespace OpenApply.Terminal;
 [JsonSerializable(typeof(StartSessionRequest))]
 [JsonSerializable(typeof(InferenceRequest))]
 [JsonSerializable(typeof(InferenceResponse))]
+[JsonSerializable(typeof(GmailCheckRequest))]
+[JsonSerializable(typeof(GmailCheckResponse))]
+[JsonSerializable(typeof(GmailCheckEvidence))]
 [JsonSerializable(typeof(CodexSettingsFile))]
 [JsonSerializable(typeof(PluginMcpFile))]
 [JsonSerializable(typeof(string))]

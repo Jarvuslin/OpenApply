@@ -23,9 +23,12 @@ export class EmailService {
   constructor(private readonly prisma: PrismaClient) {}
 
   private messageWhere(userId: string, query: MessageQuery): Prisma.EmailMessageWhereInput {
-    const { reviewStatus, classification, since, domainHint, verificationDomain } = query;
+    const { accountId, reviewStatus, classification, since, domainHint, verificationDomain } =
+      query;
 
-    const where: Prisma.EmailMessageWhereInput = { account: { userId } };
+    const where: Prisma.EmailMessageWhereInput = accountId
+      ? { account: { userId }, accountId }
+      : { account: { userId, activeForUser: { id: userId } } };
 
     if (reviewStatus) {
       where.reviewStatus = reviewStatus;
@@ -115,8 +118,6 @@ export class EmailService {
   }
 
   async scanMessage(userId: string, id: string, body: ScanMessageInput) {
-    // Independent reads: the auto-rejection lookup is scoped to the user itself, so it needs no
-    // ownership result to be safe.
     const [existing, autoRejection] = await Promise.all([
       findOwned(
         (where) =>
@@ -125,6 +126,13 @@ export class EmailService {
         "Message",
       ),
       this.resolveAutoRejection(userId, body),
+      body.matchedAppId == null
+        ? Promise.resolve(null)
+        : findOwned(
+            (where) => this.prisma.application.findFirst({ where, select: { id: true } }),
+            { id: body.matchedAppId, userId },
+            "Application",
+          ),
     ]);
 
     // `auto` means "the server applied it", so an interview or offer left there hides from the queue.

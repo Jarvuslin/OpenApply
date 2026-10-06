@@ -1,9 +1,17 @@
 using OpenApply.Terminal.Hosting;
+using OpenApply.Terminal.Connectors;
 using OpenApply.Terminal.Inference;
 using OpenApply.Terminal.Pilot;
 using OpenApply.Terminal.Sessions;
 using OpenApply.Terminal.Updates;
 using Microsoft.Extensions.Logging.Abstractions;
+
+if (args.Length > 0 && args[0] == GmailToolGate.Flag)
+{
+    Environment.ExitCode = args.Length == 3
+        ? await GmailToolGate.RunAsync(args[1], args[2], Console.In, Console.Out) : 2;
+    return;
+}
 
 // Pty.Net's macOS forkpty path requires CoreCLR's W^X remapping to be off; harmless under NativeAOT.
 if (OperatingSystem.IsMacOS())
@@ -47,6 +55,7 @@ app.UseTerminalPipeline();
 app.MapHostEndpoints();
 app.MapSessionEndpoints();
 app.MapInferenceEndpoints();
+app.MapGmailCheckEndpoints();
 app.MapPilotEndpoints();
 app.MapUpdateEndpoints();
 app.RunWithPortDiagnostics();

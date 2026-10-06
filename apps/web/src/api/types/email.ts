@@ -6,3 +6,5 @@ export type EmailMessageDto = Data<typeof api.email.messages.get>["items"][numbe
 
 /** Sync result, from `POST /api/email/sync`. */
 export type SyncResultDto = Data<typeof api.email.sync.post>;
+
+export type EmailAccountDto = Data<typeof api.email.accounts.get>[number];

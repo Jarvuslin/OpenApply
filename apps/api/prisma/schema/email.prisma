@@ -7,6 +7,13 @@ enum EmailProvider {
   @@map("email_provider")
 }
 
+enum EmailRuntimeProvider {
+  claude
+  codex
+
+  @@map("email_runtime_provider")
+}
+
 // What the scan decided a message is about.
 enum EmailClassification {
   interviewing
@@ -28,11 +35,12 @@ enum EmailReviewStatus {
   @@map("email_review_status")
 }
 
-// One connected mailbox per user; holds the OAuth tokens and the incremental sync cursor.
+// A saved mailbox; selection is separate so switching never removes imported messages.
 model EmailAccount {
   id             String    @id @default(uuid())
-  userId         String    @unique @map("user_id")
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String    @map("user_id")
+  user           User      @relation("UserMailboxes", fields: [userId], references: [id], onDelete: Cascade)
+  activeForUser  User?     @relation("ActiveMailbox")
   provider       EmailProvider
   email          String
   accessToken    String?   @map("access_token")
@@ -41,6 +49,10 @@ model EmailAccount {
   scope          String?
   historyId      String?   @map("history_id")
   lastSyncAt     DateTime? @map("last_sync_at")
+  lastCheckedAt  DateTime? @map("last_checked_at")
+  runtimeProvider EmailRuntimeProvider? @map("runtime_provider")
+  // False when read access was checked but the address was confirmed by the user.
+  identityVerified Boolean @default(false) @map("identity_verified")
   // Rejected token refresh (invalid_grant): the mailbox needs reconnecting. Cleared on success.
   refreshFailedAt DateTime? @map("refresh_failed_at")
   createdAt      DateTime  @default(now()) @map("created_at")
@@ -48,6 +60,7 @@ model EmailAccount {
 
   messages EmailMessage[]
 
+  @@unique([userId, email])
   @@map("email_accounts")
 }
 

@@ -1,4 +1,5 @@
 import type { PilotCycleStatus } from "@openapply/contracts/pilot";
+import { parseGmailCheckResult } from "./gmail-check-result";
 import { terminalRequest } from "./terminal-request";
 
 const TERMINAL_HTTP_URL = process.env.NEXT_PUBLIC_TERMINAL_URL ?? "http://localhost:4102";
@@ -131,6 +132,20 @@ export function runInference(
     { provider, text, model, check: text === undefined, schema },
     { signal, timeoutMs: 130_000 },
   );
+}
+
+export async function checkGmail(
+  provider: TerminalProviderId,
+  expectedEmail: string,
+  signal: AbortSignal,
+) {
+  const result = await send<unknown>(
+    "POST",
+    "/connectors/gmail/check",
+    { provider, expectedEmail },
+    { signal, timeoutMs: 130_000 },
+  );
+  return parseGmailCheckResult(result, provider, expectedEmail);
 }
 
 interface StartOptions {

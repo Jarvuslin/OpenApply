@@ -86,7 +86,9 @@ model User {
   campaigns          Campaign[]
   credentials        Credential[]
   jobBoards          UserJobBoard[]
-  emailAccount       EmailAccount?
+  emailAccounts      EmailAccount[] @relation("UserMailboxes")
+  activeEmailAccountId String? @unique @map("active_email_account_id")
+  activeEmailAccount EmailAccount? @relation("ActiveMailbox", fields: [activeEmailAccountId], references: [id], onDelete: SetNull)
   emailOAuthClient   EmailOAuthClient?
   upworkProposals    UpworkProposal[]
   upworkProfile      UpworkProfile?

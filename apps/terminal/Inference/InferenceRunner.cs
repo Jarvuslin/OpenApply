@@ -7,7 +7,7 @@ internal sealed class InferenceRunner
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
 
-    internal async Task<InferenceResponse?> RunAsync(Func<CancellationToken, Task<InferenceResponse>> run, TimeSpan limit, CancellationToken ct)
+    internal async Task<T?> RunAsync<T>(Func<CancellationToken, Task<T>> run, TimeSpan limit, CancellationToken ct) where T : class
     {
         if (!await _gate.WaitAsync(0, ct)) return null;
         try
