@@ -24,6 +24,8 @@ A workspace for finding employer roles, tailoring your résumé and applying thr
 
 **Status: development MVP.** The backend queue and mailbox ingest are tested, including real Postgres concurrency. Fully autonomous employer signup, email activation and application submission have not passed an independent end-to-end test. CAPTCHA solving is off by default. A blocking challenge parks that job and lets the queue continue. There is no published hosted OpenApply service or installer release.
 
+For the next real application trial, use the [visible run handoff](docs/visible-trial-handoff.md), including VM visibility, submission evidence, dashboard and analytics checks, and current email limitations.
+
 ## Setup
 
 For the hosted-web direction, see [the local companion and subscription connection flow](docs/hosted-companion.md). Onboarding now starts with an optional agent check, followed by resume import and profile review. Claude extraction uses Haiku by default; Codex uses the selected provider's local CLI. A hosted website and signed companion installers have not been released.
