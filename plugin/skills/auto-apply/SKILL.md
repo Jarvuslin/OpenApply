@@ -131,7 +131,7 @@ jobpilot-api POST /api/campaigns/$CAMPAIGN_ID/jobs --data @"$JOBPILOT_TEMP/job.j
 Hand the job to the `job-worker` subagent and wait for its compact result. It opens its own tab and runs auth, CAPTCHA, tailoring, form-fill, and submit in isolated context, so the form/posting snapshots never enter this conversation. **One worker at a time** - the browser is shared; never delegate the next job until this one returns.
 
 Delegate with the apply-mode input from `../_shared/campaign-flow.md`, passing the `digest`
-built in 2.2 and `preSubmitReview: false`. It returns one of `applied` / `failed` / `skipped` /
+built in 2.2 and the campaign minimum as `minMatchScore`. It returns one of `applied` / `failed` / `skipped` /
 `needs_user` - handle in 2.4.
 
 ### 2.4 Record + Continue

@@ -144,11 +144,12 @@ export async function finalizeIdleCampaigns(
       source: { in: ["search", "auto_apply", "apply"] },
       NOT: { jobs: { some: { status: { in: [...CAMPAIGN_JOB_ACTIVE_STATUSES] } } } },
     },
-    select: { campaignId: true, query: true, source: true },
+    select: { campaignId: true, query: true, source: true, config: true },
   });
 
+  const finishing = idle.filter((c) => !campaignConfigSchema.parse(c.config ?? {}).standing);
   const results = await Promise.all(
-    idle.map((campaign) =>
+    finishing.map((campaign) =>
       // Guarded on status, so a concurrent transition wins over the sweep.
       prisma.campaign.updateMany({
         where: { campaignId: campaign.campaignId, userId, status: "in_progress" },
@@ -161,7 +162,7 @@ export async function finalizeIdleCampaigns(
       }),
     ),
   );
-  const completed = idle.filter((_, index) => results[index].count > 0);
+  const completed = finishing.filter((_, index) => results[index].count > 0);
   if (completed.length === 0) return;
 
   for (const campaign of completed) publishCampaignStatus(userId, campaign, "completed");

@@ -76,12 +76,18 @@ export function ConnectCard(): ReactElement {
             </Typography>
           </Box>
           {status.needsReauth && <MailboxReauthAlert />}
-          {!configured && (
+          {status.provider === "connector" && (
+            <Alert severity="info">
+              Gmail is managed by your local agent. Use Check Gmail connection in the workbench to
+              refresh access. Sending uses the agent connector.
+            </Alert>
+          )}
+          {!configured && status.provider !== "connector" && (
             <Alert severity="warning">
               Add your Google OAuth client above before reconnecting.
             </Alert>
           )}
-          {configured && !status.canSend && (
+          {configured && !status.canSend && status.provider !== "connector" && (
             <Alert severity="info">
               This mailbox is read-only, so sending email is unavailable. Add the{" "}
               <code>gmail.send</code> scope to your OAuth client, then use{" "}
@@ -91,7 +97,7 @@ export function ConnectCard(): ReactElement {
           <Stack direction="row" spacing={1.5}>
             <Button
               variant={status.canSend ? "outlined" : "contained"}
-              disabled={!configured}
+              disabled={!configured || status.provider === "connector"}
               onClick={() => connect(status.provider ?? "gmail")}
             >
               {status.canSend ? "Reconnect" : "Reconnect to enable sending"}

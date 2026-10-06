@@ -1,7 +1,7 @@
 import { z } from "zod/v4";
 import { type ApplicationStatus, statusSchema } from "./application";
 
-export const EMAIL_PROVIDERS = ["gmail", "outlook", "imap"] as const;
+export const EMAIL_PROVIDERS = ["gmail", "outlook", "imap", "connector"] as const;
 export const emailProviderSchema = z.enum(EMAIL_PROVIDERS);
 export type EmailProvider = z.infer<typeof emailProviderSchema>;
 
@@ -76,3 +76,29 @@ export const sendEmailSchema = z.object({
 });
 
 export type SendEmailInput = z.infer<typeof sendEmailSchema>;
+
+export const ingestMessagesSchema = z.object({
+  mailbox: z.email().trim().toLowerCase(),
+  messages: z
+    .array(
+      z
+        .object({
+          providerId: z.string().min(1).max(500),
+          threadId: z.string().max(500).nullable(),
+          subject: z.string().max(2000),
+          fromAddress: z.email().toLowerCase(),
+          toHeader: z.string().max(4000).nullish(),
+          fromName: z.string().max(1000).nullable(),
+          fromDomain: z.string().min(1).max(253).toLowerCase(),
+          snippet: z.string().max(5000),
+          rawBody: z.string().max(100000),
+          receivedAt: z.coerce.date(),
+        })
+        .refine(
+          (m) => m.fromDomain === m.fromAddress.split("@")[1],
+          "Sender domain must match the sender address",
+        ),
+    )
+    .max(100),
+});
+export type IngestMessagesInput = z.infer<typeof ingestMessagesSchema>;

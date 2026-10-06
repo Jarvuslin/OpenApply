@@ -26,8 +26,7 @@ import {
 import { useSearchParams } from "next/navigation";
 import { api } from "@/api/client";
 import { apiErrorMessage } from "@/api/error";
-import { EmailSection } from "@/components/features/settings/sections/email-section";
-import { getStatus, injectCommand } from "@/lib/terminal";
+import { formatSkillCommand, getStatus, injectCommand } from "@/lib/terminal";
 import { useAgentDock } from "@/providers/agent-provider";
 import { DiscoveryConnections } from "./discovery-connections";
 import { RuntimeStatus } from "./runtime-status";
@@ -115,20 +114,24 @@ export function MvpWorkbench() {
   async function requireAgent() {
     const status = await getStatus();
     dock.expand();
-    if (status.session !== "running" || status.provider !== "claude")
-      throw new Error("Start Claude in the agent panel, then send your request again.");
+    if (status.session !== "running" || status.provider !== dock.provider)
+      throw new Error(
+        "Start your selected agent in the agent panel, then send your request again.",
+      );
   }
   async function apply() {
     if (!slug) return;
     await requireAgent();
     let id = campaign;
     if (!id) {
-      const result = await api.mvp.apply.post({ slug });
+      const result = await api.mvp.apply.post({ slugs: [slug] });
       if (result.error || !result.data) throw new Error(apiErrorMessage(result.error));
+      if (!result.data.queued.length)
+        throw new Error(result.data.skipped.map((row) => row.reason).join(". "));
       id = result.data.campaignId;
       setCampaign(id);
     }
-    await injectCommand(`/jobpilot:mvp-apply ${id}`, "claude");
+    await injectCommand(formatSkillCommand(dock.provider, "mvp-apply", id), dock.provider);
     setDispatched(true);
     setMessage(
       "Application sent to your agent. Follow its progress in the agent panel; a submission is confirmed only when the employer returns a receipt.",
@@ -232,7 +235,10 @@ export function MvpWorkbench() {
                     onClick={() =>
                       void run(async () => {
                         await requireAgent();
-                        await injectCommand(`/jobpilot:mvp-trial ${slug}`, "claude");
+                        await injectCommand(
+                          formatSkillCommand(dock.provider, "mvp-trial", slug ?? undefined),
+                          dock.provider,
+                        );
                         setTrialDispatched(true);
                         setMessage(
                           "Trial sent to your agent. It will save a tailored resume and inspect the live form without submitting. Follow progress in the agent panel and results in Pilot.",
@@ -280,7 +286,7 @@ export function MvpWorkbench() {
                 <Stack spacing={1} sx={{ p: 2, bgcolor: "surfaces.elevated", borderRadius: 12 }}>
                   <Typography>{lastPrompt}</Typography>
                   <Typography variant="captionMuted">
-                    Sent to Claude · responses appear in the agent panel
+                    Sent to your agent · responses appear in the agent panel
                   </Typography>
                 </Stack>
               )}
@@ -292,7 +298,7 @@ export function MvpWorkbench() {
                   if (!prompt.trim()) return;
                   void run(async () => {
                     await requireAgent();
-                    await injectCommand(prompt.trim(), "claude");
+                    await injectCommand(prompt.trim(), dock.provider);
                     setLastPrompt(prompt.trim());
                     setPrompt("");
                   });
@@ -371,7 +377,7 @@ export function MvpWorkbench() {
                 </Button>
               </Stack>
               <Typography variant="captionMuted" sx={{ textAlign: "center" }}>
-                Powered by your Claude subscription · Your originals stay yours
+                Powered by your local agent subscription · Your originals stay yours
               </Typography>
             </Stack>
             <Stack
@@ -453,7 +459,7 @@ export function MvpWorkbench() {
             <Stack spacing={0.75}>
               <Typography variant="h2">A next step worth taking.</Typography>
               <Typography color="text.secondary">
-                Real openings from employer career boards. Choose one to review with your agent.
+                Real openings from employer career boards. Select roles to queue with your agent.
               </Typography>
             </Stack>
             <WorkspaceJobs key={jobsRevision} />
@@ -461,7 +467,7 @@ export function MvpWorkbench() {
             <Stack spacing={1.5}>
               <Typography variant="h4">Add a company board</Typography>
               <Typography variant="body2Muted">
-                Bring in openings from a public Ashby or Greenhouse board.
+                Bring in openings from Ashby, Greenhouse, Lever, SmartRecruiters or Workable.
               </Typography>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
                 <TextField
@@ -515,9 +521,26 @@ export function MvpWorkbench() {
             <Alert severity={readiness?.gmail ? "success" : "info"}>
               {readiness?.gmail
                 ? "Gmail is connected to this app."
-                : "A Gmail connection in this chat does not connect the app. Complete the Google setup below once to enable unattended verification."}
+                : "Connect Gmail in the agent running inside OpenApply. The agent reads messages and uploads them here. Connecting Gmail in a separate chat does not connect this runtime."}
             </Alert>
-            <EmailSection />
+            <Button
+              variant="outlined"
+              disabled={busy}
+              onClick={() =>
+                void run(async () => {
+                  await requireAgent();
+                  await injectCommand(
+                    formatSkillCommand(dock.provider, "scan-inbox"),
+                    dock.provider,
+                  );
+                  setMessage(
+                    "Connection check sent to your agent. It will identify the mailbox and import recent job mail.",
+                  );
+                })
+              }
+            >
+              Check Gmail connection
+            </Button>
             <DiscoveryConnections />
             <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
               <Chip label="Personal Google account supported" variant="outlined" />

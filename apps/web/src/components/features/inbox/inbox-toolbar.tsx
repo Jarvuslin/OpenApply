@@ -4,8 +4,8 @@ import type { ReactElement } from "react";
 import { CloudSync, FormatListBulleted } from "@mui/icons-material";
 import { Button, Stack, ToggleButton, ToggleButtonGroup, Tooltip } from "@mui/material";
 import { api } from "@/api/client";
-import { useApiMutation } from "@/api/hooks";
-import type { InboxFilter } from "@/api/queries";
+import { useApiMutation, useApiQuery } from "@/api/hooks";
+import { emailQueries, type InboxFilter } from "@/api/queries";
 import { queryKeys } from "@/api/query-keys";
 import type { SyncResultDto } from "@/api/types";
 import { AgentOnlyButton } from "@/components/ui/buttons";
@@ -28,6 +28,8 @@ export function InboxToolbar(props: InboxToolbarProps): ReactElement {
   const { filter, onFilterChange } = props;
   const { injectSkill } = useAgent();
 
+  const account = useApiQuery(emailQueries.account());
+  const connector = account.data?.connected && account.data.provider === "connector";
   const sync = useApiMutation<SyncResultDto, void>(() => api.email.sync.post(), {
     successMessage: "Inbox synced",
     invalidate: [queryKeys.email.all],
@@ -44,7 +46,7 @@ export function InboxToolbar(props: InboxToolbarProps): ReactElement {
           size="small"
           variant="outlined"
           startIcon={<CloudSync />}
-          onClick={() => sync.mutate()}
+          onClick={() => (connector ? void handleScan() : sync.mutate())}
           disabled={sync.isPending}
         >
           {sync.isPending ? "Syncing" : "Sync"}

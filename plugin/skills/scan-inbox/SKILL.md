@@ -10,7 +10,7 @@ Classify recent email and link each thread to an existing `Application` when the
 
 ## Setup
 
-Follow `../_shared/setup.md`.
+Start with `jobpilot-api GET /api/health`. Follow `../_shared/setup.md` and `../_shared/mailbox.md`.
 
 ## Phase 1: Confirm Mailbox Connected
 
@@ -18,9 +18,7 @@ Follow `../_shared/setup.md`.
 jobpilot-api GET /api/email/account
 ```
 
-If `.connected === false`, stop:
-
-> No email account is connected. Open `/profile` → **Email** and connect a Gmail account, then re-run `scan-inbox`.
+Pull recent mail through the agent connector and ingest it per mailbox.md. This creates the first connector account. If tools are missing, explain how to connect Gmail in this running agent. If OAuth is already connected, ask the user to disconnect it first. Never report a successful connection without a successful connector profile read and ingest.
 
 ## Phase 2: Pick the Queue
 
@@ -30,10 +28,9 @@ If `.connected === false`, stop:
 jobpilot-api GET "/api/email/messages/<id>"
 ```
 
-**All pending** - no argument. Sync, then pull the unscanned queue:
+**All pending** - no argument. After the connector pull, read the unscanned queue:
 
 ```bash
-jobpilot-api POST /api/email/sync
 jobpilot-api GET /api/email/messages --query reviewStatus=pending --query classification=null
 ```
 

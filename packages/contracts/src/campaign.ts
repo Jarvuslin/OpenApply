@@ -39,6 +39,7 @@ export const CAMPAIGN_JOB_STATUSES = [
 export const campaignJobStatusSchema = z.enum(CAMPAIGN_JOB_STATUSES);
 
 export const campaignConfigSchema = z.object({
+  standing: z.boolean().optional(),
   board: z.string().min(1).optional(),
   resumeId: z.uuid().optional(),
   minScore: z.number().int().min(0).max(100).optional(),

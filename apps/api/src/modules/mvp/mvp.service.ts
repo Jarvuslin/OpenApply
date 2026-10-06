@@ -1,22 +1,19 @@
 import { chromium } from "playwright-core";
 import { singleton } from "tsyringe";
 import type { z } from "zod/v4";
-import { badRequest, notFound } from "@/common/errors";
+import { badRequest } from "@/common/errors";
 import { PrismaClient } from "@/generated/prisma/client";
-import { CampaignService } from "@/modules/campaign/campaign.service";
-import { CampaignJobService } from "@/modules/campaign/jobs/job.service";
-import { allowedApplyUrl } from "@/modules/job-board/blocked-sites";
+import { canUseCaptchaSolver } from "@/modules/captcha/entitlement";
 import { JobSourcesService } from "@/modules/job-sources/job-sources.service";
 import { PilotJournalService } from "@/modules/pilot/journal.service";
+import { ApplyQueueService } from "./apply-queue.service";
 import type { sourceInput } from "./mvp.schema";
 
 @singleton()
 export class MvpService {
-  private readonly starting = new Set<string>();
   constructor(
     private readonly prisma: PrismaClient,
-    private readonly campaigns: CampaignService,
-    private readonly jobs: CampaignJobService,
+    private readonly queue: ApplyQueueService,
     private readonly journal: PilotJournalService,
     private readonly sources: JobSourcesService,
   ) {}
@@ -74,81 +71,12 @@ export class MvpService {
       gmail: !!mailbox && !mailbox.refreshFailedAt,
       profile: !!user.firstName && !!user.lastName && !!user.contactEmail && unanswered === 0,
       resume: !!user.primaryResumeId,
-      captchaSolver: "disabled" as const,
+      captchaSolver: canUseCaptchaSolver(user) ? ("enabled" as const) : ("disabled" as const),
     };
   }
 
-  async start(userId: string, slug: string) {
-    if (this.starting.has(userId))
-      throw badRequest("An application is already being queued. Wait for that request to finish.");
-    this.starting.add(userId);
-    try {
-      return await this.createSelectedCampaign(userId, slug);
-    } finally {
-      this.starting.delete(userId);
-    }
-  }
-
-  private async createSelectedCampaign(userId: string, slug: string) {
-    const unanswered = await this.prisma.pilotQuestion.findFirst({
-      where: { userId, subjectType: "onboarding", status: "open" },
-      select: { id: true },
-    });
-    if (unanswered)
-      throw badRequest(
-        "Answer the pending onboarding question in Pilot before applying. Saved defaults are not confirmed eligibility answers.",
-      );
-    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
-    if (!user.firstName || !user.lastName || !user.contactEmail || !user.primaryResumeId)
-      throw badRequest("Complete your profile and add a resume before applying.");
-    const listing = await this.prisma.jobListing.findUnique({
-      where: { slug },
-      include: { sources: true },
-    });
-    if (listing?.status !== "published" || !listing.sources[0]) throw notFound("Job not found");
-    const source = listing.sources.find((source) => allowedApplyUrl(source.applyUrl));
-    const url = allowedApplyUrl(source?.applyUrl);
-    if (!url) throw badRequest("Employer page not found. This listing cannot be queued.");
-    const active = await this.prisma.job.findFirst({
-      where: {
-        url,
-        campaign: { userId },
-        status: { in: ["approved", "applying", "needs_user", "applied"] },
-      },
-      include: { campaign: true },
-    });
-    if (active)
-      throw badRequest(
-        "This job already has an active or completed application. Open its existing campaign.",
-      );
-    const campaign = await this.campaigns.create(userId, {
-      query: `${listing.title} at ${listing.company}`,
-      source: "apply",
-      createdBy: "user",
-      config: { maxApplications: 1, resumeId: user.primaryResumeId },
-    });
-    await this.jobs.addJob(userId, campaign.campaignId, {
-      key: "selected",
-      title: listing.title,
-      company: listing.company,
-      url,
-      location: listing.location,
-      board: source?.board,
-      status: "approved",
-      description: listing.descriptionExcerpt,
-    });
-    await this.journal.appendJournal(userId, {
-      entries: [
-        {
-          kind: "action",
-          summary: `User approved one application: ${listing.title} at ${listing.company}`,
-          subjectType: "campaign",
-          subjectId: campaign.campaignId,
-          detail: { url, captchaPolicy: "detect_and_pause", browser: "VM CDP :9222" },
-        },
-      ],
-    });
-    return { campaignId: campaign.campaignId, title: listing.title, company: listing.company };
+  async start(userId: string, slugs: string[]) {
+    return this.queue.enqueue(userId, slugs);
   }
 
   async observe(userId: string) {

@@ -138,10 +138,16 @@ export class EmailAccountService {
       refreshFailedAt: null,
     };
 
-    await this.prisma.emailAccount.upsert({
-      where: { userId },
-      create: { userId, ...fields },
-      update: fields,
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
+      const existing = await tx.emailAccount.findUnique({ where: { userId } });
+      if (existing?.provider === "connector")
+        throw conflict("Disconnect the agent connector mailbox before connecting Google OAuth.");
+      await tx.emailAccount.upsert({
+        where: { userId },
+        create: { userId, ...fields },
+        update: fields,
+      });
     });
 
     return { email };

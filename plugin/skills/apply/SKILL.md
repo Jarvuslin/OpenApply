@@ -204,17 +204,9 @@ jobpilot-api PATCH "/api/campaigns/$CAMPAIGN_ID/jobs/<key>" --data '{"status":"a
 
 ### 5.2 Apply (delegate to `job-worker`)
 
-Delegate to the `job-worker` subagent and wait for its compact result - it navigates, authenticates, tailors, fills, and submits in its own tab/context (keeping the form snapshots out of this conversation). One worker at a time. Use the apply-mode input from `../_shared/campaign-flow.md` with `digest` omitted (the worker fetches it from the saved Job) and `preSubmitReview: <true when config.maxApplications === 1, else false>`.
+Delegate to the `job-worker` subagent and wait for its compact result - it navigates, authenticates, tailors, fills, and submits in its own tab/context (keeping the form snapshots out of this conversation). One worker at a time. Use the apply-mode input from `../_shared/campaign-flow.md` with `digest` omitted (the worker fetches it from the saved Job) and `minMatchScore` from the campaign or profile.
 
-**Single-job pre-submit review:** when `preSubmitReview` is true the worker fills everything, leaves the form open, and returns `needs_user category:"review"` with a field summary in `context`. Present:
-
-```
-## Ready to Submit: [Title] at [Company]
-| Name | Email | Phone | Resume | Salary | Start date | Cover letter | Custom Qs |
-<total> fields across <P> page(s). Submit? (yes / no / edit <field>)
-```
-
-`yes` → re-delegate 5.2 with `preSubmitReview:false` (the worker submits the already-filled form). `no` → POST `/result` `outcome:"skipped"`, `skipReason:"User cancelled at pre-submit review"`. `edit <field>` → tell the worker what to change on re-delegation.
+The worker submits autonomously when the facts and fit are clear. Route uncertainty to a parked review question using the shared flow. Campaign size never determines review.
 
 ### 5.3 Record Result
 
@@ -228,6 +220,8 @@ If `config.maxApplications` is set and `applied >= config.maxApplications`, stop
 
 ## Phase 6: Summary
 
+Skip the completion command for `config.standing:true`. Leave that campaign open for future selections.
+
 ```bash
 jobpilot-api POST "/api/campaigns/$CAMPAIGN_ID/status" --data '{"status":"completed"}'
 ```
@@ -238,4 +232,4 @@ Print a summary table and link to `$JOBPILOT_WEB/campaigns/<CAMPAIGN_ID>`.
 
 The shared campaign rules (`../_shared/campaign-flow.md`) apply throughout. On top of them:
 
-1. **Up-front confirmation mandatory** (1.1 or Phase 4); single-job mode adds pre-submit review (5.2).
+1. **Up-front confirmation mandatory** (1.1 or Phase 4); the worker requests review only for uncertainty (5.2).

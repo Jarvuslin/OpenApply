@@ -26,6 +26,8 @@ jobpilot-api GET /api/pilot
 
 ## 1. Sense
 
+Read `GET /api/email/account`. For a connector account with missing lastSyncAt or a timestamp older than 15 minutes, pull and ingest through `../_shared/mailbox.md` before compiling the agenda. If disconnected, check connector availability once and let a successful pull create the account. Missing tools or mailbox errors are journaled and must not block unrelated application work. Never call OAuth sync for connector accounts.
+
 ```bash
 jobpilot-api POST /api/pilot/agenda/refresh
 ```

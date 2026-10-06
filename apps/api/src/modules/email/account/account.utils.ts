@@ -1,5 +1,5 @@
 import { type CryptoService, SECRET_CONTEXTS } from "@/common/crypto";
-import { ErrorCodes, HttpError } from "@/common/errors";
+import { conflict, ErrorCodes, HttpError } from "@/common/errors";
 import { env } from "@/env";
 import { type EmailAccount, type PrismaClient } from "@/generated/prisma/client";
 import type { OAuthClientConfig } from "../email.provider";
@@ -47,6 +47,10 @@ export async function loadFreshAccount(
     return null;
   }
 
+  if (account.provider === "connector")
+    throw conflict(
+      "Use your agent's Gmail connector to pull or send mail. Upload received messages to /api/email/messages/ingest.",
+    );
   const decrypt = (value: string | null) =>
     crypto.decryptField(userId, SECRET_CONTEXTS.gmailTokens, value);
 

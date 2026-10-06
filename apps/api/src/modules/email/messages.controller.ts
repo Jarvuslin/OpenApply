@@ -1,9 +1,10 @@
-import { approveSchema, scanMessageSchema } from "@jobpilot/contracts/email";
+import { approveSchema, ingestMessagesSchema, scanMessageSchema } from "@jobpilot/contracts/email";
 import { idParam } from "@jobpilot/contracts/shared";
 import { inboxChannel } from "@jobpilot/contracts/sse";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { authGuard } from "@/common/middleware";
+import { RATE_LIMITS, rateLimit } from "@/common/rate-limit";
 import { sseStream } from "@/common/sse";
 import {
   emailMessageListSchema,
@@ -27,6 +28,12 @@ export const emailMessagesController = new Elysia({
   detail: { tags: ["Email"] },
 })
   .use(authGuard)
+  .post("/messages/ingest", ({ user, body }) => sync.ingest(user.id, body), {
+    body: ingestMessagesSchema,
+    beforeHandle: rateLimit(RATE_LIMITS.mailboxIngest),
+    response: syncResultSchema,
+    detail: { summary: "Store mail read through the user's agent connector" },
+  })
   .get("/messages", ({ user, query }) => svc.listMessages(user.id, query), {
     query: messagesQuery,
     response: emailMessageListSchema,

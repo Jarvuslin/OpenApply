@@ -37,9 +37,9 @@ or bypass a failed browser connector from this skill.
    information, upload a resume to the employer, create an account, send email,
    accept terms, solve CAPTCHA, or submit in this preparation skill. A widget is
    not evidence of a blocking challenge. Stop inspection at a login/challenge wall.
-5. Check `GET /api/email/account`. If connected, call `POST /api/email/sync` to
-   verify access without sending mail. Do not claim Gmail verification was tested
-   without an actual matching verification message. Do not use the chat connector.
+5. Check `GET /api/email/account`. Pull through the runtime connector and ingest per
+   `../_shared/mailbox.md` to verify read access without sending mail. Do not claim Gmail verification was tested
+   without an actual matching verification message. The connector must belong to this local agent session.
 6. Save an observation via `POST /api/pilot/journal`, body `{entries:[{kind:
    "observation",summary:"Application trial prepared: <role> at <company>",
    subjectType:"job_listing",subjectId:<listing-id>,detail:{mode:"prepare_only",

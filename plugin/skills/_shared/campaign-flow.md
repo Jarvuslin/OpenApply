@@ -46,17 +46,20 @@ candidate actually submitted; without it the application's Documents card has no
 { "mode": "apply", "campaignId": "<CID>", "jobKey": "<key>", "url": "<job-url>",
   "board": "<domain>", "digest": <DIGEST>, "resumeId": "<RESUME_ID>",
   "defaultStartDate": "<autoApply.defaultStartDate>", "salaryExpectation": <remembered-or-null>,
-  "preSubmitReview": <bool> }
+  "minMatchScore": <campaign-minimum-or-null>, "answers": <explicit-user-answers-or-null> }
 ```
 
 Omit `digest` and the worker fetches it from the saved Job. The worker returns one of
 `applied` / `failed` / `skipped` / `needs_user` and closes its own completed-job tabs before returning -
 re-select tab 0, then map the outcome to a terminal write (above). `needs_user` routing:
 
-- `category:"salary"` (no profile salary preference matched) - ask the user once, remember the
-  answer for the campaign, re-delegate with `salaryExpectation` set.
+- `category:"salary"` or `category:"review"`: save a Pilot question with the exact missing facts or review issues and document links, PATCH the job to `needs_user`, leave its tab open, park it and continue. An answered question resumes only that job with its explicit answers.
 - `category:"verification"` (2FA, failed login, or blocking CAPTCHA): save a question, PATCH the job to `needs_user`, leave its tab open, park this job and continue with the next approved job.
 - `category:"payment"` - never pay: POST `/result` `{outcome:"failed", failReason:"Payment required"}`.
+
+Review depends on missing facts, untraceable claims, a score within 10 points of the minimum, or a deliberate verdict with open gaps. Never derive review from `maxApplications`.
+
+A standing campaign remains `in_progress` when its approved queue is empty. Do not complete it automatically.
 
 ## Rules
 

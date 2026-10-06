@@ -61,7 +61,7 @@ For each job where `status === "approved"`, `"pending"`, or `"applying"`, score-
 1. **Mark applying** - PATCH the job to `applying`.
 2. **Apply** - delegate to `job-worker` with the apply-mode input from
    `../_shared/campaign-flow.md`, `digest` omitted (the worker fetches it from the saved Job)
-   and `preSubmitReview: <true when MAX_APPS === 1, else false>`.
+   and `minMatchScore` from the campaign or profile. Review follows uncertainty, not the cap.
 
 3. **Record result** - map the worker's `outcome` to a terminal `/result` write and route
    `needs_user` per `../_shared/campaign-flow.md` (on `salary`, ask once then re-delegate).
@@ -79,6 +79,8 @@ If `.status` is `paused`, POST `/result` `outcome:"skipped"`, `skipReason:"Campa
 user"` for each remaining `approved` job, then stop.
 
 ## Phase 3: Summary
+
+Skip the completion command for `config.standing:true`. Leave that campaign open for future selections.
 
 ```bash
 jobpilot-api POST "/api/campaigns/$CAMPAIGN_ID/status" --data '{"status":"completed"}'

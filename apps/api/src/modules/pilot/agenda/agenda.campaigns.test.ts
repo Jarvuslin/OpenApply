@@ -177,3 +177,13 @@ describe("AgendaService idle-campaign sweep", () => {
     expect(agenda.items.some((i) => i.subjectId === "c3")).toBe(false);
   });
 });
+
+it("leaves an empty standing campaign open for future selections", async () => {
+  const { svc, rec } = serviceWithRec({
+    finalizeCampaigns: [
+      { campaignId: "standing", query: "Selected applications", config: { standing: true } },
+    ],
+  });
+  await svc.refresh("p1");
+  expect(rec.campaignUpdates).toHaveLength(0);
+});
