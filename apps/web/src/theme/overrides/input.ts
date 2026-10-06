@@ -4,6 +4,25 @@ export const textFieldOverrides: Components<Theme>["MuiTextField"] = {
   defaultProps: { variant: "outlined", size: "small" },
 };
 
+export const formControlOverrides: Components<Theme>["MuiFormControl"] = {
+  styleOverrides: {
+    root: ({ theme }) => ({
+      "&:has(> .MuiInputLabel-outlined)": { marginTop: theme.spacing(2.5) },
+    }),
+  },
+};
+
+export const inputLabelOverrides: Components<Theme>["MuiInputLabel"] = {
+  styleOverrides: {
+    outlined: ({ theme }) => ({
+      backgroundColor: "transparent",
+      "&.MuiInputLabel-shrink": {
+        transform: `translate(${theme.spacing(1.75)}, ${theme.spacing(-2.75)}) scale(0.75)`,
+      },
+    }),
+  },
+};
+
 export const outlinedInputOverrides: Components<Theme>["MuiOutlinedInput"] = {
   styleOverrides: {
     // Pinned to the shared control height so a text field and the button beside it are the same box.
@@ -13,6 +32,7 @@ export const outlinedInputOverrides: Components<Theme>["MuiOutlinedInput"] = {
       backgroundColor: theme.palette.surfaces.base,
       transition: theme.motion.fast,
       "& fieldset": { borderColor: theme.palette.line.border },
+      "& .MuiOutlinedInput-notchedOutline > legend": { maxWidth: 0 },
       "&:hover fieldset": { borderColor: `${theme.palette.line.borderHi} !important` },
       "&.Mui-focused fieldset": {
         borderColor: `${theme.palette.accent.primary} !important`,
