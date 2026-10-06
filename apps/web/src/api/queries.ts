@@ -1,16 +1,16 @@
-import type { ApplicationFilters } from "@jobpilot/contracts/application";
+import type { ApplicationFilters } from "@openapply/contracts/application";
 import type {
   CampaignJobStatus,
   CampaignSource,
   CampaignStatus,
-} from "@jobpilot/contracts/campaign";
-import type { ReviewStatus } from "@jobpilot/contracts/email";
+} from "@openapply/contracts/campaign";
+import type { ReviewStatus } from "@openapply/contracts/email";
 import {
   DEFAULT_CURSOR_PAGE_SIZE,
   MAX_PAGE_SIZE,
   type PaginationQuery,
-} from "@jobpilot/contracts/pagination";
-import type { PilotJournalKind, PilotQuestionStatus } from "@jobpilot/contracts/pilot";
+} from "@openapply/contracts/pagination";
+import type { PilotJournalKind, PilotQuestionStatus } from "@openapply/contracts/pilot";
 import { api } from "@/api/client";
 import { queryKeys } from "@/api/query-keys";
 

@@ -1,5 +1,5 @@
 {
-  "name": "@jobpilot/api",
+  "name": "@openapply/api",
   "version": "2.0.0",
   "private": true,
   "type": "module",
@@ -27,7 +27,7 @@
     "@elysiajs/cors": "^1.4.2",
     "@elysiajs/cron": "^1.4.2",
     "@elysiajs/openapi": "^1.4.16",
-    "@jobpilot/contracts": "workspace:*",
+    "@openapply/contracts": "workspace:*",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "@react-email/components": "^1.0.12",

@@ -1,4 +1,4 @@
-import type { AgendaItem, AgendaResponse } from "@jobpilot/contracts/pilot";
+import type { AgendaItem, AgendaResponse } from "@openapply/contracts/pilot";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { ClaimService } from "./claim.service";
 import { describe, expect, it } from "bun:test";

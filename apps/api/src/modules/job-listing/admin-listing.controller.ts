@@ -1,8 +1,8 @@
 import {
   adminJobListingPatchSchema,
   adminJobListingQuerySchema,
-} from "@jobpilot/contracts/job-listing";
-import { idParam } from "@jobpilot/contracts/shared";
+} from "@openapply/contracts/job-listing";
+import { idParam } from "@openapply/contracts/shared";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { requireRole } from "@/common/middleware";

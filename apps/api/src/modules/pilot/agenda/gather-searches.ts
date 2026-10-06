@@ -1,4 +1,4 @@
-import type { AgendaPayload } from "@jobpilot/contracts/pilot";
+import type { AgendaPayload } from "@openapply/contracts/pilot";
 import { DAY_MS, HOUR_MS } from "@/common/date/buckets";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { claimDamped, GATHER_CAP, latestClaim, latestClaimBySubject } from "./claims";

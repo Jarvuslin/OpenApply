@@ -15,7 +15,7 @@ Runs after `extract-resume` on upload: extraction is faithful to the PDF, this p
 Follow `../_shared/setup.md`, then:
 
 ```bash
-jobpilot-api GET /api/resumes/$RESUME_ID
+openapply-api GET /api/resumes/$RESUME_ID
 ```
 
 `content: null` → extraction hasn't run; say so and stop. Also `Read` the source PDF (path per `../_shared/setup.md`) - extraction flattens two-column layouts and drops emphasis.
@@ -47,10 +47,10 @@ The user sees a diff and clicks accept, so the diff is the guard - not a server 
 
 ## Save
 
-`label` must be exactly `Suggested rewrite` - the dashboard finds it by that label and the retention sweep skips it. Write `{"label":"Suggested rewrite","content":<improved content>,"diffNotes":"<diff notes>"}` to `$JOBPILOT_TEMP/suggested-rewrite.json`, then:
+`label` must be exactly `Suggested rewrite` - the dashboard finds it by that label and the retention sweep skips it. Write `{"label":"Suggested rewrite","content":<improved content>,"diffNotes":"<diff notes>"}` to `$OPENAPPLY_TEMP/suggested-rewrite.json`, then:
 
 ```bash
-jobpilot-api POST /api/resumes/$RESUME_ID/variants --data @"$JOBPILOT_TEMP/suggested-rewrite.json"
+openapply-api POST /api/resumes/$RESUME_ID/variants --data @"$OPENAPPLY_TEMP/suggested-rewrite.json"
 ```
 
 `content` is the full `ResumeData` - same shape `extract-resume` saves, every field carried over. A 400 means it doesn't match the schema; fix and resend.
@@ -58,6 +58,6 @@ jobpilot-api POST /api/resumes/$RESUME_ID/variants --data @"$JOBPILOT_TEMP/sugge
 Then:
 
 > Suggested a rewrite of {label}: {one-line summary}.
-> Review and accept at $JOBPILOT_WEB/resumes/$RESUME_ID
+> Review and accept at $OPENAPPLY_WEB/resumes/$RESUME_ID
 
 Don't open the browser or wait for an answer - the cycle ends here.

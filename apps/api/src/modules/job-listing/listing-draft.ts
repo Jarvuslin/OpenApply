@@ -5,7 +5,7 @@ import { allowedApplyUrl } from "@/modules/job-board/blocked-sites";
  * the part that unit-tests with no database.
  */
 
-import { type JOB_LEVELS, jobLevelFromTitle } from "@jobpilot/contracts/job-listing";
+import { type JOB_LEVELS, jobLevelFromTitle } from "@openapply/contracts/job-listing";
 import { z } from "zod/v4";
 import { MAX_YEARS_EXPERIENCE } from "@/modules/scoring/scoring.schema";
 import { canonicalizeUrl, dedupeKey, listingSlug, normalizeListingLocation } from "./dedupe";

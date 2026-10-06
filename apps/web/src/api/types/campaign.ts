@@ -1,4 +1,4 @@
-import type { Body, Data } from "@jobpilot/api-client";
+import type { Body, Data } from "@openapply/api-client";
 import type { api } from "@/api/client";
 
 /** A campaign list row, inferred from `GET /api/campaigns`. */

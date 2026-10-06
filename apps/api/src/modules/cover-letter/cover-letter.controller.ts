@@ -1,6 +1,6 @@
-import { coverLetterCreateSchema } from "@jobpilot/contracts/cover-letter";
-import { paginationQuerySchema } from "@jobpilot/contracts/pagination";
-import { idParam } from "@jobpilot/contracts/shared";
+import { coverLetterCreateSchema } from "@openapply/contracts/cover-letter";
+import { paginationQuerySchema } from "@openapply/contracts/pagination";
+import { idParam } from "@openapply/contracts/shared";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { authGuard } from "@/common/middleware";

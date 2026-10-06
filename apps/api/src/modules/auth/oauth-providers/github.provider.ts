@@ -33,7 +33,7 @@ export class GithubSignInProvider implements SignInProvider {
       Authorization: `Bearer ${accessToken}`,
       Accept: "application/vnd.github+json",
       // GitHub's API rejects requests without a User-Agent.
-      "User-Agent": "JobPilot",
+      "User-Agent": "OpenApply",
     };
 
     const userRes = await fetch("https://api.github.com/user", { headers });

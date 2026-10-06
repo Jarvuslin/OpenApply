@@ -1,10 +1,10 @@
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using System.Text.RegularExpressions;
-using JobPilot.Terminal.Common;
-using JobPilot.Terminal.Hosting;
+using OpenApply.Terminal.Common;
+using OpenApply.Terminal.Hosting;
 
-namespace JobPilot.Terminal.Providers;
+namespace OpenApply.Terminal.Providers;
 
 /// <summary>Shape of plugin/settings/codex.json. Overrides are Codex `-c` values in TOML syntax.</summary>
 public sealed record CodexSettingsFile(string[]? ConfigOverrides);

@@ -1,7 +1,7 @@
 import type {
   discoverInputSchema,
   discoveryConnectionSchema,
-} from "@jobpilot/contracts/job-sources";
+} from "@openapply/contracts/job-sources";
 import { z } from "zod/v4";
 import { unprocessable } from "@/common/errors";
 import { type FetchJson, plainText, postedAt, type SourceJob } from "./types";

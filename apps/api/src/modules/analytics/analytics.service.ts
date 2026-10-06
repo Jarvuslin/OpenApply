@@ -1,4 +1,4 @@
-import { INTERVIEW_STATUSES } from "@jobpilot/contracts/application";
+import { INTERVIEW_STATUSES } from "@openapply/contracts/application";
 import { singleton } from "tsyringe";
 import { bucketPerDay, startOfTimeline, startOfWeek } from "@/common/date/buckets";
 import { PrismaClient } from "@/generated/prisma/client";

@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactElement, ReactNode } from "react";
-import type { PilotState } from "@jobpilot/contracts/pilot";
 import { Grid, LinearProgress, Stack, Typography } from "@mui/material";
+import type { PilotState } from "@openapply/contracts/pilot";
 import { useApiQuery } from "@/api/hooks";
 import { pilotQueries } from "@/api/queries";
 import { StatCard } from "@/components/ui/display";

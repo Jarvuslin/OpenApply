@@ -1,6 +1,6 @@
 ---
 name: pr-review
-description: Review a JobPilot pull request on its own branch, resolve merge conflicts with main, remove over-engineering, redundancy, redundant tests, and noisy comments from the PR's changes, and commit the cleanup locally. Then stop so the user can review and add their own changes. Only after the user approves, push to the PR branch as maintainer and post a short summary comment. Use for "review PR 37", "clean up the PR backlog", "review new PRs", or `/pr-review [number...]`.
+description: Review a OpenApply pull request on its own branch, resolve merge conflicts with main, remove over-engineering, redundancy, redundant tests, and noisy comments from the PR's changes, and commit the cleanup locally. Then stop so the user can review and add their own changes. Only after the user approves, push to the PR branch as maintainer and post a short summary comment. Use for "review PR 37", "clean up the PR backlog", "review new PRs", or `/pr-review [number...]`.
 metadata:
   version: "1.0"
 ---

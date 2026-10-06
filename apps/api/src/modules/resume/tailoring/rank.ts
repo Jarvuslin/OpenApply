@@ -1,4 +1,4 @@
-import type { ResumeData, ResumeSkillGroup } from "@jobpilot/contracts/resume";
+import type { ResumeData, ResumeSkillGroup } from "@openapply/contracts/resume";
 import { matchesTerm, toSearchText } from "@/modules/scoring/keyword-normalize";
 import type { TailorVariantBody } from "../variants/variant.schema";
 

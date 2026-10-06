@@ -1,4 +1,4 @@
-import { type AgendaResponse, agendaResponseSchema } from "@jobpilot/contracts/pilot";
+import { type AgendaResponse, agendaResponseSchema } from "@openapply/contracts/pilot";
 import { reviveJsonDates } from "@/common/json";
 import { Prisma } from "@/generated/prisma/client";
 

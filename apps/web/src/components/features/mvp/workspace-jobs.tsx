@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState } from "react";
-import { JOB_LEVEL_LABELS, JOB_LEVELS } from "@jobpilot/contracts/job-listing";
 import { ArrowOutward, Search, WorkOutlined } from "@mui/icons-material";
 import {
   Alert,
@@ -15,6 +14,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { JOB_LEVEL_LABELS, JOB_LEVELS } from "@openapply/contracts/job-listing";
 import { api } from "@/api/client";
 import { apiErrorMessage } from "@/api/error";
 import { formatSkillCommand, getStatus, injectCommand } from "@/lib/terminal";

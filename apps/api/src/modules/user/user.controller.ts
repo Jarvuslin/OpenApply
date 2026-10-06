@@ -1,4 +1,4 @@
-import { setPrimaryResumeSchema, userWithAutoApplySchema } from "@jobpilot/contracts/user";
+import { setPrimaryResumeSchema, userWithAutoApplySchema } from "@openapply/contracts/user";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { authGuard } from "@/common/middleware";

@@ -36,16 +36,16 @@ jobs:
           fixture="$(mktemp -d)"
           claude="$fixture/claude"
           codex="$fixture/codex"
-          mkdir -p "$claude/plugins/jobpilot" \
-                   "$codex/plugins/jobpilot/.codex-plugin" \
+          mkdir -p "$claude/plugins/openapply" \
+                   "$codex/plugins/openapply/.codex-plugin" \
                    "$codex/.agents/plugins"
           cat > "$codex/.agents/plugins/marketplace.json" <<'JSON'
           {
             "name": "sukhrob-codex-plugins",
             "interface": { "displayName": "Sukhrob Codex Plugins" },
             "plugins": [{
-              "name": "jobpilot",
-              "source": { "source": "local", "path": "./plugins/jobpilot" },
+              "name": "openapply",
+              "source": { "source": "local", "path": "./plugins/openapply" },
               "policy": { "installation": "AVAILABLE", "authentication": "ON_USE" },
               "category": "Productivity"
             }]
@@ -53,12 +53,12 @@ jobs:
           JSON
 
           # Equal size and mtime reproduces the old rsync false-negative.
-          cp -p plugin/.codex-plugin/plugin.json "$codex/plugins/jobpilot/.codex-plugin/plugin.json"
-          sed -i '0,/jobpilot/s//jobpilox/' "$codex/plugins/jobpilot/.codex-plugin/plugin.json"
-          touch -r plugin/.codex-plugin/plugin.json "$codex/plugins/jobpilot/.codex-plugin/plugin.json"
+          cp -p plugin/.codex-plugin/plugin.json "$codex/plugins/openapply/.codex-plugin/plugin.json"
+          sed -i '0,/openapply/s//jobpilox/' "$codex/plugins/openapply/.codex-plugin/plugin.json"
+          touch -r plugin/.codex-plugin/plugin.json "$codex/plugins/openapply/.codex-plugin/plugin.json"
 
           bash .github/scripts/sync-marketplaces.sh . "$claude" "$codex"
-          cmp plugin/.codex-plugin/plugin.json "$codex/plugins/jobpilot/.codex-plugin/plugin.json"
+          cmp plugin/.codex-plugin/plugin.json "$codex/plugins/openapply/.codex-plugin/plugin.json"
 
       - name: Lint & format check
         run: bun run ci
@@ -130,14 +130,13 @@ jobs:
       - name: Verify publish root ships provider assets
         working-directory: apps/terminal/publish
         run: |
-          for f in jobpilot \
+          for f in openapply \
                    plugin/.claude-plugin/plugin.json \
                    plugin/.codex-plugin/plugin.json \
                    plugin/.mcp.json \
                    plugin/skills/_shared/setup.md \
                    plugin/skills/auto-apply/SKILL.md \
-                   .codex/agents/job-worker.toml \
-                   .codex/agents/networking-worker.toml; do
+                   .codex/agents/job-worker.toml; do
             test -e "$f" || { echo "missing from publish root: $f"; exit 1; }
           done
           test ! -e .agents/plugins/marketplace.json || {

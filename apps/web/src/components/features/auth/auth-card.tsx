@@ -1,6 +1,6 @@
 import type { PropsWithChildren, ReactElement } from "react";
 import { Box, Card, CardContent, Container, Stack, Typography } from "@mui/material";
-import { JobPilotMark } from "@/components/brand/jobpilot-mark";
+import { OpenApplyMark } from "@/components/brand/openapply-mark";
 
 interface AuthCardProps extends PropsWithChildren {
   title: string;
@@ -28,7 +28,7 @@ export function AuthCard(props: AuthCardProps): ReactElement {
       <Container maxWidth="xs">
         <Stack spacing={3}>
           <Stack spacing={1} sx={{ alignItems: "center", textAlign: "center" }}>
-            <JobPilotMark size={48} />
+            <OpenApplyMark size={48} />
             <Typography variant="h1" sx={{ fontSize: "2rem", letterSpacing: "-0.035em" }}>
               OpenApply
             </Typography>

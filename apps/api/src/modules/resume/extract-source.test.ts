@@ -6,7 +6,7 @@ import { afterAll, beforeAll, expect, it } from "bun:test";
 
 let folder: string;
 beforeAll(async () => {
-  folder = await mkdtemp(path.join(tmpdir(), "jobpilot-resume-test-"));
+  folder = await mkdtemp(path.join(tmpdir(), "openapply-resume-test-"));
 });
 afterAll(async () => {
   await rm(folder, { recursive: true, force: true });

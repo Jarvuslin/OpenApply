@@ -2,8 +2,8 @@ import type {
   CampaignJobStatus,
   CampaignJobSummary,
   CampaignSummary,
-} from "@jobpilot/contracts/campaign";
-import { CAMPAIGN_JOB_STATUSES } from "@jobpilot/contracts/campaign";
+} from "@openapply/contracts/campaign";
+import { CAMPAIGN_JOB_STATUSES } from "@openapply/contracts/campaign";
 import { type Campaign, type CampaignSource, Prisma } from "@/generated/prisma/client";
 
 type SummaryClient = Pick<Prisma.TransactionClient, "job">;

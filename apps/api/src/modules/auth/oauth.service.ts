@@ -1,4 +1,4 @@
-import type { OAuthErrorReason, OAuthProviderInput } from "@jobpilot/contracts";
+import type { OAuthErrorReason, OAuthProviderInput } from "@openapply/contracts";
 import { singleton } from "tsyringe";
 import { conflict, notFound } from "@/common/errors";
 import { env } from "@/env";

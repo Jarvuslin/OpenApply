@@ -1,4 +1,4 @@
-import type { ResumeData } from "@jobpilot/contracts/resume";
+import type { ResumeData } from "@openapply/contracts/resume";
 
 export interface FieldChange {
   /** Where the change is, e.g. "Summary" or "EmTech Care Labs - bullet 2". */

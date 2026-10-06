@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { campaignChannel } from "@jobpilot/contracts/sse";
 import { Button, LinearProgress, Stack, Typography } from "@mui/material";
+import { campaignChannel } from "@openapply/contracts/sse";
 import { useQueryClient } from "@tanstack/react-query";
 import { useApiQuery } from "@/api/hooks";
 import { campaignQueries } from "@/api/queries";

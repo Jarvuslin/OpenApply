@@ -1,4 +1,4 @@
-namespace JobPilot.Terminal.Common;
+namespace OpenApply.Terminal.Common;
 
 internal static class FileTree
 {
@@ -24,13 +24,18 @@ internal static class FileTree
     /// <summary>Removes empty directories beneath <paramref name="root"/>, keeping the root itself.</summary>
     public static void DeleteEmptyDirectories(string root)
     {
-        if (!Directory.Exists(root))
+        if (!Directory.Exists(root) || (File.GetAttributes(root) & FileAttributes.ReparsePoint) != 0)
         {
             return;
         }
 
         // Deepest first, so a chain of emptied parents collapses in one pass.
-        foreach (var dir in Directory.EnumerateDirectories(root, "*", SearchOption.AllDirectories).OrderByDescending(d => d.Length))
+        var options = new EnumerationOptions
+        {
+            RecurseSubdirectories = true,
+            AttributesToSkip = FileAttributes.ReparsePoint,
+        };
+        foreach (var dir in Directory.EnumerateDirectories(root, "*", options).OrderByDescending(d => d.Length))
         {
             try
             {

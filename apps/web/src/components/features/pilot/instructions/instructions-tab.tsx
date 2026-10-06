@@ -2,12 +2,6 @@
 
 import { type ReactElement, useState } from "react";
 import {
-  NO_INSTRUCTIONS_CHANGE,
-  type PilotInstructionsChange,
-  type PilotState,
-  type UpdatePilotInstructionsInput,
-} from "@jobpilot/contracts/pilot";
-import {
   Accordion,
   AccordionDetails,
   AccordionSummary,
@@ -16,6 +10,12 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import {
+  NO_INSTRUCTIONS_CHANGE,
+  type PilotInstructionsChange,
+  type PilotState,
+  type UpdatePilotInstructionsInput,
+} from "@openapply/contracts/pilot";
 import { useSelector } from "@tanstack/react-form";
 import { api } from "@/api/client";
 import { useApiMutation, useApiQuery } from "@/api/hooks";

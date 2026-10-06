@@ -1,10 +1,10 @@
 "use client";
 
 import { type ReactElement, useRef, useState } from "react";
-import { CAMPAIGN_JOB_STATUSES, type CampaignJobStatus } from "@jobpilot/contracts/campaign";
 import { Autorenew, Clear, Replay } from "@mui/icons-material";
 import { Box, Button, Stack, TextField, Typography } from "@mui/material";
 import type { GridRowSelectionModel } from "@mui/x-data-grid";
+import { CAMPAIGN_JOB_STATUSES, type CampaignJobStatus } from "@openapply/contracts/campaign";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import { useApiMutation, useApiQuery } from "@/api/hooks";

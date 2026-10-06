@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { INTERVIEW_STATUSES } from "@jobpilot/contracts/application";
 import { Grid } from "@mui/material";
+import { INTERVIEW_STATUSES } from "@openapply/contracts/application";
 import { useApiQuery } from "@/api/hooks";
 import { applicationQueries, campaignQueries } from "@/api/queries";
 import { StatCard } from "@/components/ui/display";

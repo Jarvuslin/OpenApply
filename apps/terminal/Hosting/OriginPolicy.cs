@@ -1,4 +1,4 @@
-namespace JobPilot.Terminal.Hosting;
+namespace OpenApply.Terminal.Hosting;
 
 /// <summary>
 /// Browser origins allowed to control the host, from <c>Terminal:AllowedOrigins</c> in appsettings.json.
@@ -6,7 +6,7 @@ namespace JobPilot.Terminal.Hosting;
 /// </summary>
 public static class OriginPolicy
 {
-    public const string CorsPolicy = "jobpilot-web";
+    public const string CorsPolicy = "openapply-web";
 
     private const string ConfigKey = "Terminal:AllowedOrigins";
 

@@ -1,12 +1,6 @@
 "use client";
 
 import { type ReactElement, useState } from "react";
-import { DEFAULT_CURSOR_PAGE_SIZE } from "@jobpilot/contracts/pagination";
-import type {
-  PilotJournalEntry,
-  PilotJournalKind,
-  PilotJournalPage,
-} from "@jobpilot/contracts/pilot";
 import { DeleteSweep, Download } from "@mui/icons-material";
 import {
   Box,
@@ -19,6 +13,12 @@ import {
   ToggleButton,
   ToggleButtonGroup,
 } from "@mui/material";
+import { DEFAULT_CURSOR_PAGE_SIZE } from "@openapply/contracts/pagination";
+import type {
+  PilotJournalEntry,
+  PilotJournalKind,
+  PilotJournalPage,
+} from "@openapply/contracts/pilot";
 import { API_BASE_URL } from "@/api/base-url";
 import { api } from "@/api/client";
 import { useApiMutation, useApiQuery } from "@/api/hooks";

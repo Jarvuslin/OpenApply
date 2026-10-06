@@ -1,4 +1,4 @@
-import type { ResumeData } from "@jobpilot/contracts/resume";
+import type { ResumeData } from "@openapply/contracts/resume";
 import { matchesTerm, toSearchText } from "@/modules/scoring/keyword-normalize";
 
 /** What a resume states as fact: its numbers and its tech names. */

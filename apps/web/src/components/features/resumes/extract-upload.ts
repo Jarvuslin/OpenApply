@@ -1,4 +1,4 @@
-import type { ResumeData } from "@jobpilot/contracts/resume";
+import type { ResumeData } from "@openapply/contracts/resume";
 import { api } from "@/api/client";
 import { apiErrorMessage } from "@/api/error";
 

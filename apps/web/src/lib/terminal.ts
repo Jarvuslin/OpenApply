@@ -1,11 +1,11 @@
-import type { PilotCycleStatus } from "@jobpilot/contracts/pilot";
+import type { PilotCycleStatus } from "@openapply/contracts/pilot";
 
 const TERMINAL_HTTP_URL = process.env.NEXT_PUBLIC_TERMINAL_URL ?? "http://localhost:4102";
 
 export const TERMINAL_WS_URL = `${TERMINAL_HTTP_URL.replace(/^http/, "ws")}/ws`;
 
 /** URL scheme the host registers on Windows; opening it relaunches an offline host from the browser. */
-export const TERMINAL_PROTOCOL_URL = "jobpilot://start";
+export const TERMINAL_PROTOCOL_URL = "openapply://start";
 
 export type TerminalProviderId = "claude" | "codex";
 
@@ -50,7 +50,7 @@ export interface SessionStatus {
   hostVersion: string;
   /** Human-readable reason when status is "degraded". */
   detail?: string | null;
-  /** True when the host registered the jobpilot:// scheme, so the browser can relaunch it when offline. */
+  /** True when the host registered the openapply:// scheme, so the browser can relaunch it when offline. */
   canRelaunch: boolean;
   /** True when this is a published install, so the dashboard can offer a one-click self-update. */
   canUpdate: boolean;
@@ -110,11 +110,11 @@ interface StartOptions {
   cols: number;
   rows: number;
   provider: TerminalProviderId;
-  /** Per-user agent PAT, injected into the PTY as JOBPILOT_API_TOKEN. */
+  /** Per-user agent PAT, injected into the PTY as OPENAPPLY_API_TOKEN. */
   apiToken?: string;
-  /** Web app origin (this browser's location), injected into the PTY as JOBPILOT_WEB for user-facing links. */
+  /** Web app origin (this browser's location), injected into the PTY as OPENAPPLY_WEB for user-facing links. */
   webUrl?: string;
-  /** Backend base URL the web talks to, injected into the PTY as JOBPILOT_API so the agent hits the same (possibly remote) API. */
+  /** Backend base URL the web talks to, injected into the PTY as OPENAPPLY_API so the agent hits the same (possibly remote) API. */
   apiUrl?: string;
 }
 
@@ -143,9 +143,9 @@ interface PilotStartOptions {
   provider: TerminalProviderId;
   /** Per-user agent PAT the pilot loop authenticates with. */
   apiToken: string;
-  /** Backend base URL injected into the pilot PTY as JOBPILOT_API. */
+  /** Backend base URL injected into the pilot PTY as OPENAPPLY_API. */
   apiUrl: string;
-  /** Web origin injected as JOBPILOT_WEB for user-facing links. */
+  /** Web origin injected as OPENAPPLY_WEB for user-facing links. */
   webUrl: string;
 }
 
@@ -174,6 +174,6 @@ export function formatSkillCommand(
   args?: string,
 ): string {
   const suffix = args?.trim();
-  const command = provider === "codex" ? `$${skill}` : `/jobpilot:${skill}`;
+  const command = provider === "codex" ? `$${skill}` : `/openapply:${skill}`;
   return suffix ? `${command} ${suffix}` : command;
 }

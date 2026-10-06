@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { ApplicationStatus } from "@jobpilot/contracts/application";
 import { Box, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
+import type { ApplicationStatus } from "@openapply/contracts/application";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import type { ApplicationDto } from "@/api/types";

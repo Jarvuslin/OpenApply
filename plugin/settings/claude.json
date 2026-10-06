@@ -7,9 +7,9 @@
   "autoMode": {
     "environment": [
       "$defaults",
-      "Organization: JobPilot, a personal job-application agent run by a single user on their own machine. Primary use: browser automation and HTTP calls to the JobPilot API on that user's behalf.",
-      "Key internal services: the JobPilot API at the JOBPILOT_API host (http://localhost:4101 in dev) and the JobPilot web app at JOBPILOT_WEB (http://localhost:4100 in dev). Reading and writing the user's own applications, campaigns, contacts, and profile through that API is the agent's routine work.",
-      "Trusted internal domains: the JOBPILOT_API and JOBPILOT_WEB hosts.",
+      "Organization: OpenApply, a personal job-application agent run by a single user on their own machine. Primary use: browser automation and HTTP calls to the OpenApply API on that user's behalf.",
+      "Key internal services: the OpenApply API at the OPENAPPLY_API host (http://localhost:4101 in dev) and the OpenApply web app at OPENAPPLY_WEB (http://localhost:4100 in dev). Reading and writing the user's own applications, campaigns, contacts, and profile through that API is the agent's routine work.",
+      "Trusted internal domains: the OPENAPPLY_API and OPENAPPLY_WEB hosts.",
       "Additional context: the agent visits public job boards and company career sites with Playwright and fills application forms with the user's own profile and resume data. Submitting an application form is the purpose of this tool, not data exfiltration."
     ]
   }

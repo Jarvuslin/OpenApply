@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { CampaignActor } from "@jobpilot/contracts/campaign";
 import { Card, CardContent, Chip, Stack, Typography } from "@mui/material";
+import type { CampaignActor } from "@openapply/contracts/campaign";
 import type { CampaignDetailDto } from "@/api/types";
 import { formatRelativeTime } from "@/utils/format";
 import { CampaignStatusChip } from "../campaign-status-chip";

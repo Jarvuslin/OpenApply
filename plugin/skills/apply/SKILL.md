@@ -72,7 +72,7 @@ whether to proceed anyway. Stop on no.
 ### 1.3 Create Campaign-of-1
 
 ```bash
-jobpilot-api POST /api/campaigns \
+openapply-api POST /api/campaigns \
   --data '{"query":"<title> at <company>","source":"apply","config":{"maxApplications":1}}'
 ```
 
@@ -80,7 +80,7 @@ Keep `.campaignId` from the response as `CAMPAIGN_ID`.
 
 ### 1.4 Add the Job
 
-Pick a `JOB_KEY` of `<unix-seconds>-single`. Write the body to `"$JOBPILOT_TEMP/job.json"` (`digest` is the
+Pick a `JOB_KEY` of `<unix-seconds>-single`. Write the body to `"$OPENAPPLY_TEMP/job.json"` (`digest` is the
 stringified digest, `description` the posting text):
 
 ```json
@@ -90,10 +90,10 @@ stringified digest, `description` the posting text):
 ```
 
 ```bash
-jobpilot-api POST "/api/campaigns/$CAMPAIGN_ID/jobs" --data @"$JOBPILOT_TEMP/job.json"
+openapply-api POST "/api/campaigns/$CAMPAIGN_ID/jobs" --data @"$OPENAPPLY_TEMP/job.json"
 ```
 
-Keep `$CAMPAIGN_ID` and `$JOB_KEY`. Live view: `$JOBPILOT_WEB/campaigns/<CAMPAIGN_ID>`. Jump to **Phase 5**.
+Keep `$CAMPAIGN_ID` and `$JOB_KEY`. Live view: `$OPENAPPLY_WEB/campaigns/<CAMPAIGN_ID>`. Jump to **Phase 5**.
 
 ---
 
@@ -109,19 +109,19 @@ Skip this when the `campaign <id>` dispatch already set `CAMPAIGN_ID`. Otherwise
 `apply` campaign still holding queued rows (`.items` is newest-first):
 
 ```bash
-jobpilot-api GET /api/campaigns --query status=in_progress --query source=apply \
+openapply-api GET /api/campaigns --query status=in_progress --query source=apply \
   --query jobStatus=queued --query page=1 --query limit=1
 ```
 
 Take `.items[0].campaignId` as `CAMPAIGN_ID`. Empty `.items` → **"Nothing queued. Start a
-campaign at $JOBPILOT_WEB/campaigns/new, pick Apply to links, and run this again."** and stop. Otherwise read `config` off that same campaign row:
+campaign at $OPENAPPLY_WEB/campaigns/new, pick Apply to links, and run this again."** and stop. Otherwise read `config` off that same campaign row:
 `minScore` overrides `minMatchScore`,
 `resumeId` overrides the primary resume, `maxApplications` caps Phase 5.
 
 ### 2.2 Load the Queued Rows
 
 ```bash
-jobpilot-api GET "/api/campaigns/$CAMPAIGN_ID/jobs" --query status=queued --query page=1 --query limit=100
+openapply-api GET "/api/campaigns/$CAMPAIGN_ID/jobs" --query status=queued --query page=1 --query limit=100
 ```
 
 Keep each row's `key` and `url` - those two are all a queued row carries that is worth trusting.
@@ -135,7 +135,7 @@ For each queued row, run the applied-check (`../_shared/campaign-flow.md`) with 
 `.applied`, post the terminal result straight from `queued` (legal from any non-terminal status):
 
 ```bash
-jobpilot-api POST "/api/campaigns/$CAMPAIGN_ID/jobs/<key>/result" \
+openapply-api POST "/api/campaigns/$CAMPAIGN_ID/jobs/<key>/result" \
   --data '{"outcome":"skipped","skipReason":"Already applied (<kind>)"}'
 ```
 
@@ -189,7 +189,7 @@ Use PATCH only for approval; record every skip through `/result`:
 - `stop` → POST `/api/campaigns/$CAMPAIGN_ID/status` with `{status:"paused", actor:"user", reason:"Stopped from the terminal"}` and stop
 
 ```bash
-jobpilot-api PATCH "/api/campaigns/$CAMPAIGN_ID/jobs/<key>" --data '{"status":"approved"}'
+openapply-api PATCH "/api/campaigns/$CAMPAIGN_ID/jobs/<key>" --data '{"status":"approved"}'
 ```
 
 ## Phase 5: Apply Loop
@@ -199,7 +199,7 @@ For each `approved` job, score-descending:
 ### 5.1 Mark Applying
 
 ```bash
-jobpilot-api PATCH "/api/campaigns/$CAMPAIGN_ID/jobs/<key>" --data '{"status":"applying"}'
+openapply-api PATCH "/api/campaigns/$CAMPAIGN_ID/jobs/<key>" --data '{"status":"applying"}'
 ```
 
 ### 5.2 Apply (delegate to `job-worker`)
@@ -223,10 +223,10 @@ If `config.maxApplications` is set and `applied >= config.maxApplications`, stop
 Skip the completion command for `config.standing:true`. Leave that campaign open for future selections.
 
 ```bash
-jobpilot-api POST "/api/campaigns/$CAMPAIGN_ID/status" --data '{"status":"completed"}'
+openapply-api POST "/api/campaigns/$CAMPAIGN_ID/status" --data '{"status":"completed"}'
 ```
 
-Print a summary table and link to `$JOBPILOT_WEB/campaigns/<CAMPAIGN_ID>`.
+Print a summary table and link to `$OPENAPPLY_WEB/campaigns/<CAMPAIGN_ID>`.
 
 ## Rules
 

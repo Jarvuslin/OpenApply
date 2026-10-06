@@ -26,7 +26,7 @@ export interface TokenSet {
 }
 
 /**
- * Provider-neutral shape that JobPilot stores in the `EmailMessage` table.
+ * Provider-neutral shape that OpenApply stores in the `EmailMessage` table.
  * Each `MailboxProvider.syncMessages()` implementation is responsible for
  * decoding its raw message format into this shape.
  */

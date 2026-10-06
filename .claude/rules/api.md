@@ -21,13 +21,13 @@ schema is split by domain under `prisma/schema/*.prisma`.
 | `common/rate-limit` | One `rateLimit(policy)` per route as `beforeHandle`. Policies in `RATE_LIMITS`. |
 | `types/response.ts` | Error envelope plus `idResponseSchema`, `deletedResponseSchema`, `okResponseSchema`. Import as `@/types/response`. |
 
-Pagination schemas live in `@jobpilot/contracts/pagination`, shared with web and skills.
+Pagination schemas live in `@openapply/contracts/pagination`, shared with web and skills.
 
 ## Routes
 
 Add a route with the `add-api-route` skill. The rules:
 
-- Validate requests with Zod from `@jobpilot/contracts`. Use `idParam` for uuid path ids.
+- Validate requests with Zod from `@openapply/contracts`. Use `idParam` for uuid path ids.
 - Every JSON route declares a Zod `response` schema that matches the service return exactly.
   Elysia strips fields not in the schema, and Eden types the web from it. SSE, file, and
   redirect routes return a raw `Response` with no `response` schema.
@@ -58,7 +58,7 @@ A closed set is a Prisma `enum`, never a `String` column.
 
 1. Add a snake_case `@@map`.
 2. Values must be valid TypeScript identifiers (no hyphens, no leading digit, no `@map`).
-3. Mirror it as an `as const` array in `@jobpilot/contracts`.
+3. Mirror it as an `as const` array in `@openapply/contracts`.
 4. Add a row to `src/common/enum-parity.test.ts`.
 
 ## Traps

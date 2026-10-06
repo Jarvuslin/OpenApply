@@ -1,4 +1,4 @@
-import type { ResumeData } from "@jobpilot/contracts/resume";
+import type { ResumeData } from "@openapply/contracts/resume";
 
 /** Calculates the number of years since the earliest experience date in the resume content */
 function yearsSinceEarliestExperience(content: ResumeData): number | null {

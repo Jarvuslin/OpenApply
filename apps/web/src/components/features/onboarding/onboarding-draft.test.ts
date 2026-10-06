@@ -1,4 +1,4 @@
-import { USER_DEFAULT_VALUES, userWithAutoApplySchema } from "@jobpilot/contracts/user";
+import { USER_DEFAULT_VALUES, userWithAutoApplySchema } from "@openapply/contracts/user";
 import { readOnboardingDraft, writeOnboardingDraft } from "./onboarding-draft";
 import { expect, test } from "bun:test";
 

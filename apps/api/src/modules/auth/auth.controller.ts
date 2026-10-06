@@ -5,8 +5,8 @@ import {
   RegisterSchema,
   ResetPasswordSchema,
   VerifyEmailSchema,
-} from "@jobpilot/contracts";
-import { idParam } from "@jobpilot/contracts/shared";
+} from "@openapply/contracts";
+import { idParam } from "@openapply/contracts/shared";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { logger } from "@/common/logger";

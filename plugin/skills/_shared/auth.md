@@ -4,7 +4,7 @@ Use the persistent VM browser. Apply anonymously when the employer allows it.
 When registration is required for the one approved application:
 
 1. Read the actual employer/tenant hostname. Resolve only that exact scope using
-   `jobpilot-api GET /api/credentials/resolve --query domain=<scope>`.
+   `openapply-api GET /api/credentials/resolve --query domain=<scope>`.
    On shared ATS hosts, include the employer tenant in the scope (host/tenant).
    A returned `default` scope is not an employer-specific credential.
 2. Use an existing exact-scoped login when present. Never reset an existing
@@ -23,7 +23,7 @@ When registration is required for the one approved application:
 6. SMS, MFA or unknown eligibility means needs_user. Preserve
    the session and let the user continue in the VM viewer.
 
-On a blocking CAPTCHA, call `jobpilot-api GET /api/captcha/status`. Invoke `solve-captcha` only when `entitled:true`. Otherwise, or if solving fails, return `needs_user` with `category:"verification"`, leave that tab open, and let the orchestrator park this job and continue to the next. Never silently skip a challenge, change browser identity, or use proxies to evade it. A passive widget alone is not a blocking challenge.
+On a blocking CAPTCHA, call `openapply-api GET /api/captcha/status`. Invoke `solve-captcha` only when `entitled:true`. Otherwise, or if solving fails, return `needs_user` with `category:"verification"`, leave that tab open, and let the orchestrator park this job and continue to the next. Never silently skip a challenge, change browser identity, or use proxies to evade it. A passive widget alone is not a blocking challenge.
 
 For OAuth/SSO, let the user complete the initial login in the persistent browser.
 Do not enter the user's Gmail password into an employer's registration form.

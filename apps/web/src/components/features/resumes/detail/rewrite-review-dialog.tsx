@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { EMPTY_RESUME_DATA } from "@jobpilot/contracts/resume";
 import { ExpandMore, OpenInNew } from "@mui/icons-material";
 import {
   Accordion,
@@ -13,6 +12,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import { EMPTY_RESUME_DATA } from "@openapply/contracts/resume";
 import { resumePdfUrl, variantPdfUrl } from "@/api/resume-urls";
 import type { ResumeDto, ResumeVariantDto } from "@/api/types";
 import { FormDialogShell } from "@/components/ui/form";

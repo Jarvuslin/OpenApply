@@ -3,26 +3,26 @@ import {
   APPLICATION_EVENT_SOURCES,
   APPLICATION_SOURCES,
   APPLICATION_STATUSES,
-} from "@jobpilot/contracts/application";
+} from "@openapply/contracts/application";
 import {
   CAMPAIGN_ACTORS,
   CAMPAIGN_JOB_STATUSES,
   CAMPAIGN_SOURCES,
   CAMPAIGN_STATUSES,
-} from "@jobpilot/contracts/campaign";
-import { COVER_LETTER_SOURCES } from "@jobpilot/contracts/cover-letter";
-import { CLASSIFICATIONS, EMAIL_PROVIDERS, REVIEW_STATUSES } from "@jobpilot/contracts/email";
-import { JOB_LEVELS, JOB_LISTING_STATUSES } from "@jobpilot/contracts/job-listing";
-import { ATS_PROVIDERS, DISCOVERY_PROVIDERS } from "@jobpilot/contracts/job-sources";
-import { PILOT_CLAIM_OUTCOMES } from "@jobpilot/contracts/pilot/claim";
-import { PILOT_JOURNAL_KINDS } from "@jobpilot/contracts/pilot/journal";
-import { PILOT_QUESTION_KINDS, PILOT_QUESTION_STATUSES } from "@jobpilot/contracts/pilot/question";
-import { ROLES } from "@jobpilot/contracts/role";
-import { AVAILABILITY } from "@jobpilot/contracts/user";
+} from "@openapply/contracts/campaign";
+import { COVER_LETTER_SOURCES } from "@openapply/contracts/cover-letter";
+import { CLASSIFICATIONS, EMAIL_PROVIDERS, REVIEW_STATUSES } from "@openapply/contracts/email";
+import { JOB_LEVELS, JOB_LISTING_STATUSES } from "@openapply/contracts/job-listing";
+import { ATS_PROVIDERS, DISCOVERY_PROVIDERS } from "@openapply/contracts/job-sources";
+import { PILOT_CLAIM_OUTCOMES } from "@openapply/contracts/pilot/claim";
+import { PILOT_JOURNAL_KINDS } from "@openapply/contracts/pilot/journal";
+import { PILOT_QUESTION_KINDS, PILOT_QUESTION_STATUSES } from "@openapply/contracts/pilot/question";
+import { ROLES } from "@openapply/contracts/role";
+import { AVAILABILITY } from "@openapply/contracts/user";
 import * as prismaEnums from "@/generated/prisma/enums";
 import { describe, expect, it } from "bun:test";
 
-// The web cannot import the generated Prisma client, so `@jobpilot/contracts` keeps its own copy of
+// The web cannot import the generated Prisma client, so `@openapply/contracts` keeps its own copy of
 // every DB enum's values. This is the only thing stopping the two from drifting.
 const PAIRS: [string, readonly string[], Record<string, string>][] = [
   ["AtsProvider", ATS_PROVIDERS, prismaEnums.AtsProvider],

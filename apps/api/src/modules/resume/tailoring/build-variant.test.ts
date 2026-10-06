@@ -1,4 +1,4 @@
-import { EMPTY_RESUME_DATA, type ResumeData } from "@jobpilot/contracts/resume";
+import { EMPTY_RESUME_DATA, type ResumeData } from "@openapply/contracts/resume";
 import { HttpError } from "@/common/errors";
 import type { TailorVariantBody } from "../variants/variant.schema";
 import { buildTailoredVariant } from "./build-variant";

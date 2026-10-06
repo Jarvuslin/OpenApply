@@ -1,5 +1,5 @@
-import type { IngestMessagesInput } from "@jobpilot/contracts/email";
-import { inboxChannel } from "@jobpilot/contracts/sse";
+import type { IngestMessagesInput } from "@openapply/contracts/email";
+import { inboxChannel } from "@openapply/contracts/sse";
 import { singleton } from "tsyringe";
 import { CryptoService } from "@/common/crypto";
 import { conflict, ErrorCodes, HttpError, notFound } from "@/common/errors";

@@ -1,4 +1,4 @@
-import { CAMPAIGN_JOB_ACTIVE_STATUSES, campaignConfigSchema } from "@jobpilot/contracts/campaign";
+import { CAMPAIGN_JOB_ACTIVE_STATUSES, campaignConfigSchema } from "@openapply/contracts/campaign";
 import { DAY_MS } from "@/common/date/buckets";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { PROMOTABLE_SOURCES, publishCampaignStatus } from "@/modules/campaign/campaign.utils";

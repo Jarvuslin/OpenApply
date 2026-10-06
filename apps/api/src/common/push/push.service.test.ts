@@ -11,7 +11,7 @@ const configured: VapidConfigHolder = {
   vapid: {
     publicKey: VAPID.publicKey,
     privateKey: VAPID.privateKey,
-    subject: "mailto:test@jobpilot.dev",
+    subject: "mailto:test@openapply.dev",
   },
 };
 

@@ -29,7 +29,7 @@ export function currentRuntime() {
 
 export function guestCommand(runtime, args, user = "root") {
   if (runtime.backend === "wsl")
-    return ["wsl.exe", "-d", "JobPilot-MVP", "-u", user, "--exec", ...args];
+    return ["wsl.exe", "-d", "OpenApply-MVP", "-u", user, "--exec", ...args];
   if (runtime.backend === "lima")
     return [
       "limactl",

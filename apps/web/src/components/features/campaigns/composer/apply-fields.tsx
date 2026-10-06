@@ -1,7 +1,7 @@
 "use client";
 
-import { MAX_APPLY_URLS } from "@jobpilot/contracts/campaign";
 import { Stack } from "@mui/material";
+import { MAX_APPLY_URLS } from "@openapply/contracts/campaign";
 import { withForm } from "@/components/ui/form/tanstack";
 import { COMPOSER_DEFAULT_VALUES } from "./form-config";
 

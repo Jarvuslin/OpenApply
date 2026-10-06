@@ -1,4 +1,4 @@
-import { campaignChannel, workspaceChannel } from "@jobpilot/contracts/sse";
+import { campaignChannel, workspaceChannel } from "@openapply/contracts/sse";
 import { findOwned } from "@/common/errors";
 import { publish } from "@/common/sse";
 import type {

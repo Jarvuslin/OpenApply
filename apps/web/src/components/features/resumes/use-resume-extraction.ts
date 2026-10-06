@@ -1,7 +1,7 @@
 "use client";
 
-import type { ResumeData } from "@jobpilot/contracts/resume";
-import { resumeChannel } from "@jobpilot/contracts/sse";
+import type { ResumeData } from "@openapply/contracts/resume";
+import { resumeChannel } from "@openapply/contracts/sse";
 import { useApiQuery } from "@/api/hooks";
 import { resumeQueries } from "@/api/queries";
 import { useSseChannel } from "@/lib/sse/client";

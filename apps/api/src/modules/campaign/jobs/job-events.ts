@@ -1,5 +1,5 @@
-import type { CampaignSummary } from "@jobpilot/contracts/campaign";
-import { campaignChannel, workspaceChannel } from "@jobpilot/contracts/sse";
+import type { CampaignSummary } from "@openapply/contracts/campaign";
+import { campaignChannel, workspaceChannel } from "@openapply/contracts/sse";
 import { publish } from "@/common/sse";
 import type { CampaignSource, Job, PrismaClient } from "@/generated/prisma/client";
 import { deriveCampaignSummary } from "../campaign.summary";

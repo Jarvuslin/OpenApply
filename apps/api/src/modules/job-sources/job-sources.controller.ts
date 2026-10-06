@@ -3,7 +3,7 @@ import {
   discoverInputSchema,
   discoveryConnectionSchema,
   discoveryProviderSchema,
-} from "@jobpilot/contracts/job-sources";
+} from "@openapply/contracts/job-sources";
 import { Elysia } from "elysia";
 import { z } from "zod/v4";
 import { container } from "@/common/di/container";

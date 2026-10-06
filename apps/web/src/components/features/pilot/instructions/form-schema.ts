@@ -2,7 +2,7 @@ import {
   type PilotInstructionsConfig,
   type PilotState,
   pilotInstructionsConfigSchema,
-} from "@jobpilot/contracts/pilot";
+} from "@openapply/contracts/pilot";
 import { z } from "zod/v4";
 
 export const instructionsFormSchema = z.object({

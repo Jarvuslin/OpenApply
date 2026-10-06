@@ -6,7 +6,7 @@ argument-hint: "<campaign-id>"
 
 # Apply selected jobs
 
-Start with `jobpilot-api GET /api/health`. Stop clearly if the API is unavailable.
+Start with `openapply-api GET /api/health`. Stop clearly if the API is unavailable.
 Read `../_shared/setup.md`, `../_shared/blocked-sites.md` and `../_shared/campaign-flow.md`.
 The user has approved these selected jobs. Do not add a count cap or request routine confirmation again.
 

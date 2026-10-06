@@ -1,4 +1,4 @@
-import type { ResumeData } from "@jobpilot/contracts/resume";
+import type { ResumeData } from "@openapply/contracts/resume";
 import { unprocessable } from "@/common/errors";
 import type { TailorVariantBody, VariantRewriteAudit } from "../variants/variant.schema";
 import { buildCorpus } from "./facts";

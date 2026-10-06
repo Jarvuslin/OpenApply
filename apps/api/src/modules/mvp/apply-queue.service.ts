@@ -1,4 +1,4 @@
-import { campaignConfigSchema } from "@jobpilot/contracts/campaign";
+import { campaignConfigSchema } from "@openapply/contracts/campaign";
 import { singleton } from "tsyringe";
 import { badRequest } from "@/common/errors";
 import { type Prisma, PrismaClient } from "@/generated/prisma/client";

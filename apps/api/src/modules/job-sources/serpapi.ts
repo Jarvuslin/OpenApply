@@ -1,4 +1,4 @@
-import type { discoverInputSchema } from "@jobpilot/contracts/job-sources";
+import type { discoverInputSchema } from "@openapply/contracts/job-sources";
 import { z } from "zod/v4";
 import { allowedApplyUrl } from "@/modules/job-board/blocked-sites";
 import { type FetchJson, type SourceJob } from "./types";

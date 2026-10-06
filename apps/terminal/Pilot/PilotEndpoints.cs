@@ -1,8 +1,8 @@
-using JobPilot.Terminal.Hosting;
-using JobPilot.Terminal.Providers;
+using OpenApply.Terminal.Hosting;
+using OpenApply.Terminal.Providers;
 using Microsoft.AspNetCore.Http.HttpResults;
 
-namespace JobPilot.Terminal.Pilot;
+namespace OpenApply.Terminal.Pilot;
 
 public sealed record PilotStartRequest(string? Provider, string? ApiToken, string? ApiUrl, string? WebUrl);
 

@@ -1,4 +1,4 @@
-import type { ApplicationEventSource, ApplicationStatus } from "@jobpilot/contracts/application";
+import type { ApplicationEventSource, ApplicationStatus } from "@openapply/contracts/application";
 import type { PrismaClient } from "@/generated/prisma/client";
 
 interface StatusChangeArgs {

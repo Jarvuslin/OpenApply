@@ -7,7 +7,7 @@ credentials per `./setup.md` first; each skill states only its deltas from what'
 ## Applied-check (dedupe before opening a tab)
 
 ```bash
-jobpilot-api GET /api/applied/check --query "url=<job-url>" --query "title=<title>" --query "company=<company>"
+openapply-api GET /api/applied/check --query "url=<job-url>" --query "title=<title>" --query "company=<company>"
 ```
 
 Exact URL match plus fuzzy title+company over a 30-day window; `.match.kind` is `url` or
@@ -68,7 +68,7 @@ A standing campaign remains `in_progress` when its approved queue is empty. Do n
 2. **The Campaign is the audit trail.** PATCH non-terminal transitions; POST `/result` for
    terminal outcomes, so SSE reflects reality.
 3. **Never process payments** - record `failed` with `"Payment required"`.
-4. On a blocking CAPTCHA, call `jobpilot-api GET /api/captcha/status`. Invoke `solve-captcha` only when `entitled:true`. Otherwise, or if solving fails, return `needs_user` with `category:"verification"`, leave that tab open, and let the orchestrator park this job and continue to the next. Never silently skip a challenge, change browser identity, or use proxies to evade it. Logins and registration follow `./auth.md`.
+4. On a blocking CAPTCHA, call `openapply-api GET /api/captcha/status`. Invoke `solve-captcha` only when `entitled:true`. Otherwise, or if solving fails, return `needs_user` with `category:"verification"`, leave that tab open, and let the orchestrator park this job and continue to the next. Never silently skip a challenge, change browser identity, or use proxies to evade it. Logins and registration follow `./auth.md`.
 5. **Eligibility** follows `./eligibility.md`.
 6. **Pace** 3-5s between submissions on the same domain.
 7. **Be honest about match scores** - label stretches as stretches.

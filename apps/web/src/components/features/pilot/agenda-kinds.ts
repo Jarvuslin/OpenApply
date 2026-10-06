@@ -1,4 +1,4 @@
-import type { AgendaItem } from "@jobpilot/contracts/pilot";
+import type { AgendaItem } from "@openapply/contracts/pilot";
 
 /** Required record: a new agenda kind fails typecheck until it gets a label. */
 const AGENDA_KIND_LABELS: Record<AgendaItem["kind"], string> = {

@@ -1,4 +1,4 @@
-import { jobListingQuerySchema } from "@jobpilot/contracts/job-listing";
+import { jobListingQuerySchema } from "@openapply/contracts/job-listing";
 import { Elysia } from "elysia";
 import { z } from "zod/v4";
 import { container } from "@/common/di/container";

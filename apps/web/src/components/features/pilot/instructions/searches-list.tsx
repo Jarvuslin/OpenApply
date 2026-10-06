@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { PilotSearch } from "@jobpilot/contracts/pilot";
 import { Box, Chip, Divider, Stack, Typography } from "@mui/material";
+import type { PilotSearch } from "@openapply/contracts/pilot";
 import { useApiQuery } from "@/api/hooks";
 import { pilotQueries } from "@/api/queries";
 import { EmptyState, QuerySection } from "@/components/ui/data";

@@ -47,26 +47,26 @@ use it as `BASE_ID` (skip scoring; Step 3 extracts content if missing). Otherwis
 
 Highest wins. Tie-break: primary → most recent → lowest id. If no candidate has `hasData` AND no `sourceFilename`, stop:
 
-> No usable base resume. Upload a PDF at <$JOBPILOT_WEB/resumes>, or fill a resume's editor manually, then re-run.
+> No usable base resume. Upload a PDF at <$OPENAPPLY_WEB/resumes>, or fill a resume's editor manually, then re-run.
 
 Let `BASE_ID` be the chosen id.
 
 ## Step 3: Load the Base
 
 ```bash
-jobpilot-api GET "/api/resumes/$BASE_ID"
+openapply-api GET "/api/resumes/$BASE_ID"
 ```
 
 If `content` is `null`, run the `extract-resume` skill for `$BASE_ID`, wait for it, and refetch - Step 5 needs the saved `content`. If extract-resume stops because there's no `sourceFilename`, surface the same message and stop.
 
 **Check `profileMismatches`.** Non-empty means the recruiter reads one address and the form submits another. Echo once, don't block the apply:
 
-> ⚠ resume disagrees with your profile: {field} says "{resume}", profile says "{profile}". Fix at $JOBPILOT_WEB/resumes/{baseId}
+> ⚠ resume disagrees with your profile: {field} says "{resume}", profile says "{profile}". Fix at $OPENAPPLY_WEB/resumes/{baseId}
 
 ## Step 4: Decide Reuse vs Create
 
 ```bash
-jobpilot-api GET "/api/resumes/$BASE_ID/variants"
+openapply-api GET "/api/resumes/$BASE_ID/variants"
 ```
 
 **Shortlist first.** Rank the list response by title similarity and fetch `GET /api/resumes/variants/<id>` for the **top 5** only - a base with 60 variants would otherwise cost 60 fetches per job.
@@ -90,14 +90,14 @@ Pick the highest scorer:
 
 **Hard cap.** At **≥15** variants on a base, reuse the best scorer passing the role-family gate whatever it scored, and say so:
 
-> Reusing variant {id} (score {n}/100) - {baseId} is at {count} variants. Prune at $JOBPILOT_WEB/resumes/{baseId} to allow new ones.
+> Reusing variant {id} (score {n}/100) - {baseId} is at {count} variants. Prune at $OPENAPPLY_WEB/resumes/{baseId} to allow new ones.
 
 Reuse is the default; creating is the exception. A variant is a near-duplicate of its base with reordered bullets, so a fresh one gains little at unbounded cost. Recency contributes almost nothing on purpose - decaying a good variant's score is what turns every application into a new row.
 
 On reuse:
 
 > Reusing variant {id}: {label} (score {n}/100).
-> $JOBPILOT_API/api/resumes/variants/{id}/pdf
+> $OPENAPPLY_API/api/resumes/variants/{id}/pdf
 > `RESUME_USED base={baseId} variant={id}`
 
 Stop.
@@ -150,10 +150,10 @@ The server checks that every field you wrote states only what the resume states,
 
 The response also carries non-blocking `flags`, currently only a retitle that shares no word with the original. Echo them; they are what the candidate will be asked about.
 
-Write the body to `"$JOBPILOT_TEMP/tailor.json"` (omit `jobUrl` when there is none), then:
+Write the body to `"$OPENAPPLY_TEMP/tailor.json"` (omit `jobUrl` when there is none), then:
 
 ```bash
-jobpilot-api POST "/api/resumes/$BASE_ID/tailor" --data @"$JOBPILOT_TEMP/tailor.json"
+openapply-api POST "/api/resumes/$BASE_ID/tailor" --data @"$OPENAPPLY_TEMP/tailor.json"
 ```
 
 A plain reorder:
@@ -190,7 +190,7 @@ With a restructure:
 Response `{ id, pdfUrl, rewordedBullets, flags }`. Echo:
 
 > Created variant {id} from base {baseId} ({rewordedBullets} reworded).
-> $JOBPILOT_API{pdfUrl}
+> $OPENAPPLY_API{pdfUrl}
 > `RESUME_USED base={baseId} variant={id}`
 
 If `flags` is non-empty, append: `⚠ verify - {flags}`.

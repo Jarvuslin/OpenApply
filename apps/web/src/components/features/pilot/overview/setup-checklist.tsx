@@ -1,9 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { PilotState } from "@jobpilot/contracts/pilot";
 import { CheckCircle, RadioButtonUnchecked } from "@mui/icons-material";
 import { Box, Button, Stack, Typography } from "@mui/material";
+import type { PilotState } from "@openapply/contracts/pilot";
 import { useApiQuery } from "@/api/hooks";
 import { emailQueries } from "@/api/queries";
 import { LinkButton } from "@/components/ui/buttons";

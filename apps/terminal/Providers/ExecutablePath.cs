@@ -1,6 +1,6 @@
-using JobPilot.Terminal.Sessions;
+using OpenApply.Terminal.Sessions;
 
-namespace JobPilot.Terminal.Providers;
+namespace OpenApply.Terminal.Providers;
 
 /// <summary>
 /// Resolves a bare command name to a file <c>CreateProcess</c> can start. Codex spawns stdio MCP
@@ -11,7 +11,7 @@ public static class ExecutablePath
     private static readonly string[] ShellExtensions = [".cmd", ".bat"];
 
     // Resolve against the PATH the agent process gets, not the host's: a protocol-activated host
-    // (jobpilot://) inherits one without the machine entries, which is why PtyEnvironment exists.
+    // (openapply://) inherits one without the machine entries, which is why PtyEnvironment exists.
     private static readonly Lazy<Dictionary<string, string>> ChildEnvironment = new(PtyEnvironment.BuildOverrides);
 
     /// <summary>Absolute path to <paramref name="command"/>, or null when PATH has no match.</summary>

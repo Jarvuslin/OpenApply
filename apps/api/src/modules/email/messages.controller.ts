@@ -1,6 +1,6 @@
-import { approveSchema, ingestMessagesSchema, scanMessageSchema } from "@jobpilot/contracts/email";
-import { idParam } from "@jobpilot/contracts/shared";
-import { inboxChannel } from "@jobpilot/contracts/sse";
+import { approveSchema, ingestMessagesSchema, scanMessageSchema } from "@openapply/contracts/email";
+import { idParam } from "@openapply/contracts/shared";
+import { inboxChannel } from "@openapply/contracts/sse";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { authGuard } from "@/common/middleware";

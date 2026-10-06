@@ -9,7 +9,7 @@ interface Line {
 }
 
 const LINES: Line[] = [
-  { text: "$ /jobpilot:auto-apply senior typescript remote", tone: "prompt" },
+  { text: "$ /openapply:auto-apply senior typescript remote", tone: "prompt" },
   { text: "✓ Signed in to linkedin.com", tone: "ok" },
   { text: "→ Scoring 24 roles against your resume", tone: "step" },
   { text: "✓ Norlake · Senior Frontend Engineer - 92% match", tone: "ok" },

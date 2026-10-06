@@ -1,8 +1,8 @@
 "use client";
 
 import { type ReactElement, useState } from "react";
-import { inboxChannel } from "@jobpilot/contracts/sse";
 import { LinearProgress, Stack } from "@mui/material";
+import { inboxChannel } from "@openapply/contracts/sse";
 import { useQueryClient } from "@tanstack/react-query";
 import { useApiQuery } from "@/api/hooks";
 import { emailQueries, type InboxFilter } from "@/api/queries";

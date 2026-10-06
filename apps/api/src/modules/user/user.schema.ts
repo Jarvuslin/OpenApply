@@ -1,4 +1,4 @@
-import { SALARY_CURRENCIES, SALARY_PERIODS } from "@jobpilot/contracts/user";
+import { SALARY_CURRENCIES, SALARY_PERIODS } from "@openapply/contracts/user";
 import { z } from "zod/v4";
 
 /** A reference row attached to the user. */

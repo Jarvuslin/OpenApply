@@ -1,4 +1,4 @@
-namespace JobPilot.Terminal.Pilot;
+namespace OpenApply.Terminal.Pilot;
 
 /// <summary>
 /// Runs one cycle and recovers a stuck run by climbing check-in, skip, then restart. It returns the inter-cycle

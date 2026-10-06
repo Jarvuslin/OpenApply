@@ -5,8 +5,8 @@ import {
   pilotCycleDetailSchema,
   pilotInstructionsConfigSchema,
   type UpdatePilotInstructionsInput,
-} from "@jobpilot/contracts/pilot";
-import { pilotChannel } from "@jobpilot/contracts/sse";
+} from "@openapply/contracts/pilot";
+import { pilotChannel } from "@openapply/contracts/sse";
 import { singleton } from "tsyringe";
 import { conflict } from "@/common/errors";
 import { publish } from "@/common/sse";

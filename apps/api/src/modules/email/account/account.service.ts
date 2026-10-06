@@ -3,7 +3,7 @@ import type {
   EmailProvider,
   OAuthClientUpsertInput,
   SendEmailInput,
-} from "@jobpilot/contracts/email";
+} from "@openapply/contracts/email";
 import { singleton } from "tsyringe";
 import { CryptoService, SECRET_CONTEXTS } from "@/common/crypto";
 import { badRequest, conflict, ErrorCodes, HttpError, unprocessable } from "@/common/errors";

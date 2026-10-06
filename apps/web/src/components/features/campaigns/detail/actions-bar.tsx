@@ -1,7 +1,6 @@
 "use client";
 
 import { type ReactElement, useState } from "react";
-import type { CampaignStatus } from "@jobpilot/contracts/campaign";
 import {
   Autorenew,
   Delete,
@@ -12,6 +11,7 @@ import {
   Replay,
 } from "@mui/icons-material";
 import { Button, IconButton, Stack } from "@mui/material";
+import type { CampaignStatus } from "@openapply/contracts/campaign";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { api } from "@/api/client";

@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
-import { JOB_LEVEL_LABELS } from "@jobpilot/contracts/job-listing";
 import { Card, CardActionArea, CardContent, Chip, Stack, Typography } from "@mui/material";
+import { JOB_LEVEL_LABELS } from "@openapply/contracts/job-listing";
 import type { Route } from "next";
 import type { JobListingSummaryDto } from "@/api/types";
 import { fontFamilies } from "@/theme";

@@ -1,5 +1,5 @@
 import path from "node:path";
-import { resumeChannel } from "@jobpilot/contracts/sse";
+import { resumeChannel } from "@openapply/contracts/sse";
 import { singleton } from "tsyringe";
 import type { z } from "zod/v4";
 import { badRequest, findOwned, notFound } from "@/common/errors";

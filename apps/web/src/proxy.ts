@@ -1,4 +1,4 @@
-import { createApiClient } from "@jobpilot/api-client";
+import { createApiClient } from "@openapply/api-client";
 import { type NextRequest, NextResponse } from "next/server";
 import { API_ORIGIN } from "@/api/base-url";
 import { isAdminRole } from "@/lib/roles";

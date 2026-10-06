@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace JobPilot.Terminal.Pilot;
+namespace OpenApply.Terminal.Pilot;
 
 public enum CycleStatus
 {
@@ -14,7 +14,7 @@ public enum CycleStatus
 public readonly record struct CycleResult(CycleStatus Status, int SleepSeconds);
 
 /// <summary>
-/// Detects the <c>[[JOBPILOT_CYCLE ...]]</c> sentinel in raw PTY output. The TUI redraws and may echo the line, so
+/// Detects the <c>[[OPENAPPLY_CYCLE ...]]</c> sentinel in raw PTY output. The TUI redraws and may echo the line, so
 /// a rolling tail is rescanned on every feed and each cycle id fires at most once.
 /// </summary>
 public sealed partial class SentinelParser
@@ -31,7 +31,7 @@ public sealed partial class SentinelParser
 
     // Matched against a whitespace-free projection of the tail: the TUI wraps the sentinel with a newline+indent
     // anywhere (even mid-GUID), so the fragments only reunite once every space is gone.
-    [GeneratedRegex(@"\[\[JOBPILOT_CYCLEcycle=([0-9a-fA-F-]{36})status=(ok|empty|error)sleep=(\d+)\]\]")]
+    [GeneratedRegex(@"\[\[OPENAPPLY_CYCLEcycle=([0-9a-fA-F-]{36})status=(ok|empty|error)sleep=(\d+)\]\]")]
     private static partial Regex SentinelPattern();
 
     public IReadOnlyList<CycleResult> Feed(ReadOnlySpan<byte> chunk)

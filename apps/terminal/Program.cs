@@ -1,7 +1,7 @@
-using JobPilot.Terminal.Hosting;
-using JobPilot.Terminal.Pilot;
-using JobPilot.Terminal.Sessions;
-using JobPilot.Terminal.Updates;
+using OpenApply.Terminal.Hosting;
+using OpenApply.Terminal.Pilot;
+using OpenApply.Terminal.Sessions;
+using OpenApply.Terminal.Updates;
 using Microsoft.Extensions.Logging.Abstractions;
 
 // Pty.Net's macOS forkpty path requires CoreCLR's W^X remapping to be off; harmless under NativeAOT.
@@ -12,14 +12,14 @@ if (OperatingSystem.IsMacOS())
 
 if (args.Contains("--version", StringComparer.OrdinalIgnoreCase))
 {
-    Console.WriteLine($"jobpilot {HostInstall.HostVersion}");
+    Console.WriteLine($"openapply {HostInstall.HostVersion}");
     return;
 }
 
 if (args.Contains("--unregister", StringComparer.OrdinalIgnoreCase))
 {
     UrlScheme.Unregister(NullLogger.Instance);
-    Console.WriteLine("JobPilot: removed the jobpilot:// URL scheme.");
+    Console.WriteLine("OpenApply: removed the openapply:// URL scheme.");
     return;
 }
 

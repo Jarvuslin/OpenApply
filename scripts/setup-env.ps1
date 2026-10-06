@@ -12,9 +12,8 @@ if (!(Test-Path -LiteralPath $apiEnv)) {
   $template = Get-Content -LiteralPath (Join-Path $projectRoot 'apps/api/.env.example') -Raw
   $template = $template.Replace('JWT_SECRET=dev-insecure-change-me', "JWT_SECRET=$jwt")
   $template = $template.Replace('SECRET_MASTER_KEY=', "SECRET_MASTER_KEY=$master")
-  $template = $template.Replace('postgresql://jobpilot:jobpilot@localhost:5433/jobpilot', 'postgresql://postgres@127.0.0.1:5433/jobpilot')
-  # Blank optional variables must be absent for the Zod email/URL validators.
-  $template = [regex]::Replace($template, '(?m)^[A-Z_]+=\r?\n', '')
+  # Keep sign-in placeholders visible while omitting other unset optional values.
+  $template = [regex]::Replace($template, '(?m)^(?!(?:GOOGLE|GITHUB)_CLIENT_(?:ID|SECRET)=)[A-Z_]+=\r?\n', '')
   $template += "`nMVP_LOCAL_RUNNER=true`nCLAUDE_BIN=claude`n"
   [IO.File]::WriteAllText($apiEnv, $template, [Text.UTF8Encoding]::new($false))
   Write-Output 'Created apps/api/.env with new local encryption and session keys.'

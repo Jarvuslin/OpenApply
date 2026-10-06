@@ -1,4 +1,4 @@
-import type { JobBoardInput } from "@jobpilot/contracts/job-board";
+import type { JobBoardInput } from "@openapply/contracts/job-board";
 import { singleton } from "tsyringe";
 import { findOwned } from "@/common/errors";
 import { type Prisma, PrismaClient } from "@/generated/prisma/client";

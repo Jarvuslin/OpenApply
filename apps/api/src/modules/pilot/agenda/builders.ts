@@ -2,7 +2,7 @@ import {
   type AgendaPayload,
   type PilotInstructionsConfig,
   pilotInstructionsConfigSchema,
-} from "@jobpilot/contracts/pilot";
+} from "@openapply/contracts/pilot";
 import type { z } from "zod/v4";
 import type { AgendaInput } from "./build";
 import type { AgendaJob } from "./gather-jobs";

@@ -1,5 +1,5 @@
-import { JOB_LEVELS, jobListingStatusSchema } from "@jobpilot/contracts/job-listing";
-import { paginatedSchema } from "@jobpilot/contracts/pagination";
+import { JOB_LEVELS, jobListingStatusSchema } from "@openapply/contracts/job-listing";
+import { paginatedSchema } from "@openapply/contracts/pagination";
 import { z } from "zod/v4";
 
 /** Where one posting was seen. Board + link only - never who found it. */

@@ -1,9 +1,9 @@
 "use client";
 
 import { type ReactElement, useState } from "react";
-import type { CredentialInput } from "@jobpilot/contracts/credential";
 import { Add, Delete, Key, Lock } from "@mui/icons-material";
 import { Box, Button, Stack, Typography } from "@mui/material";
+import type { CredentialInput } from "@openapply/contracts/credential";
 import { api } from "@/api/client";
 import { useApiMutation, useApiQuery } from "@/api/hooks";
 import { credentialQueries } from "@/api/queries";

@@ -3,8 +3,8 @@ import type {
   CreatePilotQuestionInput,
   PilotQuestion,
   PilotQuestionStatus,
-} from "@jobpilot/contracts/pilot";
-import { pilotChannel } from "@jobpilot/contracts/sse";
+} from "@openapply/contracts/pilot";
+import { pilotChannel } from "@openapply/contracts/sse";
 import { singleton } from "tsyringe";
 import { z } from "zod/v4";
 import { conflict, findOwned } from "@/common/errors";
@@ -48,7 +48,7 @@ export class PilotQuestionService {
     const question = toPilotQuestion(row);
     publish(pilotChannel, { userId }, { type: "question.created", question });
     void this.push.sendToUser(userId, {
-      title: "JobPilot needs you",
+      title: "OpenApply needs you",
       body: row.prompt,
       url: row.deepLink ?? "/pilot",
       tag: `question-${row.id}`,

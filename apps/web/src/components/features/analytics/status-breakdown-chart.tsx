@@ -1,9 +1,9 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { ApplicationStatus } from "@jobpilot/contracts/application";
 import { Box, Card, CardContent, Stack, Typography, useTheme } from "@mui/material";
 import { PieChart } from "@mui/x-charts/PieChart";
+import type { ApplicationStatus } from "@openapply/contracts/application";
 import type { AnalyticsStatusBreakdownEntry } from "@/api/types";
 import { STATUS_LABEL } from "@/components/ui/display";
 

@@ -1,11 +1,11 @@
 // The review gate for scanned inbox mail: what applies itself, and what owes the user a decision.
 // Shared by the service and the backfill seeder so the rule cannot drift between live and replay.
-import type { ApplicationStatus } from "@jobpilot/contracts/application";
+import type { ApplicationStatus } from "@openapply/contracts/application";
 import {
   CLASSIFICATION_TO_STATUS,
   type Classification,
   type ReviewStatus,
-} from "@jobpilot/contracts/email";
+} from "@openapply/contracts/email";
 
 /** Scanner confidence below this leaves the message for human review. */
 export const AUTO_REJECTION_MIN_CONFIDENCE = 0.95;

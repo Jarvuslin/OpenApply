@@ -7,7 +7,7 @@ paths:
 
 One skill tree serves Claude (`--plugin-dir plugin`) and Codex (the host mirrors it into
 `.agents/skills`). Marketplaces ship only `skills/setup`. The full tree ships inside terminal
-archives as `JOBPILOT_SKILLS_ROOT`. No generation step. Edit here directly.
+archives as `OPENAPPLY_SKILLS_ROOT`. No generation step. Edit here directly.
 
 | Path | What it is |
 | --- | --- |
@@ -28,15 +28,15 @@ owns per-job variants, guarded in `apps/api/src/modules/resume/tailoring/structu
   command tokens. Claude-only frontmatter (`allowed-tools`) is fine.
 - Imperative voice, terse.
 - Start with `GET /api/health`. Stop with a clear message if the API is down.
-- Call the API with `jobpilot-api` (`plugin/bin/`, on the session's PATH), never curl or
+- Call the API with `openapply-api` (`plugin/bin/`, on the session's PATH), never curl or
   `Invoke-RestMethod`: Schannel fails TLS inside the Codex Windows sandbox, and the helper keeps
   the token out of commands. Never hard-code `localhost`. No direct DB access.
 
   ```sh
-  jobpilot-api GET /api/...
+  openapply-api GET /api/...
   ```
 
-  The host injects `JOBPILOT_API`, `JOBPILOT_API_TOKEN`, and `JOBPILOT_WEB` (for user-facing
+  The host injects `OPENAPPLY_API`, `OPENAPPLY_API_TOKEN`, and `OPENAPPLY_WEB` (for user-facing
   links).
 - Load profile, resume, and credentials per `skills/_shared/setup.md`. Credential order: board
   override, `scope === <domain>`, `scope === "default"`. Log in before searching.

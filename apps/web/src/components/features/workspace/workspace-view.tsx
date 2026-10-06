@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { workspaceChannel } from "@jobpilot/contracts/sse";
 import { Box, Tab, Tabs } from "@mui/material";
+import { workspaceChannel } from "@openapply/contracts/sse";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { queryKeys } from "@/api/query-keys";

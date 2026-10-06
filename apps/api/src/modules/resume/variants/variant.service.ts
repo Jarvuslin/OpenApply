@@ -1,8 +1,8 @@
 import type {
   resumeVariantCreateSchema,
   resumeVariantPatchSchema,
-} from "@jobpilot/contracts/resume";
-import { resumeChannel } from "@jobpilot/contracts/sse";
+} from "@openapply/contracts/resume";
+import { resumeChannel } from "@openapply/contracts/sse";
 import { singleton } from "tsyringe";
 import type { z } from "zod/v4";
 import { findOwned, notFound, unprocessable } from "@/common/errors";

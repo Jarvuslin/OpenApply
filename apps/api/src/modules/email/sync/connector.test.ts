@@ -1,4 +1,4 @@
-import { ingestMessagesSchema } from "@jobpilot/contracts/email";
+import { ingestMessagesSchema } from "@openapply/contracts/email";
 import type { CryptoService } from "@/common/crypto";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { EmailAccountService } from "../account/account.service";

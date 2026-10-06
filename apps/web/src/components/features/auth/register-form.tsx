@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { type RegisterInput, RegisterSchema } from "@jobpilot/contracts/auth";
 import { Alert, Link, Stack, Typography } from "@mui/material";
+import { type RegisterInput, RegisterSchema } from "@openapply/contracts/auth";
 import { useAppForm } from "@/components/ui/form/tanstack";
 import { useAuthActions } from "@/hooks/use-auth";
 import { useAuthOptions } from "@/hooks/use-auth-options";

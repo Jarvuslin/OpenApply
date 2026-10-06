@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { type ForgotPasswordInput, ForgotPasswordSchema } from "@jobpilot/contracts/auth";
 import { Alert, Link, Stack, Typography } from "@mui/material";
+import { type ForgotPasswordInput, ForgotPasswordSchema } from "@openapply/contracts/auth";
 import { api } from "@/api/client";
 import { useApiMutation } from "@/api/hooks";
 import type { ForgotPasswordResponse } from "@/api/types";

@@ -2,8 +2,8 @@ import type {
   AdminJobListingQuery,
   JobListingQuery,
   JobListingStatus,
-} from "@jobpilot/contracts/job-listing";
-import { pageSlice, paginate } from "@jobpilot/contracts/pagination";
+} from "@openapply/contracts/job-listing";
+import { pageSlice, paginate } from "@openapply/contracts/pagination";
 import { singleton } from "tsyringe";
 import { notFound } from "@/common/errors";
 import { type Prisma, PrismaClient } from "@/generated/prisma/client";

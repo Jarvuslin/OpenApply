@@ -2,11 +2,6 @@
 
 import { type ReactElement, type ReactNode, useState } from "react";
 import {
-  NO_INSTRUCTIONS_CHANGE,
-  type PilotInstructionsChange,
-  type PilotInstructionsImpact,
-} from "@jobpilot/contracts/pilot";
-import {
   Button,
   Checkbox,
   Dialog,
@@ -18,6 +13,11 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import {
+  NO_INSTRUCTIONS_CHANGE,
+  type PilotInstructionsChange,
+  type PilotInstructionsImpact,
+} from "@openapply/contracts/pilot";
 import { LoadingSpinner } from "@/components/ui/feedback";
 import { formatRelativeTime, plural } from "@/utils/format";
 

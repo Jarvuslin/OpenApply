@@ -1,5 +1,5 @@
 // A recruiter reads the resume's contact block; the ATS row comes from the profile. They should agree.
-import type { ResumeBasics } from "@jobpilot/contracts/resume";
+import type { ResumeBasics } from "@openapply/contracts/resume";
 import type { z } from "zod/v4";
 import type { profileMismatchSchema } from "./resume.schema";
 

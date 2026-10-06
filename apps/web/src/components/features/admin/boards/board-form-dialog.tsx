@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { type AdminBoardInput, adminBoardSchema } from "@jobpilot/contracts/job-board";
 import { Stack } from "@mui/material";
+import { type AdminBoardInput, adminBoardSchema } from "@openapply/contracts/job-board";
 import { FormDialog } from "@/components/ui/form";
 import { useAppForm } from "@/components/ui/form/tanstack";
 

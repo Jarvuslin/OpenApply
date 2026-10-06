@@ -1,4 +1,4 @@
-import { type UserWithAutoApplyInput, userWithAutoApplySchema } from "@jobpilot/contracts/user";
+import { type UserWithAutoApplyInput, userWithAutoApplySchema } from "@openapply/contracts/user";
 import { z } from "zod/v4";
 
 // Drafts validate data types, not completeness: an unfinished email, phone,
@@ -48,7 +48,7 @@ const draftSchema = z.object({
 });
 
 function draftKey(userId: string): string {
-  return `jobpilot:onboarding:v1:${userId}`;
+  return `openapply:onboarding:v1:${userId}`;
 }
 
 export function readOnboardingDraft(storage: Pick<Storage, "getItem">, userId: string) {

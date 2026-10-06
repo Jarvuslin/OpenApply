@@ -11,7 +11,7 @@ import type {
   ResumeProject,
   ResumePublication,
   ResumeSkillGroup,
-} from "@jobpilot/contracts/resume";
+} from "@openapply/contracts/resume";
 import { Link, Text, View } from "@react-pdf/renderer";
 import { absoluteHref, Bullets, dateRange, displayUrl, EntryRight, TitledEntry } from "./parts";
 import { styles } from "./styles";

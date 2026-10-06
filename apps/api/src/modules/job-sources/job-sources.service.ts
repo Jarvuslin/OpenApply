@@ -2,7 +2,7 @@ import {
   type discoverInputSchema,
   discoveryConnectionSchema,
   type discoveryProviderSchema,
-} from "@jobpilot/contracts/job-sources";
+} from "@openapply/contracts/job-sources";
 import { singleton } from "tsyringe";
 import type { z } from "zod/v4";
 import { CryptoService, SECRET_CONTEXTS } from "@/common/crypto";

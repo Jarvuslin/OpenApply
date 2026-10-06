@@ -1,5 +1,5 @@
-import type { CampaignJobResultInput, CampaignJobStatus } from "@jobpilot/contracts/campaign";
-import { CAMPAIGN_JOB_TERMINAL_OUTCOMES } from "@jobpilot/contracts/campaign";
+import type { CampaignJobResultInput, CampaignJobStatus } from "@openapply/contracts/campaign";
+import { CAMPAIGN_JOB_TERMINAL_OUTCOMES } from "@openapply/contracts/campaign";
 import { conflict, findOwned } from "@/common/errors";
 import type { Application, PrismaClient } from "@/generated/prisma/client";
 import { canonicalizeJobUrl } from "@/modules/application/job-url";

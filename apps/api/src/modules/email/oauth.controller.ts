@@ -1,4 +1,4 @@
-import { emailProviderSchema, oauthClientUpsertSchema } from "@jobpilot/contracts/email";
+import { emailProviderSchema, oauthClientUpsertSchema } from "@openapply/contracts/email";
 import { Elysia } from "elysia";
 import { oauthStateCookies } from "@/common/auth";
 import { container } from "@/common/di/container";

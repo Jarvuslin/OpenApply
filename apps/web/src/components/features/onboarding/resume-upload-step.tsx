@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
-import { USER_DEFAULT_VALUES } from "@jobpilot/contracts/user";
 import { Alert, Button, CircularProgress, Stack, Typography } from "@mui/material";
+import { USER_DEFAULT_VALUES } from "@openapply/contracts/user";
 import { api } from "@/api/client";
 import { apiErrorMessage } from "@/api/error";
 import { extractUpload } from "@/components/features/resumes/extract-upload";

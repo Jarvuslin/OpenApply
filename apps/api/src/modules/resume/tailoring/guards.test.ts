@@ -1,4 +1,4 @@
-import type { ResumeData } from "@jobpilot/contracts/resume";
+import type { ResumeData } from "@openapply/contracts/resume";
 import { buildCorpus } from "./facts";
 import { base, NLP_BULLET, PIPELINE_BULLET } from "./fakes";
 import { validateHeadline, validateRewrites, validateSummary } from "./guards";

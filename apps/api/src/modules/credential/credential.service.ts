@@ -1,4 +1,4 @@
-import type { CredentialInput, CredentialPatch } from "@jobpilot/contracts/credential";
+import type { CredentialInput, CredentialPatch } from "@openapply/contracts/credential";
 import { singleton } from "tsyringe";
 import { CryptoService, SECRET_CONTEXTS } from "@/common/crypto";
 import { findOwned } from "@/common/errors";

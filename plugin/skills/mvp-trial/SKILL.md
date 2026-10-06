@@ -6,7 +6,7 @@ argument-hint: "<job-listing-slug>"
 
 # Prepare a real application trial
 
-Start with `jobpilot-api GET /api/health`. Follow `../_shared/setup.md` for
+Start with `openapply-api GET /api/health`. Follow `../_shared/setup.md` for
 authenticated API access, profile and original resume. Read the selected listing
 with `GET /api/public/jobs/<slug>` and readiness with `GET /api/mvp/readiness`.
 Exactly one listing is in scope. Do not start Pilot or approve an application.
@@ -30,7 +30,7 @@ or bypass a failed browser connector from this skill.
    resume fact to fit. Target location does not establish current residence.
 3. Invoke `tailor-resume` with that digest and the original resume id. Preserve
    the original and use only its facts. Save or reuse one variant. Fetch its PDF
-   through `jobpilot-api GET /api/resumes/variants/<id>/pdf --out <scratch-path>`.
+   through `openapply-api GET /api/resumes/variants/<id>/pdf --out <scratch-path>`.
    Verify it is a nonempty PDF. Report a render failure separately from tailoring.
 4. Open the application form in the VM and inventory required fields, account
    requirements, uploads, and visible challenge indicators. Do not fill personal

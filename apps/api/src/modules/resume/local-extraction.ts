@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import { resumeDataSchema } from "@jobpilot/contracts/resume";
+import { resumeDataSchema } from "@openapply/contracts/resume";
 import { badRequest } from "@/common/errors";
 import { env } from "@/env";
 

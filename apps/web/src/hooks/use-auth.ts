@@ -1,6 +1,6 @@
 "use client";
 
-import type { LoginInput, RegisterInput } from "@jobpilot/contracts/auth";
+import type { LoginInput, RegisterInput } from "@openapply/contracts/auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { api } from "@/api/client";

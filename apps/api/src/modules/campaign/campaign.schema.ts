@@ -5,8 +5,8 @@ import {
   campaignSourceSchema,
   campaignStatusSchema,
   campaignSummarySchema,
-} from "@jobpilot/contracts/campaign";
-import { csvArray, paginatedSchema, paginationQuerySchema } from "@jobpilot/contracts/pagination";
+} from "@openapply/contracts/campaign";
+import { csvArray, paginatedSchema, paginationQuerySchema } from "@openapply/contracts/pagination";
 import { z } from "zod/v4";
 
 export const campaignsQuery = paginationQuerySchema.extend({

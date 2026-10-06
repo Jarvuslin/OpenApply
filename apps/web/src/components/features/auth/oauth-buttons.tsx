@@ -1,9 +1,9 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { OAuthProviderInput } from "@jobpilot/contracts/auth";
 import { GitHub, Google } from "@mui/icons-material";
 import { Alert, Button, Divider, Stack, Typography } from "@mui/material";
+import type { OAuthProviderInput } from "@openapply/contracts/auth";
 import { useAuthOptions } from "@/hooks/use-auth-options";
 import { OAUTH_PROVIDERS, oauthStartUrl } from "./oauth";
 

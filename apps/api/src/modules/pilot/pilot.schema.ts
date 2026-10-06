@@ -1,4 +1,4 @@
-import { pilotCycleStatusSchema, pilotJournalEntrySchema } from "@jobpilot/contracts/pilot";
+import { pilotCycleStatusSchema, pilotJournalEntrySchema } from "@openapply/contracts/pilot";
 import { z } from "zod/v4";
 import { SKIP_BUCKETS } from "./skip-reasons";
 

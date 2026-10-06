@@ -1,9 +1,9 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { AgendaResponse } from "@jobpilot/contracts/pilot";
 import { Refresh } from "@mui/icons-material";
 import { Box, Chip, Divider, IconButton, Stack, Typography } from "@mui/material";
+import type { AgendaResponse } from "@openapply/contracts/pilot";
 import { api } from "@/api/client";
 import { type ApiQueryResult, useApiMutation, useApiQuery } from "@/api/hooks";
 import { pilotQueries } from "@/api/queries";

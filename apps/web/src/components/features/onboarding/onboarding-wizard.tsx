@@ -2,11 +2,6 @@
 
 import { type ReactElement, type SubmitEvent, useEffect, useState } from "react";
 import {
-  USER_DEFAULT_VALUES,
-  type UserWithAutoApplyInput,
-  userWithAutoApplySchema,
-} from "@jobpilot/contracts/user";
-import {
   Alert,
   AlertTitle,
   Button,
@@ -19,6 +14,11 @@ import {
   Stepper,
   Typography,
 } from "@mui/material";
+import {
+  USER_DEFAULT_VALUES,
+  type UserWithAutoApplyInput,
+  userWithAutoApplySchema,
+} from "@openapply/contracts/user";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { api } from "@/api/client";
@@ -37,6 +37,7 @@ import { useAppForm, withForm } from "@/components/ui/form/tanstack";
 import { SectionCard } from "@/components/ui/layout";
 import { patchAgentStorage } from "@/lib/agent-storage";
 import { useToast } from "@/providers/notification-provider";
+import { migrateOpenApplyStorage } from "@/utils/storage-migration";
 import { AgentSetupStep } from "./agent-setup-step";
 import { readOnboardingDraft, writeOnboardingDraft } from "./onboarding-draft";
 import { ResumeUploadStep } from "./resume-upload-step";
@@ -83,6 +84,7 @@ function RestoreOnboarding({ userId, initialData }: OnboardingProps): ReactEleme
   } | null>(null);
   useEffect(() => {
     try {
+      migrateOpenApplyStorage(window.localStorage);
       const draft = readOnboardingDraft(window.localStorage, userId);
       setRestored({
         values: draft?.values ?? serverValues,

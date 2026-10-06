@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { ApplicationStatus } from "@jobpilot/contracts/application";
 import type { ChipProps } from "@mui/material";
+import type { ApplicationStatus } from "@openapply/contracts/application";
 import { ColorChip } from "./color-chip";
 
 export const STATUS_LABEL: Record<ApplicationStatus, string> = {

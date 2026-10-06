@@ -1,4 +1,4 @@
-import { atsProviderSchema } from "@jobpilot/contracts/job-sources";
+import { atsProviderSchema } from "@openapply/contracts/job-sources";
 import { z } from "zod/v4";
 
 export const sourceInput = z.object({

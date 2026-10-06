@@ -1,13 +1,13 @@
-# JobPilot plugin
+# OpenApply plugin
 
 This plugin turns Claude Code or Codex into your job-search agent. It searches
 job boards, tailors your resume for each posting, fills in applications, writes
 cover letters and outreach messages, and keeps your pipeline in the
-[JobPilot dashboard](https://jobpilot.suxrobgm.net) up to date.
+[OpenApply dashboard](http://localhost:4100) up to date.
 
 It runs on your machine, on your own Claude or Codex subscription. Your
-profile, resumes, and applications live in your JobPilot account; the agent
-reads and writes them through the JobPilot API.
+profile, resumes, and applications live in your OpenApply account; the agent
+reads and writes them through the OpenApply API.
 
 ## Install
 
@@ -33,7 +33,7 @@ The main ones are `search`, `auto-apply`, `apply`, and
 | `skills/pilot/kinds/` | One file per task type the autonomous Pilot can pick up. |
 | `skills/humanizer/` | Rewrites letters, proposals, and messages so they read like a person wrote them. Adapted from [blader/humanizer](https://github.com/blader/humanizer) (MIT). |
 | `agents/` | `job-worker`, the subagent that handles one job at a time so browser output stays out of the main session. |
-| `bin/` | `jobpilot-api`, the helper every skill uses to call the API. |
+| `bin/` | `openapply-api`, the helper every skill uses to call the API. |
 | `settings/` | Agent settings the terminal host passes to Claude and Codex. |
 | `.mcp.json` | The Playwright browser server. |
 

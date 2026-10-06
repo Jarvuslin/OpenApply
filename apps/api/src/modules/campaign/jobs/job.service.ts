@@ -4,8 +4,8 @@ import type {
   PatchCampaignJobInput,
   RescanCampaignJobInput,
   RetryCampaignJobInput,
-} from "@jobpilot/contracts/campaign";
-import { workspaceChannel } from "@jobpilot/contracts/sse";
+} from "@openapply/contracts/campaign";
+import { workspaceChannel } from "@openapply/contracts/sse";
 import { singleton } from "tsyringe";
 import { conflict, findOwned } from "@/common/errors";
 import { publish } from "@/common/sse";

@@ -1,4 +1,4 @@
-import { EMPTY_RESUME_DATA } from "@jobpilot/contracts/resume";
+import { EMPTY_RESUME_DATA } from "@openapply/contracts/resume";
 import { diffRewrite } from "./rewrite-diff";
 import { expect, test } from "bun:test";
 

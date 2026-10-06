@@ -1,9 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(jobpilot-api:*)",
+      "Bash(openapply-api:*)",
       "Bash(date:*)",
-      "mcp__plugin_jobpilot_playwright__*",
+      "mcp__plugin_openapply_playwright__*",
       "Skill(humanizer)",
       "Skill(cover-letter)",
       "Skill(autopilot)",

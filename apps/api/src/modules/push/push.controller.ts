@@ -4,7 +4,7 @@ import {
   pushSubscriptionSchema,
   pushUnsubscribeSchema,
   vapidKeySchema,
-} from "@jobpilot/contracts/push";
+} from "@openapply/contracts/push";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { notFound } from "@/common/errors";

@@ -2,9 +2,9 @@ import {
   campaignStatusCommandSchema,
   createCampaignSchema,
   updateCampaignConfigSchema,
-} from "@jobpilot/contracts/campaign";
-import { idParam } from "@jobpilot/contracts/shared";
-import { campaignChannel } from "@jobpilot/contracts/sse";
+} from "@openapply/contracts/campaign";
+import { idParam } from "@openapply/contracts/shared";
+import { campaignChannel } from "@openapply/contracts/sse";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { authGuard, requireVerifiedEmail } from "@/common/middleware";

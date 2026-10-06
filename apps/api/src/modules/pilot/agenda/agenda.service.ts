@@ -2,7 +2,7 @@ import {
   type AgendaResponse,
   type PilotInstructionsConfig,
   pilotInstructionsConfigSchema,
-} from "@jobpilot/contracts/pilot";
+} from "@openapply/contracts/pilot";
 import { singleton } from "tsyringe";
 import { conflict } from "@/common/errors";
 import { toInputJson } from "@/common/json";

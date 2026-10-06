@@ -1,3 +1,5 @@
+import { migrateOpenApplyStorage } from "./storage-migration";
+
 /**
  * Reads a JSON-serialized value from `window.localStorage` under `key`.
  * Returns `null` on SSR, when the key is missing, or when the stored value
@@ -9,6 +11,7 @@ export function readLocalStorage<T>(key: string): T | null {
   if (typeof window === "undefined") {
     return null;
   }
+  migrateOpenApplyStorage(window.localStorage);
   const raw = window.localStorage.getItem(key);
   if (!raw) {
     return null;

@@ -1,7 +1,7 @@
 "use client";
 
-import type { PilotQuestion } from "@jobpilot/contracts/pilot";
-import { pilotChannel } from "@jobpilot/contracts/sse";
+import type { PilotQuestion } from "@openapply/contracts/pilot";
+import { pilotChannel } from "@openapply/contracts/sse";
 import { useQueryClient } from "@tanstack/react-query";
 import { useApiQuery } from "@/api/hooks";
 import { pilotQueries } from "@/api/queries";

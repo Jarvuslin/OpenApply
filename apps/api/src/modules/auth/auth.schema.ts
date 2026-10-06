@@ -1,6 +1,6 @@
-import { OAuthProviderSchema } from "@jobpilot/contracts";
-import { roleSchema } from "@jobpilot/contracts/role";
-import { availabilitySchema } from "@jobpilot/contracts/user";
+import { OAuthProviderSchema } from "@openapply/contracts";
+import { roleSchema } from "@openapply/contracts/role";
+import { availabilitySchema } from "@openapply/contracts/user";
 import { z } from "zod/v4";
 
 export const oauthProviderParams = z.object({ provider: OAuthProviderSchema });

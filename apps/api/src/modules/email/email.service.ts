@@ -1,11 +1,11 @@
-import type { ApplicationStatus } from "@jobpilot/contracts/application";
+import type { ApplicationStatus } from "@openapply/contracts/application";
 import {
   type ApproveInput,
   CLASSIFICATION_TO_STATUS,
   type ScanMessageInput,
-} from "@jobpilot/contracts/email";
-import { type PaginationQuery, pageSlice, paginate } from "@jobpilot/contracts/pagination";
-import { inboxChannel } from "@jobpilot/contracts/sse";
+} from "@openapply/contracts/email";
+import { type PaginationQuery, pageSlice, paginate } from "@openapply/contracts/pagination";
+import { inboxChannel } from "@openapply/contracts/sse";
 import { singleton } from "tsyringe";
 import type { z } from "zod/v4";
 import { ErrorCodes, findOwned, HttpError, notFound } from "@/common/errors";

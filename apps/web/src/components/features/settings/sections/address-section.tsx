@@ -1,7 +1,7 @@
 "use client";
 
-import { USER_DEFAULT_VALUES } from "@jobpilot/contracts/user";
 import { Stack } from "@mui/material";
+import { USER_DEFAULT_VALUES } from "@openapply/contracts/user";
 import { FormSection } from "@/components/ui/form";
 import { withForm } from "@/components/ui/form/tanstack";
 

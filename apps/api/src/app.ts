@@ -97,7 +97,7 @@ const app = new Elysia()
     idleTimeout: env.MVP_LOCAL_RUNNER ? 150 : 30,
   });
 
-logger.info(`JobPilot API running at http://localhost:${app.server?.port}`);
+logger.info(`OpenApply API running at http://localhost:${app.server?.port}`);
 if (env.NODE_ENV === "development") {
   logger.info(`Swagger docs at http://localhost:${app.server?.port}/swagger`);
 }

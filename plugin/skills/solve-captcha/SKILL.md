@@ -6,9 +6,9 @@ argument-hint: "[url | ref_or_description] (optional; a URL → navigate there f
 
 # Solve CAPTCHA
 
-Clear a CAPTCHA on the **current browser tab**. Return **solved** or **unsolved** (the caller falls back). Authorized use only - the user's own applications. Call the API with `jobpilot-api` (`../_shared/setup.md` "Calling the API").
+Clear a CAPTCHA on the **current browser tab**. Return **solved** or **unsolved** (the caller falls back). Authorized use only - the user's own applications. Call the API with `openapply-api` (`../_shared/setup.md` "Calling the API").
 
-Before any attempt, call `jobpilot-api GET /api/captcha/status`. If `entitled` is not true, return **unsolved** without interacting with the challenge. The caller must park the job as `needs_user`, category `verification`, and leave its tab open. Never use proxies or change browser identity.
+Before any attempt, call `openapply-api GET /api/captcha/status`. If `entitled` is not true, return **unsolved** without interacting with the challenge. The caller must park the job as `needs_user`, category `verification`, and leave its tab open. Never use proxies or change browser identity.
 
 ## 1. Dispatch + identify
 
@@ -50,7 +50,7 @@ hCaptcha: `iframe[src*="hcaptcha"]` → `type:"hcaptcha"`. Turnstile: `.cf-turns
 Solve it server-side (the endpoint resolves the configured key + polls the provider; the skill never sees the key):
 
 ```bash
-jobpilot-api POST /api/captcha/solve --data '{"type":"recaptcha","sitekey":"<sitekey>","pageurl":"<pageurl>"}'
+openapply-api POST /api/captcha/solve --data '{"type":"recaptcha","sitekey":"<sitekey>","pageurl":"<pageurl>"}'
 ```
 
 A failed call or an empty `.token` (no key configured, or solver failure) → **unsolved**.

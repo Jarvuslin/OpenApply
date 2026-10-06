@@ -1,9 +1,9 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { type OAuthClientUpsertInput, oauthClientUpsertSchema } from "@jobpilot/contracts/email";
 import { CheckCircle } from "@mui/icons-material";
 import { Alert, Box, Button, Chip, Link, Stack, Tooltip, Typography } from "@mui/material";
+import { type OAuthClientUpsertInput, oauthClientUpsertSchema } from "@openapply/contracts/email";
 import { api } from "@/api/client";
 import { useApiMutation, useApiQuery } from "@/api/hooks";
 import { emailQueries } from "@/api/queries";

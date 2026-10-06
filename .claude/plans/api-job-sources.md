@@ -4,7 +4,7 @@
 
 GitHub issue #28: the freehire.me maintainer proposes it as a job source. Its search API is
 public and key-free, returns full descriptions per hit, filters on visa sponsorship, and links
-to the employer's own ATS. JobPilot discovers jobs only through agent-driven Playwright browsing
+to the employer's own ATS. OpenApply discovers jobs only through agent-driven Playwright browsing
 today, which costs tokens and time per page.
 
 We build a thin generic seam: a `JobSourceAdapter` TypeScript interface with a code registry,

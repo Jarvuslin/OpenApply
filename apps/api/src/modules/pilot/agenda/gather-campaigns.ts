@@ -1,5 +1,5 @@
-import { campaignConfigSchema } from "@jobpilot/contracts/campaign";
-import type { AgendaPayload } from "@jobpilot/contracts/pilot";
+import { campaignConfigSchema } from "@openapply/contracts/campaign";
+import type { AgendaPayload } from "@openapply/contracts/pilot";
 import { z } from "zod/v4";
 import { DAY_MS, HOUR_MS } from "@/common/date/buckets";
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";

@@ -1,12 +1,12 @@
-# JobPilot
+# OpenApply
 
 Multi-user AI job-application app. The web UI and API are cloud-hosted and shared. The API owns
 all state. Each user runs the agent locally: Claude Code or Codex in a .NET PTY host, plus
 Playwright. Dev ports: web `:4100`, API `:4101`, PTY host `:4102`.
 
 Auth: the web fetches the user's terminal token via `POST /api/auth/tokens/terminal` and hands
-it to the PTY host, which sets `JOBPILOT_API_TOKEN`. Skills call the API through
-`plugin/bin/jobpilot-api`, which sends it as `Authorization: Bearer`.
+it to the PTY host, which sets `OPENAPPLY_API_TOKEN`. Skills call the API through
+`plugin/bin/openapply-api`, which sends it as `Authorization: Bearer`.
 
 ## Layout
 
@@ -14,9 +14,9 @@ it to the PTY host, which sets `JOBPILOT_API_TOKEN`. Skills call the API through
 | --- | --- |
 | `apps/web/` | Next.js 16 + MUI 9 on Bun. Talks to the API over HTTP only. `src/proxy.ts` is auth middleware, not a data proxy. |
 | `apps/api/` | Elysia + Prisma 7 on Bun. Owns all persistence. Exports `type App` for Eden. Swagger at `:4101/swagger`. |
-| `apps/terminal/` | .NET 10 PTY host. Tests in `tests/JobPilot.Terminal.Tests/`, solution `JobPilot.slnx`. |
-| `packages/contracts/` | `@jobpilot/contracts`: shared Zod schemas. |
-| `packages/api-client/` | `@jobpilot/api-client`: Eden client. |
+| `apps/terminal/` | .NET 10 PTY host. Tests in `tests/OpenApply.Terminal.Tests/`, solution `OpenApply.slnx`. |
+| `packages/contracts/` | `@openapply/contracts`: shared Zod schemas. |
+| `packages/api-client/` | `@openapply/api-client`: Eden client. |
 | `plugin/` | One skill tree for Claude and Codex. Edit skills here directly. |
 | `docs/`, `deploy/` | User docs. Production stack. |
 

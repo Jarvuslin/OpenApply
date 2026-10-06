@@ -2,7 +2,7 @@ import {
   type SalaryCurrency,
   type SalaryPeriod,
   type UserWithAutoApplyInput,
-} from "@jobpilot/contracts/user";
+} from "@openapply/contracts/user";
 import { singleton } from "tsyringe";
 import { findOwned } from "@/common/errors";
 import { resumePath } from "@/common/storage/storage";

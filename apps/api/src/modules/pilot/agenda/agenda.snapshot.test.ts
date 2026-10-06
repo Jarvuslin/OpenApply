@@ -1,4 +1,4 @@
-import type { AgendaResponse } from "@jobpilot/contracts/pilot";
+import type { AgendaResponse } from "@openapply/contracts/pilot";
 import type { PushService } from "@/common/push/push.service";
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { CampaignJobService } from "@/modules/campaign/jobs/job.service";

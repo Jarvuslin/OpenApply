@@ -90,7 +90,7 @@ export function buildMimeMessage(input: {
     return `${headers.join("\r\n")}\r\n\r\n${input.body}`;
   }
 
-  const boundary = `jobpilot_${input.to.replace(/[^a-z0-9]/gi, "")}_boundary`;
+  const boundary = `openapply_${input.to.replace(/[^a-z0-9]/gi, "")}_boundary`;
   headers.push(`Content-Type: multipart/mixed; boundary="${boundary}"`);
 
   const parts: string[] = [

@@ -1,4 +1,4 @@
-import { captchaSolveSchema } from "@jobpilot/contracts/captcha";
+import { captchaSolveSchema } from "@openapply/contracts/captcha";
 import { Elysia } from "elysia";
 import { z } from "zod/v4";
 import { container } from "@/common/di/container";

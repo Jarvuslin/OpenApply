@@ -3,7 +3,7 @@ import {
   type AgendaItem,
   type AgendaPayload,
   type PilotInstructionsConfig,
-} from "@jobpilot/contracts/pilot";
+} from "@openapply/contracts/pilot";
 import { nextDayReset } from "@/common/date/buckets";
 import type { AgendaJob } from "./gather-jobs";
 import type { DueSearch } from "./gather-searches";

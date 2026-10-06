@@ -1,11 +1,11 @@
-using JobPilot.Terminal.Pilot;
-using JobPilot.Terminal.Sessions;
-using JobPilot.Terminal.Updates;
+using OpenApply.Terminal.Pilot;
+using OpenApply.Terminal.Sessions;
+using OpenApply.Terminal.Updates;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
-namespace JobPilot.Terminal.Hosting;
+namespace OpenApply.Terminal.Hosting;
 
 public static class HostingExtensions
 {
@@ -106,8 +106,8 @@ public static class HostingExtensions
         {
             var url = app.Configuration["Kestrel:Endpoints:Http:Url"] ?? "http://localhost:4102";
             Console.Error.WriteLine(
-                $"JobPilot terminal: {url} is already in use - another jobpilot instance is probably running.\n"
-                + "Stop it and retry: 'Get-Process jobpilot | Stop-Process' (Windows) or 'pkill -x jobpilot' (macOS/Linux).");
+                $"OpenApply terminal: {url} is already in use - another openapply instance is probably running.\n"
+                + "Stop it and retry: 'Get-Process openapply | Stop-Process' (Windows) or 'pkill -x openapply' (macOS/Linux).");
             Environment.Exit(1);
         }
     }

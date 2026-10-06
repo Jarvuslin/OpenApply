@@ -1,6 +1,6 @@
 // Deterministic scoring heuristic. `fit.ts` imports only `keyword-normalize` + a type, so no env/Prisma.
 
-import { DEFAULT_MIN_MATCH_SCORE } from "@jobpilot/contracts/user";
+import { DEFAULT_MIN_MATCH_SCORE } from "@openapply/contracts/user";
 import { scoreFit } from "./fit";
 import type { FitProfile, JobDigest } from "./scoring.schema";
 import { describe, expect, it } from "bun:test";

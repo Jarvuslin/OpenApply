@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode, useEffect, useRef } from "react";
-import { pilotChannel } from "@jobpilot/contracts/sse";
+import { pilotChannel } from "@openapply/contracts/sse";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/api/query-keys";
 import { useSseChannel } from "@/lib/sse/client";

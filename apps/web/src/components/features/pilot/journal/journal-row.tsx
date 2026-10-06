@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { PilotJournalEntry, PilotJournalKind } from "@jobpilot/contracts/pilot";
 import type { SvgIconComponent } from "@mui/icons-material";
 import {
   Autorenew,
@@ -13,6 +12,7 @@ import {
   Visibility,
 } from "@mui/icons-material";
 import { Box, Chip, type ChipProps, Stack, Typography } from "@mui/material";
+import type { PilotJournalEntry, PilotJournalKind } from "@openapply/contracts/pilot";
 import { RelativeTime } from "@/components/ui/display";
 import { humanizeIsoInText } from "@/utils/format";
 

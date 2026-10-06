@@ -1,4 +1,4 @@
-import { USER_DEFAULT_VALUES, type UserWithAutoApplyInput } from "@jobpilot/contracts/user";
+import { USER_DEFAULT_VALUES, type UserWithAutoApplyInput } from "@openapply/contracts/user";
 import type { UserAggregateResponse } from "@/api/types";
 export function toFormValues(data: UserAggregateResponse): UserWithAutoApplyInput {
   const p = data.user;

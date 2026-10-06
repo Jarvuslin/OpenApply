@@ -1,7 +1,7 @@
 import {
   pilotInstructionsChangeSchema,
   pilotInstructionsConfigSchema,
-} from "@jobpilot/contracts/pilot";
+} from "@openapply/contracts/pilot";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { PilotService } from "./pilot.service";
 import { describe, expect, it } from "bun:test";

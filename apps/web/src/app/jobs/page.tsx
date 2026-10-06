@@ -1,6 +1,6 @@
 import { type ReactElement, Suspense } from "react";
-import { JOB_LISTING_FILTER_KEYS, JOB_LISTING_MAX_PAGE } from "@jobpilot/contracts/job-listing";
 import { Grid, Skeleton, Stack, Typography } from "@mui/material";
+import { JOB_LISTING_FILTER_KEYS, JOB_LISTING_MAX_PAGE } from "@openapply/contracts/job-listing";
 import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
 import { notFound } from "next/navigation";

@@ -1,6 +1,6 @@
 "use client";
 
-import { type PilotJournalPage, pilotCycleDetailSchema } from "@jobpilot/contracts/pilot";
+import { type PilotJournalPage, pilotCycleDetailSchema } from "@openapply/contracts/pilot";
 import { useEffect, useState } from "react";
 import { useApiQuery } from "@/api/hooks";
 import { pilotQueries } from "@/api/queries";

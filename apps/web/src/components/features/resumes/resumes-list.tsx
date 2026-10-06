@@ -1,7 +1,6 @@
 "use client";
 
 import { type ReactElement, type ReactNode, useState } from "react";
-import { resumeChannel } from "@jobpilot/contracts/sse";
 import { Add, Description, PictureAsPdf, Star, StarBorder } from "@mui/icons-material";
 import {
   Box,
@@ -15,6 +14,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import { resumeChannel } from "@openapply/contracts/sse";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Route } from "next";
 import Link from "next/link";

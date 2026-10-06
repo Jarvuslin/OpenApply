@@ -1,11 +1,8 @@
 param([switch]$VmOnly)
 $ErrorActionPreference = 'Stop'
 $mvpRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$mvpWork = [IO.Path]::GetFullPath((Join-Path $mvpRoot '../../work'))
-$mvpBun = Join-Path $mvpWork 'audit-runtime/node_modules/@oven/bun-windows-x64/bin/bun.exe'
-$mvpDotnet = Join-Path $mvpWork 'dotnet/dotnet.exe'
-if (!(Test-Path -LiteralPath $mvpBun)) { $mvpBun = (Get-Command bun -ErrorAction Stop).Source }
-if (!(Test-Path -LiteralPath $mvpDotnet)) { $mvpDotnet = (Get-Command dotnet -ErrorAction Stop).Source }
+$mvpBun = (Get-Command bun -ErrorAction Stop).Source
+$mvpDotnet = (Get-Command dotnet -ErrorAction Stop).Source
 $env:DOTNET_ROOT = Split-Path $mvpDotnet
 $env:PATH = (Split-Path $mvpBun) + ';' + (Split-Path $mvpDotnet) + ';' + $env:PATH
 $mvpLogs = Join-Path $mvpRoot '.temp/mvp'
@@ -19,8 +16,8 @@ function Start-MvpProcess([string]$Name, [string]$Exe, [string[]]$Arguments, [st
 }
 if (!(Test-MvpEndpoint 'http://127.0.0.1:9222/json/version')) {
   $windowsScript = (Join-Path $PSScriptRoot 'mvp-vm-start.sh').Replace('\','/')
-  $vmScript = (& wsl -d JobPilot-MVP -- wslpath -a $windowsScript).Trim()
-  Start-MvpProcess 'vm' 'wsl.exe' @('-d','JobPilot-MVP','--','sh',('"' + $vmScript + '"')) $mvpRoot
+  $vmScript = (& wsl -d OpenApply-MVP -- wslpath -a $windowsScript).Trim()
+  Start-MvpProcess 'vm' 'wsl.exe' @('-d','OpenApply-MVP','--','sh',('"' + $vmScript + '"')) $mvpRoot
   for ($attempt = 0; $attempt -lt 120; $attempt++) {
     if (Test-MvpEndpoint 'http://127.0.0.1:9222/json/version') { break }
     Start-Sleep -Milliseconds 500

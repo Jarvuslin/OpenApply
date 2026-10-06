@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Pty.Net;
 
-namespace JobPilot.Terminal.Sessions;
+namespace OpenApply.Terminal.Sessions;
 
 public sealed class PtyStartException(string command, Exception innerException)
     : Exception($"Failed to start '{command}': {innerException.Message}", innerException);

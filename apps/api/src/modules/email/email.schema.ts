@@ -1,10 +1,10 @@
-import { statusSchema } from "@jobpilot/contracts/application";
+import { statusSchema } from "@openapply/contracts/application";
 import {
   classificationSchema,
   emailProviderSchema,
   reviewStatusSchema,
-} from "@jobpilot/contracts/email";
-import { paginatedSchema, paginationQuerySchema } from "@jobpilot/contracts/pagination";
+} from "@openapply/contracts/email";
+import { paginatedSchema, paginationQuerySchema } from "@openapply/contracts/pagination";
 import { z } from "zod/v4";
 
 /** What narrows a set of inbox messages, whether the caller wants the rows or just how many. */

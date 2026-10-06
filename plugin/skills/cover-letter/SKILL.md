@@ -13,7 +13,7 @@ Write the letter a good candidate would write in fifteen minutes: short, specifi
 Follow `../_shared/setup.md`, then load the structured resume (the caller's `resumeId`, else `user.primaryResumeId`):
 
 ```bash
-jobpilot-api GET "/api/resumes/$RESUME_ID"
+openapply-api GET "/api/resumes/$RESUME_ID"
 ```
 
 Write from its `content`. Don't `Read` the source PDF: it's the same content at several times the size, and inside an apply loop that cost is paid per job.
@@ -27,7 +27,7 @@ From the argument, note the company and what it does, the role and level, the tw
 Letters that are each fine but all the same shape are what reads as AI. Don't skip this.
 
 ```bash
-jobpilot-api GET /api/cover-letters --query page=1 --query limit=5
+openapply-api GET /api/cover-letters --query page=1 --query limit=5
 ```
 
 The list is metadata only, so `GET /api/cover-letters/<id>` for each `.items[].id`. From each, keep four things and drop the rest: what it led with, its first sentence, its last sentence, and how it phrased its numbers. No history → skip to Step 3.
@@ -82,10 +82,10 @@ Then compare against the Step 2 notes; the humanizer sees one letter and can't d
 
 ## Step 6: Save to history
 
-Best effort; continue if it fails. Write `{"content":"<final letter>","jobUrl":"<job url>","jobTitle":"<title>","company":"<company>","source":"<source>"}` to `$JOBPILOT_TEMP/cover-letter.json`, omitting empty `jobUrl`/`jobTitle`/`company`:
+Best effort; continue if it fails. Write `{"content":"<final letter>","jobUrl":"<job url>","jobTitle":"<title>","company":"<company>","source":"<source>"}` to `$OPENAPPLY_TEMP/cover-letter.json`, omitting empty `jobUrl`/`jobTitle`/`company`:
 
 ```bash
-jobpilot-api POST /api/cover-letters --data @"$JOBPILOT_TEMP/cover-letter.json"
+openapply-api POST /api/cover-letters --data @"$OPENAPPLY_TEMP/cover-letter.json"
 ```
 
 Take `jobUrl`/`jobTitle`/`company` from the JD argument (`$DIGEST` fields when present). `source` is the caller: `apply`, `auto_apply`, or `manual` (the default).

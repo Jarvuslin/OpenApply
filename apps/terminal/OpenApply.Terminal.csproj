@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <PublishAot>true</PublishAot>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RootNamespace>OpenApply.Terminal</RootNamespace>
+    <AssemblyName>openapply</AssemblyName>
+    <Version>2.1.38</Version>
+    <ApplicationIcon>openapply.ico</ApplicationIcon>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Quick.PtyNet" Version="1.0.4" />
+    <!-- DPAPI for the pilot token at rest on Windows; a P/Invoke shim that is trim/AOT safe. -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="OpenApply.Terminal.Tests" />
+  </ItemGroup>
+
+  <!-- Native AOT emits a .pdb on Windows despite DebugType=none; drop it from the publish output. -->
+  <Target Name="TrimPublishSymbols" AfterTargets="Publish">
+    <ItemGroup>
+      <_OpenApplyStalePublish Include="$(PublishDir)**\*.pdb" />
+    </ItemGroup>
+    <Delete Files="@(_OpenApplyStalePublish)" />
+  </Target>
+
+  <!-- Ship the shared plugin/ tree for Claude and OpenApply runtime resources. -->
+  <ItemGroup>
+    <Content Include="..\..\plugin\**\*">
+      <Link>plugin\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <!-- Codex loads the user-installed marketplace plugin; these repo-scoped agents provide worker parity with Claude. -->
+    <Content Include="..\..\.codex\agents\*.toml">
+      <Link>.codex\agents\%(Filename)%(Extension)</Link>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

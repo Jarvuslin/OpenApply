@@ -1,5 +1,5 @@
-import { campaignConfigSchema } from "@jobpilot/contracts/campaign";
-import type { AgendaPayload } from "@jobpilot/contracts/pilot";
+import { campaignConfigSchema } from "@openapply/contracts/campaign";
+import type { AgendaPayload } from "@openapply/contracts/pilot";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { GATHER_CAP } from "./claims";
 

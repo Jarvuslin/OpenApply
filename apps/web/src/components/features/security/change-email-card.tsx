@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { type ChangeEmailInput, ChangeEmailSchema } from "@jobpilot/contracts/auth";
 import { Alert, Stack, Typography } from "@mui/material";
+import { type ChangeEmailInput, ChangeEmailSchema } from "@openapply/contracts/auth";
 import { api } from "@/api/client";
 import { useApiMutation } from "@/api/hooks";
 import type { ChangeEmailResponse } from "@/api/types";

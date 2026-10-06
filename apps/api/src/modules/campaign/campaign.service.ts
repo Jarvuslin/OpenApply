@@ -4,9 +4,9 @@ import {
   campaignConfigSchema,
   campaignConfigSupportsSource,
   type UpdateCampaignConfigInput,
-} from "@jobpilot/contracts/campaign";
-import { pageSlice, paginate } from "@jobpilot/contracts/pagination";
-import { workspaceChannel } from "@jobpilot/contracts/sse";
+} from "@openapply/contracts/campaign";
+import { pageSlice, paginate } from "@openapply/contracts/pagination";
+import { workspaceChannel } from "@openapply/contracts/sse";
 import { singleton } from "tsyringe";
 import type { z } from "zod/v4";
 import { conflict, findOwned, unprocessable } from "@/common/errors";

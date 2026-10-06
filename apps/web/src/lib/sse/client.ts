@@ -1,6 +1,6 @@
 "use client";
 
-import type { AnyChannel, ChannelEvent, ChannelUrlParams } from "@jobpilot/contracts/sse";
+import type { AnyChannel, ChannelEvent, ChannelUrlParams } from "@openapply/contracts/sse";
 import { EventSource } from "eventsource";
 import { useEffect, useRef, useState } from "react";
 import { API_BASE_URL } from "@/api/base-url";

@@ -84,15 +84,15 @@ flowchart LR
         DB[(PostgreSQL)]
     end
     subgraph Local [User's machine]
-        T["JobPilot.Terminal :4102"]
-        P["Claude Code / Codex<br/>+ jobpilot plugin"]
+        T["OpenApply.Terminal :4102"]
+        P["Claude Code / Codex<br/>+ openapply plugin"]
         B["Browser (Playwright MCP)"]
     end
     WEB -- "HTTP + SSE" --> API
     API --> DB
     WEB -- "xterm.js WS + POST /sessions/*" --> T
     T -- "PTY stdin/stdout" --> P
-    P -- "jobpilot-api, Bearer JOBPILOT_API_TOKEN" --> API
+    P -- "openapply-api, Bearer OPENAPPLY_API_TOKEN" --> API
     P --> B
 ```
 
@@ -111,15 +111,15 @@ flowchart LR
   over WebSocket. Endpoints: `POST /sessions/start`, `POST /sessions/inject`,
   `DELETE /sessions/current`, `GET /healthz`, `GET /ws`. `/sessions/start`
   takes the user's terminal token and spawns the provider with
-  `JOBPILOT_API_TOKEN`, `JOBPILOT_API`, `JOBPILOT_WEB` (plus
-  `JOBPILOT_SKILLS_ROOT` / `JOBPILOT_WORKSPACE_ROOT` for wrappers) and
-  `plugin/bin` first on `PATH`, so skills call the API through `jobpilot-api`
+  `OPENAPPLY_API_TOKEN`, `OPENAPPLY_API`, `OPENAPPLY_WEB` (plus
+  `OPENAPPLY_SKILLS_ROOT` / `OPENAPPLY_WORKSPACE_ROOT` for wrappers) and
+  `plugin/bin` first on `PATH`, so skills call the API through `openapply-api`
   with zero manual setup.
 
 One Terminal instance owns one PTY. It survives tab close: reopening the panel
 reattaches a WebSocket to the live session and replays the buffered tail
 (`TerminalRelay`, 512 KB, cleared when a new session starts). Switching providers
-restarts the PTY. The web injects commands as `/jobpilot:<skill>` for Claude and
+restarts the PTY. The web injects commands as `/openapply:<skill>` for Claude and
 `$<skill>` for Codex. On a new release the agent dock shows an update banner;
 the guided flow updates host + plugin and finishes with `/reload-plugins` on
 Claude.
@@ -147,7 +147,7 @@ The terminal launches
 `claude --permission-mode auto --settings plugin/settings/claude.json --plugin-dir plugin`
 or `codex --no-alt-screen --approve-for-me -c <override>`. Both run
 under automatic approval review, so a blocked action prompts in the dashboard
-terminal. `settings/claude.json` pins Sonnet and describes the JobPilot API
+terminal. `settings/claude.json` pins Sonnet and describes the OpenApply API
 under `autoMode.environment`. Codex has no `--settings` flag, and a project
 `.codex/config.toml` loads only for trusted projects, so
 [CodexProvider](../apps/terminal/Providers/CodexProvider.cs) expands
@@ -160,11 +160,10 @@ location (excluding the marketplace-owned `setup` bootstrap) and translates
 the bundled `.mcp.json` into `-c mcp_servers.*` overrides. The publish output
 also bundles `.codex/agents/*.toml` for worker parity. Both provider
 marketplaces contain only `setup`; the full runtime tree comes from the host.
-The bootstraps are published to the
-[claude-plugins](https://github.com/suxrobGM/claude-plugins) and
-[codex-plugins](https://github.com/suxrobGM/codex-plugins) marketplaces, synced
-from `plugin/` each release tag. Root `.claude/settings.json` is repo trust
-policy; the plugin owns behavior.
+OpenApply releases publish terminal archives with the runtime plugin bundled.
+The marketplace sync script is available for operator-owned marketplaces and
+is not run against upstream repositories. Root `.claude/settings.json` is repo
+trust policy. The plugin owns behavior.
 
 ### Apply lifecycle
 

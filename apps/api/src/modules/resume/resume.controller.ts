@@ -1,6 +1,6 @@
-import { resumeDataSchema } from "@jobpilot/contracts/resume";
-import { idParam } from "@jobpilot/contracts/shared";
-import { resumeChannel } from "@jobpilot/contracts/sse";
+import { resumeDataSchema } from "@openapply/contracts/resume";
+import { idParam } from "@openapply/contracts/shared";
+import { resumeChannel } from "@openapply/contracts/sse";
 import { Elysia } from "elysia";
 import { z } from "zod/v4";
 import { container } from "@/common/di/container";

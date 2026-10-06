@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { CampaignActor } from "@jobpilot/contracts/campaign";
 import { Chip, Tooltip } from "@mui/material";
+import type { CampaignActor } from "@openapply/contracts/campaign";
 
 interface PilotBadgeProps {
   createdBy: CampaignActor;

@@ -3,7 +3,7 @@ import {
   type PilotClaim,
   pilotClaimSchema,
   type ReleasePilotClaimInput,
-} from "@jobpilot/contracts/pilot";
+} from "@openapply/contracts/pilot";
 import { singleton } from "tsyringe";
 import { z } from "zod/v4";
 import { conflict, findOwned } from "@/common/errors";

@@ -1,8 +1,8 @@
 "use client";
 
 import { type ReactElement, useState } from "react";
-import { APPLICATION_STATUSES, type ApplicationStatus } from "@jobpilot/contracts/application";
 import { Button, MenuItem, TextField } from "@mui/material";
+import { APPLICATION_STATUSES, type ApplicationStatus } from "@openapply/contracts/application";
 import { STATUS_LABEL } from "@/components/ui/display";
 import { FormDialogShell } from "@/components/ui/form";
 

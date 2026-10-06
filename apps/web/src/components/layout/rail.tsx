@@ -3,7 +3,7 @@ import { type ReactElement, Suspense } from "react";
 import { NorthEast } from "@mui/icons-material";
 import { Box, Button, Divider, Stack, Typography } from "@mui/material";
 import NextLink from "next/link";
-import { JobPilotMark } from "@/components/brand/jobpilot-mark";
+import { OpenApplyMark } from "@/components/brand/openapply-mark";
 import { AccountMenu } from "@/components/features/profile/account-menu";
 import { useSession } from "@/hooks/use-auth";
 import { FeedbackMenu } from "./feedback-menu";
@@ -31,7 +31,7 @@ export function Rail(): ReactElement {
         spacing={1.25}
         sx={{ alignItems: "center", px: 2.5, py: 3, textDecoration: "none", color: "text.primary" }}
       >
-        <JobPilotMark size={28} />
+        <OpenApplyMark size={28} />
         <Typography variant="h4">OpenApply</Typography>
         <Typography variant="captionMuted">personal</Typography>
       </Stack>

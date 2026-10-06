@@ -1,12 +1,12 @@
 using System.Text.Json.Serialization;
-using JobPilot.Terminal.Hosting;
-using JobPilot.Terminal.Pilot;
-using JobPilot.Terminal.Providers;
-using JobPilot.Terminal.Sessions;
-using JobPilot.Terminal.Updates;
+using OpenApply.Terminal.Hosting;
+using OpenApply.Terminal.Pilot;
+using OpenApply.Terminal.Providers;
+using OpenApply.Terminal.Sessions;
+using OpenApply.Terminal.Updates;
 using Microsoft.AspNetCore.Mvc;
 
-namespace JobPilot.Terminal;
+namespace OpenApply.Terminal;
 
 /// <summary>
 /// Native AOT JSON metadata. JIT reflection can hide missing registrations, so every directly serialized

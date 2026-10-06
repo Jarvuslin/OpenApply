@@ -1,4 +1,4 @@
-import type { AgendaItem, AgendaPayload } from "@jobpilot/contracts/pilot";
+import type { AgendaItem, AgendaPayload } from "@openapply/contracts/pilot";
 import { jobSubjectId } from "./claims";
 import type { AgendaJob } from "./gather-jobs";
 

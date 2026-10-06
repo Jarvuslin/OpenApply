@@ -1,6 +1,6 @@
-import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "@jobpilot/contracts/pagination";
 import type { Components, Theme } from "@mui/material/styles";
 import type {} from "@mui/x-data-grid/themeAugmentation";
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "@openapply/contracts/pagination";
 
 export const dataGridOverrides: Components<Theme>["MuiDataGrid"] = {
   defaultProps: {

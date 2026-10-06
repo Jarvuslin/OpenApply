@@ -2,7 +2,7 @@
 // reconciliation, and the mapped rows carry no stable id.
 
 import { Children, type ReactElement, type ReactNode } from "react";
-import type { ResumeBasics } from "@jobpilot/contracts/resume";
+import type { ResumeBasics } from "@openapply/contracts/resume";
 import { Link, Text, View } from "@react-pdf/renderer";
 import { styles } from "./styles";
 

@@ -8,11 +8,8 @@ export async function setupEnv(root) {
     apiTemplate
       .replace("JWT_SECRET=dev-insecure-change-me", `JWT_SECRET=${randomBytes(32).toString("hex")}`)
       .replace(/^SECRET_MASTER_KEY=.*$/m, `SECRET_MASTER_KEY=${randomBytes(32).toString("base64")}`)
-      .replace(
-        "postgresql://jobpilot:jobpilot@localhost:5433/jobpilot",
-        "postgresql://postgres@127.0.0.1:5433/jobpilot",
-      )
-      .replace(/^[A-Z_]+=\r?$/gm, "") + "\nMVP_LOCAL_RUNNER=true\nCLAUDE_BIN=claude\n";
+      .replace(/^(?!(?:GOOGLE|GITHUB)_CLIENT_(?:ID|SECRET)=)[A-Z_]+=\r?$/gm, "") +
+    "\nMVP_LOCAL_RUNNER=true\nCLAUDE_BIN=claude\n";
   const web = await readFile(path.join(root, "apps/web/.env.example"), "utf8");
   for (const [name, body] of [
     ["apps/api/.env", api],

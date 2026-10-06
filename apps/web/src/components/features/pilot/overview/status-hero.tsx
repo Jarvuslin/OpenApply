@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { PilotState } from "@jobpilot/contracts/pilot";
 import { Alert, Box, Button, Chip, Grid, Stack, Tooltip, Typography } from "@mui/material";
+import type { PilotState } from "@openapply/contracts/pilot";
 import { ColorChip, RelativeTime } from "@/components/ui/display";
 import { SectionCard } from "@/components/ui/layout";
 import { CYCLE_STATUS_COLOR, type PilotHealth, providerDisplayName } from "@/lib/terminal";

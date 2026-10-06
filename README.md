@@ -20,7 +20,7 @@ A workspace for finding employer roles, tailoring your résumé and applying thr
 - Gmail messages can be read by the local agent connector and uploaded to OpenApply. No OpenApply Google Cloud mail app is needed for this path.
 - Required-question pre-scan before tailoring, per-job workers and questions for missing facts or uncertain fit.
 - A preparation-only trial that inspects a real posting and form, generates a résumé variant and records missing answers.
-- Existing campaign, credential-vault, inbox and Pilot infrastructure inherited from JobPilot.
+- Existing campaign, credential-vault, inbox and Pilot infrastructure inherited from the upstream project.
 
 **Status: development MVP.** The backend queue and mailbox ingest are tested, including real Postgres concurrency. Fully autonomous employer signup, email activation and application submission have not passed an independent end-to-end test. CAPTCHA solving is off by default. A blocking challenge parks that job and lets the queue continue. There is no published hosted OpenApply service or installer release.
 
@@ -125,7 +125,7 @@ Download the **x86_64 Mini Root Filesystem for Alpine 3.24** from [Alpine downlo
 .\scripts\setup-vm.ps1 -RootfsPath "$env:USERPROFILE\Downloads\alpine-minirootfs-3.24.0-x86_64.tar.gz"
 ```
 
-Replace the filename with the version you downloaded. The script imports a WSL2 distribution and installs Chromium, PostgreSQL 18, Xvfb and noVNC. It refuses to replace an existing distribution. The internal distribution name remains `JobPilot-MVP` for compatibility with the browser connector. it is not the product name.
+Replace the filename with the version you downloaded. The script imports a WSL2 distribution and installs Chromium, PostgreSQL 18, Xvfb and noVNC. It refuses to replace an existing distribution. The WSL distribution is named `OpenApply-MVP`.
 
 ```powershell
 .\scripts\start-mvp.ps1 -VmOnly
@@ -149,13 +149,13 @@ In the workbench, choose an ATS provider and import a company board slug. For ex
 
 For a preview, open a role and use **Prepare trial · no submission**. This inspects the form and generates documents without submitting an application.
 
-The app currently uses the upstream internal plugin namespace, so `/jobpilot:mvp-trial` and `JOBPILOT_*` environment variables are intentional. Do not globally rename them without migrating the terminal/plugin interface.
+Agent commands use the `openapply` plugin namespace, such as `/openapply:mvp-trial`. The terminal supplies `OPENAPPLY_*` environment variables and the `openapply-api` command.
 
 ### Gmail through your agent
 
 1. Connect Gmail in the Claude Code or Codex runtime that OpenApply starts. The account must be the intended applicant's mailbox. A connector in a separate chat does not automatically appear in this runtime.
 2. For Claude Code, use `/mcp` in that local session to confirm the Gmail tools. The worker allowlist includes `mcp__gmail__*` and `mcp__codex_apps__gmail_*`. Match it to your installed connector's actual prefix. These names alone do not install or authorize a Gmail server.
-3. Open **Connections** and click **Check Gmail connection**. This sends the `scan-inbox` skill to the selected agent. The Claude command is `/jobpilot:scan-inbox`.
+3. Open **Connections** and click **Check Gmail connection**. This sends the `scan-inbox` skill to the selected agent. The Claude command is `/openapply:scan-inbox`.
 4. The agent reads its mailbox identity, searches recent job mail and uploads normalized batches of up to 100 messages to `POST /api/email/messages/ingest`. The first successful upload creates the connector account. Repeated message IDs are ignored within that mailbox.
 5. Verification searches pull fresh mail through the same connector. Approved replies use its send tool. OpenApply's OAuth sync and send endpoints return 409 for connector accounts.
 
@@ -234,4 +234,4 @@ Release configuration avoids locking the development terminal executable on Wind
 
 The discovery split and ATS request shapes were informed by [career-ops](https://github.com/career-ops-hq/career-ops), an MIT-licensed project. OpenApply keeps its own provider adapters and employer resolver.
 
-OpenApply is a derivative of [suxrobGM/jobpilot](https://github.com/suxrobGM/jobpilot), originally created by Sukhrob Ilyosbekov. We reuse its application backend, terminal host, agent skills and other infrastructure. The original [MIT license and copyright notice](LICENSE) are preserved. Internal `jobpilot` package names, namespaces and historical documentation remain where required for compatibility or attribution. OpenApply's rebrand does not imply endorsement by the original author.
+OpenApply is a derivative of [suxrobGM/jobpilot](https://github.com/suxrobGM/jobpilot), originally created by Sukhrob Ilyosbekov. We reuse its application backend, terminal host, agent skills and other infrastructure. The original [MIT license and copyright notice](LICENSE) and historical changelog are preserved. Active packages, commands, runtime configuration and branding use OpenApply. This derivative does not imply endorsement by the original author.

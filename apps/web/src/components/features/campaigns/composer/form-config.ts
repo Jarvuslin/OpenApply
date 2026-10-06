@@ -1,4 +1,8 @@
-import { applyUrlsSchema, type CampaignSource, MAX_APPLY_URLS } from "@jobpilot/contracts/campaign";
+import {
+  applyUrlsSchema,
+  type CampaignSource,
+  MAX_APPLY_URLS,
+} from "@openapply/contracts/campaign";
 import { z } from "zod/v4";
 import type { CreateCampaignRequest, JobBoardDto } from "@/api/types";
 import { buildCliArgs } from "@/utils/cli-args";

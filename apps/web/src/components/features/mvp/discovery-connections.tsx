@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState } from "react";
-import type { discoveryConnectionSchema } from "@jobpilot/contracts/job-sources";
 import {
   Alert,
   Button,
@@ -11,6 +10,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import type { discoveryConnectionSchema } from "@openapply/contracts/job-sources";
 import type { z } from "zod/v4";
 import { api } from "@/api/client";
 import { apiErrorMessage } from "@/api/error";

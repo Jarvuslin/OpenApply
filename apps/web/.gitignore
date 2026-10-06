@@ -41,7 +41,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# jobpilot
+# openapply
 # NOTE: resume storage and the database now live in the api app (apps/api);
 # the stale apps/web/prisma/app.db* below are pre-Postgres SQLite leftovers.
 /prisma/app.db

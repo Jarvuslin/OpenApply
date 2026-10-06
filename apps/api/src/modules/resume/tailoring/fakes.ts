@@ -1,4 +1,4 @@
-import { EMPTY_RESUME_DATA, type ResumeData } from "@jobpilot/contracts/resume";
+import { EMPTY_RESUME_DATA, type ResumeData } from "@openapply/contracts/resume";
 
 export const NLP_BULLET =
   "NLP pipeline extracting symptoms, medications, and care events from free-text clinical notes; 0.90 F1.";

@@ -16,7 +16,7 @@ const config: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
   pageExtensions: ["ts", "tsx", "md", "mdx"],
   // Compile the workspace TS packages consumed by the app.
-  transpilePackages: ["@jobpilot/contracts", "@jobpilot/api-client"],
+  transpilePackages: ["@openapply/contracts", "@openapply/api-client"],
 };
 
 // Plugins must be string references under Turbopack (loader options are serialized).
