@@ -1,7 +1,6 @@
 "use client";
 
 import { type ReactElement, type ReactNode, useEffect, useState } from "react";
-import type { PushSubscriptionDto, PushSubscriptionInput } from "@jobpilot/contracts/push";
 import { Delete } from "@mui/icons-material";
 import {
   Box,
@@ -12,6 +11,7 @@ import {
   Switch,
   Typography,
 } from "@mui/material";
+import type { PushSubscriptionDto, PushSubscriptionInput } from "@openapply/contracts/push";
 import { api } from "@/api/client";
 import { useApiMutation, useApiQuery } from "@/api/hooks";
 import { pilotQueries } from "@/api/queries";

@@ -15,6 +15,8 @@ export interface WebSocketClient {
 }
 
 interface WebSocketOptions {
+  /** Fail a stalled handshake so the caller can offer a retry. */
+  connectTimeoutMs?: number;
   /** Native WebSocket binaryType. Defaults to arraybuffer. */
   binaryType?: BinaryType;
 
@@ -43,6 +45,11 @@ interface WebSocketOptions {
 export function connectWebSocket(url: string, options: WebSocketOptions = {}): WebSocketClient {
   const socket = new WebSocket(url);
   socket.binaryType = options.binaryType ?? "arraybuffer";
+  let connectTimer: ReturnType<typeof setTimeout> | null = null;
+  const clearConnectTimer = (): void => {
+    if (connectTimer) clearTimeout(connectTimer);
+    connectTimer = null;
+  };
 
   const client: WebSocketClient = {
     get readyState() {
@@ -62,6 +69,7 @@ export function connectWebSocket(url: string, options: WebSocketOptions = {}): W
   };
 
   const handleOpen = (event: Event): void => {
+    clearConnectTimer();
     options.onOpen?.(client, event);
   };
   const handleMessage = (event: MessageEvent): void => {
@@ -72,13 +80,16 @@ export function connectWebSocket(url: string, options: WebSocketOptions = {}): W
     }
   };
   const handleClose = (event: CloseEvent): void => {
+    clearConnectTimer();
     options.onClose?.(event);
   };
   const handleError = (event: Event): void => {
+    clearConnectTimer();
     options.onError?.(event);
   };
 
   const detach = (): void => {
+    clearConnectTimer();
     socket.removeEventListener("open", handleOpen);
     socket.removeEventListener("message", handleMessage);
     socket.removeEventListener("close", handleClose);
@@ -89,6 +100,12 @@ export function connectWebSocket(url: string, options: WebSocketOptions = {}): W
   socket.addEventListener("message", handleMessage);
   socket.addEventListener("close", handleClose);
   socket.addEventListener("error", handleError);
+  if (options.connectTimeoutMs != null) {
+    connectTimer = setTimeout(() => {
+      options.onError?.(new Event("timeout"));
+      client.close(1000, "Connection timed out");
+    }, options.connectTimeoutMs);
+  }
 
   return client;
 }

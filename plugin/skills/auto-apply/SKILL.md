@@ -6,7 +6,9 @@ argument-hint: "<query> --board <domain> [--campaign <campaign-id>] [--min-score
 
 # Auto-apply - Search + Apply On Demand
 
-Keep the chosen board open in tab 1; for each result that qualifies, delegate the application to the `job-worker` subagent (it works in its own tab and returns a compact result), then move to the next job. **No batch pre-discovery and no per-job approval - launching the campaign is the confirmation.** Pause only for 2FA / payment. **A CAPTCHA is not a pause** - attempt the `solve-captcha` skill; if unsolved, skip the job (never pause) and the user finishes it later via the `apply` skill. Live view at `$JOBPILOT_WEB/campaigns/<campaign-id>`.
+Read `$OPENAPPLY_SKILLS_ROOT/_shared/blocked-sites.md` before any browser action.
+
+Keep the chosen board open in tab 1; for each result that qualifies, delegate the application to the `job-worker` subagent (it works in its own tab and returns a compact result), then move to the next job. **No batch pre-discovery and no per-job approval - launching the campaign is the confirmation.** Park only the affected job when human input is required. On a blocking CAPTCHA, call `openapply-api GET /api/captcha/status`. Invoke `solve-captcha` only when `entitled:true`. Otherwise, or if solving fails, return `needs_user` with `category:"verification"`, leave that tab open, and let the orchestrator park this job and continue to the next. Never silently skip a challenge, change browser identity, or use proxies to evade it. Live view at `$OPENAPPLY_WEB/campaigns/<campaign-id>`.
 
 ## Setup
 
@@ -36,19 +38,19 @@ To recover wrongly-`skipped` jobs, use the dedicated `rescan-skipped` skill (it 
 **No `--campaign`** (manual run): look for an unfinished campaign first.
 
 ```bash
-jobpilot-api GET /api/campaigns --query status=in_progress --query source=auto_apply
-jobpilot-api GET /api/campaigns --query status=paused --query source=auto_apply
+openapply-api GET /api/campaigns --query status=in_progress --query source=auto_apply
+openapply-api GET /api/campaigns --query status=paused --query source=auto_apply
 ```
 
 A match in `.items` → ask **"Found an incomplete campaign from `<startedAt>` (status: `<status>`). Resume or start fresh?"** Resume → run the `resume-campaign` skill with that `campaignId`. Otherwise create one; `resumeId` defaults to `user.primaryResumeId`, and leave `maxApplications` out for unlimited:
 
 ```bash
-jobpilot-api POST /api/campaigns --data '{"query":"<query>","source":"auto_apply","config":{"board":"<domain>","resumeId":"<RESUME_ID>","minScore":<n>}}'
+openapply-api POST /api/campaigns --data '{"query":"<query>","source":"auto_apply","config":{"board":"<domain>","resumeId":"<RESUME_ID>","minScore":<n>}}'
 ```
 
 Read `.campaignId` as `CAMPAIGN_ID`.
 
-Either way, read the campaign's `config.resumeId` as `RESUME_ID` (`GET /api/campaigns/$CAMPAIGN_ID`; absent → the primary) and surface the live view: `$JOBPILOT_WEB/campaigns/<CAMPAIGN_ID>`.
+Either way, read the campaign's `config.resumeId` as `RESUME_ID` (`GET /api/campaigns/$CAMPAIGN_ID`; absent → the primary) and surface the live view: `$OPENAPPLY_WEB/campaigns/<CAMPAIGN_ID>`.
 
 ## Phase 1: Open the Board (tab 1)
 
@@ -61,7 +63,7 @@ Extract title/role, keywords, location, preferences. If vague, ask before search
 Resolve the board:
 
 ```bash
-jobpilot-api GET /api/job-boards
+openapply-api GET /api/job-boards
 ```
 
 Pick the row whose `.domain` equals `<domain>`. If none matches, command the campaign to `failed` with `POST /api/campaigns/$CAMPAIGN_ID/status {"status":"failed"}` and stop.
@@ -83,10 +85,10 @@ move on - **don't open a tab.**
 
 ### 2.2 Score
 
-If the listing row lacks enough detail, read it from the tab-1 snapshot (don't navigate away). Build the digest (`../_shared/digest-schema.md`), then score server-side. Write `$JOBPILOT_TEMP/fit.json` as `{"digest": <digest object>, "minScore": <MIN_SCORE>, "resumeId": "<RESUME_ID>"}` (drop `resumeId` when there is none):
+If the listing row lacks enough detail, read it from the tab-1 snapshot (don't navigate away). Build the digest (`../_shared/digest-schema.md`), then score server-side. Write `$OPENAPPLY_TEMP/fit.json` as `{"digest": <digest object>, "minScore": <MIN_SCORE>, "resumeId": "<RESUME_ID>"}` (drop `resumeId` when there is none):
 
 ```bash
-jobpilot-api POST /api/score-fit --data @"$JOBPILOT_TEMP/fit.json"
+openapply-api POST /api/score-fit --data @"$OPENAPPLY_TEMP/fit.json"
 ```
 
 Read `.score` as `SCORE` and `.verdict` as `FIT_VERDICT`, then branch (eligibility per `../_shared/eligibility.md` - a thin/generic row is **not** a skip):
@@ -96,13 +98,13 @@ Read `.score` as `SCORE` and `.verdict` as `FIT_VERDICT`, then branch (eligibili
 - **Needs the full posting** → delegate the row to `job-worker` `mode:"score"` (`{campaignId:$CAMPAIGN_ID, jobKey:<key>, url, resumeId:$RESUME_ID, minMatchScore:$MIN_SCORE}`) instead of opening the posting in this conversation. The worker creates every row non-terminal and sends ineligible outcomes to `/result`; eligible rows remain `pending`. PATCH an eligible row to `applying`, then go straight to apply (2.3):
 
 ```bash
-jobpilot-api PATCH /api/campaigns/$CAMPAIGN_ID/jobs/<key> --data '{"status":"applying"}'
+openapply-api PATCH /api/campaigns/$CAMPAIGN_ID/jobs/<key> --data '{"status":"applying"}'
 ```
 
 With a usable score from the listing/tab-1 snapshot alone:
 
 - **Below `minMatchScore` after a fair read** → create as `pending`, POST `/result` with `outcome:"skipped"`, `skipReason:"Below minimum match score ($SCORE < $MIN_SCORE)"`, and move on (no tab).
-- **Qualifies** → add it as `applying` and apply (2.3). Write `$JOBPILOT_TEMP/job.json`:
+- **Qualifies** → add it as `applying` and apply (2.3). Write `$OPENAPPLY_TEMP/job.json`:
 
 ```json
 {
@@ -121,7 +123,7 @@ With a usable score from the listing/tab-1 snapshot alone:
 ```
 
 ```bash
-jobpilot-api POST /api/campaigns/$CAMPAIGN_ID/jobs --data @"$JOBPILOT_TEMP/job.json"
+openapply-api POST /api/campaigns/$CAMPAIGN_ID/jobs --data @"$OPENAPPLY_TEMP/job.json"
 ```
 
 ### 2.3 Apply (delegate to `job-worker`)
@@ -129,7 +131,7 @@ jobpilot-api POST /api/campaigns/$CAMPAIGN_ID/jobs --data @"$JOBPILOT_TEMP/job.j
 Hand the job to the `job-worker` subagent and wait for its compact result. It opens its own tab and runs auth, CAPTCHA, tailoring, form-fill, and submit in isolated context, so the form/posting snapshots never enter this conversation. **One worker at a time** - the browser is shared; never delegate the next job until this one returns.
 
 Delegate with the apply-mode input from `../_shared/campaign-flow.md`, passing the `digest`
-built in 2.2 and `preSubmitReview: false`. It returns one of `applied` / `failed` / `skipped` /
+built in 2.2 and the campaign minimum as `minMatchScore`. It returns one of `applied` / `failed` / `skipped` /
 `needs_user` - handle in 2.4.
 
 ### 2.4 Record + Continue
@@ -157,10 +159,10 @@ The loop ends **only** on one of these. Before picking the next result, refetch 
 ## Phase 3: Summary
 
 ```bash
-jobpilot-api POST /api/campaigns/$CAMPAIGN_ID/status --data '{"status":"completed"}'
+openapply-api POST /api/campaigns/$CAMPAIGN_ID/status --data '{"status":"completed"}'
 ```
 
-Print a summary table, link to `$JOBPILOT_WEB/campaigns/<CAMPAIGN_ID>`, suggest `retry-failed <CAMPAIGN_ID>`, the `rescan-skipped` skill on `<CAMPAIGN_ID>` to recover dropped jobs, or a new search.
+Print a summary table, link to `$OPENAPPLY_WEB/campaigns/<CAMPAIGN_ID>`, suggest `retry-failed <CAMPAIGN_ID>`, the `rescan-skipped` skill on `<CAMPAIGN_ID>` to recover dropped jobs, or a new search.
 
 ## Rules
 

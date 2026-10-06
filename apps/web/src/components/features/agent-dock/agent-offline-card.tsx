@@ -15,7 +15,7 @@ interface AgentOfflineCardProps {
   /** Marks a host relaunch as in flight, so the dock shows its starting state and polls fast. */
   onStart: () => void;
   provider: TerminalProviderId;
-  /** Whether the host reported the jobpilot:// scheme is registered, so the browser can relaunch it. */
+  /** Whether the host reported the openapply:// scheme is registered, so the browser can relaunch it. */
   canRelaunch: boolean;
 }
 

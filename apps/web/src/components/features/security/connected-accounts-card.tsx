@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { OAuthProviderInput } from "@jobpilot/contracts/auth";
 import { Alert, Box, Button, Stack, Tooltip, Typography } from "@mui/material";
+import type { OAuthProviderInput } from "@openapply/contracts/auth";
 import { api } from "@/api/client";
 import { useApiMutation } from "@/api/hooks";
 import { queryKeys } from "@/api/query-keys";

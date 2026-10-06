@@ -8,7 +8,6 @@ const perDayPointSchema = z.object({
   count: z.number().int(),
 });
 
-/** Dashboard analytics summary aggregating application and networking activity. */
 export const analyticsStatsSchema = z.object({
   totals: z.object({
     applications: z.number().int(),
@@ -43,24 +42,4 @@ export const analyticsStatsSchema = z.object({
       count: z.number().int(),
     }),
   ),
-  networking: z.object({
-    totals: z.object({
-      contacts: z.number().int(),
-      sent: z.number().int(),
-      replied: z.number().int(),
-      bounced: z.number().int(),
-    }),
-    thisWeek: z.object({
-      sent: z.number().int(),
-      replied: z.number().int(),
-    }),
-    replyRatePct: z.number().int(),
-    perDaySent: z.array(perDayPointSchema),
-    topContactSources: z.array(
-      z.object({
-        source: z.string(),
-        count: z.number().int(),
-      }),
-    ),
-  }),
 });

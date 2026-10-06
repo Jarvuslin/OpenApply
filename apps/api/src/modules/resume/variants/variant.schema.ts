@@ -1,4 +1,4 @@
-import { PROTECTED_VARIANT_LABELS, resumeDataSchema } from "@jobpilot/contracts/resume";
+import { PROTECTED_VARIANT_LABELS, resumeDataSchema } from "@openapply/contracts/resume";
 import { z } from "zod/v4";
 import type { Prisma } from "@/generated/prisma/client";
 

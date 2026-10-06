@@ -4,13 +4,7 @@ import { Chip, Stack, Typography } from "@mui/material";
 import { useSelector } from "@tanstack/react-form";
 import type { UserAggregateResponse } from "@/api/types";
 import { withForm } from "@/components/ui/form/tanstack";
-import {
-  type BoardOption,
-  COMPOSER_DEFAULT_VALUES,
-  isUpworkSearch,
-  MODE_DESCRIPTIONS,
-  UPWORK_MODE_DESCRIPTION,
-} from "./form-config";
+import { type BoardOption, COMPOSER_DEFAULT_VALUES, MODE_DESCRIPTIONS } from "./form-config";
 
 /** Campaign basics: the mode toggle, plus query (+ recent), board, and resume for every mode but apply. */
 export const CampaignBasicsFields = withForm({
@@ -22,10 +16,8 @@ export const CampaignBasicsFields = withForm({
   },
   render: function CampaignBasicsFields({ form, boards, resumes, recentQueries }) {
     const mode = useSelector(form.store, (s) => s.values.mode);
-    const board = useSelector(form.store, (s) => s.values.board);
+
     const isApply = mode === "apply";
-    const isUpwork = isUpworkSearch({ mode, board });
-    const isNetworking = mode === "networking";
 
     return (
       <>
@@ -34,22 +26,16 @@ export const CampaignBasicsFields = withForm({
             {(field) => (
               <field.Toggle
                 label="Mode"
-                options={
-                  isUpwork
-                    ? [{ value: "search", label: "Recommend" }]
-                    : [
-                        { value: "search", label: "Search only" },
-                        { value: "auto_apply", label: "Auto-apply" },
-                        { value: "networking", label: "Networking" },
-                        { value: "apply", label: "Apply to links" },
-                      ]
-                }
+                options={[
+                  { value: "search", label: "Search only" },
+                  { value: "auto_apply", label: "Auto-apply" },
+
+                  { value: "apply", label: "Apply to links" },
+                ]}
               />
             )}
           </form.AppField>
-          <Typography variant="captionMuted">
-            {isUpwork ? UPWORK_MODE_DESCRIPTION : MODE_DESCRIPTIONS[mode]}
-          </Typography>
+          <Typography variant="captionMuted">{MODE_DESCRIPTIONS[mode]}</Typography>
         </Stack>
 
         {/* Apply has none of these - it takes pasted links and tailors a resume per job. */}
@@ -59,12 +45,8 @@ export const CampaignBasicsFields = withForm({
               <form.AppField name="query">
                 {(field) => (
                   <field.TextField
-                    label={isNetworking ? "Target criteria" : "Query"}
-                    placeholder={
-                      isNetworking
-                        ? "Hiring managers at NYC fintech startups"
-                        : "Senior React TypeScript remote"
-                    }
+                    label={"Query"}
+                    placeholder={"Senior React TypeScript remote"}
                     autoFocus
                   />
                 )}
@@ -87,30 +69,20 @@ export const CampaignBasicsFields = withForm({
               )}
             </Stack>
 
-            {/* One board control: required for search/auto-apply, optional for networking, where it
-                toggles board-grounded vs criteria-only discovery. */}
             {boards.length > 0 && (
               <Stack spacing={0.75}>
                 <form.AppField name="board">
                   {(field) => (
                     <field.Select
                       label="Board"
-                      optional={isNetworking}
-                      emptyLabel="No board - reach by criteria"
                       items={boards.map((b) => ({ value: b.domain, label: b.name }))}
                     />
                   )}
                 </form.AppField>
-                {isNetworking && (
-                  <Typography variant="captionMuted">
-                    With a board, each contact is grounded in a matching opening; without one,
-                    networking uses your criteria alone.
-                  </Typography>
-                )}
               </Stack>
             )}
-            {/* Networking can run on criteria alone, so a missing board only blocks the other modes. */}
-            {boards.length === 0 && !isNetworking && (
+
+            {boards.length === 0 && (
               <Typography variant="body2Muted">
                 No boards configured. Add one on the Boards page first.
               </Typography>

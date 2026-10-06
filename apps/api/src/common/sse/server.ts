@@ -1,4 +1,4 @@
-import type { AnyChannel, ChannelEvent, ChannelTopicParams } from "@jobpilot/contracts/sse";
+import type { AnyChannel, ChannelEvent, ChannelTopicParams } from "@openapply/contracts/sse";
 import { sse } from "elysia";
 import { createSseBroker, type SseBroker } from "./broker";
 

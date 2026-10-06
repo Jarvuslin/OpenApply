@@ -1,6 +1,6 @@
 // Retention windows + where-clause builders. No runtime env/db imports: CI runs `bun test` with neither.
 
-import { UNUSED_VARIANT_DAYS } from "@jobpilot/contracts/resume";
+import { UNUSED_VARIANT_DAYS } from "@openapply/contracts/resume";
 import { DAY_MS } from "@/common/date/buckets";
 import type { Prisma } from "@/generated/prisma/client";
 import { notProtectedVariant } from "@/modules/resume/variants/variant.schema";
@@ -73,13 +73,6 @@ export function verificationTokenWhere(c: RetentionCutoffs): Prisma.Verification
 
 export function refreshTokenWhere(c: RetentionCutoffs): Prisma.RefreshTokenWhereInput {
   return { OR: [{ expiresAt: { lt: c.token } }, { revokedAt: { lt: c.token } }] };
-}
-
-export function promotionPostWhere(c: RetentionCutoffs): Prisma.PromotionPostWhereInput {
-  return {
-    status: { in: ["declined", "skipped", "expired", "failed"] },
-    updatedAt: { lt: c.promotion },
-  };
 }
 
 export function emailBodyWhere(c: RetentionCutoffs): Prisma.EmailMessageWhereInput {

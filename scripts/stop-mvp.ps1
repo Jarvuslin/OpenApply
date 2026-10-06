@@ -10,5 +10,5 @@ foreach ($name in @('web','api','terminal')) {
     & taskkill /PID $process.Id /T /F | Out-Null
   }
 }
-& wsl --terminate JobPilot-MVP
+& wsl --terminate OpenApply-MVP
 Write-Output 'MVP processes stopped. Database, resumes and browser profile are retained.'

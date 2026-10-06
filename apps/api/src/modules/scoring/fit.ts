@@ -1,4 +1,4 @@
-import { DEFAULT_MIN_MATCH_SCORE } from "@jobpilot/contracts/user";
+import { DEFAULT_MIN_MATCH_SCORE } from "@openapply/contracts/user";
 import { detectEligibilityRestrictions, type EligibilityRestriction } from "./eligibility";
 import {
   expandSynonyms,

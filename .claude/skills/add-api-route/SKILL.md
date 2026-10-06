@@ -1,6 +1,6 @@
 ---
 name: add-api-route
-description: Add a new JobPilot API route or module the standard way - contracts schema, controller, service, response schema, optional web hook. Use for "add an endpoint", "new route", "new module".
+description: Add a new OpenApply API route or module the standard way - contracts schema, controller, service, response schema, optional web hook. Use for "add an endpoint", "new route", "new module".
 ---
 
 # Add an API route

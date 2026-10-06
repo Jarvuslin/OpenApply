@@ -1,5 +1,5 @@
 import path from "node:path";
-import { resumeChannel } from "@jobpilot/contracts/sse";
+import { resumeChannel } from "@openapply/contracts/sse";
 import { singleton } from "tsyringe";
 import type { z } from "zod/v4";
 import { badRequest, findOwned, notFound } from "@/common/errors";
@@ -18,7 +18,6 @@ import { PrismaClient, type Resume } from "@/generated/prisma/client";
 import { findProfileMismatches } from "./consistency";
 import { readContent, toStoredContent } from "./content";
 import { extractSourceText } from "./extract-source";
-import { structureResume } from "./local-extraction";
 import type { createResumeSchema, updateResumeSchema } from "./resume.schema";
 
 const MAX_RESUME_BYTES = 5 * 1024 * 1024;
@@ -36,7 +35,7 @@ interface SavedSource {
 export class ResumeService {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async extract(userId: string, id: string) {
+  async sourceText(userId: string, id: string) {
     const resume = await this.findOwned(userId, id);
     if (!resume.sourceFilename) throw badRequest("Upload a resume first.");
     let text: string;
@@ -45,9 +44,11 @@ export class ResumeService {
     } catch {
       throw badRequest("Could not read this document. Use a text-based PDF, DOCX or TXT resume.");
     }
-    const content = await structureResume(text);
-    await this.update(userId, id, { content });
-    return { content };
+    if (text.trim().length < 40)
+      throw badRequest(
+        "No readable text found. Use a text-based PDF, DOCX or TXT file; scanned documents need OCR.",
+      );
+    return { text };
   }
 
   /** Unpaginated: an account holds a handful of master resumes, and selects read the whole list. */
@@ -194,13 +195,6 @@ export class ResumeService {
   }
 
   /** Unauthenticated: the resume's v4 uuid is the capability token. */
-  async renderPublicPdf(id: string) {
-    const resume = await this.prisma.resume.findUnique({ where: { id } });
-    if (!resume) {
-      throw notFound("Resume not found");
-    }
-    return this.streamPdf(resume);
-  }
 
   /** Rendered from structured content when there is some, else the uploaded source. */
   private async streamPdf(resume: Resume): Promise<Response> {

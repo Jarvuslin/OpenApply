@@ -1,7 +1,8 @@
+import { atsProviderSchema } from "@openapply/contracts/job-sources";
 import { z } from "zod/v4";
 
 export const sourceInput = z.object({
-  provider: z.enum(["ashby", "greenhouse"]),
+  provider: atsProviderSchema,
   board: z
     .string()
     .trim()
@@ -21,13 +22,13 @@ export const readinessResult = z.object({
   gmail: z.boolean(),
   profile: z.boolean(),
   resume: z.boolean(),
-  captchaSolver: z.literal("disabled"),
+  captchaSolver: z.enum(["disabled", "enabled"]),
 });
-export const startInput = z.object({ slug: z.string().min(1).max(300) });
+export const startInput = z.object({ slugs: z.array(z.string().min(1).max(300)).min(1).max(100) });
 export const startResult = z.object({
   campaignId: z.string(),
-  title: z.string(),
-  company: z.string(),
+  queued: z.array(z.string()),
+  skipped: z.array(z.object({ slug: z.string(), reason: z.string() })),
 });
 export const observationResult = z.object({
   url: z.string(),

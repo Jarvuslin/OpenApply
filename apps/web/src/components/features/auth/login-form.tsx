@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { type LoginInput, LoginSchema } from "@jobpilot/contracts/auth";
 import { Alert, Link, Stack, Typography } from "@mui/material";
+import { type LoginInput, LoginSchema } from "@openapply/contracts/auth";
 import { useAppForm } from "@/components/ui/form/tanstack";
 import { useAuthActions } from "@/hooks/use-auth";
 import { OAuthButtons } from "./oauth-buttons";
@@ -35,6 +35,8 @@ export function LoginForm(): ReactElement {
         <form.AppField name="email">
           {(field) => (
             <field.TextField
+              labelPosition="above"
+              size="medium"
               label="Email"
               type="email"
               autoComplete="email"
@@ -46,7 +48,13 @@ export function LoginForm(): ReactElement {
 
         <form.AppField name="password">
           {(field) => (
-            <field.TextField label="Password" type="password" autoComplete="current-password" />
+            <field.TextField
+              labelPosition="above"
+              size="medium"
+              label="Password"
+              type="password"
+              autoComplete="current-password"
+            />
           )}
         </form.AppField>
 

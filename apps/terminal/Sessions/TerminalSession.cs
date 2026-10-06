@@ -1,9 +1,9 @@
 using System.Text;
-using JobPilot.Terminal.Hosting;
-using JobPilot.Terminal.Providers;
+using OpenApply.Terminal.Hosting;
+using OpenApply.Terminal.Providers;
 using Pty.Net;
 
-namespace JobPilot.Terminal.Sessions;
+namespace OpenApply.Terminal.Sessions;
 
 /// <summary>How a session ended. A null exit code means it was stopped on request.</summary>
 public readonly record struct SessionExit(string ProviderDisplayName, int? ExitCode)
@@ -108,12 +108,12 @@ public sealed class TerminalSession : IDisposable
             var scratchDir = Directory.CreateDirectory(paths.ScratchDir).FullName;
             var env = new Dictionary<string, string>(StringComparer.Ordinal)
             {
-                ["JOBPILOT_SKILLS_ROOT"] = paths.SkillsDir,
-                ["JOBPILOT_WORKSPACE_ROOT"] = paths.WorkingDir,
-                ["JOBPILOT_TEMP"] = scratchDir,
-                ["JOBPILOT_API"] = RequestOrEnv(apiUrl, "JOBPILOT_API", "http://localhost:4101"),
-                ["JOBPILOT_API_TOKEN"] = RequestOrEnv(apiToken, "JOBPILOT_API_TOKEN", ""),
-                ["JOBPILOT_WEB"] = RequestOrEnv(webUrl, "JOBPILOT_WEB", "http://localhost:4100"),
+                ["OPENAPPLY_SKILLS_ROOT"] = paths.SkillsDir,
+                ["OPENAPPLY_WORKSPACE_ROOT"] = paths.WorkingDir,
+                ["OPENAPPLY_TEMP"] = scratchDir,
+                ["OPENAPPLY_API"] = RequestOrEnv(apiUrl, "OPENAPPLY_API", "http://localhost:4101"),
+                ["OPENAPPLY_API_TOKEN"] = RequestOrEnv(apiToken, "OPENAPPLY_API_TOKEN", ""),
+                ["OPENAPPLY_WEB"] = RequestOrEnv(webUrl, "OPENAPPLY_WEB", "http://localhost:4100"),
             };
 
             Starting?.Invoke();

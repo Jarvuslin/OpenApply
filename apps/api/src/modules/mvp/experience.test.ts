@@ -1,4 +1,4 @@
-import { jobLevelFromTitle, jobListingQuerySchema } from "@jobpilot/contracts/job-listing";
+import { jobLevelFromTitle, jobListingQuerySchema } from "@openapply/contracts/job-listing";
 import { listedExperience } from "./experience";
 import { describe, expect, it } from "bun:test";
 

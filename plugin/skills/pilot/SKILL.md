@@ -6,7 +6,9 @@ argument-hint: "(none - injected by the terminal host)"
 
 # Pilot - One Autonomous Cycle
 
-JobPilot's autonomous mode: the host re-injects this skill perpetually, so each invocation is **one stateless cycle** - sense, decide, act, record, exit. All state lives in the API; nothing survives between invocations except what you write there. Do **exactly one** agenda item (at most one worker delegation, one browser activity), journal it, print the sentinel, stop.
+Read `$OPENAPPLY_SKILLS_ROOT/_shared/blocked-sites.md` before any browser action.
+
+OpenApply's autonomous mode: the host re-injects this skill perpetually, so each invocation is **one stateless cycle** - sense, decide, act, record, exit. All state lives in the API; nothing survives between invocations except what you write there. Do **exactly one** agenda item (at most one worker delegation, one browser activity), journal it, print the sentinel, stop.
 
 ## 0. Setup
 
@@ -19,13 +21,15 @@ node -p "crypto.randomUUID()"
 Load the pilot state - step 2 breaks priority ties with its goals text. No run-state check here: the host gates the loop.
 
 ```bash
-jobpilot-api GET /api/pilot
+openapply-api GET /api/pilot
 ```
 
 ## 1. Sense
 
+Read `GET /api/email/account`. For a connector account with missing lastSyncAt or a timestamp older than 15 minutes, pull and ingest through `../_shared/mailbox.md` before compiling the agenda. If disconnected, check connector availability once and let a successful pull create the account. Missing tools or mailbox errors are journaled and must not block unrelated application work. Never call OAuth sync for connector accounts.
+
 ```bash
-jobpilot-api POST /api/pilot/agenda/refresh
+openapply-api POST /api/pilot/agenda/refresh
 ```
 
 Keep the response as the agenda: its `version`, `items`, and `sleepSeconds` feed the steps below.
@@ -33,20 +37,20 @@ Keep the response as the agenda: its `version`, `items`, and `sleepSeconds` feed
 A `409` means the pilot was stopped mid-cycle - a rare race the host normally gates. Journal and exit empty.
 
 ```bash
-jobpilot-api POST /api/pilot/journal \
+openapply-api POST /api/pilot/journal \
   --data '{"cycleId":"<CYCLE_ID>","entries":[{"kind":"cycle","summary":"Pilot is stopped.","detail":{"status":"empty","sleepSeconds":3600}}]}'
 ```
 
-Print `[[JOBPILOT_CYCLE cycle=<CYCLE_ID> status=empty sleep=3600]]` as the final line, stop.
+Print `[[OPENAPPLY_CYCLE cycle=<CYCLE_ID> status=empty sleep=3600]]` as the final line, stop.
 
 If `.items` is empty:
 
 ```bash
-jobpilot-api POST /api/pilot/journal \
+openapply-api POST /api/pilot/journal \
   --data '{"cycleId":"<CYCLE_ID>","entries":[{"kind":"cycle","summary":"All caught up - nothing needs doing; checking back at <nextWakeAt>.","detail":{"status":"empty","sleepSeconds":<agenda sleepSeconds>}}]}'
 ```
 
-Print `[[JOBPILOT_CYCLE cycle=<CYCLE_ID> status=empty sleep=<sleepSeconds>]]` as the final line, stop.
+Print `[[OPENAPPLY_CYCLE cycle=<CYCLE_ID> status=empty sleep=<sleepSeconds>]]` as the final line, stop.
 
 ## 2. Decide
 
@@ -55,13 +59,13 @@ Take the top item - the server already ranked the agenda. If several share prior
 ## 3. Claim
 
 ```bash
-jobpilot-api POST /api/pilot/claims --data '{"itemId":"<itemId>","agendaVersion":"<agenda version>"}'
+openapply-api POST /api/pilot/claims --data '{"itemId":"<itemId>","agendaVersion":"<agenda version>"}'
 ```
 
 Read the claim's `.id` as `CLAIM_ID`. On `409`, re-fetch the agenda once; if still nothing claimable, treat this as an empty cycle (step 1's journal + sentinel). A `409` opening `Already applied` is the duplicate guard - the job is already recorded `skipped`, so claim the next item instead of writing a result yourself. `CLAIM_ID` feeds step 6's release and the **heartbeat** that long branches send to keep the claim alive:
 
 ```bash
-jobpilot-api POST /api/pilot/claims/$CLAIM_ID/heartbeat
+openapply-api POST /api/pilot/claims/$CLAIM_ID/heartbeat
 ```
 
 ## 4. Act
@@ -72,7 +76,7 @@ at; the rest are not your cycle's work.
 
 ## 5. Record
 
-Write the batch to `$JOBPILOT_TEMP/journal.json`, then `jobpilot-api POST /api/pilot/journal --data @"$JOBPILOT_TEMP/journal.json"`:
+Write the batch to `$OPENAPPLY_TEMP/journal.json`, then `openapply-api POST /api/pilot/journal --data @"$OPENAPPLY_TEMP/journal.json"`:
 
 ```json
 {
@@ -97,7 +101,7 @@ If the worker returned `observations`, append each to the **same** journal POST 
 ## 6. Release
 
 ```bash
-jobpilot-api POST /api/pilot/claims/$CLAIM_ID/release --data '{"outcome":"done"}'
+openapply-api POST /api/pilot/claims/$CLAIM_ID/release --data '{"outcome":"done"}'
 ```
 
 `"failed"` if the action itself errored - the job result, if any, was already recorded separately in step 4.
@@ -107,7 +111,7 @@ jobpilot-api POST /api/pilot/claims/$CLAIM_ID/release --data '{"outcome":"done"}
 Print exactly one sentinel as the **final line of output**, then stop:
 
 ```
-[[JOBPILOT_CYCLE cycle=<CYCLE_ID> status=ok sleep=<agenda.sleepSeconds>]]
+[[OPENAPPLY_CYCLE cycle=<CYCLE_ID> status=ok sleep=<agenda.sleepSeconds>]]
 ```
 
 `status=empty` for the stopped/no-agenda/no-claimable-item paths (steps 1/3). `status=error` when the cycle failed unexpectedly.
@@ -115,11 +119,11 @@ Print exactly one sentinel as the **final line of output**, then stop:
 Error hardening: any API call that fails with a non-2xx other than the documented `409`s, a transport failure, or an orchestrator check-in you can't recover from, ends the cycle. Journal ONE batch - a `kind:"system"` entry naming what failed plus a `kind:"cycle"` entry carrying the error `detail`, never omitted:
 
 ```bash
-jobpilot-api POST /api/pilot/journal \
+openapply-api POST /api/pilot/journal \
   --data '{"cycleId":"<CYCLE_ID>","entries":[{"kind":"system","summary":"<what failed>"},{"kind":"cycle","summary":"Cycle failed: <why>","detail":{"status":"error","sleepSeconds":300}}]}'
 ```
 
-Then print `[[JOBPILOT_CYCLE cycle=<CYCLE_ID> status=error sleep=300]]` and stop. If even that journal POST fails, still print the sentinel - cycles must never end silently.
+Then print `[[OPENAPPLY_CYCLE cycle=<CYCLE_ID> status=error sleep=300]]` and stop. If even that journal POST fails, still print the sentinel - cycles must never end silently.
 
 ## Rules
 
@@ -128,5 +132,4 @@ Then print `[[JOBPILOT_CYCLE cycle=<CYCLE_ID> status=error sleep=300]]` and stop
 3. Never invent agenda items; never apply without a claim. Caps are server-enforced - a refused claim (`409`) is normal, not an error.
 4. Anything stuck - including an orchestrator check-in - exits through step 7's error batch. A `cycle` entry without `detail` is not a completion signal.
 5. Eligibility for `job.apply`/`question.answered` follows `../_shared/eligibility.md`; never skip silently.
-6. Draft promotions only for the instructions' platforms. Drafting never posts; `promo.post` publishes only a user-approved draft, verbatim - the server refuses the claim otherwise.
 7. Heartbeat `$CLAIM_ID` during long branches (`search.discover`, `campaign.scorePending`, `queue.drain`, `job.apply`) - after each worker return/row and at least every ~10 minutes - or the orchestrator reads legitimate long work as stuck and sends a check-in.

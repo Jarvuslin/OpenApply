@@ -15,7 +15,7 @@ try {
     [
       "sh",
       "-c",
-      "cd /home/pilot/openapply && exec node /home/pilot/jobpilot-tools/node_modules/@playwright/mcp/cli.js --cdp-endpoint http://127.0.0.1:9222 --output-dir /home/pilot/openapply",
+      "cd /home/pilot/openapply && exec node /home/pilot/openapply-tools/node_modules/@playwright/mcp/cli.js --cdp-endpoint http://127.0.0.1:9222 --output-dir /home/pilot/openapply",
     ],
     "pilot",
   );

@@ -1,4 +1,4 @@
-import type { OAuthErrorReason } from "@jobpilot/contracts";
+import type { OAuthErrorReason } from "@openapply/contracts";
 import type { OAuthProfile } from "./oauth-providers";
 
 export type OAuthLoginDecision =

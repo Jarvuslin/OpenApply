@@ -46,7 +46,7 @@ export const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   summary: { marginTop: 6, textAlign: "justify" },
-  entryBlock: { marginTop: 6 },
+  entryBlock: { marginTop: 6, flexShrink: 0 },
   entryHeaderRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -62,7 +62,7 @@ export const styles = StyleSheet.create({
     fontSize: 9.5,
   },
   bulletList: { marginTop: 3, paddingLeft: 10 },
-  bulletRow: { flexDirection: "row", marginTop: 1.5 },
+  bulletRow: { flexDirection: "row", marginTop: 1.5, flexShrink: 0 },
   bulletDot: { width: 8, fontSize: 10 },
   bulletText: { flex: 1, textAlign: "justify" },
   skillRow: { flexDirection: "row", marginTop: 2 },

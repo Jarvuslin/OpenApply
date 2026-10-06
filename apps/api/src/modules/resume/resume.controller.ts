@@ -1,6 +1,5 @@
-import { resumeDataSchema } from "@jobpilot/contracts/resume";
-import { idParam } from "@jobpilot/contracts/shared";
-import { resumeChannel } from "@jobpilot/contracts/sse";
+import { idParam } from "@openapply/contracts/shared";
+import { resumeChannel } from "@openapply/contracts/sse";
 import { Elysia } from "elysia";
 import { z } from "zod/v4";
 import { container } from "@/common/di/container";
@@ -41,11 +40,11 @@ export const resumeController = new Elysia({
   detail: { tags: ["Resumes"] },
 })
   .use(authGuard)
-  .post("/:id/extract", ({ user, params }) => svc.extract(user.id, params.id), {
+  .get("/:id/source-text", ({ user, params }) => svc.sourceText(user.id, params.id), {
     beforeHandle: rateLimit(RATE_LIMITS.localExtraction),
     params: idParam,
-    response: z.object({ content: resumeDataSchema }),
-    detail: { summary: "Read a resume locally using PDF.js/Mammoth and the Claude subscription" },
+    response: z.object({ text: z.string() }),
+    detail: { summary: "Read owned resume text for extraction by the user's local agent" },
   })
   .get("/", ({ user }) => svc.list(user.id), {
     response: resumeListSchema,
@@ -161,17 +160,3 @@ export const resumeController = new Elysia({
       description: "Removes the resume's uploaded source file and clears its source metadata.",
     },
   });
-
-/** Unauthenticated, for recipient-reachable links such as networking emails. */
-export const publicResumeController = new Elysia({
-  prefix: "/public/resumes",
-  detail: { tags: ["Resumes"] },
-}).get("/:id/pdf", ({ params }) => svc.renderPublicPdf(params.id), {
-  params: idParam,
-  beforeHandle: rateLimit(RATE_LIMITS.publicResumePdf),
-  detail: {
-    summary: "Render resume PDF (public)",
-    description:
-      "Streams a resume as a PDF without authentication, keyed by the resume's unguessable uuid.",
-  },
-});

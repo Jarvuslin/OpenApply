@@ -3,7 +3,7 @@
 import type { TerminalProviderId } from "@/lib/terminal";
 import { readLocalStorage, writeLocalStorage } from "@/utils/local-storage";
 
-const STORAGE_KEY = "jobpilot:agent";
+const STORAGE_KEY = "openapply:agent";
 
 interface AgentStorage {
   provider: TerminalProviderId;
@@ -11,7 +11,7 @@ interface AgentStorage {
   dockExpanded: boolean;
   /** True once a local terminal host has ever answered /healthz from this browser. */
   everReachable: boolean;
-  /** Last-reported host capability: the jobpilot:// scheme is registered, so it can be relaunched from the browser. */
+  /** Last-reported host capability: the openapply:// scheme is registered, so it can be relaunched from the browser. */
   canRelaunch: boolean;
 }
 

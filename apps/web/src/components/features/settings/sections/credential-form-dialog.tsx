@@ -1,12 +1,12 @@
 "use client";
 
 import { type ReactElement, useState } from "react";
+import { ToggleButton, ToggleButtonGroup } from "@mui/material";
 import {
   type CredentialInput,
   credentialSchema,
   SERVICE_PROVIDERS,
-} from "@jobpilot/contracts/credential";
-import { ToggleButton, ToggleButtonGroup } from "@mui/material";
+} from "@openapply/contracts/credential";
 import { FormDialog } from "@/components/ui/form";
 import { useAppForm } from "@/components/ui/form/tanstack";
 

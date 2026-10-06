@@ -1,8 +1,8 @@
 using System.Threading.Channels;
-using JobPilot.Terminal.Common;
+using OpenApply.Terminal.Common;
 using Microsoft.Extensions.Hosting;
 
-namespace JobPilot.Terminal.Pilot;
+namespace OpenApply.Terminal.Pilot;
 
 /// <summary>Runs cycles while the pilot is running and parks while it is stopped.</summary>
 public sealed class PilotLoop : BackgroundService

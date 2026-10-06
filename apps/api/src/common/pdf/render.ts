@@ -1,4 +1,4 @@
-import type { ResumeData } from "@jobpilot/contracts/resume";
+import type { ResumeData } from "@openapply/contracts/resume";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { createElement } from "react";
 import { CoverLetterTemplate } from "./cover-letter-template";

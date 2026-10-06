@@ -21,7 +21,7 @@ export const shadows = {
   sm: "none",
   md: "0 4px 16px rgba(25,30,25,0.06)",
   lg: "0 16px 48px rgba(25,30,25,0.12)",
-  focus: `0 0 0 2px ${alpha(accent.primary, 0.5)}`,
+  focus: `0 0 0 2px ${alpha(accent.primary, 0.14)}`,
 } as const;
 
 export const radii = {

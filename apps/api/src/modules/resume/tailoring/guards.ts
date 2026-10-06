@@ -1,6 +1,6 @@
 // Every validator returns violations; empty means accepted. Tailoring may rephrase a real
 // accomplishment but never fabricate, drop a fact, or pad it with stock phrasing.
-import type { ResumeData } from "@jobpilot/contracts/resume";
+import type { ResumeData } from "@openapply/contracts/resume";
 import type { EntryRewriteAudit, TailorVariantBody } from "../variants/variant.schema";
 import { type Corpus, droppedTerms, extractNumbers, unverifiedTerms } from "./facts";
 

@@ -7,6 +7,7 @@
     "packages/*"
   ],
   "scripts": {
+    "start": "concurrently -k -n terminal,api,web -c cyan,magenta,green \"dotnet run --project apps/terminal --no-build\" \"bun --cwd=apps/api run src/app.ts\" \"bun --cwd=apps/web run start\"",
     "dev": "concurrently -k -n terminal,api,web -c cyan,magenta,green \"dotnet run --project apps/terminal\" \"bun --cwd=apps/api run dev\" \"bun --cwd=apps/web run dev\"",
     "dev:api": "bun --cwd=apps/api run dev",
     "dev:web": "bun --cwd=apps/web run dev",

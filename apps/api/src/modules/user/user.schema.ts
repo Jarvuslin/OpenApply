@@ -1,9 +1,9 @@
 import {
-  availabilitySchema,
-  portfolioVisibilitySchema,
+  jobPreferencesSchema,
   SALARY_CURRENCIES,
   SALARY_PERIODS,
-} from "@jobpilot/contracts/user";
+  workAuthorizationSchema,
+} from "@openapply/contracts/user";
 import { z } from "zod/v4";
 
 /** A reference row attached to the user. */
@@ -43,6 +43,9 @@ const userViewSchema = z.object({
   state: z.string().nullable(),
   zipCode: z.string().nullable(),
   country: z.string().nullable(),
+  countryCode: z.string().nullable(),
+  jobPreferences: jobPreferencesSchema,
+  workAuthorization: workAuthorizationSchema,
   usAuthorized: z.boolean(),
   requiresSponsorship: z.boolean(),
   visaStatus: z.string().nullable(),
@@ -94,13 +97,4 @@ export const primaryResumeSetSchema = z.object({
   primaryResumeId: z.uuid().nullable(),
 });
 
-/** Current public-portfolio settings (from the `users` row). Username is always assigned. */
-export const portfolioSettingsSchema = portfolioVisibilitySchema.extend({
-  username: z.string(),
-  availability: availabilitySchema.nullable(),
-});
-
 /** Whether a candidate username is free to claim. */
-export const usernameAvailabilitySchema = z.object({
-  available: z.boolean(),
-});

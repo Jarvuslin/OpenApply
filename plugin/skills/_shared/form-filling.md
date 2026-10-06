@@ -10,7 +10,7 @@ Job applications often span multiple pages. For each page:
    - Text inputs → `browser_type` (or `browser_fill_form` for batch)
    - Selects → `browser_select_option`
    - Checkboxes / radios → `browser_click`
-   - File uploads (resume) → fetch the tailored variant from the caller's prior step into the scratch dir (see `./setup.md` "Scratch files"): `jobpilot-api GET /api/resumes/variants/<id>/pdf --out "$JOBPILOT_TEMP/resume.pdf"`, then `browser_file_upload` that path.
+   - File uploads (resume) → fetch the tailored variant from the caller's prior step into the scratch dir (see `./setup.md` "Scratch files"): `openapply-api GET /api/resumes/variants/<id>/pdf --out "$OPENAPPLY_TEMP/resume.pdf"`, then `browser_file_upload` that path.
    - Date fields → use the appropriate date format
 4. **Custom widgets** (date pickers, autocomplete combos, rich-text editors) the form snapshot couldn't enumerate cleanly: narrow the `browser_snapshot` to just that widget's container to obtain a ref.
 
@@ -27,12 +27,12 @@ All paths refer to `GET /api/user` (already loaded by setup.md).
 - **Start date** → "Immediately" or "2 weeks notice" unless `autoApply.defaultStartDate` overrides.
 - **Cover letter** (a textarea or a file-upload field labelled "cover letter") → generate via the `cover-letter` skill (already humanized; it also saves the letter to history - pass `source` = the invoking skill, `apply` or `auto_apply`). Then:
   - Text area → paste the text directly.
-  - File upload → render the text to PDF and upload it: write `{"text":"<letter text>"}` to `$JOBPILOT_TEMP/cover-letter-pdf.json`, run `jobpilot-api POST /api/cover-letters/pdf --data @"$JOBPILOT_TEMP/cover-letter-pdf.json" --out "$JOBPILOT_TEMP/cover-letter.pdf"`, then `browser_file_upload` that path (overwritten each time).
+  - File upload → render the text to PDF and upload it: write `{"text":"<letter text>"}` to `$OPENAPPLY_TEMP/cover-letter-pdf.json`, run `openapply-api POST /api/cover-letters/pdf --data @"$OPENAPPLY_TEMP/cover-letter-pdf.json" --out "$OPENAPPLY_TEMP/cover-letter.pdf"`, then `browser_file_upload` that path (overwritten each time).
 - **"How did you hear about us?"** → "Job board" or "Company website".
-- **Years of experience** → calculate from earliest work experience date.
+- **Years of experience** → use confirmed `user.jobPreferences.yearsExperience` for total professional experience. For skill-specific experience, use dated evidence, account for overlap, and ask if uncertain; never count time since the earliest date as continuous employment.
 - **Custom questions** → best judgment from the resume. Genuinely uncertain → ask (loop skills: make a reasonable attempt and log in notes).
 - **Relocation** → `user.willingToRelocate`. For preferred/target locations, use `user.preferredLocations`. Empty `[]` or contains `"Anywhere"` → user is open, answer accordingly without asking.
-- **Work auth / visa** → `user.{usAuthorized, requiresSponsorship, visaStatus, optExtension}`. Map to form questions; for dropdowns, pick the closest option. Sponsorship questions ("Will you now or in the future require sponsorship?") → answer truthfully from `requiresSponsorship` - never misstate to pass a screen. If the form reveals a no-sponsorship policy the JD didn't state, still answer truthfully, finish the application, and note it in the result summary.
+- **Work auth / visa** → use the entry in `user.workAuthorization[]` whose country matches the job country. `authorized` and `sponsorship` must be explicit booleans. An absent entry or unanswered value means ask the user; never use the legacy US/global booleans to fill a different country or infer an answer. Specific visa types still require a confirmed answer.
 - **EEO / Diversity** → `user.{eeoGender, eeoRace, eeoEthnicity, eeoHispanicOrLatino, eeoVeteranStatus, eeoDisabilityStatus}`. Null → "Prefer not to disclose".
 - **References** → `user.references[]`, each `{name, relationship, company, email, phone}`. Fill reference rows in order. If the form requires references and the array is empty, fill what you can and note the gap - never invent one.
 

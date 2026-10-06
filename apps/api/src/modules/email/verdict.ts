@@ -1,4 +1,4 @@
-import type { ApplicationStatus } from "@jobpilot/contracts/application";
+import type { ApplicationStatus } from "@openapply/contracts/application";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { statusChangeOps } from "@/modules/application/status-change";
 

@@ -1,5 +1,7 @@
-import type { ResumeBasics } from "@jobpilot/contracts/resume";
-import { normalizeLinkUrl } from "@jobpilot/contracts/utils/url";
+import { normalizePhone } from "@openapply/contracts/phone";
+import type { ResumeBasics } from "@openapply/contracts/resume";
+import { normalizeLinkUrl } from "@openapply/contracts/utils/url";
+import { getCountries } from "libphonenumber-js";
 
 type ProfileTextFieldName =
   | "firstName"
@@ -10,6 +12,7 @@ type ProfileTextFieldName =
   | "linkedin"
   | "github"
   | "city"
+  | "country"
   | "state";
 
 // Minimal slice of a TanStack form this helper needs - accepts the typed
@@ -25,12 +28,17 @@ export function applyBasicsToForm(form: ProfileFieldWriter, basics: ResumeBasics
   setIfEmpty(form, "firstName", firstName);
   setIfEmpty(form, "lastName", lastName);
   setIfEmpty(form, "contactEmail", basics.email);
-  setIfEmpty(form, "phone", basics.phone);
+  const { city, state, country } = parseLocation(basics.location);
+  setIfEmpty(form, "country", country);
+  const names = new Intl.DisplayNames(["en"], { type: "region" });
+  const code = getCountries().find(
+    (c) => c === form.getFieldValue("country") || names.of(c) === form.getFieldValue("country"),
+  );
+  setIfEmpty(form, "phone", basics.phone && normalizePhone(basics.phone, code));
   setIfEmpty(form, "website", basics.website && normalizeLinkUrl(basics.website));
   setIfEmpty(form, "linkedin", basics.linkedin && normalizeLinkUrl(basics.linkedin));
   setIfEmpty(form, "github", basics.github && normalizeLinkUrl(basics.github));
 
-  const { city, state } = parseLocation(basics.location);
   setIfEmpty(form, "city", city);
   setIfEmpty(form, "state", state);
 }
@@ -64,9 +72,9 @@ function splitName(name: string): [string, string] {
   return [trimmed.slice(0, idx).trim(), trimmed.slice(idx + 1).trim()];
 }
 
-function parseLocation(location?: string): { city: string; state: string } {
+function parseLocation(location?: string): { city: string; state: string; country: string } {
   if (!location) {
-    return { city: "", state: "" };
+    return { city: "", state: "", country: "" };
   }
 
   const parts = location
@@ -74,14 +82,13 @@ function parseLocation(location?: string): { city: string; state: string } {
     .map((p) => p.trim())
     .filter(Boolean);
 
-  if (parts.length === 0) {
-    return { city: "", state: "" };
-  }
-  if (parts.length === 1) {
-    return { city: parts[0]!, state: "" };
-  }
-
-  const state = parts[parts.length - 1]!.split(/\s+/)[0]!;
-  const city = parts.slice(0, -1).join(", ");
-  return { city, state };
+  const names = new Intl.DisplayNames(["en"], { type: "region" });
+  const last = parts.at(-1);
+  const code = getCountries().find(
+    (c) => names.of(c) === last || (parts.length >= 3 && c === last),
+  );
+  const country = code ? (names.of(code) ?? code) : "";
+  if (country) parts.pop();
+  const state = parts.length > 1 ? parts.pop()! : "";
+  return { city: parts.join(", "), state, country };
 }

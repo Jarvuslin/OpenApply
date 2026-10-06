@@ -1,14 +1,16 @@
 import { type ReactElement, Suspense } from "react";
-import { JOB_LISTING_FILTER_KEYS, JOB_LISTING_MAX_PAGE } from "@jobpilot/contracts/job-listing";
 import { Grid, Skeleton, Stack, Typography } from "@mui/material";
+import { JOB_LISTING_FILTER_KEYS, JOB_LISTING_MAX_PAGE } from "@openapply/contracts/job-listing";
 import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
+import { notFound } from "next/navigation";
 import { api } from "@/api/client";
 import { getPublicFetchOptions } from "@/api/server";
 import { JobCard, JobFilters, JobGridSkeleton, JobPager } from "@/components/features/jobs";
 import { JsonLd } from "@/components/seo/json-ld";
 import { LinkButton } from "@/components/ui/buttons";
 import { EmptyState } from "@/components/ui/data";
+import { PUBLIC_SITE_ENABLED } from "@/lib/public-site";
 import { breadcrumbLd } from "@/lib/structured-data";
 import { one, pageParam } from "@/utils/search-params";
 
@@ -24,6 +26,7 @@ interface JobsPageProps {
 }
 
 export default function JobsPage(props: JobsPageProps): ReactElement {
+  if (!PUBLIC_SITE_ENABLED) notFound();
   return (
     <Stack spacing={4}>
       <JsonLd

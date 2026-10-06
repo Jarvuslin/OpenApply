@@ -29,9 +29,7 @@ function setup() {
       },
       groupBy: async () => [],
     },
-    networkingMessage: {
-      groupBy: async () => [],
-    },
+
     $transaction: async (work: (tx: unknown) => Promise<unknown>) => work(db),
   };
   const listings = { publishInBackground: () => undefined } as unknown as JobListingPublisher;

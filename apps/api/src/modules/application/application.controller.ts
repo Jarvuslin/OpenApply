@@ -1,5 +1,5 @@
-import { applicationFilterSchema, statusTransitionSchema } from "@jobpilot/contracts/application";
-import { idParam } from "@jobpilot/contracts/shared";
+import { applicationFilterSchema, statusTransitionSchema } from "@openapply/contracts/application";
+import { idParam } from "@openapply/contracts/shared";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { authGuard } from "@/common/middleware";

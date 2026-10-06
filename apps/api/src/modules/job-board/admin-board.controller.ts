@@ -1,5 +1,5 @@
-import { adminBoardPatchSchema, adminBoardSchema } from "@jobpilot/contracts/job-board";
-import { idParam } from "@jobpilot/contracts/shared";
+import { adminBoardPatchSchema, adminBoardSchema } from "@openapply/contracts/job-board";
+import { idParam } from "@openapply/contracts/shared";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { requireRole } from "@/common/middleware";

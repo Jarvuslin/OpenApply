@@ -1,7 +1,6 @@
 "use client";
 
 import { type ReactElement, useState } from "react";
-import type { CampaignStatus } from "@jobpilot/contracts/campaign";
 import {
   Autorenew,
   Delete,
@@ -12,6 +11,7 @@ import {
   Replay,
 } from "@mui/icons-material";
 import { Button, IconButton, Stack } from "@mui/material";
+import type { CampaignStatus } from "@openapply/contracts/campaign";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { api } from "@/api/client";
@@ -90,7 +90,7 @@ export function CampaignActionsBar(props: CampaignActionsBarProps): ReactElement
     const confirmed = await confirm({
       title: "Delete campaign?",
       description:
-        "Permanently deletes this campaign and all of its data - jobs, history, applications it produced, and networking activity. This cannot be undone.",
+        "Permanently deletes this campaign and all of its data - jobs, history, applications it produced. This cannot be undone.",
       confirmLabel: "Delete campaign",
       destructive: true,
       confirmationText: "delete",
@@ -111,11 +111,8 @@ export function CampaignActionsBar(props: CampaignActionsBarProps): ReactElement
     setRescanOpen(false);
   };
 
-  // Networking campaigns have no jobs to replay - re-run the networking skill instead of `resume-campaign`.
   const handleResume = (): void => {
-    void (campaign.source === "networking"
-      ? agent.injectSkill("networking", `--campaign ${campaign.campaignId}`)
-      : agent.injectSkill("resume-campaign", campaign.campaignId));
+    void agent.injectSkill("resume-campaign", campaign.campaignId);
   };
 
   const menuItems: DropdownMenuItem[] = [

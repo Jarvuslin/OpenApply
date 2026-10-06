@@ -1,9 +1,10 @@
-import { USER_DEFAULT_VALUES, type UserWithAutoApplyInput } from "@jobpilot/contracts/user";
+import { USER_DEFAULT_VALUES, type UserWithAutoApplyInput } from "@openapply/contracts/user";
 import type { UserAggregateResponse } from "@/api/types";
+import { normalizeProfileDraft } from "@/components/features/onboarding/normalize-profile-draft";
 export function toFormValues(data: UserAggregateResponse): UserWithAutoApplyInput {
   const p = data.user;
   const a = data.autoApply ?? USER_DEFAULT_VALUES.autoApply!;
-  return {
+  return normalizeProfileDraft({
     firstName: p.firstName,
     lastName: p.lastName,
     contactEmail: p.contactEmail,
@@ -17,6 +18,8 @@ export function toFormValues(data: UserAggregateResponse): UserWithAutoApplyInpu
     state: p.state ?? "",
     zipCode: p.zipCode ?? "",
     country: p.country ?? "",
+    jobPreferences: p.jobPreferences,
+    workAuthorization: p.workAuthorization,
     usAuthorized: p.usAuthorized,
     requiresSponsorship: p.requiresSponsorship,
     visaStatus: p.visaStatus ?? "",
@@ -45,5 +48,5 @@ export function toFormValues(data: UserAggregateResponse): UserWithAutoApplyInpu
     eeoDisabilityStatus: p.eeoDisabilityStatus ?? "",
     primaryResumeId: p.primaryResumeId,
     autoApply: a,
-  };
+  });
 }

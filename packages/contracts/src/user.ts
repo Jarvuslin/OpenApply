@@ -78,6 +78,40 @@ const salaryPreferenceSchema = z.object({
 
 export type SalaryPreferenceInput = z.infer<typeof salaryPreferenceSchema>;
 
+export const JOB_LEVELS = [
+  "Internship",
+  "Entry",
+  "Intermediate / Mid",
+  "Senior",
+  "Staff",
+  "Principal",
+  "Manager",
+  "Director+",
+] as const;
+export const WORK_MODES = ["Remote", "Hybrid", "Onsite"] as const;
+export const EMPLOYMENT_TYPES = ["Full-time", "Part-time", "Contract", "Internship"] as const;
+export const jobPreferencesSchema = z.object({
+  levels: z.array(z.enum(JOB_LEVELS)),
+  yearsExperience: z.number().min(0).max(80).nullable(),
+  workModes: z.array(z.enum(WORK_MODES)),
+  employmentTypes: z.array(z.enum(EMPLOYMENT_TYPES)),
+});
+export const workAuthorizationSchema = z
+  .array(
+    z.object({
+      country: z.string().min(1, "Choose a country"),
+      authorized: z
+        .boolean()
+        .nullable()
+        .refine((v): boolean => v !== null, "Choose Yes or No for work authorization"),
+      sponsorship: z
+        .boolean()
+        .nullable()
+        .refine((v): boolean => v !== null, "Choose Yes or No for sponsorship"),
+    }),
+  )
+  .max(20);
+
 const userUpdateSchema = z.object({
   firstName: z.string().min(1, "Required"),
   lastName: z.string().min(1, "Required"),
@@ -93,6 +127,8 @@ const userUpdateSchema = z.object({
   state: z.string().optional().nullable(),
   zipCode: optionalZipCode,
   country: z.string().optional().nullable(),
+  jobPreferences: jobPreferencesSchema.optional(),
+  workAuthorization: workAuthorizationSchema.optional(),
 
   usAuthorized: z.boolean(),
   requiresSponsorship: z.boolean(),
@@ -118,7 +154,14 @@ export const DEFAULT_MIN_MATCH_SCORE = 60;
 
 const autoApplySettingsSchema = z.object({
   minMatchScore: z.number().int().min(0).max(100),
-  maxApplicationsPerCampaign: z.number().int().min(1).max(500).optional().nullable(),
+  maxApplicationsPerCampaign: z
+    .number()
+    .int()
+    .min(0, "Choose no limit or enter 1–500 applications")
+    .max(500)
+    .nullable()
+    .transform((v) => (v === 0 ? null : v))
+    .optional(),
   defaultStartDate: z.string(),
 });
 
@@ -146,8 +189,10 @@ export const USER_DEFAULT_VALUES: UserWithAutoApplyInput = {
   city: "",
   state: "",
   zipCode: "",
-  country: "United States",
-  usAuthorized: true,
+  country: "",
+  jobPreferences: { levels: [], yearsExperience: null, workModes: [], employmentTypes: [] },
+  workAuthorization: [],
+  usAuthorized: false,
   requiresSponsorship: false,
   visaStatus: "",
   optExtension: "",
@@ -170,34 +215,8 @@ export const USER_DEFAULT_VALUES: UserWithAutoApplyInput = {
 };
 
 /** The /u/[username] slug. Lowercased; letters, digits, and interior hyphens only. */
-export const usernameSchema = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .min(3, "At least 3 characters")
-  .max(30, "At most 30 characters")
-  .regex(
-    /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/,
-    "Use letters, numbers, and hyphens (no leading/trailing hyphen)",
-  );
 
 export const AVAILABILITY = ["open", "not_looking"] as const;
 export const availabilitySchema = z.enum(AVAILABILITY);
 
-export type Availability = z.infer<typeof availabilitySchema>;
-
 /** What the owner has chosen to publish; every flag is opt-in. */
-export const portfolioVisibilitySchema = z.object({
-  showResume: z.boolean(),
-  showWebsite: z.boolean(),
-  showLinkedin: z.boolean(),
-  showGithub: z.boolean(),
-});
-
-/** Partial update of the user's portfolio settings; every field optional. */
-export const portfolioSettingsPatchSchema = portfolioVisibilitySchema.partial().extend({
-  username: usernameSchema.optional(),
-  availability: availabilitySchema.nullable().optional(),
-});
-
-export type PortfolioSettingsPatch = z.infer<typeof portfolioSettingsPatchSchema>;

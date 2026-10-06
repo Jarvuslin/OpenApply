@@ -2,11 +2,12 @@ import type {
   AdminJobListingQuery,
   JobListingQuery,
   JobListingStatus,
-} from "@jobpilot/contracts/job-listing";
-import { pageSlice, paginate } from "@jobpilot/contracts/pagination";
+} from "@openapply/contracts/job-listing";
+import { pageSlice, paginate } from "@openapply/contracts/pagination";
 import { singleton } from "tsyringe";
 import { notFound } from "@/common/errors";
 import { type Prisma, PrismaClient } from "@/generated/prisma/client";
+import { allowedApplyUrl } from "@/modules/job-board/blocked-sites";
 import {
   groupSkillFacets,
   resolveSkillFilter,
@@ -32,6 +33,7 @@ const SUMMARY_SELECT = {
   lastSeenAt: true,
   // The list only shows "posted on N boards", so count them rather than shipping every source row.
   _count: { select: { sources: true } },
+  sources: { select: { applyUrl: true, board: true } },
 } satisfies Prisma.JobListingSelect;
 
 /** The detail page is the only view that needs the board links and the long-form digest fields. */
@@ -41,7 +43,15 @@ const DETAIL_SELECT = {
   responsibilities: true,
   yearsExperience: true,
   sources: {
-    select: { board: true, url: true, lastSeenAt: true },
+    select: {
+      board: true,
+      url: true,
+      lastSeenAt: true,
+      applyUrl: true,
+      attributionUrl: true,
+      resolutionConfidence: true,
+      postedAt: true,
+    },
     orderBy: { lastSeenAt: "desc" },
   },
 } satisfies Prisma.JobListingSelect;
@@ -52,11 +62,19 @@ const ADMIN_SELECT = {
   createdAt: true,
 } satisfies Prisma.JobListingSelect;
 
-type CountedRow = { _count: { sources: number } };
+type CountedRow = {
+  _count: { sources: number };
+  sources: { applyUrl: string | null; board: string | null }[];
+};
 
 /** Flatten Prisma's `_count` into the flat `sourceCount` the contract exposes. */
 function withSourceCount<T extends CountedRow>({ _count, ...row }: T) {
-  return { ...row, sourceCount: _count.sources };
+  return {
+    ...row,
+    sourceCount: _count.sources,
+    canApply: row.sources.some((s) => allowedApplyUrl(s.applyUrl)),
+    foundOn: [...new Set(row.sources.map((s) => s.board ?? "source"))],
+  };
 }
 
 const SITEMAP_LIMIT = 5000;

@@ -1,11 +1,22 @@
 import { randomBytes } from "node:crypto";
-import type { EmailProvider, OAuthClientUpsertInput } from "@jobpilot/contracts/email";
-import type { SendEmailInput } from "@jobpilot/contracts/networking";
+import type {
+  EmailProvider,
+  OAuthClientUpsertInput,
+  RegisterConnectorAccountInput,
+  SendEmailInput,
+} from "@openapply/contracts/email";
 import { singleton } from "tsyringe";
 import { CryptoService, SECRET_CONTEXTS } from "@/common/crypto";
-import { badRequest, conflict, ErrorCodes, HttpError, unprocessable } from "@/common/errors";
+import {
+  badRequest,
+  conflict,
+  ErrorCodes,
+  findOwned,
+  HttpError,
+  unprocessable,
+} from "@/common/errors";
 import { env } from "@/env";
-import { PrismaClient } from "@/generated/prisma/client";
+import { type EmailAccount, PrismaClient } from "@/generated/prisma/client";
 import {
   accountCanSend,
   GMAIL_READ_SCOPE,
@@ -14,6 +25,23 @@ import {
   scopeCanRead,
 } from "../gmail.provider";
 import { loadFreshAccount, resolveOAuthClient } from "./account.utils";
+import { getActiveEmailAccount, selectFirstEmailAccount } from "./account-selection";
+import { saveConnectorAccount } from "./connector-account";
+
+function mailboxStatus(account: EmailAccount, selected: boolean) {
+  return {
+    id: account.id,
+    provider: account.provider,
+    email: account.email,
+    runtimeProvider: account.runtimeProvider,
+    identityVerified: account.identityVerified,
+    lastCheckedAt: account.lastCheckedAt,
+    lastSyncAt: account.lastSyncAt,
+    canSend: accountCanSend(account),
+    needsReauth: account.refreshFailedAt !== null,
+    selected,
+  };
+}
 
 @singleton()
 export class EmailAccountService {
@@ -23,7 +51,7 @@ export class EmailAccountService {
   ) {}
 
   async accountStatus(userId: string) {
-    const account = await this.prisma.emailAccount.findUnique({ where: { userId } });
+    const account = await getActiveEmailAccount(this.prisma, userId);
 
     if (!account) {
       return { connected: false as const, canSend: false };
@@ -31,25 +59,64 @@ export class EmailAccountService {
 
     return {
       connected: true as const,
-      provider: account.provider,
-      email: account.email,
-      lastSyncAt: account.lastSyncAt,
-      canSend: accountCanSend(account),
-      needsReauth: account.refreshFailedAt !== null,
+      ...mailboxStatus(account, true),
     };
   }
 
-  async disconnectAccount(userId: string) {
-    await this.prisma.emailAccount.deleteMany({ where: { userId } });
+  async listAccounts(userId: string) {
+    const rows = await this.prisma.emailAccount.findMany({
+      where: { userId },
+      orderBy: { createdAt: "asc" },
+      include: { activeForUser: { select: { id: true } } },
+    });
+    return rows.map((row) => mailboxStatus(row, row.activeForUser?.id === userId));
+  }
+
+  async registerConnectorAccount(userId: string, input: RegisterConnectorAccountInput) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
+      const account = await saveConnectorAccount(tx, userId, {
+        ...input,
+        identityVerified: input.identityVerified ?? false,
+      });
+      const selected = await getActiveEmailAccount(tx, userId);
+      return mailboxStatus(account, selected?.id === account.id);
+    });
+  }
+
+  async selectAccount(userId: string, accountId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
+      const account = await findOwned(
+        (where) => tx.emailAccount.findFirst({ where }),
+        { id: accountId, userId },
+        "Mailbox",
+      );
+      await tx.user.update({ where: { id: userId }, data: { activeEmailAccountId: account.id } });
+      return { connected: true as const, ...mailboxStatus(account, true) };
+    });
+  }
+
+  async disconnectAccount(userId: string, accountId?: string) {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
+      const account = accountId
+        ? await findOwned(
+            (where) => tx.emailAccount.findFirst({ where }),
+            { id: accountId, userId },
+            "Mailbox",
+          )
+        : await getActiveEmailAccount(tx, userId);
+      if (!account) return;
+      await tx.user.updateMany({
+        where: { id: userId, activeEmailAccountId: account.id },
+        data: { activeEmailAccountId: null },
+      });
+      await tx.emailAccount.delete({ where: { id: account.id } });
+    });
     return { disconnected: true };
   }
 
-  /**
-   * Send an outbound email from the user's connected mailbox. Used by the
-   * networking skill (and the networking board's "approve & send" action). Refreshes
-   * an expired token first and 4xxs with an actionable message when the account
-   * lacks send scope (needs reconnecting).
-   */
   async send(userId: string, body: SendEmailInput) {
     const loaded = await loadFreshAccount(this.prisma, this.crypto, userId);
     if (!loaded) {
@@ -132,19 +199,30 @@ export class EmailAccountService {
       null;
     const fields = {
       provider: providerName,
-      email,
+      email: email.trim().toLowerCase(),
       accessToken,
       refreshToken,
       tokenExpiresAt: tokens.expiresAt ?? null,
       scope: tokens.scope ?? null,
       // A reconnect is exactly how a dead grant gets fixed.
       refreshFailedAt: null,
+      lastCheckedAt: new Date(),
     };
 
-    await this.prisma.emailAccount.upsert({
-      where: { userId },
-      create: { userId, ...fields },
-      update: fields,
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
+      const where = { userId_email: { userId, email: fields.email } };
+      const existing = await tx.emailAccount.findUnique({ where });
+      if (existing?.provider === "connector")
+        throw conflict(
+          "This mailbox already uses an agent connector. Remove it before changing its connection method.",
+        );
+      const account = await tx.emailAccount.upsert({
+        where,
+        create: { userId, ...fields },
+        update: fields,
+      });
+      if (!existing) await selectFirstEmailAccount(tx, userId, account.id);
     });
 
     return { email };
@@ -198,7 +276,9 @@ export class EmailAccountService {
 
   /** Remove the OAuth client. Blocked while a mailbox is still connected. */
   async deleteOAuthClient(userId: string) {
-    const account = await this.prisma.emailAccount.findUnique({ where: { userId } });
+    const account = await this.prisma.emailAccount.findFirst({
+      where: { userId, provider: { not: "connector" } },
+    });
     if (account) {
       throw conflict("Disconnect the mailbox before removing its OAuth client.");
     }

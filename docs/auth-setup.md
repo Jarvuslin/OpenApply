@@ -7,7 +7,7 @@ access only; it does not let the agent read email.
 
 ## Local configuration
 
-Edit the ignored `apps/api/.env` on the machine running the API. Do not put
+Edit the ignored `apps/api/.env` on the machine running the API. For this checkout, that is `D:\Dev\OpenApply\apps\api\.env`. There is no `/app/.env` file. The setup command keeps the four empty provider fields visible. Fill in both fields for each provider you want to enable. Do not put
 secrets in chat, browser code, `NEXT_PUBLIC_*` variables, or Git. Keep both
 provider fields empty until you have both values.
 

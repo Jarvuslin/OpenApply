@@ -1,6 +1,8 @@
 import type { ReactElement, ReactNode } from "react";
 import { Box, Container } from "@mui/material";
+import { notFound } from "next/navigation";
 import { MarketingFooter, MarketingNav } from "@/components/features/marketing";
+import { PUBLIC_SITE_ENABLED } from "@/lib/public-site";
 
 interface JobsLayoutProps {
   children: ReactNode;
@@ -8,6 +10,7 @@ interface JobsLayoutProps {
 
 /** The public job index shares the marketing shell - it is an acquisition surface, not the app. */
 export default function JobsLayout(props: JobsLayoutProps): ReactElement {
+  if (!PUBLIC_SITE_ENABLED) notFound();
   const { children } = props;
   return (
     <Box

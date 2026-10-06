@@ -3,7 +3,6 @@ import { alpha, Box, Grid, Stack, Typography } from "@mui/material";
 import { accent, feedback } from "@/theme";
 import { InboxPanel } from "../mock-panels/inbox-panel";
 import { ResumePanel } from "../mock-panels/resume-panel";
-import { UpworkPanel } from "../mock-panels/upwork-panel";
 import { WorkspacePanel } from "../mock-panels/workspace-panel";
 import { Section } from "../section";
 import { SectionEyebrow } from "../section-eyebrow";
@@ -39,13 +38,6 @@ const ROWS: TourRow[] = [
     body: "Keep one base resume; the agent tailors a variant for each application and renders it to PDF live. You always know which version went where.",
     panel: <ResumePanel />,
     glow: alpha(feedback.success, 0.06),
-  },
-  {
-    eyebrow: "UPWORK",
-    title: "Only the Upwork jobs worth bidding on.",
-    body: "Client-quality filters drop low hire rates and empty spend histories before ranking what's left. Proposals and profile improvements are drafted for your approval.",
-    panel: <UpworkPanel />,
-    glow: alpha(accent.primary, 0.07),
   },
 ];
 

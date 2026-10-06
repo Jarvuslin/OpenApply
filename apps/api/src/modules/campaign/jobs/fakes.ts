@@ -101,9 +101,7 @@ export function setup() {
     campaign: {
       findUniqueOrThrow: async () => campaign,
     },
-    networkingMessage: {
-      groupBy: async () => [],
-    },
+
     resume: {
       findFirst: async ({ where }: { where: { id: string; userId: string } }) =>
         where.id === OWNED_RESUME_ID && where.userId === "u1" ? { id: OWNED_RESUME_ID } : null,

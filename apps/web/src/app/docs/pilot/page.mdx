@@ -16,7 +16,7 @@ Everything it does lands in a live journal. The few decisions only you can make
 arrive as one-tap questions, on your phone if you enable notifications.
 
 It runs the [campaign modes](/docs/campaigns-and-skills) for you: searching,
-applying, and networking all happen inside its cycles. Every dashboard action
+and applying all happen inside its cycles. Every dashboard action
 stays available whenever you want to do something by hand.
 
 ## How a cycle works
@@ -61,15 +61,9 @@ optional tuning, folded behind **Advanced settings**.
   search keeps coming up dry. The Instructions page shows them read-only, with
   each one's recent yield and next check.
 - **Operating limits.** Daily apply cap, minimum match score, check interval.
-- **Networking.** Off by default. You set a daily cap and a follow-up delay,
-  then an autonomy level per channel: email can be **draft only**, **review
-  each**, or **auto-send**; LinkedIn stops at **review each**, because nothing
-  is ever sent there without you.
 - **Boards.** Which job boards the Pilot searches, and in what order. It moves
   to the next board each cycle, so all of them get worked. Leave it empty and
   each saved search stays on the board it was created with.
-- **Platforms.** Where the Pilot drafts self-promotion posts. Posting is
-  always review-only.
 
 Your goals text handles the judgment calls. The caps are a different thing: the
 server enforces those, so the Pilot can't exceed one no matter how the goals are
@@ -81,10 +75,7 @@ worded. Edit any of it any time, and changes take effect on the next cycle.
 | --- | --- |
 | Applies to matching roles within your daily cap | A login code it can't read, from SMS or an authenticator app |
 | Reads emailed sign-in codes from your connected mailbox | Salary and screening questions on an application |
-| Sends networking emails you set to auto-send, within your cap | Sending a LinkedIn message |
-| Follows up on networking messages per your autonomy setting | Posting any self-promotion publicly |
 | Reviews recruiter replies in your inbox (proposes moves) | Sending a drafted interview reply |
-| Drafts emails, follow-ups, interview replies, prep sheets, and posts | Whether to resume a campaign you paused |
 
 Anything in the right column surfaces as a question. Nothing sends, posts, or
 changes an application's status without you.
@@ -115,8 +106,7 @@ a **digest**: applications, replies reviewed, messages sent, questions waiting.
 
 When a recruiter's reply is an interview invite, the Pilot drafts a short
 availability reply and posts it as an approval card; it never sends on its
-own. It also builds a **prep sheet** (behavioral, technical, system design,
-company notes) and attaches it to the application.
+own.
 
 ## Troubleshooting
 

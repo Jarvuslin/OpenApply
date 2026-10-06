@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { type ResetPasswordInput, ResetPasswordSchema } from "@jobpilot/contracts/auth";
 import { Alert, Link, Stack, Typography } from "@mui/material";
+import { type ResetPasswordInput, ResetPasswordSchema } from "@openapply/contracts/auth";
 import { useRouter } from "next/navigation";
 import { api } from "@/api/client";
 import { useApiMutation } from "@/api/hooks";
@@ -60,6 +60,8 @@ export function ResetPasswordForm(props: ResetPasswordFormProps): ReactElement {
         <form.AppField name="password">
           {(field) => (
             <field.TextField
+              labelPosition="above"
+              size="medium"
               label="New password"
               type="password"
               autoComplete="new-password"

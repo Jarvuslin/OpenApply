@@ -3,7 +3,7 @@ import {
   type PilotClaim,
   pilotClaimSchema,
   type ReleasePilotClaimInput,
-} from "@jobpilot/contracts/pilot";
+} from "@openapply/contracts/pilot";
 import { singleton } from "tsyringe";
 import { z } from "zod/v4";
 import { conflict, findOwned } from "@/common/errors";
@@ -40,18 +40,6 @@ async function assertStillClaimable(
   let remaining: number;
   let gone: string;
   switch (item.kind) {
-    case "promo.post":
-      remaining = await tx.promotionPost.count({
-        where: { id: subjectId, userId, status: "approved" },
-      });
-      gone = "Promotion post is no longer approved.";
-      break;
-    case "networking.send":
-      remaining = await tx.networkingMessage.count({
-        where: { id: subjectId, userId, status: "approved" },
-      });
-      gone = "Networking message is no longer approved.";
-      break;
     case "campaign.reviewPaused":
       remaining = await tx.campaign.count({
         where: { campaignId: subjectId, userId, status: "paused" },

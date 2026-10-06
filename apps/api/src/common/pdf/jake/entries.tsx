@@ -11,7 +11,7 @@ import type {
   ResumeProject,
   ResumePublication,
   ResumeSkillGroup,
-} from "@jobpilot/contracts/resume";
+} from "@openapply/contracts/resume";
 import { Link, Text, View } from "@react-pdf/renderer";
 import { absoluteHref, Bullets, dateRange, displayUrl, EntryRight, TitledEntry } from "./parts";
 import { styles } from "./styles";
@@ -144,6 +144,11 @@ export function CertificationEntry(props: { entry: ResumeCertification }): React
       sub={entry.issuer}
     >
       {entry.credentialId && <Text style={styles.entryNote}>{entry.credentialId}</Text>}
+      {entry.url && (
+        <Link src={absoluteHref(entry.url)} style={styles.link}>
+          {displayUrl(entry.url)}
+        </Link>
+      )}
     </TitledEntry>
   );
 }

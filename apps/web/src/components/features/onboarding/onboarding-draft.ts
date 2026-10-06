@@ -1,5 +1,10 @@
-import { type UserWithAutoApplyInput, userWithAutoApplySchema } from "@jobpilot/contracts/user";
+import {
+  jobPreferencesSchema,
+  type UserWithAutoApplyInput,
+  userWithAutoApplySchema,
+} from "@openapply/contracts/user";
 import { z } from "zod/v4";
+import { normalizeProfileDraft } from "./normalize-profile-draft";
 
 // Drafts validate data types, not completeness: an unfinished email, phone,
 // reference or compensation range must survive navigation and validation errors.
@@ -13,6 +18,18 @@ const valuesSchema = userWithAutoApplySchema.extend({
   linkedin: text,
   github: text,
   zipCode: text,
+  jobPreferences: jobPreferencesSchema
+    .extend({ yearsExperience: z.number().nullable() })
+    .optional(),
+  workAuthorization: z
+    .array(
+      z.object({
+        country: z.string(),
+        authorized: z.boolean().nullable(),
+        sponsorship: z.boolean().nullable(),
+      }),
+    )
+    .optional(),
   references: z.array(
     z.object({
       name: z.string(),
@@ -41,14 +58,14 @@ const valuesSchema = userWithAutoApplySchema.extend({
 });
 
 const draftSchema = z.object({
-  version: z.literal(1),
+  version: z.union([z.literal(1), z.literal(2)]),
   userId: z.string(),
   step: z.number().int().min(0).max(5),
   values: valuesSchema,
 });
 
 function draftKey(userId: string): string {
-  return `jobpilot:onboarding:v1:${userId}`;
+  return `openapply:onboarding:v1:${userId}`;
 }
 
 export function readOnboardingDraft(storage: Pick<Storage, "getItem">, userId: string) {
@@ -61,7 +78,13 @@ export function readOnboardingDraft(storage: Pick<Storage, "getItem">, userId: s
   // Number inputs use null for a cleared field even when the submit contract
   // requires a number. Preserve that draft value; the submit schema still
   // validates it before anything can be sent to the profile API.
-  return { ...parsed.data, values: parsed.data.values as UserWithAutoApplyInput };
+  let step = parsed.data.step;
+  if (parsed.data.version === 1) step = step === 5 ? 0 : step + 1;
+  return {
+    ...parsed.data,
+    step,
+    values: normalizeProfileDraft(parsed.data.values as UserWithAutoApplyInput),
+  };
 }
 
 export function writeOnboardingDraft(
@@ -70,5 +93,9 @@ export function writeOnboardingDraft(
   values: UserWithAutoApplyInput,
   step: number,
 ): void {
-  storage.setItem(draftKey(userId), JSON.stringify({ version: 1, userId, values, step }));
+  storage.setItem(draftKey(userId), JSON.stringify({ version: 2, userId, values, step }));
+}
+
+export function clearOnboardingDraft(storage: Pick<Storage, "removeItem">, userId: string): void {
+  storage.removeItem(draftKey(userId));
 }

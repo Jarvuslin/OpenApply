@@ -1,9 +1,10 @@
 import { type CryptoService, SECRET_CONTEXTS } from "@/common/crypto";
-import { ErrorCodes, HttpError } from "@/common/errors";
+import { conflict, ErrorCodes, HttpError } from "@/common/errors";
 import { env } from "@/env";
 import { type EmailAccount, type PrismaClient } from "@/generated/prisma/client";
 import type { OAuthClientConfig } from "../email.provider";
 import { getProvider } from "../gmail.provider";
+import { getActiveEmailAccount } from "./account-selection";
 
 /** Resolve the user's own Google OAuth client; 400s if unconfigured (no shared client). Redirect URI is env-derived. */
 export async function resolveOAuthClient(
@@ -42,11 +43,15 @@ export async function loadFreshAccount(
   crypto: CryptoService,
   userId: string,
 ): Promise<{ account: EmailAccount; config: OAuthClientConfig } | null> {
-  const account = await prisma.emailAccount.findUnique({ where: { userId } });
+  const account = await getActiveEmailAccount(prisma, userId);
   if (!account) {
     return null;
   }
 
+  if (account.provider === "connector")
+    throw conflict(
+      "Use your agent's Gmail connector to pull or send mail. Upload received messages to /api/email/messages/ingest.",
+    );
   const decrypt = (value: string | null) =>
     crypto.decryptField(userId, SECRET_CONTEXTS.gmailTokens, value);
 

@@ -9,6 +9,8 @@ const HOUR = 60 * MINUTE;
  * it could only strand a user half-logged-out.
  */
 export const RATE_LIMITS = {
+  mailboxIngest: { key: byUser, limit: 120, windowMs: MINUTE, maxInFlight: 1 },
+  applyQueue: { key: byUser, limit: 30, windowMs: MINUTE, maxInFlight: 1 },
   localExtraction: { key: byUser, limit: 10, windowMs: HOUR, maxInFlight: 1 },
   /** Credential stuffing against one account. Keyed by (email, IP) so one bad actor can't lock out
    *  everyone else behind the same office/CGNAT address. */
@@ -66,9 +68,6 @@ export const RATE_LIMITS = {
   /** Sized for a crawler walking the paginated public job index, not just a human browsing it -
    *  too tight here and we deindex ourselves. A scraper brake, not an anti-abuse wall. */
   publicJobs: { key: byIp, limit: 1800, windowMs: HOUR, burst: 120 },
-
-  /** Public portfolio + leaderboard pages, crawlable. Same shape as publicJobs: a scraper brake. */
-  publicPortfolio: { key: byIp, limit: 1800, windowMs: HOUR, burst: 120 },
 
   /** Burns the *user's own* solver credits (captcha.service.ts decrypts their key), so this is a
    *  runaway-agent guardrail, not an anti-abuse wall. burst 5 covers a page with several challenges.

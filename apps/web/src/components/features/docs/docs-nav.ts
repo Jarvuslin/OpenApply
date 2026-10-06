@@ -28,7 +28,7 @@ export const DOCS_NAV: DocsNavEntry[] = [
   {
     title: "Email setup",
     href: "/docs/email-setup",
-    description: "Connect Gmail with your own Google OAuth client.",
+    description: "Connect Gmail through Claude Code or Codex.",
   },
   {
     title: "Credentials",

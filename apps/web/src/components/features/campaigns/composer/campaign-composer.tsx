@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactElement, useEffect } from "react";
+import type { ReactElement } from "react";
 import { Button, LinearProgress, Stack } from "@mui/material";
 import { useSelector } from "@tanstack/react-form";
 import { useRouter } from "next/navigation";
@@ -22,13 +22,10 @@ import {
   buildSkillArg,
   COMPOSER_DEFAULT_VALUES,
   composerFormSchema,
-  isUpworkSearch,
   SUBMIT_LABELS,
 } from "./form-config";
-import { NetworkingFields } from "./networking-fields";
 
 interface CampaignComposerProps {
-  /** Preselect a board (e.g. from /campaigns/new?board=upwork.com). */
   defaultBoard?: string;
 }
 
@@ -43,7 +40,6 @@ export function CampaignComposer(props: CampaignComposerProps): ReactElement {
 
   const linkedBoards = boardsQuery.data ?? [];
 
-  // Upwork is picker-only, so /upwork's "Find jobs" presets a board most profiles have not
   // linked. Offer it from the catalog instead of falling back to the first linked board.
   const catalogQuery = useApiQuery(jobBoardQueries.catalog(), {
     enabled: Boolean(defaultBoard),
@@ -91,13 +87,13 @@ export function CampaignComposer(props: CampaignComposerProps): ReactElement {
     defaultValues: {
       ...COMPOSER_DEFAULT_VALUES,
       board: presetBoard ?? boards[0]?.domain ?? "",
+
       resumeId: resumes.find((r) => r.isPrimary)?.id ?? resumes[0]?.id ?? "",
       minScore: profileQuery.data?.autoApply?.minMatchScore ?? COMPOSER_DEFAULT_VALUES.minScore,
     },
     validators: { onSubmit: composerFormSchema },
     onSubmit: async ({ value }) => {
-      const upwork = isUpworkSearch(value);
-      const effective = upwork ? { ...value, mode: "search" as const } : value;
+      const effective = value;
 
       if (!(await adoptBoard(effective.board))) {
         return;
@@ -107,25 +103,13 @@ export function CampaignComposer(props: CampaignComposerProps): ReactElement {
       const campaignId = campaign.campaignId;
       router.push(`/campaigns/${encodeURIComponent(campaignId)}`);
 
-      void agent.injectSkill(
-        upwork ? "upwork-search" : effective.mode,
-        buildSkillArg(effective, campaignId),
-      );
+      void agent.injectSkill(effective.mode, buildSkillArg(effective, campaignId));
     },
   });
 
   const mode = useSelector(form.store, (s) => s.values.mode);
-  const board = useSelector(form.store, (s) => s.values.board);
-  const isApply = mode === "apply";
-  const isUpwork = isUpworkSearch({ mode, board });
-  const isNetworking = mode === "networking";
 
-  // Upwork has no auto-apply/networking path - pin the mode to search.
-  useEffect(() => {
-    if (isUpwork && mode !== "search") {
-      form.setFieldValue("mode", "search");
-    }
-  }, [isUpwork, mode, form]);
+  const isApply = mode === "apply";
 
   if (boardsQuery.isLoading || catalogQuery.isLoading || profileQuery.isLoading) {
     return <LinearProgress />;
@@ -160,7 +144,7 @@ export function CampaignComposer(props: CampaignComposerProps): ReactElement {
             </form.AppField>
           )}
           {mode === "auto_apply" && <AutoApplyFields form={form} />}
-          {mode === "networking" && <NetworkingFields form={form} />}
+
           {mode === "apply" && <ApplyFields form={form} />}
 
           <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
@@ -170,13 +154,9 @@ export function CampaignComposer(props: CampaignComposerProps): ReactElement {
                 <Button
                   type="submit"
                   variant="contained"
-                  disabled={
-                    !canSubmit ||
-                    isSubmitting ||
-                    (!isApply && (!hasResumes || (!hasBoards && !isNetworking)))
-                  }
+                  disabled={!canSubmit || isSubmitting || (!isApply && (!hasResumes || !hasBoards))}
                 >
-                  {isUpwork ? "Find Upwork jobs" : SUBMIT_LABELS[mode]}
+                  {SUBMIT_LABELS[mode]}
                 </Button>
               )}
             </form.Subscribe>

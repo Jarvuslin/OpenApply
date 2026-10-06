@@ -1,5 +1,5 @@
-import { COVER_LETTER_SOURCES } from "@jobpilot/contracts/cover-letter";
-import { paginatedSchema } from "@jobpilot/contracts/pagination";
+import { COVER_LETTER_SOURCES } from "@openapply/contracts/cover-letter";
+import { paginatedSchema } from "@openapply/contracts/pagination";
 import { z } from "zod/v4";
 
 export const pdfRequestSchema = z.object({

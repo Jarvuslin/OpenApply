@@ -1,4 +1,4 @@
-import type { ChangeEmailInput, ChangePasswordInput } from "@jobpilot/contracts";
+import type { ChangeEmailInput, ChangePasswordInput } from "@openapply/contracts";
 import { singleton } from "tsyringe";
 import { hashPassword, verifyPassword } from "@/common/auth";
 import { badRequest, conflict, notFound, unauthorized } from "@/common/errors";

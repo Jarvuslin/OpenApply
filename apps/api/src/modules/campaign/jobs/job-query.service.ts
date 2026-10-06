@@ -1,5 +1,5 @@
-import type { CampaignJobReason } from "@jobpilot/contracts/campaign";
-import { pageSlice, paginate } from "@jobpilot/contracts/pagination";
+import type { CampaignJobReason } from "@openapply/contracts/campaign";
+import { pageSlice, paginate } from "@openapply/contracts/pagination";
 import { singleton } from "tsyringe";
 import type { z } from "zod/v4";
 import { type Prisma, PrismaClient } from "@/generated/prisma/client";

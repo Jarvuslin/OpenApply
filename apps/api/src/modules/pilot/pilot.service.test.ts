@@ -1,7 +1,7 @@
 import {
   pilotInstructionsChangeSchema,
   pilotInstructionsConfigSchema,
-} from "@jobpilot/contracts/pilot";
+} from "@openapply/contracts/pilot";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { PilotService } from "./pilot.service";
 import { describe, expect, it } from "bun:test";
@@ -45,7 +45,7 @@ function stateService(savedGoals: string) {
     },
     job: { updateMany: count("jobsDropped") },
     application: { count: async () => 0 },
-    networkingMessage: { count: async () => 0 },
+
     $transaction: async (ops: Promise<unknown>[]) => Promise.all(ops),
   };
   return { svc: new PilotService(db as unknown as PrismaClient), rec };

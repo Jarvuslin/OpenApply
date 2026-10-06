@@ -3,7 +3,7 @@
 Payload `{searchId, query, board?, resumeId?, minScore, campaignId?, newJobsTarget, maxPages}`. Run ONE board search, modeled on the `search` skill (login per `../../_shared/auth.md`). `SEARCH_ID=<payload.searchId>` - the run is reported against it before Record. A `campaignId` in the payload means reuse it (`CID=<payload.campaignId>`); never open a second campaign for one search. Only when it is absent, create one - `pilotSearchId` is load-bearing, it is how the next cycle finds this campaign again:
 
 ```bash
-jobpilot-api POST /api/campaigns \
+openapply-api POST /api/campaigns \
   --data '{"query":"<query>","source":"auto_apply","createdBy":"pilot","pilotSearchId":"<SEARCH_ID>","config":{"resumeId":"<resumeId>","minScore":<n>,"board":"<board>"}}'
 ```
 
@@ -16,7 +16,7 @@ Track `JOBS_SEEN` (rows read) and `NEW_JOBS` (fresh eligible `pending` rows you 
 Before SKILL.md step 5 (Record), report the run - a `404` means the search was deleted mid-run, so journal that and move on:
 
 ```bash
-jobpilot-api POST /api/pilot/searches/$SEARCH_ID/run-result \
+openapply-api POST /api/pilot/searches/$SEARCH_ID/run-result \
   --data '{"jobsSeen":<JOBS_SEEN>,"newJobs":<NEW_JOBS>,"reachedEnd":<REACHED_END>}'
 ```
 

@@ -2,7 +2,11 @@ import type { PrismaClient } from "@/generated/prisma/client";
 import { JobBoardService } from "./job-board.service";
 import { describe, expect, it } from "bun:test";
 
-const linkedin = { name: "LinkedIn", domain: "linkedin.com", searchUrl: "https://li" };
+const employer = {
+  name: "Employer",
+  domain: "employer.com",
+  searchUrl: "https://employer.com/careers",
+};
 
 function makeService(knownBoard = true) {
   const upserts: Record<string, unknown>[] = [];
@@ -15,10 +19,10 @@ function makeService(knownBoard = true) {
       },
     },
     userJobBoard: {
-      findMany: async () => [{ id: "l1", jobBoard: linkedin }],
+      findMany: async () => [{ id: "l1", jobBoard: employer }],
       create: async ({ data }: { data: Record<string, unknown> }) => {
         links.push(data);
-        return { id: "l2", jobBoard: linkedin };
+        return { id: "l2", jobBoard: employer };
       },
     },
   } as unknown as PrismaClient;
@@ -29,14 +33,19 @@ describe("JobBoardService", () => {
   it("projects a link to its id plus the catalog fields", async () => {
     const { svc } = makeService();
     expect(await svc.list("u1")).toEqual([
-      { id: "l1", name: "LinkedIn", domain: "linkedin.com", searchUrl: "https://li" },
+      {
+        id: "l1",
+        name: "Employer",
+        domain: "employer.com",
+        searchUrl: "https://employer.com/careers",
+      },
     ]);
   });
 
   it("links by domain without touching the catalog row", async () => {
     const { svc, upserts, links } = makeService();
-    await svc.create("u1", { domain: "linkedin.com", name: "ignored" });
-    expect(upserts[0]).toMatchObject({ where: { domain: "linkedin.com" }, update: {} });
+    await svc.create("u1", { domain: "employer.com", name: "ignored" });
+    expect(upserts[0]).toMatchObject({ where: { domain: "employer.com" }, update: {} });
     expect(links[0]).toEqual({ userId: "u1", jobBoardId: "b1" });
   });
 

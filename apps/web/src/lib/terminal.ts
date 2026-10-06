@@ -1,11 +1,13 @@
-import type { PilotCycleStatus } from "@jobpilot/contracts/pilot";
+import type { PilotCycleStatus } from "@openapply/contracts/pilot";
+import { parseGmailCheckResult } from "./gmail-check-result";
+import { terminalRequest } from "./terminal-request";
 
 const TERMINAL_HTTP_URL = process.env.NEXT_PUBLIC_TERMINAL_URL ?? "http://localhost:4102";
 
 export const TERMINAL_WS_URL = `${TERMINAL_HTTP_URL.replace(/^http/, "ws")}/ws`;
 
 /** URL scheme the host registers on Windows; opening it relaunches an offline host from the browser. */
-export const TERMINAL_PROTOCOL_URL = "jobpilot://start";
+export const TERMINAL_PROTOCOL_URL = "openapply://start";
 
 export type TerminalProviderId = "claude" | "codex";
 
@@ -50,7 +52,7 @@ export interface SessionStatus {
   hostVersion: string;
   /** Human-readable reason when status is "degraded". */
   detail?: string | null;
-  /** True when the host registered the jobpilot:// scheme, so the browser can relaunch it when offline. */
+  /** True when the host registered the openapply:// scheme, so the browser can relaunch it when offline. */
   canRelaunch: boolean;
   /** True when this is a published install, so the dashboard can offer a one-click self-update. */
   canUpdate: boolean;
@@ -78,48 +80,88 @@ export class TerminalApiError extends Error {
   }
 }
 
-async function send<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const response = await fetch(`${TERMINAL_HTTP_URL}${path}`, {
-    method,
-    headers: body != null ? { "content-type": "application/json" } : undefined,
-    body: body != null ? JSON.stringify(body) : undefined,
-  });
-  if (!response.ok) {
-    // The host answers errors as ProblemDetails; surface its detail instead of a bare status.
-    let message = `OpenApply.Terminal ${method} ${path} -> ${response.status}`;
-    try {
-      const problem = (await response.json()) as { detail?: string; title?: string } | null;
-      message = problem?.detail ?? problem?.title ?? message;
-    } catch {
-      // empty or non-JSON body (older host) - keep the fallback
-    }
-    throw new TerminalApiError(response.status, message);
-  }
-  if (response.headers.get("content-length") === "0") {
-    return null as T;
-  }
-  const text = await response.text();
-  return text ? (JSON.parse(text) as T) : (null as T);
+async function send<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+  options?: { signal?: AbortSignal; timeoutMs?: number },
+): Promise<T> {
+  return terminalRequest(
+    `${TERMINAL_HTTP_URL}${path}`,
+    {
+      method,
+      headers: body != null ? { "content-type": "application/json" } : undefined,
+      body: body != null ? JSON.stringify(body) : undefined,
+    },
+    async (response) => {
+      if (!response.ok) {
+        // The host answers errors as ProblemDetails; surface its detail instead of a bare status.
+        let message = `OpenApply.Terminal ${method} ${path} -> ${response.status}`;
+        try {
+          const problem = (await response.json()) as { detail?: string; title?: string } | null;
+          message = problem?.detail ?? problem?.title ?? message;
+        } catch {
+          // empty or non-JSON body (older host) - keep the fallback
+        }
+        throw new TerminalApiError(response.status, message);
+      }
+      if (response.headers.get("content-length") === "0") {
+        return null as T;
+      }
+      const text = await response.text();
+      return text ? (JSON.parse(text) as T) : (null as T);
+    },
+    options,
+  );
 }
 
 export function getStatus(): Promise<SessionStatus> {
-  return send<SessionStatus>("GET", "/healthz");
+  return send<SessionStatus>("GET", "/healthz", undefined, { timeoutMs: 5_000 });
+}
+
+export function runInference(
+  provider: TerminalProviderId,
+  text?: string,
+  model = "haiku",
+  schema?: unknown,
+  signal?: AbortSignal,
+) {
+  return send<{ provider: TerminalProviderId; model: string; output: string }>(
+    "POST",
+    "/inference",
+    { provider, text, model, check: text === undefined, schema },
+    { signal, timeoutMs: 130_000 },
+  );
+}
+
+export async function checkGmail(
+  provider: TerminalProviderId,
+  expectedEmail: string,
+  signal: AbortSignal,
+) {
+  const result = await send<unknown>(
+    "POST",
+    "/connectors/gmail/check",
+    { provider, expectedEmail },
+    { signal, timeoutMs: 130_000 },
+  );
+  return parseGmailCheckResult(result, provider, expectedEmail);
 }
 
 interface StartOptions {
   cols: number;
   rows: number;
   provider: TerminalProviderId;
-  /** Per-user agent PAT, injected into the PTY as JOBPILOT_API_TOKEN. */
+  /** Per-user agent PAT, injected into the PTY as OPENAPPLY_API_TOKEN. */
   apiToken?: string;
-  /** Web app origin (this browser's location), injected into the PTY as JOBPILOT_WEB for user-facing links. */
+  /** Web app origin (this browser's location), injected into the PTY as OPENAPPLY_WEB for user-facing links. */
   webUrl?: string;
-  /** Backend base URL the web talks to, injected into the PTY as JOBPILOT_API so the agent hits the same (possibly remote) API. */
+  /** Backend base URL the web talks to, injected into the PTY as OPENAPPLY_API so the agent hits the same (possibly remote) API. */
   apiUrl?: string;
 }
 
 export function startSession(options: StartOptions): Promise<SessionStatus> {
-  return send<SessionStatus>("POST", "/sessions/start", options);
+  return send<SessionStatus>("POST", "/sessions/start", options, { timeoutMs: 45_000 });
 }
 
 /**
@@ -143,9 +185,9 @@ interface PilotStartOptions {
   provider: TerminalProviderId;
   /** Per-user agent PAT the pilot loop authenticates with. */
   apiToken: string;
-  /** Backend base URL injected into the pilot PTY as JOBPILOT_API. */
+  /** Backend base URL injected into the pilot PTY as OPENAPPLY_API. */
   apiUrl: string;
-  /** Web origin injected as JOBPILOT_WEB for user-facing links. */
+  /** Web origin injected as OPENAPPLY_WEB for user-facing links. */
   webUrl: string;
 }
 
@@ -174,6 +216,6 @@ export function formatSkillCommand(
   args?: string,
 ): string {
   const suffix = args?.trim();
-  const command = provider === "codex" ? `$${skill}` : `/jobpilot:${skill}`;
+  const command = provider === "codex" ? `$${skill}` : `/openapply:${skill}`;
   return suffix ? `${command} ${suffix}` : command;
 }

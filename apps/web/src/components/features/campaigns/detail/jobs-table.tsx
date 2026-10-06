@@ -1,9 +1,9 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { CampaignJobStatus } from "@jobpilot/contracts/campaign";
 import { Button, Link } from "@mui/material";
 import type { GridColDef, GridRowSelectionModel } from "@mui/x-data-grid";
+import type { CampaignJobStatus } from "@openapply/contracts/campaign";
 import type { CampaignJobDto } from "@/api/types";
 import { DataTable } from "@/components/ui/data/data-table";
 import type { GridPaginationProps } from "@/hooks/use-pagination";
@@ -24,9 +24,9 @@ interface CampaignJobsTableProps extends GridPaginationProps {
   loading?: boolean;
   /** When provided, applicable rows get an "Apply" action that calls this. */
   onApplyJob?: (job: CampaignJobDto) => void;
-  /** When provided, applicable rows get a "Draft proposal" action (Upwork). */
+
   onDraftProposal?: (job: CampaignJobDto) => void;
-  /** Show the match-reason column (recommendation rationale, e.g. Upwork). */
+
   showReason?: boolean;
   /** Enables checkbox selection (reapplicable rows only). */
   checkboxSelection?: boolean;

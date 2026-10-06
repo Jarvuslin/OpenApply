@@ -23,13 +23,13 @@ export default function InstallPage(): ReactElement {
         <Section maxWidth="md">
           <Stack spacing={3}>
             <Stack spacing={2}>
-              <SectionEyebrow color="accent.primary">GET STARTED</SectionEyebrow>
+              <SectionEyebrow color="accent.primary">SETUP</SectionEyebrow>
               <Typography variant="h1" sx={{ fontSize: { xs: "2rem", md: "2.75rem" } }}>
                 Set up your OpenApply workspace.
               </Typography>
               <Typography variant="body1Muted" sx={{ maxWidth: 560 }}>
-                Run the local MVP from source with your own Claude Code account. The README covers
-                dependencies, the browser VM, Gmail and first-run setup.
+                Run the local MVP from source with your own Claude Code or Codex account. The README
+                covers dependencies, the browser VM, Gmail and first-run setup.
               </Typography>
             </Stack>
             <InstallGuide />

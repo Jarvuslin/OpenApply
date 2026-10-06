@@ -7,7 +7,7 @@ const STEPS = [
   {
     title: "Install the plugin",
     body: "Add OpenApply to the Claude Code or Codex subscription you already have; it needs no API keys of its own. The setup skill installs and starts the local agent.",
-    snippet: "/plugin install jobpilot  ·  /jobpilot:setup",
+    snippet: "/plugin install openapply  ·  /openapply:setup",
   },
   {
     title: "Create your account",

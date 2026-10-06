@@ -2,7 +2,7 @@ import {
   createPilotJournalSchema,
   pilotJournalPageSchema,
   pilotJournalQuerySchema,
-} from "@jobpilot/contracts/pilot";
+} from "@openapply/contracts/pilot";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { authGuard } from "@/common/middleware";

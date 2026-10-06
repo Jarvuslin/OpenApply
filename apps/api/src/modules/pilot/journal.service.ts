@@ -1,5 +1,5 @@
-import { cursorPage } from "@jobpilot/contracts/pagination";
-import type { CreatePilotJournalInput, PilotJournalKind } from "@jobpilot/contracts/pilot";
+import { cursorPage } from "@openapply/contracts/pagination";
+import type { CreatePilotJournalInput, PilotJournalKind } from "@openapply/contracts/pilot";
 import { singleton } from "tsyringe";
 import { publishActivity, toActivityEntry, writeActivity } from "@/common/activity-log";
 import { PushService } from "@/common/push/push.service";

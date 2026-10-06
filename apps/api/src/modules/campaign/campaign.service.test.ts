@@ -55,7 +55,7 @@ function makeService(current = row) {
         return { count: data.length };
       },
     },
-    networkingMessage: { groupBy: async () => [], findMany: async () => [] },
+
     $transaction: async (work: (tx: unknown) => Promise<unknown>) => work(db),
   };
   return {
@@ -72,7 +72,7 @@ describe("CampaignService", () => {
     const { service } = makeService();
     const result = await service.list("u1", { page: 1, limit: 25 });
     expect(result.pagination).toMatchObject({ page: 1, limit: 25, total: 1, totalPages: 1 });
-    expect(result.items[0]?.summary).toEqual(emptySummary("search"));
+    expect(result.items[0]?.summary).toEqual(emptySummary());
   });
 
   it("filters to campaigns still holding a job of the requested status, in SQL", async () => {

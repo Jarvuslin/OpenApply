@@ -4,12 +4,9 @@ import {
   BusinessCenter,
   Dashboard,
   Description,
-  Forum,
-  Handshake,
   Inbox,
   Insights,
   Lightbulb,
-  Public,
   Settings,
   SmartToy,
   type SvgIconComponent,
@@ -48,24 +45,16 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: "Channels",
-    items: [
-      { label: "Upwork", href: "/upwork", icon: Handshake },
-      { label: "Networking", href: "/networking", icon: Forum },
-    ],
-  },
-  {
     label: "Library",
     items: [
       {
         label: "Documents",
-        href: "/documents",
+        href: "/documents/resumes",
         icon: Description,
         // Detail routes stayed at their old prefixes; keep Documents lit while viewing them.
-        matchHrefs: ["/resumes", "/cover-letters"],
+        matchHrefs: ["/documents", "/resumes", "/cover-letters"],
       },
       { label: "Boards", href: "/boards", icon: BusinessCenter },
-      { label: "Portfolio", href: "/portfolio", icon: Public },
     ],
   },
 ];

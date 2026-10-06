@@ -7,7 +7,6 @@ import {
   emailBodyWhere,
   journalDigestOldWhere,
   journalOldWhere,
-  promotionPostWhere,
   questionTerminalWhere,
   RETENTION_DAYS,
   refreshTokenWhere,
@@ -94,17 +93,6 @@ describe("where-builders", () => {
     expect(refreshTokenWhere(c)).toEqual({
       OR: [{ expiresAt: { lt: c.token } }, { revokedAt: { lt: c.token } }],
     });
-  });
-
-  it("promotionPostWhere only targets terminal statuses", () => {
-    const where = promotionPostWhere(c);
-    expect(where).toEqual({
-      status: { in: ["declined", "skipped", "expired", "failed"] },
-      updatedAt: { lt: c.promotion },
-    });
-    for (const kept of ["draft", "approved", "posted"]) {
-      expect((where.status as { in: string[] }).in).not.toContain(kept);
-    }
   });
 
   it("emailBodyWhere skips already-blanked rows and messages still awaiting classification", () => {

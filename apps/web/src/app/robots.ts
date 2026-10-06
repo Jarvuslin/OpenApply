@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/constants";
+import { PUBLIC_SITE_ENABLED } from "@/lib/public-site";
 import { PUBLIC_ROUTES } from "./public-routes";
 
 /**
@@ -9,6 +10,7 @@ import { PUBLIC_ROUTES } from "./public-routes";
  * `Disallow:` would read it as "block the whole site".
  */
 export default function robots(): MetadataRoute.Robots {
+  if (!PUBLIC_SITE_ENABLED) return { rules: { userAgent: "*", disallow: "/" } };
   return {
     rules: [
       {
@@ -17,18 +19,18 @@ export default function robots(): MetadataRoute.Robots {
         disallow: [
           "/admin",
           "/pilot",
-          "/portfolio",
+
           "/workspace",
           "/campaigns",
           "/applications",
           "/analytics",
           "/inbox",
-          "/networking",
+
           "/documents",
           "/resumes",
           "/cover-letters",
           "/boards",
-          "/upwork",
+
           "/settings",
           "/onboarding",
         ],

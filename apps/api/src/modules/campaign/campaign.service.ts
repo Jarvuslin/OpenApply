@@ -4,9 +4,9 @@ import {
   campaignConfigSchema,
   campaignConfigSupportsSource,
   type UpdateCampaignConfigInput,
-} from "@jobpilot/contracts/campaign";
-import { pageSlice, paginate } from "@jobpilot/contracts/pagination";
-import { workspaceChannel } from "@jobpilot/contracts/sse";
+} from "@openapply/contracts/campaign";
+import { pageSlice, paginate } from "@openapply/contracts/pagination";
+import { workspaceChannel } from "@openapply/contracts/sse";
 import { singleton } from "tsyringe";
 import type { z } from "zod/v4";
 import { conflict, findOwned, unprocessable } from "@/common/errors";
@@ -17,6 +17,7 @@ import {
   type Prisma,
   PrismaClient,
 } from "@/generated/prisma/client";
+import { assertAutomationAllowed } from "@/modules/job-board/blocked-sites";
 import type { campaignsQuery } from "./campaign.schema";
 import {
   deriveCampaignSummary,
@@ -46,7 +47,7 @@ export class CampaignService {
     const where: Prisma.CampaignWhereInput = {
       userId,
       status: query.status?.length ? { in: query.status } : undefined,
-      source: query.source,
+      source: query.source ?? { in: ["search", "auto_apply", "apply"] },
       jobs: query.jobStatus ? { some: { status: query.jobStatus } } : undefined,
     };
     const [campaigns, total] = await Promise.all([
@@ -58,6 +59,8 @@ export class CampaignService {
   }
 
   async create(userId: string, body: CreateCampaignInput) {
+    if (body.config?.board) assertAutomationAllowed(body.config.board);
+    for (const url of body.urls ?? []) assertAutomationAllowed(url);
     const data: Prisma.CampaignUncheckedCreateInput = {
       userId,
       query: body.query,
@@ -72,7 +75,7 @@ export class CampaignService {
 
     const campaign = await this.prisma.campaign.create({ data });
     // A just-created campaign provably has no jobs or messages; skip the aggregate round trip.
-    return toRow({ ...campaign, summary: emptySummary(campaign.source) });
+    return toRow({ ...campaign, summary: emptySummary() });
   }
 
   /** Seeds pasted links as `queued` jobs with the campaign, so a half-written batch can't strand them. */
@@ -104,11 +107,10 @@ export class CampaignService {
   }
 
   async updateConfig(userId: string, id: string, body: UpdateCampaignConfigInput) {
+    if (body.config.board) assertAutomationAllowed(body.config.board);
     const existing = await this.findCampaign(userId, id);
     if (!campaignConfigSupportsSource(existing.source, body.config)) {
-      throw unprocessable(
-        "config.resumeId is required for search, auto-apply, and networking campaigns.",
-      );
+      throw unprocessable("config.resumeId is required for search and auto-apply campaigns.");
     }
     // Guarded in the write: comparing against `existing` leaves a window for the pilot's strategy
     // review and a user edit to clobber each other.
@@ -158,20 +160,7 @@ export class CampaignService {
   async remove(userId: string, id: string) {
     await ensureCampaignOwned(this.prisma, userId, id);
     await this.prisma.$transaction(async (tx) => {
-      const messages = await tx.networkingMessage.findMany({
-        where: { campaignId: id, userId },
-        select: { contactId: true },
-      });
       await tx.application.deleteMany({ where: { campaignId: id, userId } });
-      await tx.networkingMessage.deleteMany({ where: { campaignId: id, userId } });
-      await tx.contact.deleteMany({
-        where: {
-          id: { in: messages.map((message) => message.contactId) },
-          userId,
-          messages: { none: {} },
-          relatedAppId: null,
-        },
-      });
       await tx.campaign.delete({ where: { campaignId: id } });
     });
     publish(workspaceChannel, { userId }, { type: "campaign.deleted", campaignId: id });

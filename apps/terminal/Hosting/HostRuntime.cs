@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using CpuArchitecture = System.Runtime.InteropServices.Architecture;
 
-namespace JobPilot.Terminal.Hosting;
+namespace OpenApply.Terminal.Hosting;
 
 public sealed record HostRuntime(string Platform, string Architecture, string Backend, string Support)
 {

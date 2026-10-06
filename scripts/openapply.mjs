@@ -10,6 +10,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const runtime = currentRuntime();
 const command = process.argv[2] ?? "doctor";
 const vmOnly = process.argv.includes("--vm-only");
+const development = process.argv.includes("--dev");
 const shell = ["powershell.exe", "-NoProfile", "-File"];
 const services = [5433, 9222, 6080];
 const apps = [4100, 4101, 4102];
@@ -112,11 +113,24 @@ async function startApps() {
   for (const port of apps)
     if (await portOpen(port))
       throw new Error(`Port ${port} is already in use. Stop that instance first.`);
+  const appEnvironment = { ...process.env };
+  if (development) {
+    delete appEnvironment.OPENAPPLY_WEB_DIST_DIR;
+  } else {
+    appEnvironment.OPENAPPLY_WEB_DIST_DIR = ".next-preview";
+    console.log("Building the web app once for fast navigation. Use start --dev for hot reload.");
+    await run(["bun", "run", "build:web"], { cwd: root, env: appEnvironment, timeout: 600_000 });
+  }
   console.log(
     "OpenApply: http://localhost:4100/mvp — Ctrl+C stops the app; stop command shuts down the VM.",
   );
   await new Promise((resolve, reject) => {
-    const child = spawn("bun", ["run", "dev"], { cwd: root, stdio: "inherit", detached: true });
+    const child = spawn("bun", ["run", development ? "dev" : "start"], {
+      cwd: root,
+      env: appEnvironment,
+      stdio: "inherit",
+      detached: true,
+    });
     let stopping = false;
     const stop = () => {
       stopping = true;
@@ -158,7 +172,9 @@ async function main() {
     return run(["limactl", "stop", "openapply"], { timeout: 120_000 });
   }
   if (!["setup", "start"].includes(command))
-    throw new Error("Commands: env, setup [--rootfs <file>], start [--vm-only], doctor, stop");
+    throw new Error(
+      "Commands: env, setup [--rootfs <file>], start [--vm-only] [--dev], doctor, stop",
+    );
   await checkDependencies();
   if (command === "setup") await setupEnv(root);
   if (runtime.backend === "lima") await limaVm(command === "setup");
@@ -190,7 +206,10 @@ async function main() {
   }
   if (vmOnly) return;
   if (runtime.backend === "wsl")
-    return run([...shell, path.join(root, "scripts/start-mvp.ps1")], { cwd: root });
+    return run(
+      [...shell, path.join(root, "scripts/start-mvp.ps1"), ...(development ? ["-Dev"] : [])],
+      { cwd: root, timeout: 600_000 },
+    );
   await startApps();
 }
 

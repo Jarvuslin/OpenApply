@@ -1,20 +1,20 @@
 "use client";
 
 import "@xterm/xterm/css/xterm.css";
-import { type ReactElement, useEffect, useRef } from "react";
-import { Box, useTheme } from "@mui/material";
+import { type ReactElement, useEffect, useRef, useState } from "react";
+import { Box, Button, Stack, useTheme } from "@mui/material";
 import { FitAddon } from "@xterm/addon-fit";
 import { type ITheme, Terminal } from "@xterm/xterm";
 import { API_BASE_URL } from "@/api/base-url";
 import { api } from "@/api/client";
-import { startSession, TERMINAL_WS_URL, type TerminalProviderId } from "@/lib/terminal";
+import { getStatus, startSession, TERMINAL_WS_URL, type TerminalProviderId } from "@/lib/terminal";
+import { createSessionStarter } from "@/lib/terminal-session-start";
 import { connectWebSocket, type WebSocketClient } from "@/lib/websocket";
 import { toBase64 } from "@/utils/base64";
 
 const RESIZE_DEBOUNCE_MS = 220;
 
-/** Module scope because the race is between mounts: a remount can pass the abort check before cleanup runs. */
-let pendingStart: Promise<unknown> | null = null;
+const ensureSession = createSessionStarter({ getStatus, startSession });
 
 const TERMINAL_FONT_FAMILY = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
 const SHIFT_ENTER_B64 = toBase64("\x1b[13;2u");
@@ -85,33 +85,35 @@ async function openSession(
 ): Promise<boolean> {
   terminal.writeln(notice(DIM, "connecting…"));
 
-  const { data, error } = await api.auth.tokens.terminal.post();
-  if (signal.aborted) {
-    return false;
-  }
-  if (error) {
-    terminal.writeln(
-      notice(
-        RED,
-        `couldn't authenticate the agent - sign in to OpenApply, then restart the terminal. (${error.value.message})`,
-      ),
-    );
-    return false;
-  }
-
   try {
-    fit.fit();
-    pendingStart ??= startSession({
-      cols: terminal.cols,
-      rows: terminal.rows,
-      provider,
-      apiToken: data.token,
-      webUrl: window.location.origin,
-      apiUrl: API_BASE_URL,
-    }).finally(() => {
-      pendingStart = null;
+    const { data, error } = await api.auth.tokens.terminal.post(undefined, {
+      fetch: { signal: AbortSignal.any([signal, AbortSignal.timeout(20_000)]) },
     });
-    await pendingStart;
+    if (signal.aborted) {
+      return false;
+    }
+    if (error) {
+      terminal.writeln(
+        notice(
+          RED,
+          `couldn't authenticate the agent - sign in to OpenApply, then restart the terminal. (${error.value.message})`,
+        ),
+      );
+      return false;
+    }
+
+    fit.fit();
+    await ensureSession(
+      {
+        cols: terminal.cols,
+        rows: terminal.rows,
+        provider,
+        apiToken: data.token,
+        webUrl: window.location.origin,
+        apiUrl: API_BASE_URL,
+      },
+      signal,
+    );
     return !signal.aborted;
   } catch (err) {
     if (signal.aborted) {
@@ -125,7 +127,7 @@ async function openSession(
       terminal.writeln(
         notice(
           YELLOW,
-          "Install the CLI and make sure it's on PATH, then restart the OpenApply host.",
+          `Install ${provider === "claude" ? "Claude Code" : "Codex"} on this computer, then click Retry terminal. OpenApply checks for it again on each attempt.`,
         ),
       );
     }
@@ -136,6 +138,8 @@ async function openSession(
 /** xterm.js bridged to a OpenApply.Terminal PTY over WebSocket; Shift+Enter sent as CSI-u `ESC[13;2u`. */
 export function TerminalPanel(props: TerminalPanelProps): ReactElement {
   const { provider } = props;
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const { palette } = useTheme();
@@ -159,6 +163,7 @@ export function TerminalPanel(props: TerminalPanelProps): ReactElement {
     }
   }, [background, foreground, accent]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: attempt explicitly retries a failed session start
   useEffect(() => {
     const container = containerRef.current;
     if (!container) {
@@ -204,13 +209,36 @@ export function TerminalPanel(props: TerminalPanelProps): ReactElement {
       terminal.write(data);
     };
     openSession(terminal, fit, provider, abort.signal).then((started) => {
+      if (abort.signal.aborted) return;
       if (started) {
-        socket = connectWebSocket(TERMINAL_WS_URL, {
-          onOpen: fitAndResize,
-          onBinary: write,
-          onText: write,
-          onClose: () => write(`\r\n${notice(YELLOW, "disconnected")}\r\n`),
-        });
+        setFailed(false);
+        try {
+          socket = connectWebSocket(TERMINAL_WS_URL, {
+            connectTimeoutMs: 10_000,
+            onOpen: fitAndResize,
+            onBinary: write,
+            onText: write,
+            onClose: () => {
+              write(
+                `\r\n${notice(YELLOW, "disconnected — click Retry terminal to reconnect")}\r\n`,
+              );
+              setFailed(true);
+            },
+            onError: () => {
+              write(
+                `\r\n${notice(RED, "terminal connection failed — click Retry terminal to reconnect")}\r\n`,
+              );
+              setFailed(true);
+            },
+          });
+        } catch (error) {
+          write(
+            `\r\n${notice(RED, `terminal connection failed: ${(error as Error).message}`)}\r\n`,
+          );
+          setFailed(true);
+        }
+      } else {
+        setFailed(true);
       }
     });
 
@@ -233,22 +261,35 @@ export function TerminalPanel(props: TerminalPanelProps): ReactElement {
       terminalRef.current = null;
       terminal.dispose();
     };
-  }, [provider]);
+  }, [provider, attempt]);
 
   return (
-    <Box
-      ref={containerRef}
-      sx={(t) => ({
-        flex: 1,
-        minHeight: 0,
-        backgroundColor: t.palette.surfaces.base,
-        overflow: "hidden",
-        position: "relative",
-        px: 1,
-        py: 0.5,
-        "& .xterm": { height: "100%", maxWidth: "100%" },
-        "& .xterm-viewport": { overscrollBehavior: "contain" },
-      })}
-    />
+    <Stack sx={{ flex: 1, minHeight: 0, height: "100%" }}>
+      <Box
+        ref={containerRef}
+        sx={(t) => ({
+          flex: 1,
+          minHeight: 0,
+          backgroundColor: t.palette.surfaces.base,
+          overflow: "hidden",
+          position: "relative",
+          px: 1,
+          py: 0.5,
+          "& .xterm": { height: "100%", maxWidth: "100%" },
+          "& .xterm-viewport": { overscrollBehavior: "contain" },
+        })}
+      />
+      {failed && (
+        <Button
+          sx={{ alignSelf: "flex-start", m: 1 }}
+          onClick={() => {
+            setFailed(false);
+            setAttempt((value) => value + 1);
+          }}
+        >
+          Retry terminal
+        </Button>
+      )}
+    </Stack>
   );
 }

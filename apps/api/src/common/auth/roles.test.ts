@@ -1,5 +1,5 @@
 // Contracts is zod-only, so this test pulls in no env and no Prisma.
-import { hasRole } from "@jobpilot/contracts/role";
+import { hasRole } from "@openapply/contracts/role";
 import { describe, expect, it } from "bun:test";
 
 describe("role ladder", () => {

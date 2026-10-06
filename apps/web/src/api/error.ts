@@ -4,6 +4,17 @@ export type EdenResult<T> = {
   error: { status?: unknown; value?: unknown } | null;
 };
 
+export class ApiError extends Error {
+  readonly status: number | undefined;
+
+  constructor(error: unknown) {
+    super(apiErrorMessage(error));
+    this.name = "ApiError";
+    const status = (error as { status?: unknown } | null)?.status;
+    this.status = typeof status === "number" && status > 0 ? status : undefined;
+  }
+}
+
 /** Pull a human-readable message out of an Eden Treaty error (`error.value.message`). */
 export function apiErrorMessage(error: unknown, fallback?: string): string {
   const value = (error as { value?: unknown } | null)?.value;

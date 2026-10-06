@@ -3,11 +3,13 @@
 Technical reference for contributors. For the plain-language overview, see
 [architecture.md](architecture.md).
 
+For Windows setup and Mac beta, follow the [README](../README.md). The commands below assume the database and environment files already exist.
+
 ## Local setup
 
 ```bash
-git clone https://github.com/suxrobgm/jobpilot.git
-cd jobpilot
+git clone https://github.com/Jarvuslin/OpenApply.git
+cd OpenApply
 bun install
 bun run db:setup # generates the Prisma client, runs migrations, seeds default data
 bun run dev      # web :4100 + api :4101 + terminal :4102
@@ -82,22 +84,22 @@ flowchart LR
         DB[(PostgreSQL)]
     end
     subgraph Local [User's machine]
-        T["JobPilot.Terminal :4102"]
-        P["Claude Code / Codex<br/>+ jobpilot plugin"]
+        T["OpenApply.Terminal :4102"]
+        P["Claude Code / Codex<br/>+ openapply plugin"]
         B["Browser (Playwright MCP)"]
     end
     WEB -- "HTTP + SSE" --> API
     API --> DB
     WEB -- "xterm.js WS + POST /sessions/*" --> T
     T -- "PTY stdin/stdout" --> P
-    P -- "jobpilot-api, Bearer JOBPILOT_API_TOKEN" --> API
+    P -- "openapply-api, Bearer OPENAPPLY_API_TOKEN" --> API
     P --> B
 ```
 
 ### Components
 
 - **[apps/web/](../apps/web/)**: Next.js UI covering the pipeline, campaigns
-  with live per-job progress, inbox, networking, resume studio, Upwork (proposals, profile, inbox),
+  with live per-job progress, inbox, resume studio,
   analytics, settings, and the agent dock (an xterm.js panel that installs,
   launches, and monitors the local agent). Browser and server both call the
   API directly via `API_BASE_URL`, with no proxy in between.
@@ -109,15 +111,15 @@ flowchart LR
   over WebSocket. Endpoints: `POST /sessions/start`, `POST /sessions/inject`,
   `DELETE /sessions/current`, `GET /healthz`, `GET /ws`. `/sessions/start`
   takes the user's terminal token and spawns the provider with
-  `JOBPILOT_API_TOKEN`, `JOBPILOT_API`, `JOBPILOT_WEB` (plus
-  `JOBPILOT_SKILLS_ROOT` / `JOBPILOT_WORKSPACE_ROOT` for wrappers) and
-  `plugin/bin` first on `PATH`, so skills call the API through `jobpilot-api`
+  `OPENAPPLY_API_TOKEN`, `OPENAPPLY_API`, `OPENAPPLY_WEB` (plus
+  `OPENAPPLY_SKILLS_ROOT` / `OPENAPPLY_WORKSPACE_ROOT` for wrappers) and
+  `plugin/bin` first on `PATH`, so skills call the API through `openapply-api`
   with zero manual setup.
 
 One Terminal instance owns one PTY. It survives tab close: reopening the panel
 reattaches a WebSocket to the live session and replays the buffered tail
 (`TerminalRelay`, 512 KB, cleared when a new session starts). Switching providers
-restarts the PTY. The web injects commands as `/jobpilot:<skill>` for Claude and
+restarts the PTY. The web injects commands as `/openapply:<skill>` for Claude and
 `$<skill>` for Codex. On a new release the agent dock shows an update banner;
 the guided flow updates host + plugin and finishes with `/reload-plugins` on
 Claude.
@@ -130,7 +132,7 @@ Claude.
   `skills/_shared/` (no `SKILL.md`, so neither provider lists them as skills).
   Skills reference siblings by name and shared docs by relative path
   (`../_shared/<doc>.md`), so the same text serves both providers.
-- `agents/*.md`: worker subagents (`job-worker`, `networking-worker`) that
+- `agents/*.md`: worker subagents (`job-worker`) that
   campaign skills delegate per-iteration work to, isolating heavy browser
   output. Claude auto-discovers them; [.codex/agents/](../.codex/agents/)
   point at the same `.md` bodies. Runtimes without subagents run inline.
@@ -145,7 +147,7 @@ The terminal launches
 `claude --permission-mode auto --settings plugin/settings/claude.json --plugin-dir plugin`
 or `codex --no-alt-screen --approve-for-me -c <override>`. Both run
 under automatic approval review, so a blocked action prompts in the dashboard
-terminal. `settings/claude.json` pins Sonnet and describes the JobPilot API
+terminal. `settings/claude.json` pins Sonnet and describes the OpenApply API
 under `autoMode.environment`. Codex has no `--settings` flag, and a project
 `.codex/config.toml` loads only for trusted projects, so
 [CodexProvider](../apps/terminal/Providers/CodexProvider.cs) expands
@@ -158,11 +160,10 @@ location (excluding the marketplace-owned `setup` bootstrap) and translates
 the bundled `.mcp.json` into `-c mcp_servers.*` overrides. The publish output
 also bundles `.codex/agents/*.toml` for worker parity. Both provider
 marketplaces contain only `setup`; the full runtime tree comes from the host.
-The bootstraps are published to the
-[claude-plugins](https://github.com/suxrobGM/claude-plugins) and
-[codex-plugins](https://github.com/suxrobGM/codex-plugins) marketplaces, synced
-from `plugin/` each release tag. Root `.claude/settings.json` is repo trust
-policy; the plugin owns behavior.
+OpenApply releases publish terminal archives with the runtime plugin bundled.
+The marketplace sync script is available for operator-owned marketplaces and
+is not run against upstream repositories. Root `.claude/settings.json` is repo
+trust policy. The plugin owns behavior.
 
 ### Apply lifecycle
 
@@ -187,7 +188,7 @@ sequenceDiagram
 Skills mutate through `/api/campaigns/*`; the web opens
 `EventSource /api/campaigns/[id]/events` and invalidates the TanStack Query
 cache on each event, refetching canonical state from PostgreSQL. Five more
-channels (`workspace`, `inbox`, `resume`, `upwork`, `pilot`) follow the same
+channels (`workspace`, `inbox`, `resume`, `pilot`) follow the same
 pattern; they are defined in `packages/contracts/src/sse/channels/`.
 
 ### Skills layer

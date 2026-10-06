@@ -14,10 +14,10 @@ The recruiter already knows the role and your background, so don't restate eithe
 **Do not send.** POST a question and stop:
 
 ```bash
-jobpilot-api POST /api/pilot/questions --data @"$JOBPILOT_TEMP/question.json"
+openapply-api POST /api/pilot/questions --data @"$OPENAPPLY_TEMP/question.json"
 ```
 
-`$JOBPILOT_TEMP/question.json`:
+`$OPENAPPLY_TEMP/question.json`:
 
 ```json
 {
@@ -26,7 +26,7 @@ jobpilot-api POST /api/pilot/questions --data @"$JOBPILOT_TEMP/question.json"
   "subjectId": "<emailMessageId>",
   "prompt": "Reply to <company> interview invite? Draft: <draft>",
   "options": ["Send", "Skip"],
-  "deepLink": "<JOBPILOT_WEB>/inbox"
+  "deepLink": "<OPENAPPLY_WEB>/inbox"
 }
 ```
 

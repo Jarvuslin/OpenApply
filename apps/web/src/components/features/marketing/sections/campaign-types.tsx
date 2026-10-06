@@ -35,13 +35,6 @@ const MODES: Mode[] = [
     action: "New campaign → Apply to links",
     tone: "success",
   },
-  {
-    tag: "networking",
-    title: "Networking",
-    body: "Find the hiring manager and message them by email or LinkedIn.",
-    action: "New campaign → Networking",
-    tone: "warning",
-  },
 ];
 
 const toneColor = (tone: Mode["tone"]): string =>

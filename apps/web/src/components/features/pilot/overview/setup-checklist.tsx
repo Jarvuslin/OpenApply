@@ -1,9 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { PilotState } from "@jobpilot/contracts/pilot";
 import { CheckCircle, RadioButtonUnchecked } from "@mui/icons-material";
 import { Box, Button, Stack, Typography } from "@mui/material";
+import type { PilotState } from "@openapply/contracts/pilot";
 import { useApiQuery } from "@/api/hooks";
 import { emailQueries } from "@/api/queries";
 import { LinkButton } from "@/components/ui/buttons";
@@ -81,7 +81,7 @@ export function PilotSetupChecklist(props: PilotSetupChecklistProps): ReactNode 
       label: needsReauth ? "Reconnect your mailbox" : "Connect your mailbox",
       description: needsReauth
         ? "Google rejected the mailbox's access grant - mail sync, verification codes, and sending are paused."
-        : "The pilot reads replies, fetches verification codes, and sends networking email through it.",
+        : "The pilot reads replies, fetches verification codes, and sends approved interview replies through it.",
       done: emailOk,
       action: (
         <LinkButton size="small" variant="outlined" href="/settings/email">

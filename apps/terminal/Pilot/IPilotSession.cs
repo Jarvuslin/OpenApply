@@ -1,6 +1,6 @@
-using JobPilot.Terminal.Providers;
+using OpenApply.Terminal.Providers;
 
-namespace JobPilot.Terminal.Pilot;
+namespace OpenApply.Terminal.Pilot;
 
 public enum WaitOutcome
 {

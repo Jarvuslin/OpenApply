@@ -1,4 +1,4 @@
-import { paginatedSchema } from "@jobpilot/contracts/pagination";
+import { paginatedSchema } from "@openapply/contracts/pagination";
 import { z } from "zod/v4";
 import { publicUserSchema } from "@/modules/auth/auth.schema";
 

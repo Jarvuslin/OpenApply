@@ -1,5 +1,5 @@
 {
-  "name": "@jobpilot/web",
+  "name": "@openapply/web",
   "version": "2.0.0",
   "private": true,
   "type": "module",
@@ -15,8 +15,8 @@
     "@emotion/cache": "^11.14.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
-    "@jobpilot/api-client": "workspace:*",
-    "@jobpilot/contracts": "workspace:*",
+    "@openapply/api-client": "workspace:*",
+    "@openapply/contracts": "workspace:*",
     "@mdx-js/loader": "^3.1.1",
     "@mdx-js/react": "^3.1.1",
     "@mui/icons-material": "^9.4.0",

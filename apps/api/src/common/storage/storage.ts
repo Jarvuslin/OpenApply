@@ -1,6 +1,7 @@
 import { createReadStream } from "node:fs";
 import { mkdir, readdir, stat, unlink, utimes, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { resumePdfCacheKey } from "@/common/pdf/cache-key";
 import { slugify } from "@/common/utils/slug";
 import { env } from "@/env";
 
@@ -13,11 +14,11 @@ export function resumePath(filename: string): string {
 }
 
 export function generatedResumePath(id: string, updatedAtMs: number): string {
-  return path.join(GENERATED_DIR, `master-${id}-${updatedAtMs}.pdf`);
+  return path.join(GENERATED_DIR, resumePdfCacheKey("master", id, updatedAtMs));
 }
 
 export function generatedVariantPath(variantId: string, createdAtMs: number): string {
-  return path.join(GENERATED_DIR, `variant-${variantId}-${createdAtMs}.pdf`);
+  return path.join(GENERATED_DIR, resumePdfCacheKey("variant", variantId, createdAtMs));
 }
 
 /** Unlinks a file, treating an already-missing file as success. Returns whether it removed anything. */

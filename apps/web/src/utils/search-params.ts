@@ -2,7 +2,7 @@ import {
   DEFAULT_PAGE_SIZE,
   MAX_PAGE_SIZE,
   type PaginationQuery,
-} from "@jobpilot/contracts/pagination";
+} from "@openapply/contracts/pagination";
 
 type Param = string | string[] | undefined;
 

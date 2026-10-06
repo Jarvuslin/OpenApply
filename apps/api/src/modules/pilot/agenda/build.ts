@@ -2,26 +2,18 @@ import {
   type AgendaContent,
   type AgendaItem,
   type AgendaPayload,
-  channelAutonomy,
-  networkingMode,
   type PilotInstructionsConfig,
-} from "@jobpilot/contracts/pilot";
+} from "@openapply/contracts/pilot";
 import { nextDayReset } from "@/common/date/buckets";
 import type { AgendaJob } from "./gather-jobs";
-import type { Followup } from "./gather-outreach";
 import type { DueSearch } from "./gather-searches";
 import {
   applyItem,
   boardHealthItem,
   bootstrapItem,
   discoverItem,
-  followupItem,
   inboxItem,
-  interviewPrepItem,
   interviewReplyItem,
-  networkingSendItem,
-  promoComposeItem,
-  promoPostItem,
   questionItem,
   queueDrainItem,
   rescanSkippedItem,
@@ -29,8 +21,6 @@ import {
   reviewPausedItem,
   scorePendingItem,
   strategyReviewItem,
-  upworkSyncItem,
-  warmIntroItem,
 } from "./items";
 
 const MAX_ITEMS = 10;
@@ -40,10 +30,7 @@ const PER_AGENDA = {
   boardHealth: 1,
   reviewPaused: 1,
   interviewReply: 2,
-  interviewPrep: 1,
-  warmIntro: 1,
-  followup: 2,
-  promoCompose: 1,
+
   maintenance: 1,
 } as const;
 const ACTIVE_SLEEP_SECONDS = 15;
@@ -63,14 +50,14 @@ export interface AgendaInput {
   openQuestions: number;
   activeClaims: number;
   appliedToday: number;
-  networkingSentToday: number;
+
   // No searches yet, or no goals to derive them from.
   awaitingSetup: boolean;
   // The idle sleep never runs past this.
   nextSearchRunAt: Date | null;
   answeredQuestions: AgendaPayload<"question.answered">[];
   approvedJobs: AgendaJob[];
-  warmIntroCandidates: AgendaJob[];
+
   dueQueries: DueSearch[];
   scorePending: AgendaPayload<"campaign.scorePending">[];
   queueDrains: AgendaPayload<"queue.drain">[];
@@ -78,12 +65,7 @@ export interface AgendaInput {
   boardHealth: AgendaPayload<"board.health">[];
   inbox: AgendaPayload<"inbox.review">;
   interviewReplies: AgendaPayload<"interview.reply">[];
-  interviewPreps: AgendaPayload<"interview.prep">[];
-  upworkSync: AgendaPayload<"upwork.syncInbox"> | null;
-  approvedNetworking: AgendaPayload<"networking.send">[];
-  followups: Followup[];
-  approvedPromotions: AgendaPayload<"promo.post">[];
-  duePlatforms: AgendaPayload<"promo.compose">[];
+
   strategyReviews: AgendaPayload<"campaign.strategyReview">[];
   rescanSkipped: AgendaPayload<"job.rescanSkipped">[];
   retryFailed: AgendaPayload<"job.retryFailed">[];
@@ -107,41 +89,16 @@ const clamp = (value: number, min: number, max: number) => Math.min(Math.max(val
 export function buildAgenda(input: AgendaInput): AgendaContent {
   const { now, config } = input;
   const capReached = input.appliedToday >= config.dailyApplyCap;
-  const sendsLeft = Math.max(0, config.networking.dailyCap - input.networkingSentToday);
-  const outreach = networkingMode(config);
-  const emailAutonomy = channelAutonomy(config, "email");
 
   const items: AgendaItem[] = [
     ...input.answeredQuestions.map(questionItem),
     ...input.boardHealth.slice(0, PER_AGENDA.boardHealth).map(boardHealthItem),
     ...input.pausedCampaigns.slice(0, PER_AGENDA.reviewPaused).map(reviewPausedItem),
     ...input.interviewReplies.slice(0, PER_AGENDA.interviewReply).map(interviewReplyItem),
-    ...input.interviewPreps.slice(0, PER_AGENDA.interviewPrep).map(interviewPrepItem),
     ...input.queueDrains.map(queueDrainItem),
-    ...input.approvedPromotions.map(promoPostItem),
-    ...input.duePlatforms.slice(0, PER_AGENDA.promoCompose).map(promoComposeItem),
   ];
   if (!capReached) items.push(...input.approvedJobs.map(applyItem));
   if (input.inbox.count > 0) items.push(inboxItem(input.inbox));
-  if (input.upworkSync) items.push(upworkSyncItem(input.upworkSync));
-
-  if (outreach && sendsLeft > 0) {
-    const intros = input.warmIntroCandidates.slice(0, PER_AGENDA.warmIntro);
-    items.push(...intros.map((job) => warmIntroItem(job, outreach)));
-  }
-  // Sends and followups act on email threads, and followups only get the budget sends leave over.
-  if (emailAutonomy) {
-    const sends = input.approvedNetworking.slice(0, sendsLeft);
-    const followupRoom = Math.min(PER_AGENDA.followup, sendsLeft - sends.length);
-    items.push(
-      ...sends.map(networkingSendItem),
-      ...input.followups
-        .slice(0, followupRoom)
-        .map((followup) =>
-          followupItem({ ...followup, channel: "email", autonomy: emailAutonomy }),
-        ),
-    );
-  }
 
   // Scoring and discovery only matter once nothing approved is left to apply to.
   if (input.approvedJobs.length === 0) {
@@ -203,8 +160,7 @@ export function buildAgenda(input: AgendaInput): AgendaContent {
       dailyApplyCap: config.dailyApplyCap,
       appliedToday: input.appliedToday,
       capReached,
-      dailyNetworkingCap: config.networking.dailyCap,
-      networkingSentToday: input.networkingSentToday,
+
       resetsAt: nextDayReset(now),
     },
     emptyReason: emptyReason(ranked.length, capReached, input.awaitingSetup),

@@ -4,23 +4,18 @@ import {
   boardHealth,
   bootstrap,
   cfg,
-  contact,
   dueQuery,
-  followup,
-  hotJob,
   job,
   pausedCampaign,
-  prep,
   question,
   queueDrain,
   reply,
   scorePending,
-  send,
   strategyReview,
 } from "./builders";
 import { describe, expect, it } from "bun:test";
 
-const NETWORKING_OFF = cfg({ networking: { email: "off", linkedIn: "off" } });
+const DEFAULT_CONFIG = cfg({});
 const kinds = (agenda: ReturnType<typeof buildAgenda>) => agenda.items.map((i) => i.kind);
 const countOf = (agenda: ReturnType<typeof buildAgenda>, kind: string) =>
   agenda.items.filter((i) => i.kind === kind).length;
@@ -29,16 +24,15 @@ describe("buildAgenda ranking", () => {
   it("puts humans and failing boards above any apply, and the rest of the queue below it", () => {
     const agenda = buildAgenda(
       base({
-        config: NETWORKING_OFF,
+        config: DEFAULT_CONFIG,
         answeredQuestions: [question("q1")],
         interviewReplies: [reply("em1")],
         boardHealth: [boardHealth("linkedin")],
         pausedCampaigns: [pausedCampaign("c9")],
         approvedJobs: [job("j1", 100)],
-        interviewPreps: [prep("app1")],
+
         queueDrains: [queueDrain("c8")],
         inbox: { messageIds: ["e1"], count: 1 },
-        upworkSync: { lastSyncedAt: null, unreadCount: 0 },
       }),
     );
     expect(kinds(agenda)).toEqual([
@@ -47,42 +41,26 @@ describe("buildAgenda ranking", () => {
       "board.health",
       "campaign.reviewPaused",
       "job.apply",
-      "interview.prep",
+
       "queue.drain",
       "inbox.review",
-      "upwork.syncInbox",
     ]);
   });
 
   it("ranks the supporting kinds once nothing is left to apply to", () => {
     const agenda = buildAgenda(
       base({
-        approvedNetworking: [send("m1")],
-        approvedPromotions: [
-          { promotionId: "p1", platform: "hn", target: null, title: null, body: "b" },
-        ],
-        warmIntroCandidates: [hotJob("j1", 90)],
         scorePending: [scorePending("c1")],
         dueQueries: [dueQuery("golang")],
-        followups: [followup("f1")],
-        duePlatforms: [{ platform: "reddit" }],
       }),
     );
-    expect(kinds(agenda)).toEqual([
-      "networking.send",
-      "promo.post",
-      "networking.warmIntro",
-      "campaign.scorePending",
-      "search.discover",
-      "networking.followup",
-      "promo.compose",
-    ]);
+    expect(kinds(agenda)).toEqual(["campaign.scorePending", "search.discover"]);
   });
 
   it("ranks applies by matchScore and keeps the top 10, with a paused review still on top", () => {
     const jobs = Array.from({ length: 15 }, (_, i) => job(`j${i}`, 80 + i));
     const agenda = buildAgenda(
-      base({ config: NETWORKING_OFF, approvedJobs: jobs, pausedCampaigns: [pausedCampaign("c9")] }),
+      base({ config: DEFAULT_CONFIG, approvedJobs: jobs, pausedCampaigns: [pausedCampaign("c9")] }),
     );
     expect(agenda.items).toHaveLength(10);
     expect(agenda.items.map((i) => i.subjectId).slice(0, 3)).toEqual(["c9", "c1:j14", "c1:j13"]);
@@ -99,7 +77,7 @@ describe("buildAgenda gating", () => {
   it("stops applying once the daily cap is spent, but still reviews paused campaigns", () => {
     const agenda = buildAgenda(
       base({
-        config: cfg({ dailyApplyCap: 3, networking: { email: "off", linkedIn: "off" } }),
+        config: cfg({ dailyApplyCap: 3 }),
         appliedToday: 3,
         approvedJobs: [job("j1", 90)],
         pausedCampaigns: [pausedCampaign("c9")],
@@ -153,106 +131,19 @@ describe("buildAgenda gating", () => {
         boardHealth: [boardHealth("linkedin"), boardHealth("indeed")],
         pausedCampaigns: [pausedCampaign("c1"), pausedCampaign("c2")],
         interviewReplies: [reply("e1"), reply("e2"), reply("e3")],
-        interviewPreps: [prep("a1"), prep("a2")],
       }),
     );
     expect(countOf(agenda, "board.health")).toBe(1);
     expect(countOf(agenda, "campaign.reviewPaused")).toBe(1);
     expect(countOf(agenda, "interview.reply")).toBe(2);
-    expect(countOf(agenda, "interview.prep")).toBe(1);
 
     const quiet = buildAgenda(
       base({
-        warmIntroCandidates: [hotJob("j1", 90), hotJob("j2", 88)],
-        followups: [followup("f1"), followup("f2"), followup("f3")],
-        duePlatforms: [{ platform: "hn" }, { platform: "reddit" }],
         strategyReviews: [strategyReview("c1"), strategyReview("c2")],
       }),
     );
-    expect(countOf(quiet, "networking.warmIntro")).toBe(1);
-    expect(countOf(quiet, "networking.followup")).toBe(2);
-    expect(countOf(quiet, "promo.compose")).toBe(1);
+
     expect(countOf(quiet, "campaign.strategyReview")).toBe(1);
-  });
-});
-
-describe("buildAgenda networking", () => {
-  it("spends the networking cap on sends first, and gives followups what is left", () => {
-    const withRoom = buildAgenda(
-      base({
-        config: cfg({ networking: { dailyCap: 3 } }),
-        networkingSentToday: 1,
-        approvedNetworking: [send("m1")],
-        followups: [followup("f1"), followup("f2")],
-      }),
-    );
-    expect(countOf(withRoom, "networking.send")).toBe(1);
-    expect(countOf(withRoom, "networking.followup")).toBe(1);
-
-    const spent = buildAgenda(
-      base({
-        config: cfg({ networking: { dailyCap: 2 } }),
-        networkingSentToday: 2,
-        approvedNetworking: [send("m1")],
-        followups: [followup("f1")],
-        warmIntroCandidates: [hotJob("j1", 90)],
-      }),
-    );
-    expect(spent.items).toEqual([]);
-  });
-
-  it("drops every networking kind when both channels are off, but still triages the inbox", () => {
-    const agenda = buildAgenda(
-      base({
-        config: NETWORKING_OFF,
-        warmIntroCandidates: [hotJob("j1", 90)],
-        approvedNetworking: [send("m1")],
-        followups: [followup("f1")],
-        inbox: { messageIds: ["e1"], count: 1 },
-      }),
-    );
-    expect(kinds(agenda)).toEqual(["inbox.review"]);
-  });
-
-  it("sends email-only work by email, and warm intros by the first channel that is on", () => {
-    const bothOn = buildAgenda(
-      base({
-        config: cfg({ networking: { email: "auto", linkedIn: "review" } }),
-        warmIntroCandidates: [hotJob("j1", 90)],
-        followups: [followup("f1")],
-      }),
-    );
-    const intro = bothOn.items.find((i) => i.kind === "networking.warmIntro");
-    const followupItem = bothOn.items.find((i) => i.kind === "networking.followup");
-    expect(intro?.payload).toMatchObject({ channel: "email", autonomy: "auto" });
-    expect(followupItem?.payload).toMatchObject({ channel: "email", autonomy: "auto" });
-
-    const linkedInOnly = buildAgenda(
-      base({
-        config: cfg({ networking: { email: "off", linkedIn: "review" } }),
-        warmIntroCandidates: [hotJob("j1", 90)],
-        approvedNetworking: [send("m1")],
-        followups: [followup("f1")],
-      }),
-    );
-    expect(kinds(linkedInOnly)).toEqual(["networking.warmIntro"]);
-    expect(linkedInOnly.items[0].payload).toMatchObject({
-      channel: "linkedin",
-      autonomy: "review",
-    });
-  });
-
-  it("carries known insiders on both the apply and the intro, and intros with none", () => {
-    const insider = contact("w1");
-    const known = hotJob("j1", 90, [insider]);
-    const agenda = buildAgenda(base({ approvedJobs: [known], warmIntroCandidates: [known] }));
-    const apply = agenda.items.find((i) => i.kind === "job.apply");
-    const intro = agenda.items.find((i) => i.kind === "networking.warmIntro");
-    expect(apply?.payload).toMatchObject({ warmContacts: [insider] });
-    expect(intro?.payload).toMatchObject({ contacts: [insider] });
-
-    const unknown = buildAgenda(base({ warmIntroCandidates: [hotJob("j2", 90)] }));
-    expect(unknown.items[0].payload).toMatchObject({ contacts: [] });
   });
 });
 
@@ -305,4 +196,15 @@ describe("buildAgenda empty reason and sleep", () => {
     expect(sleepUntil(5)).toBe(300);
     expect(sleepUntil(-1)).toBe(30);
   });
+});
+
+it("ignores retired instruction fields instead of emitting removed actions", () => {
+  const config = cfg({
+    dailyApplyCap: 10,
+    ...JSON.parse('{"networking":{"email":"auto"},"platforms":["hn"]}'),
+  });
+  const agenda = buildAgenda(
+    base({ config, approvedJobs: [job("j1", 90)], interviewReplies: [reply("em1")] }),
+  );
+  expect(kinds(agenda)).toEqual(["interview.reply", "job.apply"]);
 });

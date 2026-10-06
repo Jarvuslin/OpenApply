@@ -8,13 +8,6 @@ export const queryKeys = {
   user: {
     all: ["user"] as const,
     detail: () => [...queryKeys.user.all, "detail"] as const,
-    portfolio: () => [...queryKeys.user.all, "portfolio"] as const,
-    portfolioPreview: () => [...queryKeys.user.all, "portfolio", "preview"] as const,
-  },
-
-  leaderboard: {
-    all: ["leaderboard"] as const,
-    list: (window: string) => [...queryKeys.leaderboard.all, window] as const,
   },
 
   credentials: {
@@ -60,14 +53,12 @@ export const queryKeys = {
     jobs: (campaignId: string, filters: Record<string, unknown> = {}) =>
       [...queryKeys.campaigns.all, "jobs", campaignId, filters] as const,
     reasons: (campaignId: string) => [...queryKeys.campaigns.all, "reasons", campaignId] as const,
-    networking: (campaignId: string, filters: Record<string, unknown> = {}) =>
-      [...queryKeys.campaigns.all, "networking", campaignId, filters] as const,
   },
 
   email: {
     all: ["email"] as const,
     account: () => [...queryKeys.email.all, "account"] as const,
-    oauthClient: () => [...queryKeys.email.all, "oauthClient"] as const,
+    accounts: () => [...queryKeys.email.all, "accounts"] as const,
     messages: (filters: Record<string, unknown> = {}) =>
       [...queryKeys.email.all, "messages", filters] as const,
     message: (id: string) => [...queryKeys.email.all, "message", id] as const,
@@ -81,36 +72,6 @@ export const queryKeys = {
   analytics: {
     all: ["analytics"] as const,
     stats: () => [...queryKeys.analytics.all, "stats"] as const,
-  },
-
-  upworkProposals: {
-    all: ["upwork-proposals"] as const,
-    list: (filters: Record<string, unknown> = {}) =>
-      [...queryKeys.upworkProposals.all, "list", filters] as const,
-    detail: (id: string) => [...queryKeys.upworkProposals.all, "detail", id] as const,
-  },
-
-  upworkProfile: {
-    all: ["upwork-profile"] as const,
-    detail: () => [...queryKeys.upworkProfile.all, "detail"] as const,
-  },
-
-  upworkAccount: {
-    all: ["upwork-account"] as const,
-    detail: () => [...queryKeys.upworkAccount.all, "detail"] as const,
-  },
-
-  upworkInbox: {
-    all: ["upwork-inbox"] as const,
-    list: (filters: Record<string, unknown> = {}) =>
-      [...queryKeys.upworkInbox.all, "list", filters] as const,
-  },
-
-  coverLetters: {
-    all: ["cover-letters"] as const,
-    list: (filters: Record<string, unknown> = {}) =>
-      [...queryKeys.coverLetters.all, "list", filters] as const,
-    detail: (id: string) => [...queryKeys.coverLetters.all, "detail", id] as const,
   },
 
   pilot: {
@@ -130,9 +91,7 @@ export const queryKeys = {
     questionsAll: () => [...queryKeys.pilot.all, "questions"] as const,
     questions: (filters: Record<string, unknown> = {}) =>
       [...queryKeys.pilot.questionsAll(), filters] as const,
-    promotionsAll: () => [...queryKeys.pilot.all, "promotions"] as const,
-    promotions: (filters: Record<string, unknown> = {}) =>
-      [...queryKeys.pilot.promotionsAll(), filters] as const,
+
     push: () => [...queryKeys.pilot.all, "push"] as const,
     pushKey: () => [...queryKeys.pilot.push(), "vapid-key"] as const,
     pushDevices: () => [...queryKeys.pilot.push(), "devices"] as const,

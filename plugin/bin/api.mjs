@@ -1,14 +1,14 @@
 // @ts-check
-// Calls the JobPilot API as the session's user. Node's fetch does TLS through OpenSSL, so it works
+// Calls the OpenApply API as the session's user. Node's fetch does TLS through OpenSSL, so it works
 // inside the Codex Windows sandbox, where Schannel-based HTTP clients cannot get credentials.
 import { readFileSync, writeFileSync } from "node:fs";
 
-const USAGE = `usage: jobpilot-api <METHOD> <path> [--query key=value]... [--data <json>|@<file>|-] [--out <file>]
+const USAGE = `usage: openapply-api <METHOD> <path> [--query key=value]... [--data <json>|@<file>|-] [--out <file>]
 
-  jobpilot-api GET /api/user
-  jobpilot-api GET /api/applied --query search=Acme --query limit=100
-  jobpilot-api POST /api/campaigns --data @body.json
-  jobpilot-api GET /api/resumes/3/pdf --out resume-3.pdf`;
+  openapply-api GET /api/user
+  openapply-api GET /api/applied --query search=Acme --query limit=100
+  openapply-api POST /api/campaigns --data @body.json
+  openapply-api GET /api/resumes/3/pdf --out resume-3.pdf`;
 
 const REQUEST_TIMEOUT_MS = 120_000;
 
@@ -95,7 +95,7 @@ function readBody(data) {
 }
 
 /**
- * @param {string} base The JOBPILOT_API origin.
+ * @param {string} base The OPENAPPLY_API origin.
  * @param {string} rawPath
  * @param {[string, string][]} query
  * @returns {URL}
@@ -116,16 +116,16 @@ function buildUrl(base, rawPath, query) {
 /** @returns {Promise<void>} */
 async function main() {
   const request = parseArgs(process.argv.slice(2));
-  const base = process.env.JOBPILOT_API;
+  const base = process.env.OPENAPPLY_API;
   if (!base)
-    fail("JOBPILOT_API is unset - this session is not running inside the JobPilot terminal host");
+    fail("OPENAPPLY_API is unset - this session is not running inside the OpenApply terminal host");
 
   const url = buildUrl(base, request.path, request.query);
   const body = readBody(request.data);
   /** @type {Record<string, string>} */
   const headers = { accept: "application/json" };
-  if (process.env.JOBPILOT_API_TOKEN)
-    headers.authorization = `Bearer ${process.env.JOBPILOT_API_TOKEN}`;
+  if (process.env.OPENAPPLY_API_TOKEN)
+    headers.authorization = `Bearer ${process.env.OPENAPPLY_API_TOKEN}`;
   if (body !== null) headers["content-type"] = "application/json";
 
   /** @type {Response} */

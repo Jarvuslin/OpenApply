@@ -5,16 +5,16 @@ Payload `{campaignId, query, board, pausedAt}` - a stuck paused auto-apply campa
 - Missing resume and the file is restorable per `../../_shared/setup.md` → resume:
 
 ```bash
-jobpilot-api POST /api/campaigns/$CID/status --data '{"status":"in_progress","actor":"pilot"}'
+openapply-api POST /api/campaigns/$CID/status --data '{"status":"in_progress","actor":"pilot"}'
 ```
 
 - Anything else → ask; never silently override a user pause. `subjectType:"campaign"` + `subjectId` are load-bearing (suppress re-review while open, route the answer):
 
 ```bash
-jobpilot-api POST /api/pilot/questions --data @"$JOBPILOT_TEMP/question.json"
+openapply-api POST /api/pilot/questions --data @"$OPENAPPLY_TEMP/question.json"
 ```
 
-`$JOBPILOT_TEMP/question.json`:
+`$OPENAPPLY_TEMP/question.json`:
 
 ```json
 {
@@ -23,7 +23,7 @@ jobpilot-api POST /api/pilot/questions --data @"$JOBPILOT_TEMP/question.json"
   "subjectId": "<campaignId>",
   "prompt": "Campaign '<query>' is paused (<reason>). Resume it?",
   "options": ["Resume", "Keep paused", "Complete campaign"],
-  "deepLink": "<JOBPILOT_WEB>/campaigns/<campaignId>"
+  "deepLink": "<OPENAPPLY_WEB>/campaigns/<campaignId>"
 }
 ```
 

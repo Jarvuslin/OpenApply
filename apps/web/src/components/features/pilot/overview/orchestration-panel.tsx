@@ -2,8 +2,8 @@
 
 import "@xyflow/react/dist/style.css";
 import { type ReactElement, useEffect, useState } from "react";
-import type { PilotJournalKind, PilotState } from "@jobpilot/contracts/pilot";
 import { Box, Skeleton, Typography, useTheme } from "@mui/material";
+import type { PilotJournalKind, PilotState } from "@openapply/contracts/pilot";
 import { Background, BackgroundVariant, type Edge, ReactFlow } from "@xyflow/react";
 import { useApiQuery } from "@/api/hooks";
 import { pilotQueries } from "@/api/queries";

@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode, useEffect, useRef } from "react";
-import { pilotChannel } from "@jobpilot/contracts/sse";
+import { pilotChannel } from "@openapply/contracts/sse";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/api/query-keys";
 import { useSseChannel } from "@/lib/sse/client";
@@ -18,7 +18,6 @@ export function PilotLive(): ReactNode {
     queryClient.invalidateQueries({ queryKey });
   };
   const refreshQuestions = (): void => invalidate(queryKeys.pilot.questionsAll());
-  const refreshPromotions = (): void => invalidate(queryKeys.pilot.promotionsAll());
 
   const status = useSseChannel(pilotChannel, null, {
     on: {
@@ -26,8 +25,6 @@ export function PilotLive(): ReactNode {
       "journal.appended": (event) => appendJournalEntry(queryClient, event.entry),
       "question.created": refreshQuestions,
       "question.answered": refreshQuestions,
-      "promotion.created": refreshPromotions,
-      "promotion.updated": refreshPromotions,
     },
   });
 
@@ -38,7 +35,6 @@ export function PilotLive(): ReactNode {
       queryClient.invalidateQueries({ queryKey: queryKeys.pilot.state() });
       queryClient.invalidateQueries({ queryKey: queryKeys.pilot.journalAll() });
       queryClient.invalidateQueries({ queryKey: queryKeys.pilot.questionsAll() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.pilot.promotionsAll() });
     }
     previousStatus.current = status;
   }, [status, queryClient]);

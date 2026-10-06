@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import type { Pagination } from "@jobpilot/contracts/pagination";
 import { Stack, Typography } from "@mui/material";
+import type { Pagination } from "@openapply/contracts/pagination";
 import type { Route } from "next";
 import { LinkButton } from "@/components/ui/buttons";
 import { jobsHref } from "./jobs-href";

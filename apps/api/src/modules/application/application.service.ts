@@ -2,9 +2,9 @@ import type {
   ApplicationSource,
   ApplicationStatus,
   StatusTransitionInput,
-} from "@jobpilot/contracts/application";
-import { APPLICATION_STATUSES, SINGLE_APPLY_CAMPAIGN } from "@jobpilot/contracts/application";
-import { type PaginationQuery, pageSlice, paginate } from "@jobpilot/contracts/pagination";
+} from "@openapply/contracts/application";
+import { APPLICATION_STATUSES, SINGLE_APPLY_CAMPAIGN } from "@openapply/contracts/application";
+import { type PaginationQuery, pageSlice, paginate } from "@openapply/contracts/pagination";
 import { singleton } from "tsyringe";
 import { findOwned } from "@/common/errors";
 import { type Prisma, PrismaClient } from "@/generated/prisma/client";
@@ -119,16 +119,6 @@ export class ApplicationService {
                 classification: true,
               },
               orderBy: { receivedAt: "desc" },
-            },
-            contacts: {
-              select: {
-                id: true,
-                name: true,
-                title: true,
-                company: true,
-                email: true,
-                linkedinUrl: true,
-              },
             },
           },
         }),

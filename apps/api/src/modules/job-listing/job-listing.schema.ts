@@ -1,11 +1,15 @@
-import { JOB_LEVELS, jobListingStatusSchema } from "@jobpilot/contracts/job-listing";
-import { paginatedSchema } from "@jobpilot/contracts/pagination";
+import { JOB_LEVELS, jobListingStatusSchema } from "@openapply/contracts/job-listing";
+import { paginatedSchema } from "@openapply/contracts/pagination";
 import { z } from "zod/v4";
 
 /** Where one posting was seen. Board + link only - never who found it. */
 const jobListingSourceSchema = z.object({
   board: z.string().nullable(),
   url: z.string(),
+  applyUrl: z.string().nullable(),
+  attributionUrl: z.string().nullable(),
+  resolutionConfidence: z.number().nullable(),
+  postedAt: z.date().nullable(),
   lastSeenAt: z.date(),
 });
 
@@ -27,6 +31,8 @@ const jobListingSummarySchema = z.object({
   lastSeenAt: z.date(),
   /** How many boards this posting was found on - the list renders the count, not the links. */
   sourceCount: z.number().int(),
+  canApply: z.boolean(),
+  foundOn: z.array(z.string()),
 });
 
 /** The detail view adds the board links and the digest fields the list has no room for. */

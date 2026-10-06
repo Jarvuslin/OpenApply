@@ -5,15 +5,15 @@ import {
   pilotCycleDetailSchema,
   pilotInstructionsConfigSchema,
   type UpdatePilotInstructionsInput,
-} from "@jobpilot/contracts/pilot";
-import { pilotChannel } from "@jobpilot/contracts/sse";
+} from "@openapply/contracts/pilot";
+import { pilotChannel } from "@openapply/contracts/sse";
 import { singleton } from "tsyringe";
 import { conflict } from "@/common/errors";
 import { publish } from "@/common/sse";
 import { type PilotState as PilotStateModel, PrismaClient } from "@/generated/prisma/client";
 import { publishCampaignStatus } from "@/modules/campaign/campaign.utils";
 import { AGENDA_SNAPSHOT_RESET } from "./agenda/snapshot";
-import { costByKind, countAppliedToday, countSentToday, countTodayOutcomes } from "./pilot.stats";
+import { costByKind, countAppliedToday, countTodayOutcomes } from "./pilot.stats";
 import { SERVER_SKIP_REASONS } from "./skip-reasons";
 
 const PILOT_CAMPAIGN = { createdBy: "pilot" } as const;
@@ -26,10 +26,7 @@ export class PilotService {
   private async toState(row: PilotStateModel): Promise<PilotState> {
     const config = pilotInstructionsConfigSchema.parse(row.instructionsConfig);
     const now = new Date();
-    const [appliedToday, networkingSentToday] = await Promise.all([
-      countAppliedToday(this.prisma, row.userId, now),
-      countSentToday(this.prisma, row.userId, now),
-    ]);
+    const appliedToday = await countAppliedToday(this.prisma, row.userId, now);
     return {
       userId: row.userId,
       running: row.running,
@@ -39,7 +36,6 @@ export class PilotService {
       lastCycleAt: row.lastCycleAt,
       cycleCount: row.cycleCount,
       appliedToday,
-      networkingSentToday,
       // `>=` so a cap of 0 reads as reached, matching the agenda.
       capReached: appliedToday >= config.dailyApplyCap,
       createdAt: row.createdAt,

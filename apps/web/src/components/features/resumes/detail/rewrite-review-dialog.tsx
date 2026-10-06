@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { EMPTY_RESUME_DATA } from "@jobpilot/contracts/resume";
 import { ExpandMore, OpenInNew } from "@mui/icons-material";
 import {
   Accordion,
@@ -13,7 +12,8 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { resumePdfUrl, variantPdfUrl } from "@/api/resume-urls";
+import { EMPTY_RESUME_DATA } from "@openapply/contracts/resume";
+import { resumePdfUrl, resumeSourceUrl, variantPdfUrl } from "@/api/resume-urls";
 import type { ResumeDto, ResumeVariantDto } from "@/api/types";
 import { FormDialogShell } from "@/components/ui/form";
 import { diffRewrite } from "./rewrite-diff";
@@ -48,9 +48,23 @@ export function RewriteReviewDialog(props: RewriteReviewDialogProps): ReactEleme
     >
       <Stack spacing={2}>
         <Typography variant="body2Muted">
-          Your uploaded PDF is untouched either way, so you can always re-extract from it.
+          Your original upload stays unchanged. Generated PDFs use the OpenApply template, so their
+          fonts, section order and spacing can differ from the original even before a rewrite.
         </Typography>
-        <Stack direction="row" spacing={1}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+          {resume.sourceFilename && (
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<OpenInNew fontSize="sm" />}
+              component="a"
+              href={resumeSourceUrl(resume.id, resume.updatedAt)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Original upload
+            </Button>
+          )}
           <Button
             size="small"
             variant="outlined"
@@ -60,7 +74,7 @@ export function RewriteReviewDialog(props: RewriteReviewDialogProps): ReactEleme
             target="_blank"
             rel="noopener noreferrer"
           >
-            Current PDF
+            Current generated PDF
           </Button>
           <Button
             size="small"

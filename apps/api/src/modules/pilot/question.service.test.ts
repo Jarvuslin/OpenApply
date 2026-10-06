@@ -57,7 +57,7 @@ describe("PilotQuestionService.createQuestion", () => {
     expect(question).toMatchObject({ status: "open", options: ["2 weeks", "immediately"] });
     expect(rec.created?.expiresAt).toBeNull();
     expect(rec.pushes[0]?.payload).toEqual({
-      title: "JobPilot needs you",
+      title: "OpenApply needs you",
       body: "Which start date?",
       url: "/pilot/questions/e1",
       tag: "question-e1",

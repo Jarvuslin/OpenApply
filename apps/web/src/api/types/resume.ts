@@ -1,4 +1,4 @@
-import type { Data } from "@jobpilot/api-client";
+import type { Data } from "@openapply/api-client";
 import type { api } from "@/api/client";
 
 /** A single resume, from `GET /api/resumes/:id`. */

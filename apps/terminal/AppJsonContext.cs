@@ -1,12 +1,14 @@
 using System.Text.Json.Serialization;
-using JobPilot.Terminal.Hosting;
-using JobPilot.Terminal.Pilot;
-using JobPilot.Terminal.Providers;
-using JobPilot.Terminal.Sessions;
-using JobPilot.Terminal.Updates;
+using OpenApply.Terminal.Inference;
+using OpenApply.Terminal.Connectors;
+using OpenApply.Terminal.Hosting;
+using OpenApply.Terminal.Pilot;
+using OpenApply.Terminal.Providers;
+using OpenApply.Terminal.Sessions;
+using OpenApply.Terminal.Updates;
 using Microsoft.AspNetCore.Mvc;
 
-namespace JobPilot.Terminal;
+namespace OpenApply.Terminal;
 
 /// <summary>
 /// Native AOT JSON metadata. JIT reflection can hide missing registrations, so every directly serialized
@@ -14,6 +16,11 @@ namespace JobPilot.Terminal;
 /// </summary>
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(StartSessionRequest))]
+[JsonSerializable(typeof(InferenceRequest))]
+[JsonSerializable(typeof(InferenceResponse))]
+[JsonSerializable(typeof(GmailCheckRequest))]
+[JsonSerializable(typeof(GmailCheckResponse))]
+[JsonSerializable(typeof(GmailCheckEvidence))]
 [JsonSerializable(typeof(CodexSettingsFile))]
 [JsonSerializable(typeof(PluginMcpFile))]
 [JsonSerializable(typeof(string))]

@@ -2,12 +2,6 @@
 
 import { type ReactElement, useState } from "react";
 import {
-  NO_INSTRUCTIONS_CHANGE,
-  type PilotInstructionsChange,
-  type PilotState,
-  type UpdatePilotInstructionsInput,
-} from "@jobpilot/contracts/pilot";
-import {
   Accordion,
   AccordionDetails,
   AccordionSummary,
@@ -16,6 +10,12 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import {
+  NO_INSTRUCTIONS_CHANGE,
+  type PilotInstructionsChange,
+  type PilotState,
+  type UpdatePilotInstructionsInput,
+} from "@openapply/contracts/pilot";
 import { useSelector } from "@tanstack/react-form";
 import { api } from "@/api/client";
 import { useApiMutation, useApiQuery } from "@/api/hooks";
@@ -38,8 +38,6 @@ import {
 import { GoalsChangeDialog } from "./goals-change-dialog";
 import { GoalsSection } from "./goals-section";
 import { LimitsSection } from "./limits-section";
-import { NetworkingSection } from "./networking-section";
-import { PlatformsSection } from "./platforms-section";
 import { SearchesList } from "./searches-list";
 
 const NAV_ANCHORS: SectionAnchor[] = [
@@ -169,7 +167,7 @@ function InstructionsEditor(props: InstructionsEditorProps): ReactElement {
                     <Stack spacing={0.25}>
                       <Typography variant="body1Strong">Advanced settings</Typography>
                       <Typography variant="captionMuted">
-                        Caps, networking, boards, platforms - the defaults work for most people.
+                        Caps and boards - the defaults work for most people.
                       </Typography>
                     </Stack>
                   </AccordionSummary>
@@ -178,14 +176,9 @@ function InstructionsEditor(props: InstructionsEditorProps): ReactElement {
                       <Box data-section-id="limits">
                         <LimitsSection form={form} />
                       </Box>
-                      <Box data-section-id="networking">
-                        <NetworkingSection form={form} />
-                      </Box>
+
                       <Box data-section-id="boards">
                         <BoardsSection form={form} />
-                      </Box>
-                      <Box data-section-id="platforms">
-                        <PlatformsSection form={form} />
                       </Box>
                     </Stack>
                   </AccordionDetails>

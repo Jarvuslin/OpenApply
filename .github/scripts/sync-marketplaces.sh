@@ -3,7 +3,7 @@
 set -euo pipefail
 
 if [ "$#" -ne 3 ]; then
-  echo "usage: sync-marketplaces.sh <jobpilot-root> <claude-marketplace-root> <codex-marketplace-root>" >&2
+  echo "usage: sync-marketplaces.sh <openapply-root> <claude-marketplace-root> <codex-marketplace-root>" >&2
   exit 2
 fi
 
@@ -31,8 +31,8 @@ rsync -a --checksum "$repo_root/plugin/.codex-plugin/" "$codex_stage/.codex-plug
 rsync -a --checksum "$repo_root/plugin/skills/setup/" "$codex_stage/skills/setup/"
 
 # --checksum is intentional: release manifests often retain size and checkout-time mtimes while content changes.
-rsync -a --checksum --delete "$claude_stage/" "$claude_root/plugins/jobpilot/"
-rsync -a --checksum --delete "$codex_stage/" "$codex_root/plugins/jobpilot/"
+rsync -a --checksum --delete "$claude_stage/" "$claude_root/plugins/openapply/"
+rsync -a --checksum --delete "$codex_stage/" "$codex_root/plugins/openapply/"
 
 version_of() {
   node -e 'const v = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).version; if (!v) process.exit(1); console.log(v)' "$1"
@@ -41,24 +41,24 @@ version_of() {
 release_version="$(version_of "$repo_root/package.json")"
 test "$(version_of "$repo_root/plugin/.claude-plugin/plugin.json")" = "$release_version"
 test "$(version_of "$repo_root/plugin/.codex-plugin/plugin.json")" = "$release_version"
-test "$(version_of "$claude_root/plugins/jobpilot/.claude-plugin/plugin.json")" = "$release_version"
-test "$(version_of "$codex_root/plugins/jobpilot/.codex-plugin/plugin.json")" = "$release_version"
+test "$(version_of "$claude_root/plugins/openapply/.claude-plugin/plugin.json")" = "$release_version"
+test "$(version_of "$codex_root/plugins/openapply/.codex-plugin/plugin.json")" = "$release_version"
 
-cmp "$repo_root/plugin/.codex-plugin/plugin.json" "$codex_root/plugins/jobpilot/.codex-plugin/plugin.json"
-cmp "$repo_root/plugin/skills/setup/SKILL.md" "$codex_root/plugins/jobpilot/skills/setup/SKILL.md"
-test ! -e "$codex_root/plugins/jobpilot/.mcp.json"
-test ! -e "$codex_root/plugins/jobpilot/skills/pilot"
-test ! -e "$codex_root/plugins/jobpilot/skills/_shared"
+cmp "$repo_root/plugin/.codex-plugin/plugin.json" "$codex_root/plugins/openapply/.codex-plugin/plugin.json"
+cmp "$repo_root/plugin/skills/setup/SKILL.md" "$codex_root/plugins/openapply/skills/setup/SKILL.md"
+test ! -e "$codex_root/plugins/openapply/.mcp.json"
+test ! -e "$codex_root/plugins/openapply/skills/pilot"
+test ! -e "$codex_root/plugins/openapply/skills/_shared"
 
 node -e '
   const market = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
-  const entries = (market.plugins ?? []).filter((p) => p.name === "jobpilot");
+  const entries = (market.plugins ?? []).filter((p) => p.name === "openapply");
   const [p] = entries;
   const ok =
     market.name === "sukhrob-codex-plugins" &&
     entries.length === 1 &&
     p.source?.source === "local" &&
-    p.source?.path === "./plugins/jobpilot" &&
+    p.source?.path === "./plugins/openapply" &&
     p.policy?.installation === "AVAILABLE" &&
     p.policy?.authentication === "ON_USE" &&
     p.category === "Productivity";

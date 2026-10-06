@@ -1,8 +1,8 @@
 using System.Threading.Channels;
-using JobPilot.Terminal.Providers;
-using JobPilot.Terminal.Sessions;
+using OpenApply.Terminal.Providers;
+using OpenApply.Terminal.Sessions;
 
-namespace JobPilot.Terminal.Pilot;
+namespace OpenApply.Terminal.Pilot;
 
 public sealed class PilotSession : IPilotSession, IDisposable
 {

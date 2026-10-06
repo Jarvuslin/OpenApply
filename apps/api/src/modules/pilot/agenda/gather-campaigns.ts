@@ -1,5 +1,5 @@
-import { campaignConfigSchema } from "@jobpilot/contracts/campaign";
-import type { AgendaPayload } from "@jobpilot/contracts/pilot";
+import { campaignConfigSchema } from "@openapply/contracts/campaign";
+import type { AgendaPayload } from "@openapply/contracts/pilot";
 import { z } from "zod/v4";
 import { DAY_MS, HOUR_MS } from "@/common/date/buckets";
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
@@ -177,7 +177,7 @@ const reviewMarkerSchema = z.object({ type: z.string().optional() }).loose();
 export async function gatherCampaignReviews(prisma: PrismaClient, userId: string, now: Date) {
   const [campaigns, markers] = await Promise.all([
     prisma.campaign.findMany({
-      where: { userId, status: "in_progress", source: { not: "networking" } },
+      where: { userId, status: "in_progress", source: { in: ["search", "auto_apply", "apply"] } },
       select: { campaignId: true, query: true, config: true, source: true },
     }),
     prisma.pilotJournalEntry.findMany({

@@ -1,8 +1,8 @@
 {
-  "name": "jobpilot",
-  "description": "Claude Code skills and Playwright MCP wiring for JobPilot job applications.",
+  "name": "openapply",
+  "description": "Claude Code skills and Playwright MCP wiring for OpenApply job applications.",
   "version": "2.1.38",
   "author": {
-    "name": "JobPilot"
+    "name": "OpenApply"
   }
 }

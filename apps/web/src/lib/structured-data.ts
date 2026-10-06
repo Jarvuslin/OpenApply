@@ -104,29 +104,6 @@ export function jobPostingLd(job: JobPostingLdInput): object {
   };
 }
 
-export interface PersonLdInput {
-  name: string;
-  username: string;
-  headline: string | null;
-  links: { website: string | null; linkedin: string | null; github: string | null };
-}
-
-/** ProfilePage + Person for a public portfolio; `sameAs` links out to the person's own profiles. */
-export function personLd(person: PersonLdInput): object {
-  const sameAs = [person.links.website, person.links.linkedin, person.links.github].filter(Boolean);
-  return {
-    "@context": "https://schema.org",
-    "@type": "ProfilePage",
-    mainEntity: {
-      "@type": "Person",
-      name: person.name,
-      url: abs(`/u/${person.username}`),
-      ...(person.headline && { jobTitle: person.headline }),
-      ...(sameAs.length > 0 && { sameAs }),
-    },
-  };
-}
-
 export function breadcrumbLd(trail: readonly { name: string; path: string }[]): object {
   return {
     "@context": "https://schema.org",

@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { ResumeSkillGroup } from "@jobpilot/contracts/resume";
 import { Autocomplete, Stack, TextField } from "@mui/material";
+import type { ResumeSkillGroup } from "@openapply/contracts/resume";
 import { EntryList } from "./entry-list";
 
 interface SkillsSectionProps {

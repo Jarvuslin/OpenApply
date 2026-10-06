@@ -1,18 +1,20 @@
 "use client";
 
 import { type ReactElement, useState } from "react";
-import { type UserWithAutoApplyInput, userWithAutoApplySchema } from "@jobpilot/contracts/user";
 import { Save } from "@mui/icons-material";
 import { Box, Button, LinearProgress, Stack } from "@mui/material";
+import { type UserWithAutoApplyInput, userWithAutoApplySchema } from "@openapply/contracts/user";
 import { api } from "@/api/client";
 import { useApiMutation, useApiQuery } from "@/api/hooks";
 import { userQueries } from "@/api/queries";
 import { queryKeys } from "@/api/query-keys";
+import { normalizeProfileDraft } from "@/components/features/onboarding/normalize-profile-draft";
 import { useAppForm } from "@/components/ui/form/tanstack";
 import { toFormValues } from "./profile-values";
 import { AddressSection } from "./sections/address-section";
 import { AutoApplySection } from "./sections/auto-apply-section";
 import { EeoSection } from "./sections/eeo-section";
+import { JobPreferencesSection } from "./sections/job-preferences-section";
 import { PersonalSection } from "./sections/personal-section";
 import { ReferencesSection } from "./sections/references-section";
 import { SalarySection } from "./sections/salary-section";
@@ -51,7 +53,7 @@ function SettingsForm(props: SettingsFormProps): ReactElement {
     defaultValues: initialData,
     validators: { onSubmit: userWithAutoApplySchema },
     onSubmit: async ({ value }) => {
-      await save.mutateAsync(value);
+      await save.mutateAsync(userWithAutoApplySchema.parse(value));
     },
   });
 
@@ -60,6 +62,9 @@ function SettingsForm(props: SettingsFormProps): ReactElement {
       component="form"
       onSubmit={(e) => {
         e.preventDefault();
+        const normalized = normalizeProfileDraft(form.state.values);
+        form.setFieldValue("phone", normalized.phone);
+        form.setFieldValue("autoApply", normalized.autoApply);
         form.handleSubmit();
       }}
       sx={{ width: "100%" }}
@@ -70,6 +75,7 @@ function SettingsForm(props: SettingsFormProps): ReactElement {
         <WorkAuthSection form={form} />
         <ReferencesSection form={form} />
         <SalarySection form={form} />
+        <JobPreferencesSection form={form} />
         <EeoSection form={form} />
         <AutoApplySection form={form} />
 

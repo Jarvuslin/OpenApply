@@ -1,4 +1,4 @@
--- The MCP can write the skill set, so JobPilot suggests one alongside the overview.
+-- The MCP can write the skill set, so OpenApply suggests one alongside the overview.
 ALTER TABLE "upwork_profiles" ADD COLUMN "current_skills" TEXT NOT NULL DEFAULT '[]';
 ALTER TABLE "upwork_profiles" ADD COLUMN "suggested_skills" TEXT NOT NULL DEFAULT '[]';
 

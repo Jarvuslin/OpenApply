@@ -1,12 +1,12 @@
 "use client";
 
-import { DEFAULT_CURSOR_PAGE_SIZE } from "@jobpilot/contracts/pagination";
+import { DEFAULT_CURSOR_PAGE_SIZE } from "@openapply/contracts/pagination";
 import type {
   PilotJournalEntry,
   PilotJournalKind,
   PilotJournalPage,
-} from "@jobpilot/contracts/pilot";
-import { pilotChannel } from "@jobpilot/contracts/sse";
+} from "@openapply/contracts/pilot";
+import { pilotChannel } from "@openapply/contracts/sse";
 import type { QueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/api/query-keys";
 import { type SseConnectionStatus, useSseChannel } from "@/lib/sse/client";

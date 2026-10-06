@@ -34,9 +34,7 @@ The base compose file alone expects published images.
 Rebuild when the public origin changes. Set `APP_URL`, `CORS_ORIGINS` and
 `AUTH_OAUTH_REDIRECT_BASE` to the same HTTPS public origin. Next's route guard
 and the API need the same host-only session cookie. Replace the example domain
-in `jobpilot.conf` and enable TLS before login. That filename is retained
-for compatibility.
-
+in `openapply.conf` and enable TLS before login.
 The production API rejects HTTP auth origins, split web/API callback origins,
 missing mail delivery, test email senders, and obvious JWT placeholder secrets.
 The Google/GitHub callbacks are `https://YOUR_DOMAIN/api/auth/providers/google/callback`
@@ -64,7 +62,7 @@ connection. Complete the auth guide's acceptance checks and a local-agent test
   GHCR (tagged `latest` by the release workflow). The API keeps uploaded files
   in the `api-storage` volume and both services expose health checks, bound to
   localhost only.
-- [jobpilot.conf](jobpilot.conf) is the nginx site config: one origin, web at
+- [openapply.conf](openapply.conf) is the nginx site config: one origin, web at
   `/`, API proxied at `/api` with SSE buffering off. Install steps are in the
   file's header comment; TLS comes from `certbot --nginx`.
 - `.env` (not committed) holds `DATABASE_URL` for the external PostgreSQL,

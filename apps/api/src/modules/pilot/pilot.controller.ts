@@ -2,8 +2,8 @@ import {
   pilotInstructionsImpactSchema,
   pilotStateSchema,
   updatePilotInstructionsSchema,
-} from "@jobpilot/contracts/pilot";
-import { pilotChannel } from "@jobpilot/contracts/sse";
+} from "@openapply/contracts/pilot";
+import { pilotChannel } from "@openapply/contracts/sse";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { authGuard } from "@/common/middleware";

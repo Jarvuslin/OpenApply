@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { PilotJournalEntry, PilotJournalKind } from "@jobpilot/contracts/pilot";
 import type { SvgIconComponent } from "@mui/icons-material";
 import {
   Autorenew,
@@ -13,6 +12,7 @@ import {
   Visibility,
 } from "@mui/icons-material";
 import { Box, Chip, type ChipProps, Stack, Typography } from "@mui/material";
+import type { PilotJournalEntry, PilotJournalKind } from "@openapply/contracts/pilot";
 import { RelativeTime } from "@/components/ui/display";
 import { humanizeIsoInText } from "@/utils/format";
 
@@ -47,8 +47,7 @@ function DigestCounts(props: DigestCountsProps): ReactElement {
   const parts = [
     `${countOf(detail, "applicationsCreated")} applied`,
     `${countOf(detail, "jobsFailed") + countOf(detail, "jobsSkipped")} not applied`,
-    `${countOf(detail, "networkingSent")} networking (${countOf(detail, "networkingReplies")} replies)`,
-    `${countOf(detail, "promotionsPosted")} posts`,
+
     `${countOf(detail, "openQuestions")} open`,
   ];
   return <Typography variant="captionMuted">{parts.join(" · ")}</Typography>;

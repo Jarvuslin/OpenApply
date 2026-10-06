@@ -1,9 +1,9 @@
 "use client";
 
 import { type ReactElement, useState } from "react";
-import type { PilotQuestion } from "@jobpilot/contracts/pilot";
 import { OpenInNew } from "@mui/icons-material";
 import { Button, Card, CardContent, Link, Stack, TextField, Typography } from "@mui/material";
+import type { PilotQuestion } from "@openapply/contracts/pilot";
 import { api } from "@/api/client";
 import { useApiMutation } from "@/api/hooks";
 import { queryKeys } from "@/api/query-keys";

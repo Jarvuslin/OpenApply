@@ -1,5 +1,5 @@
-import { credentialPatchSchema, credentialSchema } from "@jobpilot/contracts/credential";
-import { idParam } from "@jobpilot/contracts/shared";
+import { credentialPatchSchema, credentialSchema } from "@openapply/contracts/credential";
+import { idParam } from "@openapply/contracts/shared";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { authGuard } from "@/common/middleware";

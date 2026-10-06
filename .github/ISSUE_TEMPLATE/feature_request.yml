@@ -1,5 +1,5 @@
 name: Feature Request
-description: Suggest a new feature or improvement for JobPilot
+description: Suggest a new feature or improvement for OpenApply
 title: "[Feature]: "
 labels: ["enhancement"]
 body:
@@ -12,7 +12,7 @@ body:
     id: problem
     attributes:
       label: Idea
-      description: Describe the feature or improvement you would like to see in JobPilot.
+      description: Describe the feature or improvement you would like to see in OpenApply.
       placeholder: Describe your idea...
     validations:
       required: true

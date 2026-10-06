@@ -7,7 +7,8 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 
 // No /api proxy: the browser calls the backend directly (see api/base-url.ts).
 const config: NextConfig = {
-  output: "standalone",
+  distDir: process.env.OPENAPPLY_WEB_DIST_DIR ?? ".next",
+  output: process.env.OPENAPPLY_WEB_DIST_DIR === ".next-preview" ? undefined : "standalone",
   outputFileTracingRoot: path.resolve(here, "../.."),
   cacheComponents: true,
   partialPrefetching: true,
@@ -16,7 +17,7 @@ const config: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
   pageExtensions: ["ts", "tsx", "md", "mdx"],
   // Compile the workspace TS packages consumed by the app.
-  transpilePackages: ["@jobpilot/contracts", "@jobpilot/api-client"],
+  transpilePackages: ["@openapply/contracts", "@openapply/api-client"],
 };
 
 // Plugins must be string references under Turbopack (loader options are serialized).

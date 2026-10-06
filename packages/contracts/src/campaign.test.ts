@@ -1,6 +1,6 @@
 // The public job index is built from the digest, so a garbled or empty one silently loses the job.
 
-import { addCampaignJobSchema, patchCampaignJobSchema } from "./campaign";
+import { addCampaignJobSchema, createCampaignSchema, patchCampaignJobSchema } from "./campaign";
 import { describe, expect, it } from "bun:test";
 
 const job = (digest?: string) => ({
@@ -36,4 +36,10 @@ describe("job digest contract", () => {
     expect(patchCampaignJobSchema.parse({ digest: null }).digest).toBeNull();
     expect(patchCampaignJobSchema.parse({ digest: "" }).digest).toBeUndefined();
   });
+});
+
+it("rejects the retired campaign source", () => {
+  expect(
+    createCampaignSchema.safeParse({ query: "Engineer", source: "networking", config: {} }).success,
+  ).toBe(false);
 });

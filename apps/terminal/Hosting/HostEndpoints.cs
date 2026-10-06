@@ -1,7 +1,7 @@
-using JobPilot.Terminal.Sessions;
+using OpenApply.Terminal.Sessions;
 using Microsoft.AspNetCore.Http.HttpResults;
 
-namespace JobPilot.Terminal.Hosting;
+namespace OpenApply.Terminal.Hosting;
 
 /// <summary>Acknowledges /shutdown; the process exits shortly after this response flushes.</summary>
 public sealed record ShutdownResult(bool Ok);

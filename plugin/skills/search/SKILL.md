@@ -6,6 +6,8 @@ argument-hint: "<job_title_keywords_location> --board <domain> [--max-jobs N] [-
 
 # Job Search
 
+Read `$OPENAPPLY_SKILLS_ROOT/_shared/blocked-sites.md` before any browser action.
+
 Search a single board (picked by the user when launching the campaign) and rank results by qualification fit against the resume.
 
 ## Setup
@@ -18,7 +20,7 @@ Search a single board (picked by the user when launching the campaign) and rank 
 3. Resolve the board:
 
    ```bash
-   jobpilot-api GET /api/job-boards
+   openapply-api GET /api/job-boards
    ```
 
    Pick the entry whose `domain` is `<domain>`. If none matches, abort with: "Board `<domain>` is not configured. Add it on /boards or run again with a different `--board`." When a `--campaign` id was given, first command it to `failed` with `POST /api/campaigns/<id>/status {"status":"failed"}`.
@@ -45,10 +47,10 @@ record `skipped` through `/jobs/<key>/result`; do not offer them for apply.
 
 ## Phase 4: Fit Review
 
-Score each non-applied result server-side, like every other campaign skill. Build the digest (`../_shared/digest-schema.md`) and write `{"digest": <digest>, "minScore": 0, "resumeId": "<config.resumeId>"}` to `$JOBPILOT_TEMP/fit.json` (drop `resumeId` when the campaign has none; the server uses the primary):
+Score each non-applied result server-side, like every other campaign skill. Build the digest (`../_shared/digest-schema.md`) and write `{"digest": <digest>, "minScore": 0, "resumeId": "<config.resumeId>"}` to `$OPENAPPLY_TEMP/fit.json` (drop `resumeId` when the campaign has none; the server uses the primary):
 
 ```bash
-jobpilot-api POST /api/score-fit --data @"$JOBPILOT_TEMP/fit.json"
+openapply-api POST /api/score-fit --data @"$OPENAPPLY_TEMP/fit.json"
 ```
 
 Use `.score` when `.verdict` is `trust`; on `deliberate`, adjust it from `strongMatches`/`partialMatches`/`gaps`. `minScore: 0` because search keeps every result for the user to review.
@@ -57,16 +59,16 @@ Use `.score` when `.verdict` is `trust`; on `deliberate`, adjust it from `strong
 
 Save every result as a `Job` on `<campaign-id>` so it appears on the campaigns detail page. **Don't offer apply/search-again commands** - the user applies from there. Use a stable, shell-safe `key` per result (slug of `company-title` + rank, no spaces).
 
-Carry the `digest` you scored from (`../_shared/digest-schema.md`). Per result, write `{key, title, company, location, url, board:"<domain>", matchScore, matchReason:"<one-line verdict>", status:"pending", digest}` (`digest` as a JSON string) to `$JOBPILOT_TEMP/job-<key>.json`, then:
+Carry the `digest` you scored from (`../_shared/digest-schema.md`). Per result, write `{key, title, company, location, url, board:"<domain>", matchScore, matchReason:"<one-line verdict>", status:"pending", digest}` (`digest` as a JSON string) to `$OPENAPPLY_TEMP/job-<key>.json`, then:
 
 ```bash
-jobpilot-api POST /api/campaigns/<campaign-id>/jobs --data @"$JOBPILOT_TEMP/job-<key>.json"
+openapply-api POST /api/campaigns/<campaign-id>/jobs --data @"$OPENAPPLY_TEMP/job-<key>.json"
 ```
 
 Previously-applied results (Phase 3) → create as `pending`, then POST `/jobs/<key>/result` with `{outcome:"skipped",skipReason:"Already applied (<kind>)"}`. Then close the campaign:
 
 ```bash
-jobpilot-api POST /api/campaigns/<campaign-id>/status --data '{"status":"completed"}'
+openapply-api POST /api/campaigns/<campaign-id>/status --data '{"status":"completed"}'
 ```
 
 ## Phase 6: Hand Off
@@ -74,7 +76,7 @@ jobpilot-api POST /api/campaigns/<campaign-id>/status --data '{"status":"complet
 Print a compact ranked table, then link to the campaign - nothing else:
 
 ```
-## Saved <N> jobs · "[query]" - review and apply at $JOBPILOT_WEB/campaigns/<campaign-id>
+## Saved <N> jobs · "[query]" - review and apply at $OPENAPPLY_WEB/campaigns/<campaign-id>
 
 | # | Score | Title | Company | Location |
 |---|-------|-------|---------|----------|

@@ -4,8 +4,8 @@ import {
   pilotQuestionListSchema,
   pilotQuestionSchema,
   pilotQuestionsQuerySchema,
-} from "@jobpilot/contracts/pilot";
-import { idParam } from "@jobpilot/contracts/shared";
+} from "@openapply/contracts/pilot";
+import { idParam } from "@openapply/contracts/shared";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { authGuard } from "@/common/middleware";

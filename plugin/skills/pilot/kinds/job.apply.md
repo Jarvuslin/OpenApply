@@ -14,15 +14,15 @@ Pass the worker's `kind`, `question`, and `options` through verbatim (`options` 
   "subjectId": "<campaignId>:<jobKey>",
   "prompt": "<worker question>",
   "options": <worker options, else []>,
-  "deepLink": "<JOBPILOT_WEB>/campaigns/<campaignId>"
+  "deepLink": "<OPENAPPLY_WEB>/campaigns/<campaignId>"
 }
 ```
 
-Write that to `$JOBPILOT_TEMP/question.json`, then:
+Write that to `$OPENAPPLY_TEMP/question.json`, then:
 
 ```bash
-jobpilot-api POST /api/pilot/questions --data @"$JOBPILOT_TEMP/question.json"
-jobpilot-api PATCH /api/campaigns/$CID/jobs/$KEY --data '{"status":"needs_user"}'
+openapply-api POST /api/pilot/questions --data @"$OPENAPPLY_TEMP/question.json"
+openapply-api PATCH /api/campaigns/$CID/jobs/$KEY --data '{"status":"needs_user"}'
 ```
 
 For `two_factor`: the server auto-expires the question in ~5 minutes and the parked job is skipped cleanly - do nothing special, keep moving.

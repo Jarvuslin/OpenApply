@@ -1,9 +1,10 @@
 "use client";
 
-import type { LoginInput, RegisterInput } from "@jobpilot/contracts/auth";
+import type { LoginInput, RegisterInput } from "@openapply/contracts/auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { api } from "@/api/client";
+import { ApiError } from "@/api/error";
 import {
   type ApiMutationResult,
   type ApiQueryResult,
@@ -11,8 +12,8 @@ import {
   useApiQuery,
 } from "@/api/hooks";
 import { authQueries } from "@/api/queries";
-import { queryKeys } from "@/api/query-keys";
 import type { AuthSessionResponse, AuthUserDto, LogoutResponse, MeResponse } from "@/api/types";
+import { loginDestination } from "@/utils/login-destination";
 
 export interface UseSessionResult {
   user: AuthUserDto | undefined;
@@ -29,35 +30,37 @@ export interface UseAuthActionsResult {
 
 /**
  * The signed-in user, read from `/api/auth/me` (auth rides the httpOnly cookie).
- * Kept separate from `useAuthActions` so the signed-out pages that only need
- * login/register can't drag a guaranteed-401 `me` fetch onto themselves.
+ * A fresh probe on the login page restores expired access cookies before showing the form.
  */
-export function useSession(): UseSessionResult {
+export function useSession(options?: { fresh?: boolean }): UseSessionResult {
   const meQuery = useApiQuery(authQueries.me(), {
     retry: false,
     staleTime: 30_000,
+    refetchOnMount: options?.fresh ? "always" : true,
   });
+  const signedOut = meQuery.error instanceof ApiError && meQuery.error.status === 401;
 
   return {
-    user: meQuery.data,
+    user: signedOut ? undefined : meQuery.data,
     isLoading: meQuery.isLoading,
-    isAuthenticated: Boolean(meQuery.data),
+    isAuthenticated: !signedOut && Boolean(meQuery.data),
     meQuery,
   };
 }
 
 /**
  * Login/register/logout mutations. On a successful login or register the `me`
- * query is invalidated and the user is sent to `/workspace` - the proxy
- * middleware then routes on to `/onboarding` when the profile is empty.
+ * cache is cleared before opening the requested page so a previous user's data cannot linger.
+ * The proxy routes on to `/onboarding` when the profile is empty.
  */
 export function useAuthActions(): UseAuthActionsResult {
   const router = useRouter();
   const queryClient = useQueryClient();
 
   const onSession = () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.auth.me() });
-    router.push("/workspace");
+    queryClient.clear();
+    const next = new URLSearchParams(window.location.search).get("next");
+    router.replace(loginDestination(next));
   };
 
   // The forms render these errors inline - no toast on top.

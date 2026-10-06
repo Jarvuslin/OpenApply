@@ -1,10 +1,10 @@
-import { statusSchema } from "@jobpilot/contracts/application";
+import { statusSchema } from "@openapply/contracts/application";
 import {
   campaignJobReasonSchema,
   campaignJobStatusSchema,
   campaignSummarySchema,
-} from "@jobpilot/contracts/campaign";
-import { paginatedSchema, paginationQuerySchema } from "@jobpilot/contracts/pagination";
+} from "@openapply/contracts/campaign";
+import { paginatedSchema, paginationQuerySchema } from "@openapply/contracts/pagination";
 import { z } from "zod/v4";
 
 export const campaignJobParams = z.object({ id: z.uuid(), key: z.string() });

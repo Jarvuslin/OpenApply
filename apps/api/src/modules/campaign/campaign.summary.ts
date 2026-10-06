@@ -1,13 +1,12 @@
 import type {
   CampaignJobStatus,
   CampaignJobSummary,
-  CampaignNetworkingSummary,
   CampaignSummary,
-} from "@jobpilot/contracts/campaign";
-import { CAMPAIGN_JOB_STATUSES } from "@jobpilot/contracts/campaign";
+} from "@openapply/contracts/campaign";
+import { CAMPAIGN_JOB_STATUSES } from "@openapply/contracts/campaign";
 import { type Campaign, type CampaignSource, Prisma } from "@/generated/prisma/client";
 
-type SummaryClient = Pick<Prisma.TransactionClient, "$queryRaw" | "job" | "networkingMessage">;
+type SummaryClient = Pick<Prisma.TransactionClient, "job">;
 type CampaignRef = Pick<Campaign, "campaignId" | "source">;
 
 interface StatusCount {
@@ -22,7 +21,7 @@ export type WithSummary<T> = T & { summary: CampaignSummary };
  * The roll-ups beside `byStatus` stay on the wire because installed agent skills read them
  * (`summary.applied` gates the max-applications cap); deriving them here keeps them in step.
  */
-export function jobSummary(rows: StatusCount[], networkingCount = 0): CampaignJobSummary {
+export function jobSummary(rows: StatusCount[]): CampaignJobSummary {
   const byStatus = Object.fromEntries(CAMPAIGN_JOB_STATUSES.map((status) => [status, 0])) as Record<
     CampaignJobStatus,
     number
@@ -44,26 +43,11 @@ export function jobSummary(rows: StatusCount[], networkingCount = 0): CampaignJo
     remaining: byStatus.approved + byStatus.applying + byStatus.needs_user,
     byStatus,
     scored,
-    networkingCount,
   };
 }
 
-function networkingSummary(rows: StatusCount[], discovered: number): CampaignNetworkingSummary {
-  const count = (...statuses: string[]) =>
-    rows.filter((row) => statuses.includes(row.status)).reduce((n, row) => n + row.count, 0);
-
-  return {
-    kind: "networking",
-    discovered,
-    drafted: count("draft", "approved"),
-    sent: count("sent"),
-    replied: count("replied"),
-    bounced: count("bounced"),
-  };
-}
-
-export function emptySummary(source: CampaignSource): CampaignSummary {
-  return source === "networking" ? networkingSummary([], 0) : jobSummary([]);
+export function emptySummary(): CampaignSummary {
+  return jobSummary([]);
 }
 
 /** Each campaign with its summary, derived from current rows in three aggregate queries. */
@@ -72,54 +56,25 @@ export async function summarizeCampaigns<T extends CampaignRef>(
   campaigns: T[],
 ): Promise<WithSummary<T>[]> {
   const ids = campaigns.map((c) => c.campaignId);
-  const networkingIds = campaigns.filter((c) => c.source === "networking").map((c) => c.campaignId);
-  const jobIds = campaigns.filter((c) => c.source !== "networking").map((c) => c.campaignId);
-
-  const [jobCounts, messageCounts, contacts] = await Promise.all([
-    jobIds.length
-      ? client.job.groupBy({
-          by: ["campaignId", "status"],
-          where: { campaignId: { in: jobIds } },
-          // `matchScore` counts non-nulls, so `scored` rides along with the status fold.
-          _count: { _all: true, matchScore: true },
-        })
-      : [],
-    // Job campaigns included: the pilot saves warm-intro drafts against them too.
-    ids.length
-      ? client.networkingMessage.groupBy({
-          by: ["campaignId", "status"],
-          where: { campaignId: { in: ids } },
-          _count: { _all: true },
-        })
-      : [],
-    networkingIds.length
-      ? client.$queryRaw<{ campaignId: string; discovered: number }[]>(Prisma.sql`
-          SELECT campaign_id AS "campaignId", COUNT(DISTINCT contact_id)::integer AS discovered
-          FROM networking_messages
-          WHERE campaign_id IN (${Prisma.join(networkingIds)})
-          GROUP BY campaign_id
-        `)
-      : [],
-  ]);
-
-  return campaigns.map((campaign) => {
-    const messages = messageCounts
-      .filter((row) => row.campaignId === campaign.campaignId)
-      .map((row) => ({ status: row.status, count: row._count._all }));
-    if (campaign.source === "networking") {
-      const contact = contacts.find((row) => row.campaignId === campaign.campaignId);
-      return { ...campaign, summary: networkingSummary(messages, contact?.discovered ?? 0) };
-    }
-    const jobs = jobCounts
-      .filter((row) => row.campaignId === campaign.campaignId)
-      .map((row) => ({
-        status: row.status,
-        count: row._count._all,
-        scored: row._count.matchScore,
-      }));
-    const drafts = messages.reduce((n, row) => n + row.count, 0);
-    return { ...campaign, summary: jobSummary(jobs, drafts) };
-  });
+  const jobCounts = ids.length
+    ? await client.job.groupBy({
+        by: ["campaignId", "status"],
+        where: { campaignId: { in: ids } },
+        _count: { _all: true, matchScore: true },
+      })
+    : [];
+  return campaigns.map((campaign) => ({
+    ...campaign,
+    summary: jobSummary(
+      jobCounts
+        .filter((row) => row.campaignId === campaign.campaignId)
+        .map((row) => ({
+          status: row.status,
+          count: row._count._all,
+          scored: row._count.matchScore,
+        })),
+    ),
+  }));
 }
 
 export async function deriveCampaignSummary(

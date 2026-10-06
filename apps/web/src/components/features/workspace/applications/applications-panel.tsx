@@ -1,8 +1,8 @@
 "use client";
 
 import { type ReactElement, useState } from "react";
-import { SINGLE_APPLY_CAMPAIGN } from "@jobpilot/contracts/application";
 import { Button, Stack, TextField } from "@mui/material";
+import { SINGLE_APPLY_CAMPAIGN } from "@openapply/contracts/application";
 import { useSearchParams } from "next/navigation";
 import { useApiQuery } from "@/api/hooks";
 import { applicationQueries, campaignQueries, jobBoardQueries } from "@/api/queries";

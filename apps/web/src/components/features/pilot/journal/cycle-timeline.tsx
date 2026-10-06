@@ -1,13 +1,13 @@
 "use client";
 
 import { type ReactElement, type ReactNode, useState } from "react";
+import { ExpandLess, ExpandMore } from "@mui/icons-material";
+import { Box, Chip, Collapse, Divider, Paper, Stack, Typography } from "@mui/material";
 import {
   type PilotJournalEntry,
   type PilotJournalKind,
   pilotCycleDetailSchema,
-} from "@jobpilot/contracts/pilot";
-import { ExpandLess, ExpandMore } from "@mui/icons-material";
-import { Box, Chip, Collapse, Divider, Paper, Stack, Typography } from "@mui/material";
+} from "@openapply/contracts/pilot";
 import { ColorChip, RelativeTime } from "@/components/ui/display";
 import { CYCLE_STATUS_COLOR } from "@/lib/terminal";
 import { formatDuration, formatSpanBetween } from "@/utils/format";

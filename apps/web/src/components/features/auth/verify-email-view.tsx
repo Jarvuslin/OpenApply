@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { VerifyEmailInput } from "@jobpilot/contracts/auth";
 import { Alert, Button, Stack, Typography } from "@mui/material";
+import type { VerifyEmailInput } from "@openapply/contracts/auth";
 import { api } from "@/api/client";
 import { useApiMutation } from "@/api/hooks";
 import type { ResendVerificationResponse, VerifyEmailResponse } from "@/api/types";

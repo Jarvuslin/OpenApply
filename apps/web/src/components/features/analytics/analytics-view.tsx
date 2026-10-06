@@ -6,8 +6,6 @@ import { useApiQuery } from "@/api/hooks";
 import { analyticsQueries } from "@/api/queries";
 import { AnalyticsStatTiles } from "./analytics-stat-tiles";
 import { ApplicationsTimelineChart } from "./applications-timeline-chart";
-import { NetworkingStatTiles } from "./networking-stat-tiles";
-import { PortfolioRankChip } from "./portfolio-rank-chip";
 import { StatusBreakdownChart } from "./status-breakdown-chart";
 import { TopBoardsList } from "./top-boards-list";
 
@@ -35,7 +33,6 @@ export function AnalyticsView(): ReactElement {
 
   return (
     <Stack spacing={3}>
-      <PortfolioRankChip />
       <Typography variant="overlineMuted">Applications</Typography>
       <AnalyticsStatTiles stats={stats} />
 
@@ -63,30 +60,6 @@ export function AnalyticsView(): ReactElement {
             title="Top failure reasons"
             entries={toEntries(stats.topRejectReasons, (r) => r.reason)}
             emptyMessage="No failed campaign jobs recorded."
-          />
-        </Grid>
-      </Grid>
-
-      <Typography variant="overlineMuted" sx={{ mt: 1 }}>
-        Networking
-      </Typography>
-      <NetworkingStatTiles networking={stats.networking} />
-
-      <Grid container spacing={2} sx={{ alignItems: "stretch" }}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <ApplicationsTimelineChart
-            data={stats.networking.perDaySent}
-            title="Messages over time"
-            metricLabel="sent"
-            emptyMessage="No networking messages sent yet."
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <TopBoardsList
-            eyebrow="Distribution"
-            title="Contact sources"
-            entries={toEntries(stats.networking.topContactSources, (s) => s.source)}
-            emptyMessage="No contacts discovered yet."
           />
         </Grid>
       </Grid>

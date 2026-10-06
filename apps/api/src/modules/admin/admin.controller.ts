@@ -2,8 +2,8 @@ import {
   adminPilotQuerySchema,
   adminUserQuerySchema,
   updateUserRoleSchema,
-} from "@jobpilot/contracts/admin";
-import { idParam } from "@jobpilot/contracts/shared";
+} from "@openapply/contracts/admin";
+import { idParam } from "@openapply/contracts/shared";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { requireRole, requireRoleOn } from "@/common/middleware";

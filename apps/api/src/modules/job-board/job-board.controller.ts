@@ -1,5 +1,5 @@
-import { jobBoardSchema } from "@jobpilot/contracts/job-board";
-import { idParam } from "@jobpilot/contracts/shared";
+import { jobBoardSchema } from "@openapply/contracts/job-board";
+import { idParam } from "@openapply/contracts/shared";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { authGuard } from "@/common/middleware";

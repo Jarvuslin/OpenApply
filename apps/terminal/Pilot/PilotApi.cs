@@ -1,7 +1,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
-namespace JobPilot.Terminal.Pilot;
+namespace OpenApply.Terminal.Pilot;
 
 /// <summary>GET /api/pilot/activity.</summary>
 public sealed record PilotActivity(bool Running, DateTimeOffset? LastActivityAt, CompletedCycle? LastCycle);

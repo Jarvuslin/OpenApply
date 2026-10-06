@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactElement, ReactNode } from "react";
-import { pilotChannel } from "@jobpilot/contracts/sse";
 import { Alert, Chip, Stack, Typography } from "@mui/material";
+import { pilotChannel } from "@openapply/contracts/sse";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useApiQuery } from "@/api/hooks";

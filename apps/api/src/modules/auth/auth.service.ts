@@ -1,4 +1,4 @@
-import type { LoginInput, RegisterInput } from "@jobpilot/contracts";
+import type { LoginInput, RegisterInput } from "@openapply/contracts";
 import { singleton } from "tsyringe";
 import {
   durationToMs,

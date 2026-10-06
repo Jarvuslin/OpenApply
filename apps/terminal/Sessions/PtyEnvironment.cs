@@ -1,10 +1,10 @@
 using System.Runtime.Versioning;
 using Microsoft.Win32;
 
-namespace JobPilot.Terminal.Sessions;
+namespace OpenApply.Terminal.Sessions;
 
 /// <summary>
-/// Repairs the PATH handed to PTY children: a protocol-activated host (jobpilot://) can inherit
+/// Repairs the PATH handed to PTY children: a protocol-activated host (openapply://) can inherit
 /// one without the machine entries, and every session would be born broken.
 /// </summary>
 public static class PtyEnvironment

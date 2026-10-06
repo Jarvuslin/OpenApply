@@ -6,7 +6,7 @@ import { createServer } from "node:http";
 const pending = new Map();
 const sessions = new Set();
 const page = (body) =>
-  "<!doctype html><title>JobPilot local QA fixture</title><main><p>LOCAL TEST FIXTURE — no employer, no email sent</p>" +
+  "<!doctype html><title>OpenApply local QA fixture</title><main><p>LOCAL TEST FIXTURE — no employer, no email sent</p>" +
   body +
   "</main>";
 const signup =

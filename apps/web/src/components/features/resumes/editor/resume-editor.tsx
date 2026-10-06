@@ -1,8 +1,8 @@
 "use client";
 
 import { type ReactElement, useEffect, useState } from "react";
-import type { ResumeData } from "@jobpilot/contracts/resume";
 import { Alert, Button, Stack } from "@mui/material";
+import type { ResumeData } from "@openapply/contracts/resume";
 import { api } from "@/api/client";
 import { useApiMutation } from "@/api/hooks";
 import { invalidations } from "@/api/query-keys";

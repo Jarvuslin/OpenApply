@@ -1,5 +1,9 @@
-import { USER_DEFAULT_VALUES, userWithAutoApplySchema } from "@jobpilot/contracts/user";
-import { readOnboardingDraft, writeOnboardingDraft } from "./onboarding-draft";
+import { USER_DEFAULT_VALUES, userWithAutoApplySchema } from "@openapply/contracts/user";
+import {
+  clearOnboardingDraft,
+  readOnboardingDraft,
+  writeOnboardingDraft,
+} from "./onboarding-draft";
 import { expect, test } from "bun:test";
 
 function storage() {
@@ -8,6 +12,9 @@ function storage() {
     getItem: (key: string) => data.get(key) ?? null,
     setItem: (key: string, value: string) => {
       data.set(key, value);
+    },
+    removeItem: (key: string) => {
+      data.delete(key);
     },
   };
 }
@@ -34,6 +41,16 @@ test("drafts belong to a single account", () => {
   expect(readOnboardingDraft(disk, "b")).toBeNull();
   writeOnboardingDraft(disk, "b", { ...USER_DEFAULT_VALUES, firstName: "B" }, 1);
   expect(readOnboardingDraft(disk, "a")?.step).toBe(2);
+});
+
+test("completing onboarding clears only the saved account's draft", () => {
+  const disk = storage();
+  writeOnboardingDraft(disk, "a", USER_DEFAULT_VALUES, 5);
+  writeOnboardingDraft(disk, "b", { ...USER_DEFAULT_VALUES, firstName: "B" }, 2);
+  clearOnboardingDraft(disk, "a");
+  expect(readOnboardingDraft(disk, "a")).toBeNull();
+  expect(readOnboardingDraft(disk, "b")?.values.firstName).toBe("B");
+  expect(readOnboardingDraft(disk, "b")?.step).toBe(2);
 });
 
 test("clearing a required numeric field does not discard the rest of the draft", () => {
@@ -95,4 +112,50 @@ test("wrong-owner payload and unavailable storage report failure", () => {
       1,
     ),
   ).toThrow("quota");
+});
+
+test("legacy drafts move to the matching step without discarding filled fields", () => {
+  const legacy = {
+    version: 1,
+    userId: "a",
+    step: 1,
+    values: {
+      ...USER_DEFAULT_VALUES,
+      country: "Canada",
+      phone: "(416) 555-2671",
+      autoApply: { ...USER_DEFAULT_VALUES.autoApply, maxApplicationsPerCampaign: 0 },
+    },
+  };
+  const draft = readOnboardingDraft({ getItem: () => JSON.stringify(legacy) }, "a");
+  expect(draft?.step).toBe(2);
+  expect(draft?.values.phone).toBe("+14165552671");
+  expect(draft?.values.autoApply?.maxApplicationsPerCampaign).toBeNull();
+});
+
+test("unanswered country authorization survives a draft restore", () => {
+  const disk = storage();
+  writeOnboardingDraft(
+    disk,
+    "a",
+    {
+      ...USER_DEFAULT_VALUES,
+      workAuthorization: [{ country: "Canada", authorized: null, sponsorship: null }],
+    },
+    3,
+  );
+  expect(readOnboardingDraft(disk, "a")?.values.workAuthorization?.[0]?.authorized).toBeNull();
+});
+
+test("invalid experience values remain editable after reload", () => {
+  const disk = storage();
+  writeOnboardingDraft(
+    disk,
+    "a",
+    {
+      ...USER_DEFAULT_VALUES,
+      jobPreferences: { levels: [], yearsExperience: -1, workModes: [], employmentTypes: [] },
+    },
+    4,
+  );
+  expect(readOnboardingDraft(disk, "a")?.values.jobPreferences?.yearsExperience).toBe(-1);
 });

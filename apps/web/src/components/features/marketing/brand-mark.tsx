@@ -3,7 +3,7 @@
 import type { ReactElement } from "react";
 import { Link, Stack, Typography } from "@mui/material";
 import type { Route } from "next";
-import { JobPilotMark } from "@/components/brand/jobpilot-mark";
+import { OpenApplyMark } from "@/components/brand/openapply-mark";
 
 interface BrandMarkProps {
   /** Hide the "OpenApply" wordmark and show only the badge. */
@@ -30,7 +30,7 @@ export function BrandMark(props: BrandMarkProps): ReactElement {
         "&:hover": { opacity: 0.85 },
       }}
     >
-      <JobPilotMark size={32} />
+      <OpenApplyMark size={32} />
       {!iconOnly && (
         <Typography variant="h3" sx={{ fontSize: "1.1rem", letterSpacing: "-0.01em" }}>
           OpenApply

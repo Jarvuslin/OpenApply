@@ -1,5 +1,5 @@
-import type { CoverLetterCreate, CoverLetterSource } from "@jobpilot/contracts/cover-letter";
-import { type PaginationQuery, pageSlice, paginate } from "@jobpilot/contracts/pagination";
+import type { CoverLetterCreate, CoverLetterSource } from "@openapply/contracts/cover-letter";
+import { type PaginationQuery, pageSlice, paginate } from "@openapply/contracts/pagination";
 import { singleton } from "tsyringe";
 import { findOwned } from "@/common/errors";
 import { renderCoverLetterPdf } from "@/common/pdf/render";

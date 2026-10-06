@@ -1,4 +1,4 @@
-import type { ResumeData, ResumeExperience, ResumeProject } from "@jobpilot/contracts/resume";
+import type { ResumeData, ResumeExperience, ResumeProject } from "@openapply/contracts/resume";
 import type { StructureAudit, StructurePlan } from "../variants/variant.schema";
 import { parseResumeDate } from "./dates";
 import { combineEntries, entryExists, promoteToEntry, type Report } from "./entries";

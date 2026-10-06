@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { PilotState } from "@jobpilot/contracts/pilot";
 import { Alert, Box, Button, Chip, Grid, Stack, Tooltip, Typography } from "@mui/material";
+import type { PilotState } from "@openapply/contracts/pilot";
 import { ColorChip, RelativeTime } from "@/components/ui/display";
 import { SectionCard } from "@/components/ui/layout";
 import { CYCLE_STATUS_COLOR, type PilotHealth, providerDisplayName } from "@/lib/terminal";
@@ -34,8 +34,7 @@ export function StatusHero(props: StatusHeroProps): ReactElement {
   const stopWithConfirm = async (): Promise<void> => {
     const ok = await confirm({
       title: "Stop the pilot?",
-      description:
-        "The pilot stops running cycles: no applying, networking, or posting until you start it again.",
+      description: "The pilot stops running cycles: no applying until you start it again.",
       confirmLabel: "Stop",
       destructive: true,
     });

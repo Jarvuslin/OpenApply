@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace JobPilot.Terminal.Pilot;
+namespace OpenApply.Terminal.Pilot;
 
 internal static class Ansi
 {

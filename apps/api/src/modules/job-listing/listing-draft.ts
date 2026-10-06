@@ -1,10 +1,11 @@
+import { allowedApplyUrl } from "@/modules/job-board/blocked-sites";
 /**
  * Turn a campaign `Job` row into a publishable public listing - or reject it. Pure and Prisma-free:
  * this is both the privacy boundary (only digest fields cross it) and the quality gate, so it is
  * the part that unit-tests with no database.
  */
 
-import { type JOB_LEVELS, jobLevelFromTitle } from "@jobpilot/contracts/job-listing";
+import { type JOB_LEVELS, jobLevelFromTitle } from "@openapply/contracts/job-listing";
 import { z } from "zod/v4";
 import { MAX_YEARS_EXPERIENCE } from "@/modules/scoring/scoring.schema";
 import { canonicalizeUrl, dedupeKey, listingSlug, normalizeListingLocation } from "./dedupe";
@@ -35,6 +36,10 @@ const digestSchema = z.object({
 export interface ListingSourceJob {
   /** Set only by a validated public ATS feed adapter, never from a user request. */
   publicFeed?: boolean;
+  applyUrl?: string | null;
+  attributionUrl?: string;
+  resolutionConfidence?: number;
+  postedAt?: Date | null;
   title: string;
   company: string;
   url: string;
@@ -48,6 +53,10 @@ export interface ListingSourceJob {
 }
 
 export interface ListingDraft {
+  applyUrl: string | null;
+  attributionUrl: string;
+  resolutionConfidence: number;
+  postedAt: Date | null;
   level: (typeof JOB_LEVELS)[number];
   dedupeKey: string;
   slug: string;
@@ -128,7 +137,7 @@ export function buildListingDraft(job: ListingSourceJob): ListingDraft | null {
   const digest = parseDigest(job.digest);
   // A posting with no named skills has nothing to filter or match on, so it never gets published.
   const skills = (digest.skills ?? []).map((skill) => skill.trim()).filter(Boolean);
-  if (skills.length === 0 && !(job.publicFeed && (job.description?.trim().length ?? 0) >= 80)) {
+  if (skills.length === 0 && !job.publicFeed) {
     return null;
   }
 
@@ -136,6 +145,10 @@ export function buildListingDraft(job: ListingSourceJob): ListingDraft | null {
   const key = dedupeKey({ title, company, location });
 
   return {
+    applyUrl: job.applyUrl === undefined ? allowedApplyUrl(url) : allowedApplyUrl(job.applyUrl),
+    attributionUrl: job.attributionUrl ?? url,
+    resolutionConfidence: job.resolutionConfidence ?? (allowedApplyUrl(url) ? 1 : 0),
+    postedAt: job.postedAt ?? null,
     level: jobLevelFromTitle(title),
     dedupeKey: key,
     slug: listingSlug({ title, company, location }, key),

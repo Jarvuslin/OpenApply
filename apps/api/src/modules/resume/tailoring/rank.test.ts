@@ -1,4 +1,4 @@
-import { EMPTY_RESUME_DATA, type ResumeData } from "@jobpilot/contracts/resume";
+import { EMPTY_RESUME_DATA, type ResumeData } from "@openapply/contracts/resume";
 import { tailorBase } from "./rank";
 import { describe, expect, it } from "bun:test";
 

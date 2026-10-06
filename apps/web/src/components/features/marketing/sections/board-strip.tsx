@@ -13,7 +13,6 @@ const BOARDS = [
   "HN Who's Hiring",
   "Remote OK",
   "4 Day Week",
-  "Upwork",
 ];
 
 const chipSx = { fontSize: { xs: "0.75rem", md: "0.8125rem" } } as const;

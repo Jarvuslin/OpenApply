@@ -1,68 +1,64 @@
 import { buildDocsMetadata } from "@/components/features/docs";
 
 export const metadata = buildDocsMetadata("email-setup", {
-  description: "Connect Gmail to OpenApply with your own Google OAuth client.",
+  description: "Use the Gmail connector in your local agent.",
 });
 
 # Email setup
 
-Connecting email powers the inbox (recruiter replies are classified and
-matched to applications), verification codes (the agent reads sign-in codes
-during applies), and networking (messages are sent from your own address).
+Connect Gmail through your chosen agent. OpenApply imports the messages the agent reads; the provider manages Gmail authorization. You do not need to create a Google Cloud project or enter a client secret in OpenApply.
 
-OpenApply connects to Gmail with **your own** Google OAuth client. It ships no
-shared client, so nothing about your mail passes through anyone else's Google
-app, and no Google verification or security audit is needed. Setup is once per
-user and takes about five minutes.
+## Claude Code
 
-## Create your OAuth client
+1. Connect the intended Gmail account at [Claude connectors](https://claude.ai/customize/connectors).
+2. In OpenApply's agent terminal, use `/login` to sign in with that same Claude account and subscription.
+3. Open `/mcp` and confirm Gmail appears. Restart the agent if you just connected it.
 
-1. In the [Google Cloud Console](https://console.cloud.google.com/apis/credentials),
-   create a new project, then an OAuth 2.0 Client ID (type: **Web application**).
-2. Enable the **Gmail API** for the project under "APIs & Services".
-3. In OpenApply, open **Settings → Email** and copy the **redirect URI** shown
-   there; add it as an authorized redirect URI on your OAuth client.
-4. Add the **`gmail.readonly`** and **`gmail.send`** scopes to the consent
-   screen, under
-   [Google Auth Platform → Data access](https://console.cloud.google.com/auth/scopes):
-   **Add or remove scopes**, search for each, tick both Gmail API rows, then
-   **Save**. `readonly` powers reply tracking and verification codes; `send`
-   powers networking email.
-5. Keep the app in Testing mode and add your Gmail address under
-   [Audience → Test users](https://console.cloud.google.com/auth/audience).
-   It's your own project with you as the only user, so Google verification is
-   never required. One catch: Testing-mode refresh tokens expire after about
-   seven days, so expect to reconnect roughly once a week. Publishing the app
-   does not fix this. Gmail scopes are restricted, so a published app without
-   Google verification fails at sign-in.
-6. Back in **Settings → Email**, paste your **Client ID** and **Client
-   secret**, save, then **Connect Gmail**.
+Claude Code inherits claude.ai connectors with subscription login. API-key authentication and `claude setup-token` credentials do not load them. Use `/status` to check the active login. Anthropic's Gmail connector must be authorized on claude.ai; adding it as a local OAuth server does not work. See [Claude Code connector setup](https://code.claude.com/docs/en/mcp#use-mcp-servers-from-claudeai).
 
-## What OpenApply can and can't do
+## Codex
 
-OpenApply can read mail and send it, and nothing more. The consent screen asks
-for four scopes: `gmail.readonly` and `gmail.send` do the work, while `openid`
-and `email` only tell OpenApply which address you connected. Deleting or
-modifying mail is outside what the token allows. Your client id and secret are
-stored encrypted per user (the secret never leaves the server) and the
-connected account is tied to your profile only.
+1. Sign in to the embedded Codex terminal with the intended ChatGPT account.
+2. Open `/plugins`, find Gmail, install or enable it, and complete any account-connection prompts.
+3. Restart the agent after installation. Use `/apps` to find Gmail and `/mcp` to inspect the tools available to this session.
 
-## Troubleshooting
+An installed plugin or a connection in another chat does not by itself verify this session's access. Availability depends on the account and runtime. See [Codex plugins](https://learn.chatgpt.com/docs/plugins) and [CLI commands](https://learn.chatgpt.com/docs/developer-commands?surface=cli).
 
-- **"Access blocked: app has not completed the Google verification
-  process".** Your Gmail isn't on the Test users list. Add it under
-  **Audience → Test users**.
-- **403 "Request had insufficient authentication scopes".** A required
-  Gmail scope isn't on the consent screen. Add both under **Data access**,
-  then disconnect and reconnect in **Settings → Email** so a new token with
-  the right scopes is issued.
-- **Mailbox connects read-only, or networking can't send.** The token was
-  issued without `gmail.send`. Add the scope under **Data access**, then use
-  **Reconnect to enable sending** in **Settings → Email**.
-- **Google 500 after publishing.** A published app using restricted Gmail
-  scopes needs Google verification. Go back to Testing mode under
-  **Audience → Publishing status → Back to testing**.
+## Check in OpenApply
 
-Outlook and IMAP support are planned; Gmail is the only provider today.
+Open **Settings → Email**, or the workbench's **Connections** tab. Select **Check Gmail**. With Claude Code, OpenApply runs a separate background check and shows its result on this page. Your interactive agent does not need to be open or running.
 
-Next up: [Credentials](/docs/credentials), so the agent can sign in to boards.
+The check performs a bounded search of recent job mail. It does not import, classify, send or delete messages. You can cancel a running check without stopping your interactive agent.
+
+- If the connector provides an authenticated account-profile tool, OpenApply verifies that its mailbox address matches the one you requested before saving it as provider-verified.
+- The standard Claude Gmail connector exposes search tools without an account-profile lookup. OpenApply can check read access through a metadata-only search scoped to the requested address, but that does not prove which Gmail account is signed in. Check the connected account in your provider settings, then explicitly confirm the address in OpenApply. It is saved as user-confirmed, with its identity still unverified.
+
+**Last checked** records the connection check; **last sync** records a separate message import. A successful read check, including a search with zero matches, is not an address verification or a message sync.
+
+If Gmail needs authorization, the result explains the next step. Use **Manage Gmail in Claude** or **Agent sign-in / setup** when needed. OpenApply cannot approve provider sign-in or permission prompts for you.
+
+Codex background Gmail checks are not supported yet. OpenApply reports this explicitly instead of opening its terminal or claiming that an unchecked mailbox is connected. Codex's interactive `connect-email` skill remains available when its tools can verify authenticated mailbox identity and read access.
+
+## Add or change an email
+
+Use **Add email** to enter another Gmail address. Authorize that address in your provider, then select **Check and add**. The new mailbox is saved after a successful check and, when authenticated identity is unavailable, your explicit address confirmation. Adding it preserves your other saved emails and their imported messages.
+
+Use **Change email**, or **Use this email** beside a saved mailbox, to choose the mailbox OpenApply uses. Changing the selection does not switch the Gmail account authorized in Claude or Codex. If the two addresses differ, the check asks you to switch accounts in your provider first. It also does not change your applicant profile or résumé email.
+
+Removing an email deletes only that mailbox's imported records from OpenApply. It does not delete Gmail messages or revoke the provider's Gmail authorization. Inbox lists and verification-code lookups use the selected mailbox unless an explicit owned mailbox is requested.
+
+Automated message imports still require a trustworthy authenticated mailbox identity in the current agent session. Your address confirmation does not replace that requirement. The standard Claude connector currently lacks the profile tool needed for these imports, even when its background read check succeeds.
+
+When the connector meets that identity requirement, use the agent's `connect-email` or `scan-inbox` skill for imports. The former verifies and imports without classifying; the latter can classify messages and update application statuses. **Scan pending** in the inbox requests classification. Reviewing an already imported message does not require a new mailbox connection.
+
+## Verification and replies
+
+The agent verifies authenticated mailbox identity before pulling new mail for verification codes, then checks the recipient, sender, employer and request time. A saved user-confirmed address or successful background read check alone does not enable this flow. Missing identity evidence, missing access or an ambiguous message parks the application and asks for help.
+
+Approved interview replies use the connector send tool. Connector accounts cannot use OpenApply's OAuth sync or send endpoints. These return a clear conflict error directing the agent to its connector.
+
+## Existing OAuth accounts
+
+Existing Google OAuth mailboxes can remain saved alongside other addresses. Switching between saved mailboxes preserves their imported messages. A given address cannot use both connection methods at once; replacing that address's connection still requires explicitly removing it first. Google sign-in for your OpenApply account is separate from Gmail access.
+
+Do not paste passwords or connector tokens into the agent conversation. Authenticate through the connector's own setup flow.

@@ -7,6 +7,7 @@ import {
   findAppliedDuplicate,
 } from "@/modules/application/duplicate";
 import { canonicalizeJobUrl } from "@/modules/application/job-url";
+import { assertAutomationAllowed } from "@/modules/job-board/blocked-sites";
 import { findFuzzyDuplicate } from "@/modules/scoring/applied-duplicates";
 import { publishStatusChange } from "./job-events";
 
@@ -85,6 +86,7 @@ export async function assertNotDuplicateApply(
   userId: string,
   job: JobPosting,
 ): Promise<void> {
+  assertAutomationAllowed(job.url);
   const sibling = await findApplyingSibling(db, userId, job);
   if (sibling) {
     throw conflict(

@@ -1,4 +1,4 @@
-namespace JobPilot.Terminal.Providers;
+namespace OpenApply.Terminal.Providers;
 
 internal sealed class ClaudeProvider : Provider
 {

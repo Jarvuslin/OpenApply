@@ -4,11 +4,10 @@ import {
   applicationFilterSchema,
   applicationSourceSchema,
   statusSchema,
-} from "@jobpilot/contracts/application";
-import { paginatedSchema, paginationQuerySchema } from "@jobpilot/contracts/pagination";
+} from "@openapply/contracts/application";
+import { paginatedSchema, paginationQuerySchema } from "@openapply/contracts/pagination";
 import { z } from "zod/v4";
 import { campaignJobSchema } from "@/modules/campaign/jobs/job.schema";
-import { contactSchema } from "@/modules/contact/contact.schema";
 import { emailMessageSchema } from "@/modules/email/email.schema";
 import { resumeSummarySchema } from "@/modules/resume/resume.schema";
 import { variantSummarySchema } from "@/modules/resume/variants/variant.schema";
@@ -99,15 +98,6 @@ const applicationEmailSchema = emailMessageSchema
   // Free String column; only the email module's own mapper narrows it to the enum.
   .extend({ classification: z.string().nullable() });
 
-const applicationContactSchema = contactSchema.pick({
-  id: true,
-  name: true,
-  title: true,
-  company: true,
-  email: true,
-  linkedinUrl: true,
-});
-
 /** The campaign job this application came from, for its posting text. */
 const applicationJobSchema = campaignJobSchema.pick({
   description: true,
@@ -123,7 +113,7 @@ export const applicationDetailSchema = applicationSchema.extend({
   resumeVariants: z.array(applicationResumeVariantSchema),
   coverLetters: z.array(applicationCoverLetterSchema),
   emailMessages: z.array(applicationEmailSchema),
-  contacts: z.array(applicationContactSchema),
+
   job: applicationJobSchema.nullable(),
 });
 

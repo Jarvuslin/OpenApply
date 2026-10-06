@@ -8,7 +8,6 @@ import {
   CircleOutlined,
   DescriptionOutlined,
   Language,
-  MailOutlined,
   Tune,
 } from "@mui/icons-material";
 import {
@@ -23,12 +22,16 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import NextLink from "next/link";
 import { useSearchParams } from "next/navigation";
 import { api } from "@/api/client";
 import { apiErrorMessage } from "@/api/error";
-import { EmailSection } from "@/components/features/settings/sections/email-section";
-import { getStatus, injectCommand } from "@/lib/terminal";
+import { useApiQuery } from "@/api/hooks";
+import { emailQueries } from "@/api/queries";
+import { EmailSection } from "@/components/features/settings/sections";
+import { formatSkillCommand, getStatus, injectCommand } from "@/lib/terminal";
 import { useAgentDock } from "@/providers/agent-provider";
+import { DiscoveryConnections } from "./discovery-connections";
 import { RuntimeStatus } from "./runtime-status";
 import { WorkspaceJobs } from "./workspace-jobs";
 import { WorkspaceTabs } from "./workspace-tabs";
@@ -48,9 +51,12 @@ const tabs = [
 export function MvpWorkbench() {
   const slug = useSearchParams().get("job");
   const dock = useAgentDock();
+  const mailbox = useApiQuery(emailQueries.account());
   const [tab, setTab] = useState("assistant");
   const [readiness, setReadiness] = useState<Readiness | null>(null);
-  const [provider, setProvider] = useState<"ashby" | "greenhouse">("ashby");
+  const [provider, setProvider] = useState<
+    "ashby" | "greenhouse" | "lever" | "smartrecruiters" | "workable"
+  >("ashby");
   const [board, setBoard] = useState("ashby");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -80,7 +86,7 @@ export function MvpWorkbench() {
     setTrialDispatched(false);
     if (slug) {
       setTab("assistant");
-      void api.public
+      void api
         .jobs({ slug })
         .get()
         .then((result) => {
@@ -112,20 +118,24 @@ export function MvpWorkbench() {
   async function requireAgent() {
     const status = await getStatus();
     dock.expand();
-    if (status.session !== "running" || status.provider !== "claude")
-      throw new Error("Start Claude in the agent panel, then send your request again.");
+    if (status.session !== "running" || status.provider !== dock.provider)
+      throw new Error(
+        "Start your selected agent in the agent panel, then send your request again.",
+      );
   }
   async function apply() {
     if (!slug) return;
     await requireAgent();
     let id = campaign;
     if (!id) {
-      const result = await api.mvp.apply.post({ slug });
+      const result = await api.mvp.apply.post({ slugs: [slug] });
       if (result.error || !result.data) throw new Error(apiErrorMessage(result.error));
+      if (!result.data.queued.length)
+        throw new Error(result.data.skipped.map((row) => row.reason).join(". "));
       id = result.data.campaignId;
       setCampaign(id);
     }
-    await injectCommand(`/jobpilot:mvp-apply ${id}`, "claude");
+    await injectCommand(formatSkillCommand(dock.provider, "mvp-apply", id), dock.provider);
     setDispatched(true);
     setMessage(
       "Application sent to your agent. Follow its progress in the agent panel; a submission is confirmed only when the employer returns a receipt.",
@@ -229,7 +239,10 @@ export function MvpWorkbench() {
                     onClick={() =>
                       void run(async () => {
                         await requireAgent();
-                        await injectCommand(`/jobpilot:mvp-trial ${slug}`, "claude");
+                        await injectCommand(
+                          formatSkillCommand(dock.provider, "mvp-trial", slug ?? undefined),
+                          dock.provider,
+                        );
                         setTrialDispatched(true);
                         setMessage(
                           "Trial sent to your agent. It will save a tailored resume and inspect the live form without submitting. Follow progress in the agent panel and results in Pilot.",
@@ -241,8 +254,12 @@ export function MvpWorkbench() {
                   </Button>
                   {trialDispatched && (
                     <Stack direction="row" spacing={1}>
-                      <Button href="/documents">Resume versions</Button>
-                      <Button href="/pilot">Trial journal</Button>
+                      <Button component={NextLink} href="/documents/resumes">
+                        Resume versions
+                      </Button>
+                      <Button component={NextLink} href="/pilot">
+                        Trial journal
+                      </Button>
                     </Stack>
                   )}
                   {readiness && !readiness.profile && (
@@ -269,7 +286,9 @@ export function MvpWorkbench() {
                         : "Apply to this role"}
                   </Button>
                   {campaign && (
-                    <Button href={`/campaigns/${campaign}`}>Application progress</Button>
+                    <Button component={NextLink} href={`/campaigns/${campaign}`}>
+                      Application progress
+                    </Button>
                   )}
                 </Stack>
               )}
@@ -277,7 +296,7 @@ export function MvpWorkbench() {
                 <Stack spacing={1} sx={{ p: 2, bgcolor: "surfaces.elevated", borderRadius: 12 }}>
                   <Typography>{lastPrompt}</Typography>
                   <Typography variant="captionMuted">
-                    Sent to Claude · responses appear in the agent panel
+                    Sent to your agent · responses appear in the agent panel
                   </Typography>
                 </Stack>
               )}
@@ -289,7 +308,7 @@ export function MvpWorkbench() {
                   if (!prompt.trim()) return;
                   void run(async () => {
                     await requireAgent();
-                    await injectCommand(prompt.trim(), "claude");
+                    await injectCommand(prompt.trim(), dock.provider);
                     setLastPrompt(prompt.trim());
                     setPrompt("");
                   });
@@ -320,13 +339,19 @@ export function MvpWorkbench() {
                 >
                   <Stack direction="row" spacing={0.5}>
                     <Button
-                      href="/documents"
+                      component={NextLink}
+                      href="/documents/resumes"
                       size="small"
                       startIcon={<DescriptionOutlined fontSize="sm" />}
                     >
                       Resume
                     </Button>
-                    <Button href="/onboarding" size="small" startIcon={<Tune fontSize="sm" />}>
+                    <Button
+                      component={NextLink}
+                      href="/settings/profile"
+                      size="small"
+                      startIcon={<Tune fontSize="sm" />}
+                    >
                       Preferences
                     </Button>
                   </Stack>
@@ -368,7 +393,7 @@ export function MvpWorkbench() {
                 </Button>
               </Stack>
               <Typography variant="captionMuted" sx={{ textAlign: "center" }}>
-                Powered by your Claude subscription · Your originals stay yours
+                Powered by your local agent subscription · Your originals stay yours
               </Typography>
             </Stack>
             <Stack
@@ -378,8 +403,8 @@ export function MvpWorkbench() {
               <Typography variant="overlineMuted">Ready when you are</Typography>
               {(
                 [
-                  { key: "profile", label: "Your profile", href: "/onboarding" },
-                  { key: "resume", label: "Original resume", href: "/documents" },
+                  { key: "profile", label: "Your profile", href: "/settings/profile" },
+                  { key: "resume", label: "Original resume", href: "/documents/resumes" },
                   { key: "gmail", label: "Gmail", href: "/settings/email" },
                   {
                     key: "browser",
@@ -387,28 +412,38 @@ export function MvpWorkbench() {
                     href: "http://localhost:6080/vnc.html?autoconnect=1",
                   },
                 ] as const
-              ).map((item) => (
-                <Stack key={item.key} direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
-                  {readiness?.[item.key] ? (
-                    <CheckCircleOutlined fontSize="sm" sx={{ color: "success.main" }} />
-                  ) : (
-                    <CircleOutlined fontSize="sm" sx={{ color: "text.disabled" }} />
-                  )}
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="body2Strong">{item.label}</Typography>
-                    <Typography variant="captionMuted">
-                      {!readiness
-                        ? "Checking…"
-                        : readiness[item.key]
-                          ? "Connected"
-                          : "Setup needed"}
-                    </Typography>
-                  </Box>
-                  <IconButton size="small" href={item.href} aria-label={`Open ${item.label}`}>
-                    <ArrowOutward fontSize="xs" />
-                  </IconButton>
-                </Stack>
-              ))}
+              ).map((item) => {
+                const ready =
+                  item.key === "gmail" ? mailbox.data?.connected : readiness?.[item.key];
+                let label = "Checking…";
+                if (ready !== undefined) label = ready ? "Connected" : "Setup needed";
+                return (
+                  <Stack
+                    key={item.key}
+                    direction="row"
+                    spacing={1.25}
+                    sx={{ alignItems: "center" }}
+                  >
+                    {ready ? (
+                      <CheckCircleOutlined fontSize="sm" sx={{ color: "success.main" }} />
+                    ) : (
+                      <CircleOutlined fontSize="sm" sx={{ color: "text.disabled" }} />
+                    )}
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="body2Strong">{item.label}</Typography>
+                      <Typography variant="captionMuted">{label}</Typography>
+                    </Box>
+                    <IconButton
+                      component={NextLink}
+                      size="small"
+                      href={item.href}
+                      aria-label={`Open ${item.label}`}
+                    >
+                      <ArrowOutward fontSize="xs" />
+                    </IconButton>
+                  </Stack>
+                );
+              })}
               <Divider />
               <Typography variant="body2Muted">
                 Start with one role. Follow the browser as your agent works, and answer anything it
@@ -450,7 +485,7 @@ export function MvpWorkbench() {
             <Stack spacing={0.75}>
               <Typography variant="h2">A next step worth taking.</Typography>
               <Typography color="text.secondary">
-                Real openings from employer career boards. Choose one to review with your agent.
+                Real openings from employer career boards. Select roles to queue with your agent.
               </Typography>
             </Stack>
             <WorkspaceJobs key={jobsRevision} />
@@ -458,18 +493,21 @@ export function MvpWorkbench() {
             <Stack spacing={1.5}>
               <Typography variant="h4">Add a company board</Typography>
               <Typography variant="body2Muted">
-                Bring in openings from a public Ashby or Greenhouse board.
+                Bring in openings from Ashby, Greenhouse, Lever, SmartRecruiters or Workable.
               </Typography>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
                 <TextField
                   select
                   label="Source"
                   value={provider}
-                  onChange={(event) => setProvider(event.target.value as "ashby" | "greenhouse")}
+                  onChange={(event) => setProvider(event.target.value as typeof provider)}
                   sx={{ minWidth: 140 }}
                 >
                   <MenuItem value="ashby">Ashby</MenuItem>
                   <MenuItem value="greenhouse">Greenhouse</MenuItem>
+                  <MenuItem value="lever">Lever</MenuItem>
+                  <MenuItem value="smartrecruiters">SmartRecruiters</MenuItem>
+                  <MenuItem value="workable">Workable</MenuItem>
                 </TextField>
                 <TextField
                   label="Company board name"
@@ -498,23 +536,13 @@ export function MvpWorkbench() {
         {tab === "connections" && (
           <Stack spacing={3} sx={{ maxWidth: 800, mx: "auto" }}>
             <RuntimeStatus />
-            <Stack spacing={1}>
-              <MailOutlined />
-              <Typography variant="h2">Keep the loop connected.</Typography>
-              <Typography color="text.secondary">
-                Connect your own Gmail so the agent can find employer verification emails while it
-                works.
-              </Typography>
-            </Stack>
-            <Alert severity={readiness?.gmail ? "success" : "info"}>
-              {readiness?.gmail
-                ? "Gmail is connected to this app."
-                : "A Gmail connection in this chat does not connect the app. Complete the Google setup below once to enable unattended verification."}
-            </Alert>
             <EmailSection />
+            <DiscoveryConnections />
             <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
               <Chip label="Personal Google account supported" variant="outlined" />
-              <Button href="/settings/credentials">Saved career accounts</Button>
+              <Button component={NextLink} href="/settings/credentials">
+                Saved career accounts
+              </Button>
             </Stack>
           </Stack>
         )}

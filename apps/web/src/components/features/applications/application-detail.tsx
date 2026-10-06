@@ -1,9 +1,9 @@
 "use client";
 
 import { type ReactElement, useState } from "react";
-import type { ApplicationStatus, StatusTransitionInput } from "@jobpilot/contracts/application";
 import { Delete, Launch } from "@mui/icons-material";
 import { Button, IconButton, LinearProgress, Stack } from "@mui/material";
+import type { ApplicationStatus, StatusTransitionInput } from "@openapply/contracts/application";
 import { useRouter } from "next/navigation";
 import { api } from "@/api/client";
 import { useApiMutation, useApiQuery } from "@/api/hooks";

@@ -10,7 +10,7 @@ Re-score a campaign's `skipped` jobs and set eligible ones to `approved`. **Neve
 
 ## Setup
 
-Follow `../_shared/setup.md`. Fetch the campaign: `jobpilot-api GET /api/campaigns/<campaign-id>`. Threshold = `config.minScore` (fallback `autoApply.minMatchScore`, else 60).
+Follow `../_shared/setup.md`. Fetch the campaign: `openapply-api GET /api/campaigns/<campaign-id>`. Threshold = `config.minScore` (fallback `autoApply.minMatchScore`, else 60).
 
 ## Step 1: Select Targets
 
@@ -29,10 +29,10 @@ Count the full target list up front and process every one. **Below-threshold, ze
 
 3. **Re-score** - every target gets a fresh `POST /api/score-fit` with `{digest, minScore:<threshold>}`; never reuse the stored `matchScore`. Take the returned `score` as-is when `verdict` is `trust`; on `deliberate`, reason from `strongMatches`/`partialMatches`/`gaps`. A zero/low score with no `skipReason` (common at defense/federal employers) is not a disqualifier; eligibility follows `../_shared/eligibility.md`.
 4. **Decide:**
-   - Eligible and `score >= threshold` → promote (no apply). Write `{"decision":"approved","matchScore":<0-100>,"matchReason":"<one line>","digest":"<digest JSON string>","description":"<posting text or empty>"}` to `$JOBPILOT_TEMP/rescan-<key>.json`, then:
+   - Eligible and `score >= threshold` → promote (no apply). Write `{"decision":"approved","matchScore":<0-100>,"matchReason":"<one line>","digest":"<digest JSON string>","description":"<posting text or empty>"}` to `$OPENAPPLY_TEMP/rescan-<key>.json`, then:
 
 ```bash
-jobpilot-api POST /api/campaigns/<campaign-id>/jobs/<key>/rescan --data @"$JOBPILOT_TEMP/rescan-<key>.json"
+openapply-api POST /api/campaigns/<campaign-id>/jobs/<key>/rescan --data @"$OPENAPPLY_TEMP/rescan-<key>.json"
 ```
 
 - Below threshold after a fair read → POST `/rescan` with `decision:"skipped"`, the new score/reason, and `skipReason:"Below minimum match score (X < Y)"`.

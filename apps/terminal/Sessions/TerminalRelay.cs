@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
 
-namespace JobPilot.Terminal.Sessions;
+namespace OpenApply.Terminal.Sessions;
 
 /// <summary>A browser control message on <c>/ws</c>: <c>input</c> (base64 bytes) or <c>resize</c>.</summary>
 public sealed record BrowserMessage(string? Type, string? Data, int? Cols, int? Rows);
@@ -95,7 +95,7 @@ public sealed class TerminalRelay : IDisposable
 
     internal static string? ExitBanner(SessionExit exit) => exit.Requested
         ? null
-        : $"\r\n\e[31m[JobPilot.Terminal] {exit.ProviderDisplayName} exited with code {exit.ExitCode}. Use Restart to reopen.\e[0m\r\n";
+        : $"\r\n\e[31m[OpenApply.Terminal] {exit.ProviderDisplayName} exited with code {exit.ExitCode}. Use Restart to reopen.\e[0m\r\n";
 
     private void Broadcast(byte[] data)
     {

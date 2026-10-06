@@ -1,8 +1,11 @@
-import { applyUrlsSchema, type CampaignSource, MAX_APPLY_URLS } from "@jobpilot/contracts/campaign";
+import {
+  applyUrlsSchema,
+  type CampaignSource,
+  MAX_APPLY_URLS,
+} from "@openapply/contracts/campaign";
 import { z } from "zod/v4";
 import type { CreateCampaignRequest, JobBoardDto } from "@/api/types";
 import { buildCliArgs } from "@/utils/cli-args";
-import { UPWORK_DOMAIN } from "../constants";
 
 /** Splits pasted text on whitespace/commas and dedupes - shared by validation and submit. */
 function parseUrls(raw: string): string[] {
@@ -31,7 +34,7 @@ function deriveApplyQuery(urls: string[]): string {
 
 export const composerFormSchema = z
   .object({
-    mode: z.enum(["search", "auto_apply", "networking", "apply"]),
+    mode: z.enum(["search", "auto_apply", "apply"]),
     query: z.string().trim(),
     board: z.string(),
     // Base resume to score/tailor against; apply tailors per pasted job, so none up front.
@@ -40,11 +43,7 @@ export const composerFormSchema = z
     maxApps: z.union([z.number().int().min(1).max(500), z.null(), z.undefined()]),
     // Empty = unlimited (search until the board is exhausted), mirroring maxApps.
     maxJobs: z.union([z.number().int().min(1), z.null(), z.undefined()]),
-    // Networking campaign settings (mode === "networking").
-    channels: z.array(z.enum(["email", "linkedin"])),
-    linkedinTier: z.enum(["free", "premium"]),
-    autonomy: z.enum(["draft", "review", "auto"]),
-    dailyCap: z.number().int().min(1).max(100),
+
     // Apply campaign settings (mode === "apply").
     urlsText: z.string(),
     applyLabel: z.string(),
@@ -66,27 +65,16 @@ export const composerFormSchema = z
     if (!v.resumeId) {
       ctx.addIssue({ code: "custom", message: "Select a resume", path: ["resumeId"] });
     }
-    // Board is required for search/auto-apply; for networking it is optional (the
-    // control between board-grounded and criteria-only discovery).
-    if (v.mode !== "networking" && !v.board) {
+    if (!v.board) {
       ctx.addIssue({ code: "custom", message: "Pick a board", path: ["board"] });
-    }
-    if (v.mode === "networking" && v.channels.length === 0) {
-      ctx.addIssue({ code: "custom", message: "Pick at least one channel", path: ["channels"] });
     }
   });
 
 /** What the board picker needs: a linked board and a catalog board both satisfy it. */
 export type BoardOption = Pick<JobBoardDto, "domain" | "name">;
 
-export type CampaignMode = Extract<
-  CampaignSource,
-  "search" | "auto_apply" | "networking" | "apply"
->;
+export type CampaignMode = Extract<CampaignSource, "search" | "auto_apply" | "apply">;
 export type ComposerFormValues = z.infer<typeof composerFormSchema>;
-
-export const UPWORK_MODE_DESCRIPTION =
-  "OpenApply searches Upwork, filters out low-quality and unresponsive clients, and ranks the rest by fit. Review the recommendations, then draft a proposal per job - you submit on Upwork yourself.";
 
 /**
  * Static defaults shared by the parent `useAppForm` and the `withForm` field
@@ -101,10 +89,7 @@ export const COMPOSER_DEFAULT_VALUES: ComposerFormValues = {
   minScore: 60,
   maxApps: null,
   maxJobs: 15,
-  channels: ["email", "linkedin"],
-  linkedinTier: "free",
-  autonomy: "draft",
-  dailyCap: 20,
+
   urlsText: "",
   applyLabel: "",
 };
@@ -114,36 +99,7 @@ function isCap(value: number | null | undefined): value is number {
   return value != null && Number.isFinite(value);
 }
 
-/**
- * Whether the composer is set up to run Upwork's dedicated search skill. Apply never sources from
- * a board, so a board value left over from another mode must not hijack it into an Upwork search.
- */
-export function isUpworkSearch(values: Pick<ComposerFormValues, "mode" | "board">): boolean {
-  return values.mode !== "apply" && values.board === UPWORK_DOMAIN;
-}
-
-/** Whether a networking campaign has a board picked (board-grounded vs criteria-only). */
-export function isBoardSelected(board: string): boolean {
-  return board.trim() !== "";
-}
-
 function buildCampaignConfig(values: ComposerFormValues): CreateCampaignRequest["config"] {
-  if (values.mode === "networking") {
-    // A selected board grounds networking in real openings; the optional cap
-    // (reusing the maxApps field) maps to config.maxJobs - omit it to run until
-    // the user stops. No board → criteria-only discovery.
-    const searchesBoard = isBoardSelected(values.board);
-    return {
-      ...(searchesBoard ? { board: values.board } : {}),
-      ...(searchesBoard && isCap(values.maxApps) ? { maxJobs: values.maxApps } : {}),
-      networking: {
-        channels: values.channels,
-        ...(values.channels.includes("linkedin") ? { linkedinTier: values.linkedinTier } : {}),
-        autonomy: values.autonomy,
-        ...(values.autonomy === "auto" ? { dailyCap: values.dailyCap } : {}),
-      },
-    };
-  }
   if (values.mode !== "auto_apply") {
     // Omit maxJobs when empty so the search runs unlimited.
     return { board: values.board, ...(isCap(values.maxJobs) ? { maxJobs: values.maxJobs } : {}) };
@@ -171,7 +127,6 @@ export function buildCreateCampaignRequest(values: ComposerFormValues): CreateCa
   return {
     query: values.query.trim(),
     source: values.mode,
-    // resumeId is campaign-wide (mandatory for search/auto-apply/networking), not mode-specific.
     config: { resumeId: values.resumeId, ...buildCampaignConfig(values) },
     createdBy: "user",
   };
@@ -182,10 +137,7 @@ export function buildSkillArg(values: ComposerFormValues, campaignId: string): s
     // The apply skill looks the campaign up by id rather than taking search flags.
     return buildCliArgs({ positional: ["campaign", campaignId] });
   }
-  if (values.mode === "networking") {
-    // The skill reads channels/tier/autonomy from the campaign's config.networking.
-    return buildCliArgs({ positional: [values.query.trim()], flags: { campaign: campaignId } });
-  }
+
   return buildCliArgs({
     positional: [values.query.trim()],
     flags: {
@@ -204,7 +156,7 @@ export function buildSkillArg(values: ComposerFormValues, campaignId: string): s
 export const SUBMIT_LABELS: Record<CampaignMode, string> = {
   search: "Start search",
   auto_apply: "Start auto-apply",
-  networking: "Start networking",
+
   apply: "Apply to links",
 };
 
@@ -213,8 +165,7 @@ export const MODE_DESCRIPTIONS: Record<CampaignMode, string> = {
     "Search a board and score matches in the selected board - nothing is sent. Review the ranked list yourself.",
   auto_apply:
     "Search, score, then auto-submit applications to matches above your score threshold in the selected board.",
-  networking:
-    "Find hiring managers or recruiters and message them directly. Pick a board to ground networking in real openings, or none to reach by criteria.",
+
   apply:
     "Already found the jobs yourself? Paste the links and the agent reviews fit, tailors your resume, and applies to each.",
 };

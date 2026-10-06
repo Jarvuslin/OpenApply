@@ -1,9 +1,9 @@
 "use client";
 
 import { type ReactElement, useState } from "react";
-import { EMPTY_RESUME_DATA, type ResumeData } from "@jobpilot/contracts/resume";
-import { resumeChannel } from "@jobpilot/contracts/sse";
 import { Box, LinearProgress, Stack } from "@mui/material";
+import { EMPTY_RESUME_DATA, type ResumeData } from "@openapply/contracts/resume";
+import { resumeChannel } from "@openapply/contracts/sse";
 import { useQueryClient } from "@tanstack/react-query";
 import { useApiQuery } from "@/api/hooks";
 import { resumeQueries } from "@/api/queries";
@@ -105,7 +105,7 @@ export function ResumeDetail(props: ResumeDetailProps): ReactElement {
           top: { lg: 16 },
         }}
       >
-        <ResumePdfPreview resumeId={resumeId} updatedAt={resume.updatedAt} />
+        <ResumePdfPreview key={resumeId} resume={resume} />
       </Box>
     </Stack>
   );

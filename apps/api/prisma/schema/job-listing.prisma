@@ -69,6 +69,10 @@ model JobListingSource {
   board      String?
   // Canonicalized (tracking params stripped) - see canonicalizeUrl in dedupe.ts.
   url        String   @unique
+  applyUrl String? @map("apply_url")
+  attributionUrl String? @map("attribution_url")
+  resolutionConfidence Float? @map("resolution_confidence")
+  postedAt DateTime? @map("posted_at")
   lastSeenAt DateTime @default(now()) @map("last_seen_at")
 
   listing JobListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
@@ -76,4 +80,36 @@ model JobListingSource {
   @@index([listingId])
   @@index([board, listingId])
   @@map("job_listing_sources")
+}
+
+enum AtsProvider {
+ ashby
+ greenhouse
+ lever
+ smartrecruiters
+ workable
+ @@map("ats_provider")
+}
+enum DiscoveryProvider {
+ apify
+ serpapi
+ @@map("discovery_provider")
+}
+model CompanyAtsBoard {
+  companyKey String @id @map("company_key")
+  provider AtsProvider
+  slug String
+  checkedAt DateTime @default(now()) @map("checked_at")
+  @@map("company_ats_boards")
+}
+
+model JobSourceConnection {
+  userId String @map("user_id")
+  provider DiscoveryProvider
+  enabled Boolean @default(false)
+  encryptedKey String @map("encrypted_key")
+  config Json @default("{}")
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  @@id([userId,provider])
+  @@map("job_source_connections")
 }

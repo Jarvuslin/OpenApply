@@ -1,4 +1,4 @@
-# JobPilot API - run interpreted by Bun so the entrypoint can migrate at startup and tsyringe keeps its decorator metadata.
+# OpenApply API - run interpreted by Bun so the entrypoint can migrate at startup and tsyringe keeps its decorator metadata.
 FROM oven/bun:1-alpine AS deps
 WORKDIR /app
 
@@ -13,7 +13,7 @@ COPY packages/contracts/package.json ./packages/contracts/
 COPY packages/api-client/package.json ./packages/api-client/
 
 # Install only the API and its workspace deps.
-RUN bun install --frozen-lockfile --filter @jobpilot/api
+RUN bun install --frozen-lockfile --filter @openapply/api
 
 # Source needed to generate the Prisma client.
 COPY packages/contracts ./packages/contracts

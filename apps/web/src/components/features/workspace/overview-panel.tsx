@@ -2,7 +2,6 @@
 
 import type { ReactElement } from "react";
 import { Stack } from "@mui/material";
-import { AttentionStrip } from "./dashboard/attention-strip";
 import { CampaignGroups } from "./dashboard/campaign-groups";
 import { NowRunning } from "./dashboard/now-running";
 import { PilotStatusCard } from "./dashboard/pilot-card";
@@ -16,7 +15,7 @@ export function OverviewPanel(): ReactElement {
       <ProfileChecklistCard />
       <PilotStatusCard />
       <NowRunning />
-      <AttentionStrip />
+
       <StatTiles />
       <CampaignGroups />
     </Stack>

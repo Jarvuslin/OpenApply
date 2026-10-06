@@ -1,5 +1,4 @@
 import { z } from "zod/v4";
-import { networkingConfigSchema } from "./networking";
 import { isJsonObject } from "./utils/json";
 import { cleanReplacementChars } from "./utils/text";
 
@@ -40,13 +39,13 @@ export const CAMPAIGN_JOB_STATUSES = [
 export const campaignJobStatusSchema = z.enum(CAMPAIGN_JOB_STATUSES);
 
 export const campaignConfigSchema = z.object({
+  standing: z.boolean().optional(),
   board: z.string().min(1).optional(),
   resumeId: z.uuid().optional(),
   minScore: z.number().int().min(0).max(100).optional(),
   maxApplications: z.number().int().min(1).max(500).optional(),
   // No upper cap: absent = unlimited (search runs until the board is exhausted).
   maxJobs: z.number().int().min(1).optional(),
-  networking: networkingConfigSchema.optional(),
 });
 
 const campaignJobSummarySchema = z.object({
@@ -62,25 +61,12 @@ const campaignJobSummarySchema = z.object({
   /** Jobs carrying a match score, however they were later resolved. */
   scored: z.number().int().min(0).default(0),
   /** Warm-intro drafts the pilot saved against this job campaign. */
-  networkingCount: z.number().int().min(0).default(0),
 });
 
-const campaignNetworkingSummarySchema = z.object({
-  kind: z.literal("networking"),
-  discovered: z.number().int().min(0).default(0),
-  drafted: z.number().int().min(0).default(0),
-  sent: z.number().int().min(0).default(0),
-  replied: z.number().int().min(0).default(0),
-  bounced: z.number().int().min(0).default(0),
-});
-
-export const campaignSummarySchema = z.discriminatedUnion("kind", [
-  campaignJobSummarySchema,
-  campaignNetworkingSummarySchema,
-]);
+export const campaignSummarySchema = campaignJobSummarySchema;
 
 /** Composer-driven sources require a user-selected base resume; `apply` tailors per job. */
-const RESUME_REQUIRED_SOURCES: readonly CampaignSource[] = ["search", "auto_apply", "networking"];
+const RESUME_REQUIRED_SOURCES: readonly CampaignSource[] = ["search", "auto_apply"];
 
 /** Returns whether a configuration satisfies its source's required fields. */
 export function campaignConfigSupportsSource(
@@ -99,7 +85,7 @@ export const applyUrlsSchema = z.array(z.url()).min(1).max(MAX_APPLY_URLS);
 export const createCampaignSchema = z
   .object({
     query: z.string().min(1),
-    source: campaignSourceSchema,
+    source: z.enum(["search", "auto_apply", "apply"]),
     config: campaignConfigSchema.optional(),
     createdBy: campaignActorSchema.default("user"),
     /** Set by the pilot's discovery cycle so the search can find this campaign again by id. */
@@ -108,7 +94,7 @@ export const createCampaignSchema = z
     urls: applyUrlsSchema.optional(),
   })
   .refine((v) => campaignConfigSupportsSource(v.source, v.config ?? {}), {
-    message: "config.resumeId is required for search, auto_apply, and networking campaigns.",
+    message: "config.resumeId is required for search and auto_apply campaigns.",
     path: ["config", "resumeId"],
   })
   .refine((v) => !v.urls || v.source === "apply", {
@@ -230,7 +216,7 @@ export type CampaignConfig = z.infer<typeof campaignConfigSchema>;
 export type CampaignSummary = z.infer<typeof campaignSummarySchema>;
 export type CampaignJobSummary = z.infer<typeof campaignJobSummarySchema>;
 export type CampaignJobReason = z.infer<typeof campaignJobReasonSchema>;
-export type CampaignNetworkingSummary = z.infer<typeof campaignNetworkingSummarySchema>;
+
 export type CreateCampaignInput = z.infer<typeof createCampaignSchema>;
 export type UpdateCampaignConfigInput = z.infer<typeof updateCampaignConfigSchema>;
 export type CampaignStatusCommandInput = z.infer<typeof campaignStatusCommandSchema>;

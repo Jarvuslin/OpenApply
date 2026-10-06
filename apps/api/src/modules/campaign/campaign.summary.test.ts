@@ -1,58 +1,18 @@
-import type { Prisma } from "@/generated/prisma/client";
+import type {} from "@/generated/prisma/client";
 import { jobSummary, summarizeCampaigns } from "./campaign.summary";
 import { describe, expect, it } from "bun:test";
 
-type Row = { campaignId: string; status: string; _count: { _all: number; matchScore?: number } };
-
-function client(
-  jobs: Row[],
-  messages: Row[],
-  contacts: { campaignId: string; discovered: number }[],
-) {
-  return {
-    job: { groupBy: async () => jobs },
-    networkingMessage: { groupBy: async () => messages },
-    $queryRaw: async () => contacts,
-  } as unknown as Prisma.TransactionClient;
-}
-
 describe("summarizeCampaigns", () => {
-  it("derives each campaign's summary from its own rows", async () => {
-    const [jobs, networking] = await summarizeCampaigns(
-      client(
-        [
-          { campaignId: "c1", status: "approved", _count: { _all: 2, matchScore: 2 } },
-          { campaignId: "c1", status: "skipped", _count: { _all: 1, matchScore: 1 } },
-        ],
-        [
-          { campaignId: "c1", status: "draft", _count: { _all: 1 } },
-          { campaignId: "c2", status: "draft", _count: { _all: 2 } },
-          { campaignId: "c2", status: "sent", _count: { _all: 3 } },
-        ],
-        [{ campaignId: "c2", discovered: 4 }],
-      ),
-      [
-        { campaignId: "c1", source: "search" },
-        { campaignId: "c2", source: "networking" },
-      ],
-    );
-
-    expect(jobs.summary).toMatchObject({
-      kind: "jobs",
-      totalFound: 3,
-      qualified: 2,
-      remaining: 2,
-      scored: 3,
-      networkingCount: 1,
-    });
-    expect(networking.summary).toEqual({
-      kind: "networking",
-      discovered: 4,
-      drafted: 2,
-      sent: 3,
-      replied: 0,
-      bounced: 0,
-    });
+  it("aggregates each campaign from job rows only", async () => {
+    const rows = [{ campaignId: "c1", status: "applied", _count: { _all: 2, matchScore: 2 } }];
+    const client = { job: { groupBy: async () => rows } } as unknown as Parameters<
+      typeof summarizeCampaigns
+    >[0];
+    const result = await summarizeCampaigns(client, [
+      { campaignId: "c1", source: "apply" },
+      { campaignId: "c2", source: "search" },
+    ]);
+    expect(result.map((c) => c.summary.applied)).toEqual([2, 0]);
   });
 });
 
