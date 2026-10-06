@@ -13,15 +13,28 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   const cookie = request.headers.get("cookie") ?? "";
   const { api } = createApiClient(API_ORIGIN, {
     headers: cookie ? { cookie } : {},
-    fetch: { cache: "no-store" },
+    fetch: { cache: "no-store", signal: AbortSignal.timeout(10_000) },
   });
 
   // One flat object carries the verified flag, role, and profile fields
-  const { data, error } = await api.auth.me.get();
+  const result = await api.auth.me.get().catch(() => null);
+  // Auth middleware can return 401 even though it is not in the endpoint's typed response map.
+  if (!result || (result.error && Number(result.error.status) !== 401)) {
+    return new NextResponse(
+      "OpenApply cannot check your session right now. Please reload to retry.",
+      {
+        status: 503,
+        headers: { "cache-control": "no-store", "retry-after": "5" },
+      },
+    );
+  }
+  const { data, error } = result;
 
-  // Not authenticated -> send to login.
+  // The browser can use the refresh cookie at /api/auth; it is not sent on page requests.
   if (error || data === null) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    const login = new URL("/login", request.url);
+    login.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
+    return NextResponse.redirect(login);
   }
 
   // Profile not filled in -> onboarding.

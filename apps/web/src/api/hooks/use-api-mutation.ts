@@ -6,7 +6,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { apiErrorMessage, type EdenResult } from "@/api/error";
+import { ApiError, type EdenResult } from "@/api/error";
 import { useToast } from "@/providers/notification-provider";
 
 type MutationFn<TData, TVariables> = (vars: TVariables) => Promise<EdenResult<TData>>;
@@ -52,7 +52,7 @@ export function useApiMutation<TData, TVariables = void, TContext = unknown>(
     mutationFn: async (vars: TVariables) => {
       const { data, error } = await mutationFn(vars);
       if (error) {
-        throw new Error(apiErrorMessage(error));
+        throw new ApiError(error);
       }
       return data as TData;
     },

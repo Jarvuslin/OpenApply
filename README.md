@@ -5,7 +5,7 @@
 
 A workspace for finding employer roles, tailoring your résumé and applying through your own local agent. Accounts, profiles and application history live in Postgres.
 
-[Setup](#setup) · [Mac beta](#clone-and-setup-mac-beta) · [Current capabilities](#current-capabilities) · [Architecture](docs/architecture.md) · [MIT license](LICENSE)
+[Setup](#setup) · [Mac beta](#clone-and-setup-mac-beta) · [Current capabilities](#current-capabilities) · [MIT license](LICENSE)
 </div>
 
 ## Current capabilities
@@ -238,4 +238,4 @@ Release configuration avoids locking the development terminal executable on Wind
 
 The discovery split and ATS request shapes were informed by [career-ops](https://github.com/career-ops-hq/career-ops), an MIT-licensed project. OpenApply keeps its own provider adapters and employer resolver.
 
-OpenApply is a derivative of [suxrobGM/jobpilot](https://github.com/suxrobGM/jobpilot), originally created by Sukhrob Ilyosbekov. We reuse its application backend, terminal host, agent skills and other infrastructure. The original [MIT license and copyright notice](LICENSE) and historical changelog are preserved. Active packages, commands, runtime configuration and branding use OpenApply. This derivative does not imply endorsement by the original author.
+OpenApply is a derivative of [suxrobGM/jobpilot](https://github.com/suxrobGM/jobpilot). We reuse its application backend, terminal host, agent skills and other infrastructure. The original [MIT license and copyright notice](LICENSE) are preserved. Active packages, commands, runtime configuration and branding use OpenApply. This derivative does not imply endorsement by the original author.

@@ -2,7 +2,6 @@ export { AuthCard } from "./auth-card";
 export { AuthFormSkeleton } from "./auth-form-skeleton";
 export { ConfirmEmailChangeView } from "./confirm-email-change-view";
 export { ForgotPasswordForm } from "./forgot-password-form";
-export { LoginForm } from "./login-form";
 export { LogoutMenuItem } from "./logout-button";
 export { OAUTH_PROVIDERS, oauthStartUrl, resolveOauthReason } from "./oauth";
 export { RegisterForm } from "./register-form";

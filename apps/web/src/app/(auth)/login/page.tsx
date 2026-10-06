@@ -1,6 +1,7 @@
-import type { ReactElement } from "react";
+import { type ReactElement, Suspense } from "react";
 import type { Metadata } from "next";
-import { AuthCard, LoginForm } from "@/components/features/auth";
+import { AuthCard, AuthFormSkeleton } from "@/components/features/auth";
+import { LoginSession } from "@/components/features/auth/login-session";
 
 export const metadata: Metadata = {
   title: "Sign in",
@@ -9,10 +10,11 @@ export const metadata: Metadata = {
 };
 
 export default function LoginPage(): ReactElement {
-  // The form reads its own OAuth error off the URL, so the whole page prerenders.
   return (
     <AuthCard title="Sign in" subtitle="Welcome back. Sign in to continue.">
-      <LoginForm />
+      <Suspense fallback={<AuthFormSkeleton />}>
+        <LoginSession />
+      </Suspense>
     </AuthCard>
   );
 }
