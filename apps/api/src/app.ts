@@ -1,3 +1,4 @@
+import { jobSourcesController } from "@/modules/job-sources/job-sources.controller";
 import "@/common/di/container";
 import { Elysia } from "elysia";
 import { db } from "@/common/database/prisma.client";
@@ -69,6 +70,7 @@ const app = new Elysia()
       .use(resumeVariantController)
       .use(publicJobListingController)
       .use(jobListingController)
+      .use(jobSourcesController)
       .use(coverLetterController)
       .use(applicationController)
       .use(scoringController)

@@ -7,20 +7,6 @@ import type { Prisma } from "@/generated/prisma/client";
  */
 export const DEFAULT_BOARDS: Prisma.JobBoardCreateManyInput[] = [
   {
-    name: "LinkedIn",
-    domain: "linkedin.com",
-    searchUrl: "https://www.linkedin.com/jobs/search/",
-    isDefault: true,
-    sortOrder: 1,
-  },
-  {
-    name: "Indeed",
-    domain: "indeed.com",
-    searchUrl: "https://www.indeed.com/jobs",
-    isDefault: true,
-    sortOrder: 2,
-  },
-  {
     name: "Hiring Cafe",
     domain: "hiring.cafe",
     searchUrl: "https://hiring.cafe",
@@ -34,12 +20,7 @@ export const DEFAULT_BOARDS: Prisma.JobBoardCreateManyInput[] = [
     isDefault: true,
     sortOrder: 4,
   },
-  {
-    name: "Wellfound",
-    domain: "wellfound.com",
-    searchUrl: "https://wellfound.com/jobs",
-    sortOrder: 5,
-  },
+
   {
     name: "Y Combinator",
     domain: "workatastartup.com",

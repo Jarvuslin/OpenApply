@@ -5,9 +5,9 @@ import { badRequest, notFound } from "@/common/errors";
 import { PrismaClient } from "@/generated/prisma/client";
 import { CampaignService } from "@/modules/campaign/campaign.service";
 import { CampaignJobService } from "@/modules/campaign/jobs/job.service";
-import { JobListingPublisher } from "@/modules/job-listing/job-listing.publisher";
+import { allowedApplyUrl } from "@/modules/job-board/blocked-sites";
+import { JobSourcesService } from "@/modules/job-sources/job-sources.service";
 import { PilotJournalService } from "@/modules/pilot/journal.service";
-import { normalizeFeed } from "./feeds";
 import type { sourceInput } from "./mvp.schema";
 
 @singleton()
@@ -15,27 +15,16 @@ export class MvpService {
   private readonly starting = new Set<string>();
   constructor(
     private readonly prisma: PrismaClient,
-    private readonly publisher: JobListingPublisher,
     private readonly campaigns: CampaignService,
     private readonly jobs: CampaignJobService,
     private readonly journal: PilotJournalService,
+    private readonly sources: JobSourcesService,
   ) {}
 
   async refresh(userId: string, input: z.infer<typeof sourceInput>) {
-    const boardPath = encodeURIComponent(input.board);
-    const url =
-      input.provider === "ashby"
-        ? `https://api.ashbyhq.com/posting-api/job-board/${boardPath}`
-        : `https://boards-api.greenhouse.io/v1/boards/${boardPath}/jobs?content=true`;
-    const response = await fetch(url, { signal: AbortSignal.timeout(20_000), redirect: "error" });
-    if (!response.ok)
-      throw badRequest(
-        `Source returned HTTP ${response.status}. Check the board name or try later.`,
-      );
-    const data = normalizeFeed(input.provider, input.board, await response.json());
-    let imported = 0;
-    for (const job of data.slice(0, 500))
-      if ((await this.publisher.publish({ ...job, publicFeed: true })) !== "skipped") imported++;
+    const result = await this.sources.publicBoard(input.provider, input.board);
+    const url = `${input.provider}/${input.board}`;
+    const { imported, fetched } = result;
     await this.journal.appendJournal(userId, {
       entries: [
         {
@@ -44,7 +33,7 @@ export class MvpService {
           detail: {
             source: url,
             mode: "public_listing_api",
-            fetched: data.length,
+            fetched: fetched,
             captchaEncountered: false,
           },
         },
@@ -52,7 +41,7 @@ export class MvpService {
     });
     return {
       imported,
-      fetched: data.length,
+      fetched: fetched,
       source: url,
       checkedAt: new Date(),
       challenge:
@@ -117,7 +106,9 @@ export class MvpService {
       include: { sources: true },
     });
     if (listing?.status !== "published" || !listing.sources[0]) throw notFound("Job not found");
-    const url = listing.sources[0].url;
+    const source = listing.sources.find((source) => allowedApplyUrl(source.applyUrl));
+    const url = allowedApplyUrl(source?.applyUrl);
+    if (!url) throw badRequest("Employer page not found. This listing cannot be queued.");
     const active = await this.prisma.job.findFirst({
       where: {
         url,
@@ -142,7 +133,7 @@ export class MvpService {
       company: listing.company,
       url,
       location: listing.location,
-      board: listing.sources[0].board,
+      board: source?.board,
       status: "approved",
       description: listing.descriptionExcerpt,
     });

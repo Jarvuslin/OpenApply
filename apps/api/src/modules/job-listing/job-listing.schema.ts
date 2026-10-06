@@ -6,6 +6,10 @@ import { z } from "zod/v4";
 const jobListingSourceSchema = z.object({
   board: z.string().nullable(),
   url: z.string(),
+  applyUrl: z.string().nullable(),
+  attributionUrl: z.string().nullable(),
+  resolutionConfidence: z.number().nullable(),
+  postedAt: z.date().nullable(),
   lastSeenAt: z.date(),
 });
 
@@ -27,6 +31,8 @@ const jobListingSummarySchema = z.object({
   lastSeenAt: z.date(),
   /** How many boards this posting was found on - the list renders the count, not the links. */
   sourceCount: z.number().int(),
+  canApply: z.boolean(),
+  foundOn: z.array(z.string()),
 });
 
 /** The detail view adds the board links and the digest fields the list has no room for. */

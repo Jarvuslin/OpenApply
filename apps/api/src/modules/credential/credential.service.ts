@@ -3,6 +3,7 @@ import { singleton } from "tsyringe";
 import { CryptoService, SECRET_CONTEXTS } from "@/common/crypto";
 import { findOwned } from "@/common/errors";
 import { PrismaClient } from "@/generated/prisma/client";
+import { assertAutomationAllowed } from "@/modules/job-board/blocked-sites";
 
 export interface ResolvedCredential {
   /** The credential row - the target for `PATCH /credentials/<id>` after a password reset. */
@@ -45,6 +46,7 @@ export class CredentialService {
   }
 
   async create(userId: string, input: CredentialInput) {
+    assertAutomationAllowed(input.scope);
     const row = await this.prisma.credential.create({
       data: {
         userId,
@@ -67,14 +69,16 @@ export class CredentialService {
 
   private findCredential(userId: string, id: string) {
     return findOwned(
-      (where) => this.prisma.credential.findFirst({ where, select: { id: true } }),
+      (where) => this.prisma.credential.findFirst({ where, select: { id: true, scope: true } }),
       { id, userId },
       "Credential",
     );
   }
 
   async update(userId: string, id: string, patch: CredentialPatch) {
-    await this.findCredential(userId, id);
+    if (patch.scope) assertAutomationAllowed(patch.scope);
+    const existing = await this.findCredential(userId, id);
+    assertAutomationAllowed(existing.scope);
     const row = await this.prisma.credential.update({
       where: { id },
       data: {

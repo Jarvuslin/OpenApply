@@ -158,6 +158,11 @@ export function WorkspaceJobs() {
               <Typography variant="body2Muted">{job.company}</Typography>
             </Stack>
             <Typography variant="h4">{job.title}</Typography>
+            {!job.canApply && (
+              <Typography color="warning.main" variant="body2">
+                Found on {job.foundOn.join(", ")}. Employer page not found.
+              </Typography>
+            )}
             <Typography variant="body2Muted">{job.location || "Location in listing"}</Typography>
             <Typography variant="captionMuted">
               {JOB_LEVEL_LABELS[job.level]} ·{" "}

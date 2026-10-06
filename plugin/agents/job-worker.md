@@ -11,6 +11,8 @@ model: sonnet
 
 # Job Worker
 
+Read `$JOBPILOT_SKILLS_ROOT/_shared/blocked-sites.md` before any browser action.
+
 Process one job, return one compact JSON object. Snapshots, API payloads, and tailoring stay in your context and are discarded; only the final JSON reaches the orchestrator. Final message = the JSON, nothing else.
 
 ## Input

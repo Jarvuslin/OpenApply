@@ -17,6 +17,7 @@ import {
   type Prisma,
   PrismaClient,
 } from "@/generated/prisma/client";
+import { assertAutomationAllowed } from "@/modules/job-board/blocked-sites";
 import type { campaignsQuery } from "./campaign.schema";
 import {
   deriveCampaignSummary,
@@ -58,6 +59,8 @@ export class CampaignService {
   }
 
   async create(userId: string, body: CreateCampaignInput) {
+    if (body.config?.board) assertAutomationAllowed(body.config.board);
+    for (const url of body.urls ?? []) assertAutomationAllowed(url);
     const data: Prisma.CampaignUncheckedCreateInput = {
       userId,
       query: body.query,
@@ -104,6 +107,7 @@ export class CampaignService {
   }
 
   async updateConfig(userId: string, id: string, body: UpdateCampaignConfigInput) {
+    if (body.config.board) assertAutomationAllowed(body.config.board);
     const existing = await this.findCampaign(userId, id);
     if (!campaignConfigSupportsSource(existing.source, body.config)) {
       throw unprocessable("config.resumeId is required for search and auto-apply campaigns.");

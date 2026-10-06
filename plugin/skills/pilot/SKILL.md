@@ -6,6 +6,8 @@ argument-hint: "(none - injected by the terminal host)"
 
 # Pilot - One Autonomous Cycle
 
+Read `$JOBPILOT_SKILLS_ROOT/_shared/blocked-sites.md` before any browser action.
+
 JobPilot's autonomous mode: the host re-injects this skill perpetually, so each invocation is **one stateless cycle** - sense, decide, act, record, exit. All state lives in the API; nothing survives between invocations except what you write there. Do **exactly one** agenda item (at most one worker delegation, one browser activity), journal it, print the sentinel, stop.
 
 ## 0. Setup

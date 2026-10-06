@@ -6,6 +6,8 @@ argument-hint: "<job_title_keywords_location> --board <domain> [--max-jobs N] [-
 
 # Job Search
 
+Read `$JOBPILOT_SKILLS_ROOT/_shared/blocked-sites.md` before any browser action.
+
 Search a single board (picked by the user when launching the campaign) and rank results by qualification fit against the resume.
 
 ## Setup

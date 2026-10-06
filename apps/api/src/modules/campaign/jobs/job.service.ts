@@ -16,6 +16,7 @@ import {
   type Prisma,
   PrismaClient,
 } from "@/generated/prisma/client";
+import { assertAutomationAllowed } from "@/modules/job-board/blocked-sites";
 import { JobListingPublisher } from "@/modules/job-listing";
 import { deriveCampaignSummary } from "../campaign.summary";
 import { ensureCampaignOwned, PROMOTABLE_SOURCES } from "../campaign.utils";
@@ -64,6 +65,7 @@ export class CampaignJobService {
   ) {}
 
   async addJob(userId: string, campaignId: string, body: AddCampaignJobInput) {
+    if (body.status === "approved") assertAutomationAllowed(body.url);
     await ensureCampaignOwned(this.prisma, userId, campaignId);
 
     const job = await this.prisma.job.create({
@@ -81,6 +83,8 @@ export class CampaignJobService {
     if (isTerminalJob(existing.status)) {
       throw conflict("Terminal jobs cannot be edited; use the retry or rescan command.");
     }
+    if (["approved", "applying"].includes(patch.status ?? existing.status))
+      assertAutomationAllowed(existing.url);
     const moveTo = patch.status && patch.status !== existing.status ? patch.status : null;
     if (moveTo && !ALLOWED_TRANSITIONS[existing.status].includes(moveTo)) {
       throw conflict(`Job cannot transition from ${existing.status} to ${moveTo}.`);
@@ -188,6 +192,7 @@ export class CampaignJobService {
                 skipReason: `Below minimum match score (${matchScore} < ${threshold})`,
               },
         });
+        if (approved) for (const job of updated) assertAutomationAllowed(job.url);
         moved.push(...updated);
       }
       return moved;
@@ -233,6 +238,7 @@ export class CampaignJobService {
     transition: JobTransition,
   ): Promise<TransitionResult> {
     const existing = await this.findJob(userId, campaignId, key);
+    if (["approved", "applying"].includes(transition.to)) assertAutomationAllowed(existing.url);
     if (existing.status === transition.idempotentAt) {
       return { job: existing, changed: false };
     }

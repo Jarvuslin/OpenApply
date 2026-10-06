@@ -1,7 +1,8 @@
+import { atsProviderSchema } from "@jobpilot/contracts/job-sources";
 import { z } from "zod/v4";
 
 export const sourceInput = z.object({
-  provider: z.enum(["ashby", "greenhouse"]),
+  provider: atsProviderSchema,
   board: z
     .string()
     .trim()

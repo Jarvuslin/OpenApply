@@ -29,6 +29,7 @@ import { apiErrorMessage } from "@/api/error";
 import { EmailSection } from "@/components/features/settings/sections/email-section";
 import { getStatus, injectCommand } from "@/lib/terminal";
 import { useAgentDock } from "@/providers/agent-provider";
+import { DiscoveryConnections } from "./discovery-connections";
 import { RuntimeStatus } from "./runtime-status";
 import { WorkspaceJobs } from "./workspace-jobs";
 import { WorkspaceTabs } from "./workspace-tabs";
@@ -50,7 +51,9 @@ export function MvpWorkbench() {
   const dock = useAgentDock();
   const [tab, setTab] = useState("assistant");
   const [readiness, setReadiness] = useState<Readiness | null>(null);
-  const [provider, setProvider] = useState<"ashby" | "greenhouse">("ashby");
+  const [provider, setProvider] = useState<
+    "ashby" | "greenhouse" | "lever" | "smartrecruiters" | "workable"
+  >("ashby");
   const [board, setBoard] = useState("ashby");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -80,7 +83,7 @@ export function MvpWorkbench() {
     setTrialDispatched(false);
     if (slug) {
       setTab("assistant");
-      void api.public
+      void api
         .jobs({ slug })
         .get()
         .then((result) => {
@@ -465,11 +468,14 @@ export function MvpWorkbench() {
                   select
                   label="Source"
                   value={provider}
-                  onChange={(event) => setProvider(event.target.value as "ashby" | "greenhouse")}
+                  onChange={(event) => setProvider(event.target.value as typeof provider)}
                   sx={{ minWidth: 140 }}
                 >
                   <MenuItem value="ashby">Ashby</MenuItem>
                   <MenuItem value="greenhouse">Greenhouse</MenuItem>
+                  <MenuItem value="lever">Lever</MenuItem>
+                  <MenuItem value="smartrecruiters">SmartRecruiters</MenuItem>
+                  <MenuItem value="workable">Workable</MenuItem>
                 </TextField>
                 <TextField
                   label="Company board name"
@@ -512,6 +518,7 @@ export function MvpWorkbench() {
                 : "A Gmail connection in this chat does not connect the app. Complete the Google setup below once to enable unattended verification."}
             </Alert>
             <EmailSection />
+            <DiscoveryConnections />
             <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
               <Chip label="Personal Google account supported" variant="outlined" />
               <Button href="/settings/credentials">Saved career accounts</Button>

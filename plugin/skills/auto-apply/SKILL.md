@@ -6,6 +6,8 @@ argument-hint: "<query> --board <domain> [--campaign <campaign-id>] [--min-score
 
 # Auto-apply - Search + Apply On Demand
 
+Read `$JOBPILOT_SKILLS_ROOT/_shared/blocked-sites.md` before any browser action.
+
 Keep the chosen board open in tab 1; for each result that qualifies, delegate the application to the `job-worker` subagent (it works in its own tab and returns a compact result), then move to the next job. **No batch pre-discovery and no per-job approval - launching the campaign is the confirmation.** Park only the affected job when human input is required. On a blocking CAPTCHA, call `jobpilot-api GET /api/captcha/status`. Invoke `solve-captcha` only when `entitled:true`. Otherwise, or if solving fails, return `needs_user` with `category:"verification"`, leave that tab open, and let the orchestrator park this job and continue to the next. Never silently skip a challenge, change browser identity, or use proxies to evade it. Live view at `$JOBPILOT_WEB/campaigns/<campaign-id>`.
 
 ## Setup
