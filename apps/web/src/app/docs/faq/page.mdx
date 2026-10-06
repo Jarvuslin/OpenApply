@@ -91,16 +91,11 @@ under **Settings → Notifications** to get questions as a push on your phone.
 
 ## Can OpenApply read and send email?
 
-Yes, through your own Google OAuth client. See
-[Email setup](/docs/email-setup). Reading powers the inbox and verification
-codes. Sending supports approved interview replies. It can never delete mail, and it works
-without email too; you just lose those features.
+Yes, through the Gmail connector in your local agent. See [Email setup](/docs/email-setup). The agent uploads messages for classification and verification. Approved replies use its send tool. Connector authentication and worker access must be checked in the embedded runtime.
 
 ## What about captchas?
 
-The agent solves checkbox and text captchas itself. For image challenges it
-uses a 2Captcha or CapSolver key if you've added one under
-[credentials](/docs/credentials); otherwise it skips the job and says why.
+Solving is disabled by default. The worker checks the API entitlement before invoking a solver. A disabled or failed solver parks the job with a verification question and leaves the browser tab open while the queue continues.
 
 ## How do I update the agent?
 

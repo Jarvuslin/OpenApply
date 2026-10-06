@@ -130,7 +130,7 @@ User decisions:
 
 - `apps/web/src/components/features/campaigns/constants.ts`: `isApiBoard(boards, domain)`.
 - `composer/campaign-composer.tsx`: when the board is API kind, pin mode to search/auto-apply
-  (Upwork-pin precedent), and on submit create the campaign, navigate to detail, run
+  and on submit create the campaign, navigate to detail, run
   `api["job-sources"].runs.post({campaignId})` via `useApiMutation` (errors surface as toast,
   SSE streams rows into the detail page), and skip `agent.injectSkill`. Exception: auto-apply
   mode with the agent online injects `resume-campaign` after the run to drain approved rows.

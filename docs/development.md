@@ -3,11 +3,13 @@
 Technical reference for contributors. For the plain-language overview, see
 [architecture.md](architecture.md).
 
+For Windows setup and Mac beta, follow the [README](../README.md). The commands below assume the database and environment files already exist.
+
 ## Local setup
 
 ```bash
-git clone https://github.com/suxrobgm/jobpilot.git
-cd jobpilot
+git clone https://github.com/Jarvuslin/OpenApply.git
+cd OpenApply
 bun install
 bun run db:setup # generates the Prisma client, runs migrations, seeds default data
 bun run dev      # web :4100 + api :4101 + terminal :4102

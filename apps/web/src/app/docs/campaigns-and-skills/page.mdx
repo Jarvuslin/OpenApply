@@ -54,7 +54,7 @@ an **Extract from PDF** button (**Re-extract from PDF** once there's content).
 The rest run on their own, mid-job. `tailor-resume` picks or creates the right
 resume variant per application, and `cover-letter` drafts a letter when a form
 asks for one. `get-code` pulls verification codes from your mailbox during
-logins, and `solve-captcha` handles captchas. The Pilot drafts availability replies for review.
+logins. The worker checks solver entitlement for a blocking CAPTCHA and parks the job if solving is disabled or fails. The Pilot drafts availability replies for review.
 `review-resume` leaves a [suggested rewrite](/docs/getting-started) on the
 resume page after an upload, and `humanizer` keeps generated text reading
 naturally.
@@ -78,8 +78,7 @@ With [email connected](/docs/email-setup), **Sync** on the inbox page pulls new
 mail from Gmail, and **Scan pending** runs the `scan-inbox` skill over it. The
 skill classifies each message (interview request, rejection, offer, and so on)
 and matches it to an application. Proposed status moves appear in your inbox
-page; approve one and the application updates. Nothing changes status without
-you.
+page; approve one and the application updates. Confident matched rejections can be applied automatically. Interview and offer decisions remain for your review.
 
 ## Recovering a campaign
 
