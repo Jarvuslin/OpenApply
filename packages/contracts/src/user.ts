@@ -78,6 +78,40 @@ const salaryPreferenceSchema = z.object({
 
 export type SalaryPreferenceInput = z.infer<typeof salaryPreferenceSchema>;
 
+export const JOB_LEVELS = [
+  "Internship",
+  "Entry",
+  "Intermediate / Mid",
+  "Senior",
+  "Staff",
+  "Principal",
+  "Manager",
+  "Director+",
+] as const;
+export const WORK_MODES = ["Remote", "Hybrid", "Onsite"] as const;
+export const EMPLOYMENT_TYPES = ["Full-time", "Part-time", "Contract", "Internship"] as const;
+export const jobPreferencesSchema = z.object({
+  levels: z.array(z.enum(JOB_LEVELS)),
+  yearsExperience: z.number().min(0).max(80).nullable(),
+  workModes: z.array(z.enum(WORK_MODES)),
+  employmentTypes: z.array(z.enum(EMPLOYMENT_TYPES)),
+});
+export const workAuthorizationSchema = z
+  .array(
+    z.object({
+      country: z.string().min(1, "Choose a country"),
+      authorized: z
+        .boolean()
+        .nullable()
+        .refine((v): boolean => v !== null, "Choose Yes or No for work authorization"),
+      sponsorship: z
+        .boolean()
+        .nullable()
+        .refine((v): boolean => v !== null, "Choose Yes or No for sponsorship"),
+    }),
+  )
+  .max(20);
+
 const userUpdateSchema = z.object({
   firstName: z.string().min(1, "Required"),
   lastName: z.string().min(1, "Required"),
@@ -93,6 +127,8 @@ const userUpdateSchema = z.object({
   state: z.string().optional().nullable(),
   zipCode: optionalZipCode,
   country: z.string().optional().nullable(),
+  jobPreferences: jobPreferencesSchema.optional(),
+  workAuthorization: workAuthorizationSchema.optional(),
 
   usAuthorized: z.boolean(),
   requiresSponsorship: z.boolean(),
@@ -118,7 +154,14 @@ export const DEFAULT_MIN_MATCH_SCORE = 60;
 
 const autoApplySettingsSchema = z.object({
   minMatchScore: z.number().int().min(0).max(100),
-  maxApplicationsPerCampaign: z.number().int().min(1).max(500).optional().nullable(),
+  maxApplicationsPerCampaign: z
+    .number()
+    .int()
+    .min(0, "Choose no limit or enter 1–500 applications")
+    .max(500)
+    .nullable()
+    .transform((v) => (v === 0 ? null : v))
+    .optional(),
   defaultStartDate: z.string(),
 });
 
@@ -146,8 +189,10 @@ export const USER_DEFAULT_VALUES: UserWithAutoApplyInput = {
   city: "",
   state: "",
   zipCode: "",
-  country: "United States",
-  usAuthorized: true,
+  country: "",
+  jobPreferences: { levels: [], yearsExperience: null, workModes: [], employmentTypes: [] },
+  workAuthorization: [],
+  usAuthorized: false,
   requiresSponsorship: false,
   visaStatus: "",
   optExtension: "",

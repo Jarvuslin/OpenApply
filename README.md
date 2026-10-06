@@ -26,6 +26,8 @@ A workspace for finding employer roles, tailoring your résumé and applying thr
 
 ## Setup
 
+For the hosted-web direction, see [the local companion and subscription connection flow](docs/hosted-companion.md). Onboarding now starts with an optional agent check, followed by resume import and profile review. Claude extraction uses Haiku by default; Codex uses the selected provider's local CLI. A hosted website and signed companion installers have not been released.
+
 For Google, GitHub, or email/password login, see [sign-in setup](docs/auth-setup.md).
 Email/password works locally without provider keys. Google and GitHub buttons
 become available after their OAuth credentials are configured on the API.

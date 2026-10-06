@@ -1,9 +1,18 @@
-import { isValidPhoneNumber } from "libphonenumber-js";
+import { type CountryCode, parsePhoneNumberFromString } from "libphonenumber-js";
 import { z } from "zod/v4";
 
 const PHONE_ERROR = "Enter a valid phone number (e.g. +1 415 555 2671)";
 
-const phoneSchema = z.string().refine((v) => isValidPhoneNumber(v), { message: PHONE_ERROR });
+export function normalizePhone(value: string, country?: CountryCode): string {
+  const parsed = parsePhoneNumberFromString(value.trim(), country);
+  return parsed?.isValid() ? parsed.number : value.trim();
+}
+
+const phoneSchema = z
+  .string()
+  .trim()
+  .refine((v) => parsePhoneNumberFromString(v)?.isValid(), { message: PHONE_ERROR })
+  .transform((v) => normalizePhone(v));
 
 export const optionalPhoneSchema = z
   .union([z.literal(""), phoneSchema])

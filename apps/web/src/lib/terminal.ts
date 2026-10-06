@@ -106,6 +106,19 @@ export function getStatus(): Promise<SessionStatus> {
   return send<SessionStatus>("GET", "/healthz");
 }
 
+export function runInference(
+  provider: TerminalProviderId,
+  text?: string,
+  model = "haiku",
+  schema?: unknown,
+) {
+  return send<{ provider: TerminalProviderId; model: string; output: string }>(
+    "POST",
+    "/inference",
+    { provider, text, model, check: text === undefined, schema },
+  );
+}
+
 interface StartOptions {
   cols: number;
   rows: number;

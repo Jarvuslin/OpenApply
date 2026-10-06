@@ -1,4 +1,3 @@
-import { resumeDataSchema } from "@openapply/contracts/resume";
 import { idParam } from "@openapply/contracts/shared";
 import { resumeChannel } from "@openapply/contracts/sse";
 import { Elysia } from "elysia";
@@ -41,11 +40,11 @@ export const resumeController = new Elysia({
   detail: { tags: ["Resumes"] },
 })
   .use(authGuard)
-  .post("/:id/extract", ({ user, params }) => svc.extract(user.id, params.id), {
+  .get("/:id/source-text", ({ user, params }) => svc.sourceText(user.id, params.id), {
     beforeHandle: rateLimit(RATE_LIMITS.localExtraction),
     params: idParam,
-    response: z.object({ content: resumeDataSchema }),
-    detail: { summary: "Read a resume locally using PDF.js/Mammoth and the Claude subscription" },
+    response: z.object({ text: z.string() }),
+    detail: { summary: "Read owned resume text for extraction by the user's local agent" },
   })
   .get("/", ({ user }) => svc.list(user.id), {
     response: resumeListSchema,

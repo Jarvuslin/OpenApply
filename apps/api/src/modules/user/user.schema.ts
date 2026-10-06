@@ -1,4 +1,9 @@
-import { SALARY_CURRENCIES, SALARY_PERIODS } from "@openapply/contracts/user";
+import {
+  jobPreferencesSchema,
+  SALARY_CURRENCIES,
+  SALARY_PERIODS,
+  workAuthorizationSchema,
+} from "@openapply/contracts/user";
 import { z } from "zod/v4";
 
 /** A reference row attached to the user. */
@@ -38,6 +43,9 @@ const userViewSchema = z.object({
   state: z.string().nullable(),
   zipCode: z.string().nullable(),
   country: z.string().nullable(),
+  countryCode: z.string().nullable(),
+  jobPreferences: jobPreferencesSchema,
+  workAuthorization: workAuthorizationSchema,
   usAuthorized: z.boolean(),
   requiresSponsorship: z.boolean(),
   visaStatus: z.string().nullable(),

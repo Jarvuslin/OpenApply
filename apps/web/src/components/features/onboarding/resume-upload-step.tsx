@@ -4,25 +4,29 @@ import { Alert, Button, CircularProgress, Stack, Typography } from "@mui/materia
 import { USER_DEFAULT_VALUES } from "@openapply/contracts/user";
 import { api } from "@/api/client";
 import { apiErrorMessage } from "@/api/error";
+import { useTerminalHealth } from "@/components/features/agent-dock/use-terminal-health";
 import { extractUpload } from "@/components/features/resumes/extract-upload";
 import { FileUpload } from "@/components/ui/form";
 import { withForm } from "@/components/ui/form/tanstack";
 import { MAX_RESUME_BYTES } from "@/lib/constants";
+import { useAgentDock } from "@/providers/agent-provider";
 import { applyBasicsToForm } from "./map-basics-to-profile";
 
 export const ResumeUploadStep = withForm({
   defaultValues: USER_DEFAULT_VALUES,
   props: { onContinue: () => {} },
   render: function ResumeUploadStep({ form, onContinue }) {
+    const { health } = useTerminalHealth();
+    const { provider, expand } = useAgentDock();
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState("");
     const [done, setDone] = useState(false);
     const [uploadedId, setUploadedId] = useState(form.getFieldValue("primaryResumeId"));
-    const read = async (id: string) => {
+    const read = async (id: string, model = "haiku") => {
       setBusy(true);
       setError("");
       try {
-        const content = await extractUpload(id);
+        const content = await extractUpload(id, model);
         applyBasicsToForm(form, content.basics);
         setDone(true);
       } catch (reason) {
@@ -45,7 +49,11 @@ export const ResumeUploadStep = withForm({
         if (!uploaded.data) throw new Error("Upload failed. Please retry.");
         setUploadedId(uploaded.data.id);
         form.setFieldValue("primaryResumeId", uploaded.data.id);
-        await read(uploaded.data.id);
+        if (health === "reachable") await read(uploaded.data.id);
+        else
+          setError(
+            "Your file is saved. Connect the local companion to extract it, or continue manually.",
+          );
       } catch (e) {
         setError(e instanceof Error ? e.message : "Resume import failed.");
       } finally {
@@ -73,14 +81,22 @@ export const ResumeUploadStep = withForm({
         />
         {busy && (
           <Alert icon={<CircularProgress size={18} />} severity="info">
-            Reading the document and structuring it with your Claude subscription. This can take a
-            minute.
+            Reading the document with {provider === "claude" ? "Claude Haiku" : "Codex"} on your
+            computer. This can take a minute.
           </Alert>
         )}
         {error && <Alert severity="error">{error}</Alert>}
+        {health !== "reachable" && (
+          <Button onClick={expand}>Connect agent for automatic extraction</Button>
+        )}
         {uploadedId && !done && (
-          <Button disabled={busy} onClick={() => void read(uploadedId)}>
+          <Button disabled={busy || health !== "reachable"} onClick={() => void read(uploadedId)}>
             Retry reading saved resume
+          </Button>
+        )}
+        {uploadedId && error && provider === "claude" && health === "reachable" && (
+          <Button disabled={busy} onClick={() => void read(uploadedId, "sonnet")}>
+            Retry with Sonnet (higher usage)
           </Button>
         )}
         {done && (

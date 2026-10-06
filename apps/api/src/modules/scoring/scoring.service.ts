@@ -1,3 +1,5 @@
+import { jobPreferencesSchema, workAuthorizationSchema } from "@openapply/contracts/user";
+import { Country } from "country-state-city";
 import { singleton } from "tsyringe";
 import { type Prisma, PrismaClient } from "@/generated/prisma/client";
 import { readContent } from "@/modules/resume/content";
@@ -29,7 +31,11 @@ export class ScoringService {
       this.resolveBaseResumeContent(userId, resumeId),
       this.prisma.user.findUnique({
         where: { id: userId },
-        select: { requiresSponsorship: true, autoApply: { select: { minMatchScore: true } } },
+        select: {
+          jobPreferences: true,
+          workAuthorization: true,
+          autoApply: { select: { minMatchScore: true } },
+        },
       }),
     ]);
 
@@ -39,12 +45,22 @@ export class ScoringService {
       derived = deriveProfileFitInputs(readContent(content));
     }
 
+    const preferences = user ? jobPreferencesSchema.parse(user.jobPreferences) : null;
+    const authorization = user ? workAuthorizationSchema.parse(user.workAuthorization) : [];
+    const country = Country.getAllCountries().find(
+      (c) => c.isoCode === digest.country || c.name === digest.country,
+    );
+    const scoped = country
+      ? authorization.find((a) => a.country === country.name || a.country === country.isoCode)
+      : undefined;
     const fitProfile = {
       skills: profile?.skills ?? derived.skills,
       yearsExperience:
-        profile?.yearsExperience !== undefined ? profile.yearsExperience : derived.yearsExperience,
-      // From the profile, not the caller: omitting the flag must not skip the eligibility check.
-      requiresSponsorship: user?.requiresSponsorship ?? false,
+        profile?.yearsExperience !== undefined
+          ? profile.yearsExperience
+          : (preferences?.yearsExperience ?? derived.yearsExperience),
+      // Unknown country eligibility must be confirmed during apply, not turned into a global rejection.
+      requiresSponsorship: scoped?.sponsorship === true,
     };
 
     // A caller that omits the threshold gets the user's own auto-apply bar, not a global constant.

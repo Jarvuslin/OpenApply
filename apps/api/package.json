@@ -33,6 +33,7 @@
     "@react-email/components": "^1.0.12",
     "@react-email/render": "^2.1.0",
     "@react-pdf/renderer": "^4.9.0",
+    "country-state-city": "^3.2.1",
     "dotenv": "^18.0.4",
     "elysia": "^1.4.30",
     "googleapis": "^182.0.0",

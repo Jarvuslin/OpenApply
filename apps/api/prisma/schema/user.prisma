@@ -51,6 +51,9 @@ model User {
   state   String?
   zipCode String? @map("zip_code")
   country String?
+  countryCode String? @map("country_code")
+  jobPreferences Json @default("{\"levels\":[],\"yearsExperience\":null,\"workModes\":[],\"employmentTypes\":[]}") @map("job_preferences")
+  workAuthorization Json @default("[]") @map("work_authorization")
 
   usAuthorized        Boolean @default(false) @map("us_authorized")
   requiresSponsorship Boolean @default(false) @map("requires_sponsorship")

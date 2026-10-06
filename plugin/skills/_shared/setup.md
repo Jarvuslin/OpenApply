@@ -109,3 +109,7 @@ Name files so parallel work can't collide - prefix with the campaign or job key 
 ## 4. Credentials
 
 Resolve a board login with `GET /api/credentials/resolve` per `./auth.md` ("Credential lookup"). The raw rows at `GET /api/credentials` (logins + captcha-service keys) are only for listing or editing them.
+
+## Confirmed job preferences
+
+Use `user.jobPreferences` (levels, yearsExperience, workModes, employmentTypes) and `user.preferredLocations` to constrain searches. Empty selections mean unspecified, not verified eligibility. Use country-matched `user.workAuthorization` for authorization and sponsorship. Legacy `usAuthorized` / `requiresSponsorship` fields are not a substitute for a confirmed country entry.

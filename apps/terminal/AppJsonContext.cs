@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using OpenApply.Terminal.Inference;
 using OpenApply.Terminal.Hosting;
 using OpenApply.Terminal.Pilot;
 using OpenApply.Terminal.Providers;
@@ -14,6 +15,8 @@ namespace OpenApply.Terminal;
 /// </summary>
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(StartSessionRequest))]
+[JsonSerializable(typeof(InferenceRequest))]
+[JsonSerializable(typeof(InferenceResponse))]
 [JsonSerializable(typeof(CodexSettingsFile))]
 [JsonSerializable(typeof(PluginMcpFile))]
 [JsonSerializable(typeof(string))]

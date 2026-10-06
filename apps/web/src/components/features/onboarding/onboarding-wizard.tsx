@@ -30,6 +30,7 @@ import { PersonalSection } from "@/components/features/settings/sections";
 import { AddressSection } from "@/components/features/settings/sections/address-section";
 import { AutoApplySection } from "@/components/features/settings/sections/auto-apply-section";
 import { EeoSection } from "@/components/features/settings/sections/eeo-section";
+import { JobPreferencesSection } from "@/components/features/settings/sections/job-preferences-section";
 import { ReferencesSection } from "@/components/features/settings/sections/references-section";
 import { SalarySection } from "@/components/features/settings/sections/salary-section";
 import { WorkAuthSection } from "@/components/features/settings/sections/work-auth-section";
@@ -39,21 +40,21 @@ import { patchAgentStorage } from "@/lib/agent-storage";
 import { useToast } from "@/providers/notification-provider";
 import { migrateOpenApplyStorage } from "@/utils/storage-migration";
 import { AgentSetupStep } from "./agent-setup-step";
+import { normalizeProfileDraft } from "./normalize-profile-draft";
 import { readOnboardingDraft, writeOnboardingDraft } from "./onboarding-draft";
 import { ResumeUploadStep } from "./resume-upload-step";
 import { describeIssues, firstStepWithIssue } from "./validation-issues";
 
 const STEPS = [
+  { key: "agent", label: "Connect agent" },
   { key: "resume", label: "Resume" },
   { key: "personal", label: "Personal" },
   { key: "eligibility", label: "Eligibility" },
   { key: "preferences", label: "Preferences" },
   { key: "review", label: "Review answers" },
-  { key: "agent", label: "Connect agent" },
 ] as const;
 
-/** Profile-form steps come first; the agent step is a self-contained section. */
-const PROFILE_STEPS = STEPS.findIndex((s) => s.key === "agent");
+const REVIEW_STEP = STEPS.length - 1;
 export function OnboardingWizard(): ReactElement {
   const query = useApiQuery(userQueries.detail(), {
     errorMessage: "Could not load your saved profile",
@@ -88,11 +89,11 @@ function RestoreOnboarding({ userId, initialData }: OnboardingProps): ReactEleme
       const draft = readOnboardingDraft(window.localStorage, userId);
       setRestored({
         values: draft?.values ?? serverValues,
-        step: draft?.step ?? (serverValues.firstName && serverValues.primaryResumeId ? 1 : 0),
+        step: draft?.step ?? 0,
         error: false,
       });
     } catch {
-      setRestored({ values: serverValues, step: 1, error: true });
+      setRestored({ values: serverValues, step: 2, error: true });
     }
     // Restore once per account, before mounting the form. Refetches must not
     // replace the user's edits with the last server-validated profile.
@@ -132,7 +133,7 @@ function OnboardingForm({
       onSuccess: () => {
         queryClient.invalidateQueries();
         // Profile saved (non-empty) clears the redirect gate, so the optional steps can navigate away safely.
-        setStep(PROFILE_STEPS);
+        finish();
       },
     },
   );
@@ -141,7 +142,7 @@ function OnboardingForm({
     defaultValues: initialData,
     validators: { onSubmit: userWithAutoApplySchema },
     onSubmit: async ({ value }) => {
-      await save.mutateAsync(value);
+      await save.mutateAsync(userWithAutoApplySchema.parse(value));
     },
   });
   useEffect(() => {
@@ -161,8 +162,8 @@ function OnboardingForm({
       subscription.unsubscribe();
     };
   }, [form, userId, step]);
-  const isProfileStep = step < PROFILE_STEPS;
-  const isLastProfileStep = step === PROFILE_STEPS - 1;
+  const isProfileStep = step > 0;
+  const isLastProfileStep = step === REVIEW_STEP;
 
   const finish = (): void => {
     // Land on the workspace with the dock open so the agent is the obvious next step.
@@ -172,6 +173,9 @@ function OnboardingForm({
 
   const submitForm = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const normalized = normalizeProfileDraft(form.state.values);
+    form.setFieldValue("phone", normalized.phone);
+    form.setFieldValue("autoApply", normalized.autoApply);
     if (!isLastProfileStep) {
       setStep((s) => s + 1);
       return;
@@ -213,31 +217,32 @@ function OnboardingForm({
         {isProfileStep ? (
           <form onSubmit={submitForm}>
             <Stack spacing={3}>
-              {step === 0 && <ResumeUploadStep form={form} onContinue={() => setStep(1)} />}
-              {step === 1 && (
+              {step === 1 && <ResumeUploadStep form={form} onContinue={() => setStep(2)} />}
+              {step === 2 && (
                 <>
                   <PersonalSection form={form} />
                   <AddressSection form={form} />
                 </>
               )}
-              {step === 2 && (
+              {step === 3 && (
                 <>
                   <Alert severity="info">
                     Review these answers explicitly. Work authorization and sponsorship are never
-                    inferred from your resume. The US authorization field only applies to US roles;
-                    other countries require a scoped answer before applying.
+                    inferred from your resume. Add an explicit answer for each country where you
+                    want to work.
                   </Alert>
                   <WorkAuthSection form={form} />
                 </>
               )}
-              {step === 3 && (
+              {step === 4 && (
                 <>
                   <SalarySection form={form} />
+                  <JobPreferencesSection form={form} />
                   <AutoApplySection form={form} />
                   <ReferencesSection form={form} />
                 </>
               )}
-              {step === 4 && (
+              {step === 5 && (
                 <>
                   <EeoSection form={form} />
                   <Alert severity="info">
@@ -260,13 +265,13 @@ function OnboardingForm({
               <Button
                 variant="text"
                 onClick={() => {
-                  setStep(PROFILE_STEPS);
+                  setStep(0);
                   setConfirmed(false);
                 }}
               >
-                Continue to agent setup — finish answers later
+                Check agent connection
               </Button>
-              {step !== 0 && (
+              {step !== 1 && (
                 <Stack direction="row" sx={{ justifyContent: "space-between", pt: 1 }}>
                   <Button variant="outlined" onClick={() => setStep((s) => Math.max(0, s - 1))}>
                     Back
@@ -276,7 +281,7 @@ function OnboardingForm({
                     variant="contained"
                     disabled={save.isPending || (isLastProfileStep && !confirmed)}
                   >
-                    {isLastProfileStep ? (save.isPending ? "Saving…" : "Save & continue") : "Next"}
+                    {isLastProfileStep ? (save.isPending ? "Saving…" : "Save & finish") : "Next"}
                   </Button>
                 </Stack>
               )}
@@ -285,16 +290,15 @@ function OnboardingForm({
         ) : (
           <Stack spacing={3}>
             <Alert severity="info">
-              You can test browser account creation before completing your profile. Missing
-              eligibility answers still need confirmation before real applications can be submitted.
+              Connect first to import your resume automatically, or continue with manual entry.
             </Alert>
             <AgentSetupStep />
             <Stack direction="row" sx={{ justifyContent: "space-between", pt: 1 }}>
-              <Button variant="outlined" onClick={() => setStep((s) => s - 1)}>
-                Back
+              <Button variant="outlined" onClick={() => setStep(2)}>
+                Fill manually
               </Button>
-              <Button variant="contained" onClick={finish}>
-                Open test workspace
+              <Button variant="contained" onClick={() => setStep(1)}>
+                Continue to resume
               </Button>
             </Stack>
           </Stack>

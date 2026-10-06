@@ -6,7 +6,7 @@
 - `Below minimum match score (X < Y)` - only after reading the actual posting.
 - A hard requirement **the JD itself states** the user can't meet. Never infer from industry or company name.
   - **`POST /api/score-fit` detects these for you**, returning `eligibilityBlocked: { kind, evidence }` when the digest states one. Present ⇒ skip, with the reason its `kind` calls for:
-    - `sponsorship` → `No visa sponsorship (JD: "<evidence>")` - only raised when `user.requiresSponsorship` is true.
+    - `sponsorship` → `No visa sponsorship (JD: "<evidence>")` - only raised when the matching `user.workAuthorization` country entry confirms sponsorship is needed. Include the job's country name or ISO code in `digest.country`; missing country/authorization is unknown and must be clarified before applying.
     - `citizenship` → `US citizenship required` - raised for everyone; nobody can acquire citizenship for a posting.
     - `clearance` → `Active security clearance required` - raised for everyone.
   - Quote the JD's words verbatim in a sponsorship reason. It reads the digest you sent, so populate `descriptionExcerpt` and `requirements` or it finds nothing. Absent means the posting is **silent**, not that sponsorship is offered - see the never-skip list.

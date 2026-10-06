@@ -96,3 +96,49 @@ test("wrong-owner payload and unavailable storage report failure", () => {
     ),
   ).toThrow("quota");
 });
+
+test("legacy drafts move to the matching step without discarding filled fields", () => {
+  const legacy = {
+    version: 1,
+    userId: "a",
+    step: 1,
+    values: {
+      ...USER_DEFAULT_VALUES,
+      country: "Canada",
+      phone: "(416) 555-2671",
+      autoApply: { ...USER_DEFAULT_VALUES.autoApply, maxApplicationsPerCampaign: 0 },
+    },
+  };
+  const draft = readOnboardingDraft({ getItem: () => JSON.stringify(legacy) }, "a");
+  expect(draft?.step).toBe(2);
+  expect(draft?.values.phone).toBe("+14165552671");
+  expect(draft?.values.autoApply?.maxApplicationsPerCampaign).toBeNull();
+});
+
+test("unanswered country authorization survives a draft restore", () => {
+  const disk = storage();
+  writeOnboardingDraft(
+    disk,
+    "a",
+    {
+      ...USER_DEFAULT_VALUES,
+      workAuthorization: [{ country: "Canada", authorized: null, sponsorship: null }],
+    },
+    3,
+  );
+  expect(readOnboardingDraft(disk, "a")?.values.workAuthorization?.[0]?.authorized).toBeNull();
+});
+
+test("invalid experience values remain editable after reload", () => {
+  const disk = storage();
+  writeOnboardingDraft(
+    disk,
+    "a",
+    {
+      ...USER_DEFAULT_VALUES,
+      jobPreferences: { levels: [], yearsExperience: -1, workModes: [], employmentTypes: [] },
+    },
+    4,
+  );
+  expect(readOnboardingDraft(disk, "a")?.values.jobPreferences?.yearsExperience).toBe(-1);
+});

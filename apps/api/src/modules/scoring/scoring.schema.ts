@@ -7,6 +7,7 @@ export const MAX_YEARS_EXPERIENCE = 50;
 const jobDigestSchema = z.object({
   title: z.string().optional().default(""),
   company: z.string().optional().default(""),
+  country: z.string().optional(),
   skills: z.array(z.string()).optional().default([]),
   requirements: z.array(z.string()).optional().default([]),
   responsibilities: z.array(z.string()).optional().default([]),

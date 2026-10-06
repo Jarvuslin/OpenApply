@@ -1,4 +1,5 @@
 using OpenApply.Terminal.Hosting;
+using OpenApply.Terminal.Inference;
 using OpenApply.Terminal.Pilot;
 using OpenApply.Terminal.Sessions;
 using OpenApply.Terminal.Updates;
@@ -45,6 +46,7 @@ await HostHandoff.WaitForPreviousHostAsync(app.Services.GetRequiredService<ILogg
 app.UseTerminalPipeline();
 app.MapHostEndpoints();
 app.MapSessionEndpoints();
+app.MapInferenceEndpoints();
 app.MapPilotEndpoints();
 app.MapUpdateEndpoints();
 app.RunWithPortDiagnostics();

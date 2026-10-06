@@ -29,10 +29,10 @@ All paths refer to `GET /api/user` (already loaded by setup.md).
   - Text area → paste the text directly.
   - File upload → render the text to PDF and upload it: write `{"text":"<letter text>"}` to `$OPENAPPLY_TEMP/cover-letter-pdf.json`, run `openapply-api POST /api/cover-letters/pdf --data @"$OPENAPPLY_TEMP/cover-letter-pdf.json" --out "$OPENAPPLY_TEMP/cover-letter.pdf"`, then `browser_file_upload` that path (overwritten each time).
 - **"How did you hear about us?"** → "Job board" or "Company website".
-- **Years of experience** → calculate from earliest work experience date.
+- **Years of experience** → use confirmed `user.jobPreferences.yearsExperience` for total professional experience. For skill-specific experience, use dated evidence, account for overlap, and ask if uncertain; never count time since the earliest date as continuous employment.
 - **Custom questions** → best judgment from the resume. Genuinely uncertain → ask (loop skills: make a reasonable attempt and log in notes).
 - **Relocation** → `user.willingToRelocate`. For preferred/target locations, use `user.preferredLocations`. Empty `[]` or contains `"Anywhere"` → user is open, answer accordingly without asking.
-- **Work auth / visa** → `user.{usAuthorized, requiresSponsorship, visaStatus, optExtension}`. Map to form questions; for dropdowns, pick the closest option. Sponsorship questions ("Will you now or in the future require sponsorship?") → answer truthfully from `requiresSponsorship` - never misstate to pass a screen. If the form reveals a no-sponsorship policy the JD didn't state, still answer truthfully, finish the application, and note it in the result summary.
+- **Work auth / visa** → use the entry in `user.workAuthorization[]` whose country matches the job country. `authorized` and `sponsorship` must be explicit booleans. An absent entry or unanswered value means ask the user; never use the legacy US/global booleans to fill a different country or infer an answer. Specific visa types still require a confirmed answer.
 - **EEO / Diversity** → `user.{eeoGender, eeoRace, eeoEthnicity, eeoHispanicOrLatino, eeoVeteranStatus, eeoDisabilityStatus}`. Null → "Prefer not to disclose".
 - **References** → `user.references[]`, each `{name, relationship, company, email, phone}`. Fill reference rows in order. If the form requires references and the array is empty, fill what you can and note the gap - never invent one.
 

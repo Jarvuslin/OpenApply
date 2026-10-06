@@ -1,8 +1,11 @@
 import {
+  jobPreferencesSchema,
   type SalaryCurrency,
   type SalaryPeriod,
   type UserWithAutoApplyInput,
+  workAuthorizationSchema,
 } from "@openapply/contracts/user";
+import { Country } from "country-state-city";
 import { singleton } from "tsyringe";
 import { findOwned } from "@/common/errors";
 import { resumePath } from "@/common/storage/storage";
@@ -23,6 +26,9 @@ const USER_SCALAR_SELECT = {
   state: true,
   zipCode: true,
   country: true,
+  countryCode: true,
+  jobPreferences: true,
+  workAuthorization: true,
   usAuthorized: true,
   requiresSponsorship: true,
   visaStatus: true,
@@ -114,6 +120,8 @@ export class UserService {
     return {
       user: {
         ...user,
+        jobPreferences: jobPreferencesSchema.parse(user.jobPreferences),
+        workAuthorization: workAuthorizationSchema.parse(user.workAuthorization),
         preferredLocations: JSON.parse(user.preferredLocations) as string[],
         references,
         // The columns are plain TEXT; assert the enums the response schema declares.
@@ -146,6 +154,10 @@ export class UserService {
       where: { id: userId },
       data: {
         ...userFields,
+        countryCode:
+          Country.getAllCountries().find(
+            (c) => c.name === userFields.country || c.isoCode === userFields.country,
+          )?.isoCode ?? null,
         preferredLocations: preferredLocationsJson,
         primaryResumeId: primaryResumeId ?? null,
       },
