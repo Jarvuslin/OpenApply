@@ -2,10 +2,11 @@
 
 import type { ReactElement } from "react";
 import { Delete, PictureAsPdf } from "@mui/icons-material";
-import { Box, IconButton, Stack, Typography } from "@mui/material";
+import { Box, Button, IconButton, Stack, Typography } from "@mui/material";
 import { api } from "@/api/client";
 import { useApiMutation } from "@/api/hooks";
 import { invalidations } from "@/api/query-keys";
+import { resumeSourceUrl } from "@/api/resume-urls";
 import type { ResumeDto } from "@/api/types";
 import { FileUpload } from "@/components/ui/form";
 import { SectionCard } from "@/components/ui/layout";
@@ -39,10 +40,10 @@ export function SourceUploadCard(props: SourceUploadCardProps): ReactElement {
 
   return (
     <SectionCard
-      title="Source document"
+      title="Original upload"
       description={
         resume.sourceFilename
-          ? "The document this resume was bootstrapped from. Extract structured fields from it, or tailor it for a specific job."
+          ? "Your original file keeps its formatting. Generated resumes use the OpenApply template."
           : "Upload PDF, DOCX or TXT to bootstrap this resume, or fill out the editor below directly."
       }
     >
@@ -58,6 +59,15 @@ export function SourceUploadCard(props: SourceUploadCardProps): ReactElement {
                   : "unknown size"}
               </Typography>
             </Box>
+            <Button
+              component="a"
+              href={resumeSourceUrl(resume.id, resume.updatedAt)}
+              target="_blank"
+              rel="noopener noreferrer"
+              size="small"
+            >
+              Open original
+            </Button>
             <ExtractResumeButton resume={resume} />
             <FileUpload
               accept=".pdf,.docx,.txt"

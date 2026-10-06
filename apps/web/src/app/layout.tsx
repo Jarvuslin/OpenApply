@@ -59,7 +59,6 @@ export const metadata: Metadata = {
   },
   openGraph: {
     siteName: "OpenApply",
-    url: "/",
     type: "website",
     locale: "en_US",
     title,

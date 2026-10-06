@@ -144,6 +144,11 @@ export function CertificationEntry(props: { entry: ResumeCertification }): React
       sub={entry.issuer}
     >
       {entry.credentialId && <Text style={styles.entryNote}>{entry.credentialId}</Text>}
+      {entry.url && (
+        <Link src={absoluteHref(entry.url)} style={styles.link}>
+          {displayUrl(entry.url)}
+        </Link>
+      )}
     </TitledEntry>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactElement, type SubmitEvent, useEffect, useState } from "react";
+import { type ReactElement, type SubmitEvent, useEffect, useRef, useState } from "react";
 import {
   Alert,
   AlertTitle,
@@ -42,7 +42,11 @@ import { migrateOpenApplyStorage } from "@/utils/storage-migration";
 import { AgentConnectionStatus, type ProviderConnection } from "./agent-connection-status";
 import { AgentSetupStep } from "./agent-setup-step";
 import { normalizeProfileDraft } from "./normalize-profile-draft";
-import { readOnboardingDraft, writeOnboardingDraft } from "./onboarding-draft";
+import {
+  clearOnboardingDraft,
+  readOnboardingDraft,
+  writeOnboardingDraft,
+} from "./onboarding-draft";
 import { ResumeUploadStep } from "./resume-upload-step";
 import { describeIssues, firstStepWithIssue } from "./validation-issues";
 
@@ -124,6 +128,7 @@ function OnboardingForm({
   const [showValidationErrors, setShowValidationErrors] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [connection, setConnection] = useState<ProviderConnection | null>(null);
+  const saved = useRef(false);
 
   // Local drafts may be incomplete. Only explicitly reviewed, validated values
   // are promoted to the account's profile through the API.
@@ -133,6 +138,12 @@ function OnboardingForm({
       successMessage: "Profile saved",
       invalidate: [queryKeys.user.all],
       onSuccess: () => {
+        saved.current = true;
+        try {
+          clearOnboardingDraft(window.localStorage, userId);
+        } catch {
+          // The server profile remains authoritative if browser storage is unavailable.
+        }
         queryClient.invalidateQueries();
         // Profile saved (non-empty) clears the redirect gate, so the optional steps can navigate away safely.
         finish();
@@ -149,6 +160,7 @@ function OnboardingForm({
   });
   useEffect(() => {
     const persist = () => {
+      if (saved.current) return;
       try {
         writeOnboardingDraft(window.localStorage, userId, form.state.values, step);
         setDraftError(false);
@@ -170,7 +182,7 @@ function OnboardingForm({
   const finish = (): void => {
     // Land on the workspace with the dock open so the agent is the obvious next step.
     patchAgentStorage({ dockExpanded: true });
-    router.push("/mvp");
+    router.replace("/mvp");
   };
 
   const submitForm = async (e: SubmitEvent<HTMLFormElement>) => {

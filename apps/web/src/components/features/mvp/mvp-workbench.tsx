@@ -23,6 +23,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import NextLink from "next/link";
 import { useSearchParams } from "next/navigation";
 import { api } from "@/api/client";
 import { apiErrorMessage } from "@/api/error";
@@ -250,8 +251,12 @@ export function MvpWorkbench() {
                   </Button>
                   {trialDispatched && (
                     <Stack direction="row" spacing={1}>
-                      <Button href="/documents">Resume versions</Button>
-                      <Button href="/pilot">Trial journal</Button>
+                      <Button component={NextLink} href="/documents/resumes">
+                        Resume versions
+                      </Button>
+                      <Button component={NextLink} href="/pilot">
+                        Trial journal
+                      </Button>
                     </Stack>
                   )}
                   {readiness && !readiness.profile && (
@@ -278,7 +283,9 @@ export function MvpWorkbench() {
                         : "Apply to this role"}
                   </Button>
                   {campaign && (
-                    <Button href={`/campaigns/${campaign}`}>Application progress</Button>
+                    <Button component={NextLink} href={`/campaigns/${campaign}`}>
+                      Application progress
+                    </Button>
                   )}
                 </Stack>
               )}
@@ -329,13 +336,19 @@ export function MvpWorkbench() {
                 >
                   <Stack direction="row" spacing={0.5}>
                     <Button
-                      href="/documents"
+                      component={NextLink}
+                      href="/documents/resumes"
                       size="small"
                       startIcon={<DescriptionOutlined fontSize="sm" />}
                     >
                       Resume
                     </Button>
-                    <Button href="/onboarding" size="small" startIcon={<Tune fontSize="sm" />}>
+                    <Button
+                      component={NextLink}
+                      href="/settings/profile"
+                      size="small"
+                      startIcon={<Tune fontSize="sm" />}
+                    >
                       Preferences
                     </Button>
                   </Stack>
@@ -387,8 +400,8 @@ export function MvpWorkbench() {
               <Typography variant="overlineMuted">Ready when you are</Typography>
               {(
                 [
-                  { key: "profile", label: "Your profile", href: "/onboarding" },
-                  { key: "resume", label: "Original resume", href: "/documents" },
+                  { key: "profile", label: "Your profile", href: "/settings/profile" },
+                  { key: "resume", label: "Original resume", href: "/documents/resumes" },
                   { key: "gmail", label: "Gmail", href: "/settings/email" },
                   {
                     key: "browser",
@@ -413,7 +426,12 @@ export function MvpWorkbench() {
                           : "Setup needed"}
                     </Typography>
                   </Box>
-                  <IconButton size="small" href={item.href} aria-label={`Open ${item.label}`}>
+                  <IconButton
+                    component={NextLink}
+                    size="small"
+                    href={item.href}
+                    aria-label={`Open ${item.label}`}
+                  >
                     <ArrowOutward fontSize="xs" />
                   </IconButton>
                 </Stack>
@@ -544,7 +562,9 @@ export function MvpWorkbench() {
             <DiscoveryConnections />
             <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
               <Chip label="Personal Google account supported" variant="outlined" />
-              <Button href="/settings/credentials">Saved career accounts</Button>
+              <Button component={NextLink} href="/settings/credentials">
+                Saved career accounts
+              </Button>
             </Stack>
           </Stack>
         )}

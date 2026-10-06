@@ -22,8 +22,15 @@ const getJob = cache(async (slug: string) =>
   ),
 );
 
-export async function generateMetadata(props: JobPageProps): Promise<Metadata> {
-  if (!PUBLIC_SITE_ENABLED) notFound();
+export function generateMetadata(props: JobPageProps): Metadata | Promise<Metadata> {
+  // The disabled page already returns 404; its metadata must stay static too.
+  if (!PUBLIC_SITE_ENABLED) {
+    return { title: "Job not found", robots: { index: false, follow: false } };
+  }
+  return getJobMetadata(props);
+}
+
+async function getJobMetadata(props: JobPageProps): Promise<Metadata> {
   const { slug } = await props.params;
   const job = await getJob(slug);
   if (!job) {

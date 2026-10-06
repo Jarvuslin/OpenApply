@@ -192,7 +192,9 @@ A direct allowed apply link is preferred. Otherwise the resolver probes the five
 .\scripts\start-mvp.ps1
 ```
 
-Stop retains the VM database and browser profile. Logs and process records live in `.temp/mvp/`. API source changes require an API restart. terminal C# changes require rebuilding and restarting the terminal. Do not restart during an active application. For interactive development after the VM is running, stop the existing web/API/terminal processes and use `bun run dev`.
+Stop retains the VM database and browser profile. Logs and process records live in `.temp/mvp/`. Normal startup builds the website once, then serves compiled pages so navigation does not wait for development compilation. The local preview build uses `apps/web/.next-preview`, separate from the hot-reload cache. A build failure leaves the web server stopped and reports the error.
+
+For hot reload while editing, use `node scripts/openapply.mjs start --dev` (Windows also accepts `.\scripts\start-mvp.ps1 -Dev`) or `bun run dev` after starting the VM. Stop the existing web/API/terminal processes before switching modes. In normal preview mode, restart after source changes to rebuild the website. API source changes require an API restart; terminal C# changes require rebuilding and restarting the terminal. Do not restart during an active application.
 
 ## Local security and data
 

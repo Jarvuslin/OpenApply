@@ -49,10 +49,10 @@ const navGroups: NavGroup[] = [
     items: [
       {
         label: "Documents",
-        href: "/documents",
+        href: "/documents/resumes",
         icon: Description,
         // Detail routes stayed at their old prefixes; keep Documents lit while viewing them.
-        matchHrefs: ["/resumes", "/cover-letters"],
+        matchHrefs: ["/documents", "/resumes", "/cover-letters"],
       },
       { label: "Boards", href: "/boards", icon: BusinessCenter },
     ],

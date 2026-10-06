@@ -95,3 +95,7 @@ export function writeOnboardingDraft(
 ): void {
   storage.setItem(draftKey(userId), JSON.stringify({ version: 2, userId, values, step }));
 }
+
+export function clearOnboardingDraft(storage: Pick<Storage, "removeItem">, userId: string): void {
+  storage.removeItem(draftKey(userId));
+}

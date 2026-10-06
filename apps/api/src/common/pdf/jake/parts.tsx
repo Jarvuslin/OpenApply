@@ -1,7 +1,7 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: react-pdf renders once to a buffer -- no
 // reconciliation, and the mapped rows carry no stable id.
 
-import { Children, type ReactElement, type ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 import type { ResumeBasics } from "@openapply/contracts/resume";
 import { Link, Text, View } from "@react-pdf/renderer";
 import { styles } from "./styles";
@@ -11,7 +11,7 @@ export function dateRange(start: string | undefined, end: string | undefined): s
   const s = (start ?? "").trim();
   const e = (end ?? "").trim();
   if (!s && !e) return "";
-  if (s && !e) return `${s} – Present`;
+  if (s && !e) return s;
   if (!s && e) return e;
   return `${s} – ${e}`;
 }
@@ -37,17 +37,19 @@ export function TitledEntry(props: {
   children?: ReactNode;
 }): ReactElement {
   return (
-    <View style={styles.entryBlock} wrap={false}>
-      <View style={styles.entryHeaderRow}>
-        <Text style={styles.entryTitle}>{props.title}</Text>
-        {props.right}
-      </View>
-      {props.sub && (
-        <View style={styles.entrySubRow}>
-          <Text>{props.sub}</Text>
-          {props.subRight && <Text>{props.subRight}</Text>}
+    <View style={styles.entryBlock}>
+      <View wrap={false} minPresenceAhead={18}>
+        <View style={styles.entryHeaderRow}>
+          <Text style={styles.entryTitle}>{props.title}</Text>
+          {props.right}
         </View>
-      )}
+        {props.sub && (
+          <View style={styles.entrySubRow}>
+            <Text>{props.sub}</Text>
+            {props.subRight && <Text>{props.subRight}</Text>}
+          </View>
+        )}
+      </View>
       {props.children}
     </View>
   );
@@ -108,19 +110,15 @@ export function Bullets(props: { items: string[] }): ReactNode {
 }
 
 /**
- * A resume section: an uppercase header followed by its content. The header is
- * grouped with the first child in a non-wrapping block so it never gets orphaned
- * at the bottom of a page when its first entry overflows to the next one.
+ * Keep space for an entry heading and its first line without making the whole entry unbreakable.
  */
 export function Section(props: { title: string; children: ReactNode }): ReactElement {
-  const [first, ...rest] = Children.toArray(props.children);
   return (
     <>
-      <View wrap={false}>
-        <Text style={styles.sectionHeader}>{props.title}</Text>
-        {first}
-      </View>
-      {rest}
+      <Text style={styles.sectionHeader} minPresenceAhead={48}>
+        {props.title}
+      </Text>
+      {props.children}
     </>
   );
 }

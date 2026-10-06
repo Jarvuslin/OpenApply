@@ -8,6 +8,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { Box } from "@mui/material";
+import dynamic from "next/dynamic";
 import {
   DOCK_COLLAPSED,
   DOCK_EXPANDED,
@@ -17,8 +18,11 @@ import {
 import { patchAgentStorage, readAgentStorage, subscribeAgentStorage } from "@/lib/agent-storage";
 import { useAgentDock } from "@/providers/agent-provider";
 import { clamp } from "@/utils/math";
-import { DockPanel } from "./dock-panel";
 import { DockStrip } from "./dock-strip";
+
+const DockPanel = dynamic(() => import("./dock-panel").then((module) => module.DockPanel), {
+  ssr: false,
+});
 
 function getStoredDockWidth(): number {
   const w = readAgentStorage()?.dockWidth;

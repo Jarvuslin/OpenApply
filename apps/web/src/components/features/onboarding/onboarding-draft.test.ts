@@ -1,5 +1,9 @@
 import { USER_DEFAULT_VALUES, userWithAutoApplySchema } from "@openapply/contracts/user";
-import { readOnboardingDraft, writeOnboardingDraft } from "./onboarding-draft";
+import {
+  clearOnboardingDraft,
+  readOnboardingDraft,
+  writeOnboardingDraft,
+} from "./onboarding-draft";
 import { expect, test } from "bun:test";
 
 function storage() {
@@ -8,6 +12,9 @@ function storage() {
     getItem: (key: string) => data.get(key) ?? null,
     setItem: (key: string, value: string) => {
       data.set(key, value);
+    },
+    removeItem: (key: string) => {
+      data.delete(key);
     },
   };
 }
@@ -34,6 +41,16 @@ test("drafts belong to a single account", () => {
   expect(readOnboardingDraft(disk, "b")).toBeNull();
   writeOnboardingDraft(disk, "b", { ...USER_DEFAULT_VALUES, firstName: "B" }, 1);
   expect(readOnboardingDraft(disk, "a")?.step).toBe(2);
+});
+
+test("completing onboarding clears only the saved account's draft", () => {
+  const disk = storage();
+  writeOnboardingDraft(disk, "a", USER_DEFAULT_VALUES, 5);
+  writeOnboardingDraft(disk, "b", { ...USER_DEFAULT_VALUES, firstName: "B" }, 2);
+  clearOnboardingDraft(disk, "a");
+  expect(readOnboardingDraft(disk, "a")).toBeNull();
+  expect(readOnboardingDraft(disk, "b")?.values.firstName).toBe("B");
+  expect(readOnboardingDraft(disk, "b")?.step).toBe(2);
 });
 
 test("clearing a required numeric field does not discard the rest of the draft", () => {

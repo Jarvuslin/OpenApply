@@ -2,7 +2,7 @@ import { createApiClient } from "@openapply/api-client";
 import { type NextRequest, NextResponse } from "next/server";
 import { API_ORIGIN } from "@/api/base-url";
 import { isAdminRole } from "@/lib/roles";
-import { isOnboardingIncomplete } from "@/utils/onboarding";
+import { onboardingRedirect } from "@/utils/onboarding";
 
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   // The landing page stays reachable signed in - asking for it is not a wrong turn.
@@ -25,8 +25,9 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   }
 
   // Profile not filled in -> onboarding.
-  if (isOnboardingIncomplete(data)) {
-    return NextResponse.redirect(new URL("/onboarding", request.url));
+  const onboardingDestination = onboardingRedirect(request.nextUrl.pathname, data);
+  if (onboardingDestination) {
+    return NextResponse.redirect(new URL(onboardingDestination, request.url));
   }
 
   // The /me call above already carried the role, so gating /admin here is free
@@ -39,6 +40,6 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
 export const config = {
   matcher: [
-    "/((?!_next|docs|install|jobs|login|register|onboarding|verify-email|forgot-password|reset-password|confirm-email-change|opengraph-image|apple-icon|favicon.ico|.*\\..*).*)",
+    "/((?!_next|docs|install|jobs|login|register|verify-email|forgot-password|reset-password|confirm-email-change|opengraph-image|apple-icon|favicon.ico|.*\\..*).*)",
   ],
 };

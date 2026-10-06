@@ -1,7 +1,7 @@
 "use client";
 
-import { type ReactElement, type ReactNode, useState } from "react";
-import { Add, Description, PictureAsPdf, Star, StarBorder } from "@mui/icons-material";
+import { type ReactElement, useState } from "react";
+import { Add, Delete, Description, PictureAsPdf, Star, StarBorder } from "@mui/icons-material";
 import {
   Box,
   Button,
@@ -14,46 +14,34 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { resumeChannel } from "@openapply/contracts/sse";
-import { useQueryClient } from "@tanstack/react-query";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/api/client";
 import { useApiMutation, useApiQuery } from "@/api/hooks";
 import { resumeQueries } from "@/api/queries";
-import { invalidations, queryKeys } from "@/api/query-keys";
+import { invalidations } from "@/api/query-keys";
 import { resumePdfUrl } from "@/api/resume-urls";
 import { RelativeTime } from "@/components/ui/display";
 import { FileUpload } from "@/components/ui/form";
 import { SectionCard } from "@/components/ui/layout";
 import { MAX_RESUME_BYTES } from "@/lib/constants";
-import { useSseChannel } from "@/lib/sse/client";
+import { useConfirm } from "@/providers/confirm-provider";
 import { useToast } from "@/providers/notification-provider";
 import { plural } from "@/utils/format";
 import { NewResumeDialog } from "./new-resume-dialog";
 
-/** Invisible per-resume SSE subscriber: refetches the list when content or variants change. */
-function ResumeEventsSubscriber({ resumeId }: { resumeId: string }): ReactNode {
-  const queryClient = useQueryClient();
-  useSseChannel(
-    resumeChannel,
-    { resumeId },
-    {
-      onMessage: () => {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.resume.list() });
-      },
-    },
-  );
-  return null;
-}
-
 export function ResumesList(): ReactElement {
   const toast = useToast();
+  const confirm = useConfirm();
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const list = useApiQuery(resumeQueries.list());
+  const list = useApiQuery(resumeQueries.list(), {
+    // One stream per resume can exhaust the browser's HTTP/1.1 connection slots.
+    refetchInterval: 10_000,
+    refetchIntervalInBackground: false,
+  });
 
   const upload = useApiMutation<{ id: string }, File>((file) => api.resumes.upload.post({ file }), {
     successMessage: "Resume uploaded",
@@ -71,6 +59,24 @@ export function ResumesList(): ReactElement {
       invalidate: invalidations.resume,
     },
   );
+
+  const remove = useApiMutation<{ deleted: string }, string>((id) => api.resumes({ id }).delete(), {
+    successMessage: "Resume deleted",
+    invalidate: invalidations.resume,
+  });
+
+  const handleDelete = async (id: string, label: string, isPrimary: boolean): Promise<void> => {
+    const primaryNote = isPrimary
+      ? " This is your primary resume; you can choose another after deleting it."
+      : "";
+    const confirmed = await confirm({
+      title: "Delete resume?",
+      description: `Remove "${label}", its uploaded file and all its variants? This cannot be undone.${primaryNote}`,
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (confirmed) remove.mutate(id);
+  };
 
   if (list.isLoading) {
     return <LinearProgress />;
@@ -107,10 +113,6 @@ export function ResumesList(): ReactElement {
           {plural(rows.length, "resume")}
         </Typography>
       </Stack>
-
-      {rows.map((r) => (
-        <ResumeEventsSubscriber key={`sse-${r.id}`} resumeId={r.id} />
-      ))}
 
       {rows.length === 0 ? (
         <SectionCard title="No resumes yet">
@@ -151,7 +153,7 @@ export function ResumesList(): ReactElement {
                   <IconButton
                     onClick={() => setPrimary.mutate(r.id)}
                     aria-label={r.isPrimary ? "Primary resume" : "Set as primary"}
-                    disabled={setPrimary.isPending}
+                    disabled={setPrimary.isPending || remove.isPending}
                   >
                     {r.isPrimary ? <Star fontSize="md" /> : <StarBorder fontSize="md" />}
                   </IconButton>
@@ -163,6 +165,19 @@ export function ResumesList(): ReactElement {
                     aria-label="Open PDF"
                   >
                     <PictureAsPdf fontSize="md" />
+                  </IconButton>
+                  <IconButton
+                    aria-label={`Delete ${r.label}`}
+                    title="Delete resume"
+                    disabled={remove.isPending || setPrimary.isPending}
+                    loading={remove.isPending && remove.variables === r.id}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      void handleDelete(r.id, r.label, r.isPrimary);
+                    }}
+                  >
+                    <Delete fontSize="md" />
                   </IconButton>
                 </Stack>
               </CardContent>

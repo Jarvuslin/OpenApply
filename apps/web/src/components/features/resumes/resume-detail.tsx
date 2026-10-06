@@ -105,7 +105,7 @@ export function ResumeDetail(props: ResumeDetailProps): ReactElement {
           top: { lg: 16 },
         }}
       >
-        <ResumePdfPreview resumeId={resumeId} updatedAt={resume.updatedAt} />
+        <ResumePdfPreview key={resumeId} resume={resume} />
       </Box>
     </Stack>
   );
