@@ -34,7 +34,7 @@ internal sealed partial class CodexProvider : Provider
     // Codex has no --settings flag, so shipped config arrives as repeated -c overrides. The PTY already sets
     // the cwd; repeating it through -C makes Windows paths cross a second argument parser.
     public override string[] BuildArgs(string pluginDir, ILogger logger) =>
-        ["--no-alt-screen", "--approve-for-me", .. ConfigOverrides(pluginDir, logger, ExecutablePath.Find).SelectMany(o => new[] { "-c", o })];
+        ["--no-alt-screen", "--sandbox", "workspace-write", "--ask-for-approval", "on-request", .. ConfigOverrides(pluginDir, logger, ExecutablePath.Find).SelectMany(o => new[] { "-c", o })];
 
     /// <summary>Codex discovers skills from the workspace .agents/skills, which is wholly ours to rebuild.</summary>
     public override void PrepareWorkspace(InstallPaths paths)

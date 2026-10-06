@@ -123,8 +123,11 @@ public sealed class PtyProcess : IDisposable
         BestEffort(active.Dispose);
     }
 
-    public static IPtyConnection SpawnWithPtyNet(PtyOptions options) =>
-        Task.Run(() => PtyProvider.SpawnAsync(options, CancellationToken.None)).GetAwaiter().GetResult();
+    public static IPtyConnection SpawnWithPtyNet(PtyOptions options)
+    {
+        PtyLaunch.Prepare(options);
+        return Task.Run(() => PtyProvider.SpawnAsync(options, CancellationToken.None)).GetAwaiter().GetResult();
+    }
 
     public static PtyOptions BuildOptions(
         string command,

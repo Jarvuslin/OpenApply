@@ -4,6 +4,19 @@ OpenApply's website and API hold the account, uploaded resumes and confirmed pro
 
 Onboarding starts with agent selection and an explicit **Verify connection** request. A reachable companion alone is not proof of model access. Verification uses a short inference request; authentication, quota and model failures remain visible. Manual onboarding remains available.
 
+Install **one** provider CLI: [Claude Code](https://code.claude.com/docs/en/setup) or [Codex](https://developers.openai.com/codex/cli/). Having a subscription or signing into the provider's website does not install its CLI. The companion launches that CLI on the user's computer; it is not included in OpenApply yet.
+
+## Connection recovery
+
+- **Verification is taking too long:** click **Cancel verification** to stop the request, then retry or select another provider. The companion stops model requests after two minutes; the browser also has its own deadline. Leaving the connection step cancels its verification.
+- **The terminal failed to start:** install the selected CLI, then click **Retry terminal**. The companion checks executable locations on every attempt, including Windows `.cmd` launchers. A host restart is not required for normal CLI installation.
+- **Codex exits with an unknown configuration value:** update the Codex CLI using its official installation guide, then restart the terminal session. An older CLI can reject settings written by a newer Codex desktop app; do not replace account credentials or change billing tiers to work around this.
+- **The companion is offline:** use **Start agent** where the registered `openapply://` launcher is available, or start the source checkout with `node scripts/openapply.mjs start`. Click **Reconnect companion** to check again.
+- **Restart a running CLI session:** use the agent panel's restart button. This restarts Claude/Codex, not the companion or website.
+- **Restart the companion itself (source development):** use the agent panel's Stop button to shut down the local companion, then run `dotnet run --project apps/terminal --no-launch-profile` from the repository root. Keep that terminal open; Ctrl+C stops it. The website reconnects automatically. This does not require restarting the API, database or browser.
+
+The current source build still requires developer tools. A hosted release should make companion install/start/restart a desktop tray action; that installer and tray UI are not shipped yet.
+
 Resume import follows this path:
 
 1. Save the source file through the authenticated API.

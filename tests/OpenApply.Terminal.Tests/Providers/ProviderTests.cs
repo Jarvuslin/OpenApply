@@ -58,7 +58,7 @@ public class ProviderTests
         temp.File(Path.Combine("settings", "codex.json"), """{"configOverrides":["a=1","b=\"two\""]}""");
 
         Assert.Equal(
-            ["--no-alt-screen", "--approve-for-me", "-c", "a=1", "-c", "b=\"two\""],
+            ["--no-alt-screen", "--sandbox", "workspace-write", "--ask-for-approval", "on-request", "-c", "a=1", "-c", "b=\"two\""],
             Provider.Codex.BuildArgs(temp.Root, NullLogger.Instance));
     }
 

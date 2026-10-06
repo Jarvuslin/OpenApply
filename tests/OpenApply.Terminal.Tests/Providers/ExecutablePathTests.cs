@@ -35,6 +35,27 @@ public class ExecutablePathTests
     }
 
     [Fact]
+    public void Find_IgnoresNpmUnixLauncher_AndSelectsTheWindowsShim()
+    {
+        using var temp = new TempDir();
+        temp.File("codex", "#!/bin/sh");
+        var shim = temp.File("codex.cmd", "@echo off");
+
+        Assert.Equal(shim, ExecutablePath.Find("codex", temp.Root, ".exe;.cmd", windows: true));
+        Assert.Null(ExecutablePath.Find("codex", temp.Root, ".exe", windows: true));
+        Assert.Null(ExecutablePath.Find(Path.Combine(temp.Root, "codex"), temp.Root, ".exe;.cmd", windows: true));
+    }
+
+    [Fact]
+    public void Find_AcceptsAnExplicitWindowsExtension()
+    {
+        using var temp = new TempDir();
+        var shim = temp.File("codex.cmd", "@echo off");
+
+        Assert.Equal(shim, ExecutablePath.Find("codex.cmd", temp.Root, ".exe;.cmd", windows: true));
+    }
+
+    [Fact]
     public void Find_FallsBackToWindowsDefaultExtensions_WhenPathExtIsMissing()
     {
         using var temp = new TempDir();

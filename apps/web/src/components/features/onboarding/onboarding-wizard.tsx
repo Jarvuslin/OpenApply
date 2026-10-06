@@ -39,6 +39,7 @@ import { SectionCard } from "@/components/ui/layout";
 import { patchAgentStorage } from "@/lib/agent-storage";
 import { useToast } from "@/providers/notification-provider";
 import { migrateOpenApplyStorage } from "@/utils/storage-migration";
+import { AgentConnectionStatus, type ProviderConnection } from "./agent-connection-status";
 import { AgentSetupStep } from "./agent-setup-step";
 import { normalizeProfileDraft } from "./normalize-profile-draft";
 import { readOnboardingDraft, writeOnboardingDraft } from "./onboarding-draft";
@@ -122,6 +123,7 @@ function OnboardingForm({
   const [draftError, setDraftError] = useState(false);
   const [showValidationErrors, setShowValidationErrors] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [connection, setConnection] = useState<ProviderConnection | null>(null);
 
   // Local drafts may be incomplete. Only explicitly reviewed, validated values
   // are promoted to the account's profile through the API.
@@ -262,15 +264,6 @@ function OnboardingForm({
                 </>
               )}
               {showValidationErrors && <ValidationSummary form={form} />}
-              <Button
-                variant="text"
-                onClick={() => {
-                  setStep(0);
-                  setConfirmed(false);
-                }}
-              >
-                Check agent connection
-              </Button>
               {step !== 1 && (
                 <Stack direction="row" sx={{ justifyContent: "space-between", pt: 1 }}>
                   <Button variant="outlined" onClick={() => setStep((s) => Math.max(0, s - 1))}>
@@ -292,7 +285,7 @@ function OnboardingForm({
             <Alert severity="info">
               Connect first to import your resume automatically, or continue with manual entry.
             </Alert>
-            <AgentSetupStep />
+            <AgentSetupStep connection={connection} onConnectionChange={setConnection} />
             <Stack direction="row" sx={{ justifyContent: "space-between", pt: 1 }}>
               <Button variant="outlined" onClick={() => setStep(2)}>
                 Fill manually
@@ -304,6 +297,13 @@ function OnboardingForm({
           </Stack>
         )}
       </SectionCard>
+      <AgentConnectionStatus
+        connection={connection}
+        onManage={() => {
+          setStep(0);
+          setConfirmed(false);
+        }}
+      />
     </Stack>
   );
 }

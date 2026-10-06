@@ -10,13 +10,13 @@ public static class ExecutablePath
 {
     private static readonly string[] ShellExtensions = [".cmd", ".bat"];
 
-    // Resolve against the PATH the agent process gets, not the host's: a protocol-activated host
-    // (openapply://) inherits one without the machine entries, which is why PtyEnvironment exists.
-    private static readonly Lazy<Dictionary<string, string>> ChildEnvironment = new(PtyEnvironment.BuildOverrides);
-
     /// <summary>Absolute path to <paramref name="command"/>, or null when PATH has no match.</summary>
-    public static string? Find(string command) =>
-        Find(command, Variable("PATH"), Variable("PATHEXT"), OperatingSystem.IsWindows());
+    public static string? Find(string command)
+    {
+        // Refresh registry PATH on every attempt so installing a CLI does not require restarting the host.
+        var environment = PtyEnvironment.BuildOverrides();
+        return Find(command, Variable(environment, "PATH"), Variable(environment, "PATHEXT"), OperatingSystem.IsWindows());
+    }
 
     /// <summary>True when the resolved file needs a command interpreter rather than a direct spawn.</summary>
     public static bool NeedsShell(string path) =>
@@ -32,7 +32,7 @@ public static class ExecutablePath
 
         if (Path.IsPathRooted(command) || command.Contains(Path.DirectorySeparatorChar) || command.Contains('/'))
         {
-            return File.Exists(command) ? command : null;
+            return File.Exists(command) && (!windows || WindowsExtension(command)) ? command : null;
         }
 
         var candidates = Candidates(command, pathExt, windows);
@@ -58,8 +58,8 @@ public static class ExecutablePath
         return null;
     }
 
-    private static string? Variable(string name) =>
-        ChildEnvironment.Value.TryGetValue(name, out var value)
+    private static string? Variable(Dictionary<string, string> environment, string name) =>
+        environment.TryGetValue(name, out var value)
             ? value
             : Environment.GetEnvironmentVariable(name);
 
@@ -73,10 +73,18 @@ public static class ExecutablePath
             return [command];
         }
 
+        if (WindowsExtension(command))
+        {
+            return [command];
+        }
+
         // A real executable first, then the shims: only the former spawns without an interpreter.
         var extensions = Split(pathExt ?? PtyEnvironment.DefaultPathExt, ';')
-            .Where(ext => ext.StartsWith('.') && !ext.Equals(".exe", StringComparison.OrdinalIgnoreCase));
+            .Where(ext => WindowsExtension("command" + ext) && !ext.Equals(".exe", StringComparison.OrdinalIgnoreCase));
 
-        return [command + ".exe", .. extensions.Select(ext => command + ext), command];
+        return [command + ".exe", .. extensions.Select(ext => command + ext)];
     }
+
+    private static bool WindowsExtension(string path) =>
+        Path.GetExtension(path).ToLowerInvariant() is ".exe" or ".com" or ".cmd" or ".bat";
 }

@@ -1,4 +1,5 @@
 import type { PilotCycleStatus } from "@openapply/contracts/pilot";
+import { terminalRequest } from "./terminal-request";
 
 const TERMINAL_HTTP_URL = process.env.NEXT_PUBLIC_TERMINAL_URL ?? "http://localhost:4102";
 
@@ -78,32 +79,43 @@ export class TerminalApiError extends Error {
   }
 }
 
-async function send<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const response = await fetch(`${TERMINAL_HTTP_URL}${path}`, {
-    method,
-    headers: body != null ? { "content-type": "application/json" } : undefined,
-    body: body != null ? JSON.stringify(body) : undefined,
-  });
-  if (!response.ok) {
-    // The host answers errors as ProblemDetails; surface its detail instead of a bare status.
-    let message = `OpenApply.Terminal ${method} ${path} -> ${response.status}`;
-    try {
-      const problem = (await response.json()) as { detail?: string; title?: string } | null;
-      message = problem?.detail ?? problem?.title ?? message;
-    } catch {
-      // empty or non-JSON body (older host) - keep the fallback
-    }
-    throw new TerminalApiError(response.status, message);
-  }
-  if (response.headers.get("content-length") === "0") {
-    return null as T;
-  }
-  const text = await response.text();
-  return text ? (JSON.parse(text) as T) : (null as T);
+async function send<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+  options?: { signal?: AbortSignal; timeoutMs?: number },
+): Promise<T> {
+  return terminalRequest(
+    `${TERMINAL_HTTP_URL}${path}`,
+    {
+      method,
+      headers: body != null ? { "content-type": "application/json" } : undefined,
+      body: body != null ? JSON.stringify(body) : undefined,
+    },
+    async (response) => {
+      if (!response.ok) {
+        // The host answers errors as ProblemDetails; surface its detail instead of a bare status.
+        let message = `OpenApply.Terminal ${method} ${path} -> ${response.status}`;
+        try {
+          const problem = (await response.json()) as { detail?: string; title?: string } | null;
+          message = problem?.detail ?? problem?.title ?? message;
+        } catch {
+          // empty or non-JSON body (older host) - keep the fallback
+        }
+        throw new TerminalApiError(response.status, message);
+      }
+      if (response.headers.get("content-length") === "0") {
+        return null as T;
+      }
+      const text = await response.text();
+      return text ? (JSON.parse(text) as T) : (null as T);
+    },
+    options,
+  );
 }
 
 export function getStatus(): Promise<SessionStatus> {
-  return send<SessionStatus>("GET", "/healthz");
+  return send<SessionStatus>("GET", "/healthz", undefined, { timeoutMs: 5_000 });
 }
 
 export function runInference(
@@ -111,11 +123,13 @@ export function runInference(
   text?: string,
   model = "haiku",
   schema?: unknown,
+  signal?: AbortSignal,
 ) {
   return send<{ provider: TerminalProviderId; model: string; output: string }>(
     "POST",
     "/inference",
     { provider, text, model, check: text === undefined, schema },
+    { signal, timeoutMs: 130_000 },
   );
 }
 
@@ -132,7 +146,7 @@ interface StartOptions {
 }
 
 export function startSession(options: StartOptions): Promise<SessionStatus> {
-  return send<SessionStatus>("POST", "/sessions/start", options);
+  return send<SessionStatus>("POST", "/sessions/start", options, { timeoutMs: 45_000 });
 }
 
 /**

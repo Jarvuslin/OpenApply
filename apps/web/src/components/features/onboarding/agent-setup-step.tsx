@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Button,
@@ -18,26 +18,67 @@ import { PluginInstallCommands } from "@/components/features/install";
 import { TerminalPanel } from "@/components/features/terminal/terminal-panel";
 import { providerDisplayName, runInference } from "@/lib/terminal";
 import { useAgentAvailable, useAgentDock } from "@/providers/agent-provider";
+import type { ProviderConnection } from "./agent-connection-status";
 
-export function AgentSetupStep() {
-  const { health } = useTerminalHealth();
+interface AgentSetupStepProps {
+  connection: ProviderConnection | null;
+  onConnectionChange: (connection: ProviderConnection | null) => void;
+}
+
+export function AgentSetupStep({ connection, onConnectionChange }: AgentSetupStepProps) {
+  const { health, recheck } = useTerminalHealth();
   const dock = useAgentDock();
   const desktop = useAgentAvailable();
   const [terminalOpen, setTerminalOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [verified, setVerified] = useState("");
+  const verified = connection?.state === "connected" ? connection.provider : null;
   const [error, setError] = useState("");
+  const [cancelled, setCancelled] = useState(false);
+  const pendingCheck = useRef<AbortController | null>(null);
+  useEffect(
+    () => () => {
+      if (pendingCheck.current) {
+        pendingCheck.current.abort();
+        onConnectionChange(null);
+      }
+    },
+    [onConnectionChange],
+  );
+  const cancelCheck = () => {
+    pendingCheck.current?.abort();
+    pendingCheck.current = null;
+    setBusy(false);
+    setCancelled(true);
+    onConnectionChange(null);
+  };
   const check = async () => {
+    if (pendingCheck.current) return;
+    const controller = new AbortController();
+    pendingCheck.current = controller;
     setBusy(true);
+    setCancelled(false);
     setError("");
-    setVerified("");
+    onConnectionChange({ provider: dock.provider, state: "verifying" });
     try {
-      const result = await runInference(dock.provider);
-      setVerified(result.provider);
+      const result = await runInference(
+        dock.provider,
+        undefined,
+        "haiku",
+        undefined,
+        controller.signal,
+      );
+      if (pendingCheck.current === controller && !controller.signal.aborted)
+        onConnectionChange({ provider: result.provider, state: "connected" });
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not verify the connection");
+      if (pendingCheck.current === controller && !controller.signal.aborted) {
+        setError(reason instanceof Error ? reason.message : "Could not verify the connection");
+        onConnectionChange(null);
+      }
     } finally {
-      setBusy(false);
+      if (pendingCheck.current === controller) {
+        pendingCheck.current = null;
+        setBusy(false);
+      }
     }
   };
   return (
@@ -48,6 +89,10 @@ export function AgentSetupStep() {
           OpenApply stays in your browser. The companion on your computer runs Claude Code or Codex
           using your own account. You sign in directly with the provider.
         </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Install the OpenApply companion and the CLI for your chosen provider on this computer. You
+          only need one provider. Signing in to their website does not install the CLI.
+        </Typography>
       </Stack>
       <ToggleButtonGroup
         exclusive
@@ -55,8 +100,9 @@ export function AgentSetupStep() {
         disabled={busy}
         onChange={(_, value) => {
           if (value) {
-            setVerified("");
+            onConnectionChange(null);
             setError("");
+            setCancelled(false);
             void dock.switchProvider(value);
           }
         }}
@@ -64,7 +110,21 @@ export function AgentSetupStep() {
         <ToggleButton value="claude">Claude Code</ToggleButton>
         <ToggleButton value="codex">Codex</ToggleButton>
       </ToggleButtonGroup>
+      <Button
+        component="a"
+        href={
+          dock.provider === "claude"
+            ? "https://code.claude.com/docs/en/setup"
+            : "https://developers.openai.com/codex/cli/"
+        }
+        target="_blank"
+        rel="noopener noreferrer"
+        sx={{ alignSelf: "flex-start" }}
+      >
+        Install or update {providerDisplayName(dock.provider)}
+      </Button>
       {health !== "reachable" && <PluginInstallCommands />}
+      {health !== "reachable" && <Button onClick={recheck}>Reconnect companion</Button>}
       {health === "reachable" && (
         <>
           <Alert severity={verified === dock.provider ? "success" : "info"}>
@@ -83,22 +143,35 @@ export function AgentSetupStep() {
               Open agent terminal to sign in
             </Button>
             <Button variant="contained" onClick={() => void check()} disabled={busy}>
-              {busy ? <CircularProgress size={18} /> : "Verify connection"}
+              {busy && <CircularProgress size={18} sx={{ mr: 1 }} />}
+              {busy ? "Verifying…" : "Verify connection"}
             </Button>
           </Stack>
           <Typography variant="caption" color="text.secondary">
             Verification sends one short test request. Claude uses Haiku; Codex uses its CLI
             default. It counts toward your provider usage.
+            {busy && " This can take up to two minutes. You can cancel at any time."}
           </Typography>
         </>
       )}
+      {busy && (
+        <Button sx={{ alignSelf: "flex-start" }} onClick={cancelCheck}>
+          Cancel verification
+        </Button>
+      )}
       {error && <Alert severity="error">{error}</Alert>}
+      {cancelled && (
+        <Alert severity="info">
+          Verification cancelled. You can retry or choose another provider.
+        </Alert>
+      )}
       <Dialog open={terminalOpen} onClose={() => setTerminalOpen(false)} fullWidth maxWidth="lg">
         <DialogTitle>Sign in to {providerDisplayName(dock.provider)}</DialogTitle>
         <DialogContent sx={{ height: "60dvh" }}>
-          <TerminalPanel provider={dock.provider} />
+          <TerminalPanel key={dock.terminalRevision} provider={dock.provider} />
         </DialogContent>
         <DialogActions>
+          <Button onClick={() => void dock.restart()}>Restart terminal</Button>
           <Button onClick={() => setTerminalOpen(false)}>Done</Button>
         </DialogActions>
       </Dialog>
