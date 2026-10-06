@@ -60,6 +60,8 @@ export function ResetPasswordForm(props: ResetPasswordFormProps): ReactElement {
         <form.AppField name="password">
           {(field) => (
             <field.TextField
+              labelPosition="above"
+              size="medium"
               label="New password"
               type="password"
               autoComplete="new-password"

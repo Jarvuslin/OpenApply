@@ -35,6 +35,8 @@ export function LoginForm(): ReactElement {
         <form.AppField name="email">
           {(field) => (
             <field.TextField
+              labelPosition="above"
+              size="medium"
               label="Email"
               type="email"
               autoComplete="email"
@@ -46,7 +48,13 @@ export function LoginForm(): ReactElement {
 
         <form.AppField name="password">
           {(field) => (
-            <field.TextField label="Password" type="password" autoComplete="current-password" />
+            <field.TextField
+              labelPosition="above"
+              size="medium"
+              label="Password"
+              type="password"
+              autoComplete="current-password"
+            />
           )}
         </form.AppField>
 

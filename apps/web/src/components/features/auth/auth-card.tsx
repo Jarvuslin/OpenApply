@@ -17,27 +17,27 @@ export function AuthCard(props: AuthCardProps): ReactElement {
   return (
     <Box
       sx={{
-        minHeight: "100vh",
+        minHeight: "100dvh",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         backgroundColor: "surfaces.base",
-        py: 6,
+        py: { xs: 4, sm: 6 },
       }}
     >
       <Container maxWidth="xs">
         <Stack spacing={3}>
           <Stack spacing={1} sx={{ alignItems: "center", textAlign: "center" }}>
-            <OpenApplyMark size={48} />
-            <Typography variant="h1" sx={{ fontSize: "2rem", letterSpacing: "-0.035em" }}>
-              OpenApply
-            </Typography>
-            <Typography variant="body2Muted">
-              Your autonomous copilot for the whole job search
-            </Typography>
+            <Stack direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
+              <OpenApplyMark size={36} />
+              <Typography variant="h2" component="h1">
+                OpenApply
+              </Typography>
+            </Stack>
+            <Typography variant="body2Muted">Your job search, in one place.</Typography>
           </Stack>
           <Card>
-            <CardContent sx={{ p: 4 }}>
+            <CardContent sx={{ p: { xs: 3, sm: 4 }, "&:last-child": { pb: { xs: 3, sm: 4 } } }}>
               <Stack spacing={3}>
                 <Stack spacing={0.5}>
                   <Typography variant="h3" component="h2">

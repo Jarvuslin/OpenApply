@@ -28,6 +28,8 @@ export function OAuthButtons(): ReactElement {
           <Button
             key={id}
             variant="outlined"
+            size="large"
+            type="button"
             fullWidth
             startIcon={ICONS[id]}
             disabled={!options.data?.providers[id]}
@@ -55,10 +57,19 @@ export function OAuthButtons(): ReactElement {
         </Alert>
       )}
       {unavailable.length > 0 && (
-        <Typography variant="captionMuted">
-          {unavailable.join(" and ")} sign-in is not set up on this server. Use email and password,
-          or create an account.
-        </Typography>
+        <Stack spacing={0.5} sx={{ alignItems: "flex-start" }}>
+          <Typography variant="captionMuted">
+            {unavailable.join(" and ")} sign-in is not configured. You can use email and password.
+          </Typography>
+          <Button
+            type="button"
+            size="small"
+            disabled={options.isFetching}
+            onClick={() => void options.refetch()}
+          >
+            {options.isFetching ? "Checking…" : "Refresh sign-in options"}
+          </Button>
+        </Stack>
       )}
     </Stack>
   );

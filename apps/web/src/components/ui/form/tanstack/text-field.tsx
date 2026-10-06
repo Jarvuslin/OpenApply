@@ -1,15 +1,17 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { TextFieldProps as MuiTextFieldProps } from "@mui/material";
-import { TextField as BaseTextField } from "../text-field";
+import {
+  TextField as BaseTextField,
+  type TextFieldProps as BaseTextFieldProps,
+} from "../text-field";
 import { firstErrorMessage } from "./error-message";
 import { useFieldContext } from "./form-context";
 
 type FieldValue = string | number | null | undefined;
 
 interface TextFieldProps
-  extends Omit<MuiTextFieldProps, "value" | "onChange" | "onBlur" | "error" | "name"> {
+  extends Omit<BaseTextFieldProps, "value" | "onChange" | "onBlur" | "errorText" | "name"> {
   transform?: (value: string) => string;
 }
 

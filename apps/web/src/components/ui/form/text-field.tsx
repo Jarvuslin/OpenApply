@@ -1,18 +1,21 @@
 "use client";
 
-import { type ReactElement, useState } from "react";
+import { type ReactElement, useId, useState } from "react";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import {
+  FormLabel,
   IconButton,
   InputAdornment,
   TextField as MuiTextField,
   type TextFieldProps as MuiTextFieldProps,
+  Stack,
   Tooltip,
 } from "@mui/material";
 
 export interface TextFieldProps extends Omit<MuiTextFieldProps, "error"> {
   /** Error message; when set the field renders in its error state and shows the text below. */
   errorText?: string;
+  labelPosition?: "floating" | "above";
 }
 
 /**
@@ -21,7 +24,19 @@ export interface TextFieldProps extends Omit<MuiTextFieldProps, "error"> {
  * controlled - pass `value`/`onChange` (no form coupling).
  */
 export function TextField(props: TextFieldProps): ReactElement {
-  const { errorText, helperText, type, slotProps, ...rest } = props;
+  const {
+    errorText,
+    helperText,
+    type,
+    slotProps,
+    label,
+    labelPosition = "floating",
+    id,
+    ...rest
+  } = props;
+  const generatedId = useId();
+  const inputId = id ?? generatedId;
+  const above = labelPosition === "above";
   const isPassword = type === "password";
   const [showPassword, setShowPassword] = useState(false);
   const effectiveType = isPassword && showPassword ? "text" : type;
@@ -42,9 +57,11 @@ export function TextField(props: TextFieldProps): ReactElement {
     </InputAdornment>
   );
 
-  return (
+  const input = (
     <MuiTextField
       fullWidth
+      id={inputId}
+      label={above ? undefined : label}
       type={effectiveType}
       error={Boolean(errorText)}
       helperText={errorText ?? helperText}
@@ -52,10 +69,29 @@ export function TextField(props: TextFieldProps): ReactElement {
         ...slotProps,
         input: {
           ...(slotProps?.input as object),
+          ...(above ? { notched: false } : {}),
           ...(isPassword ? { endAdornment: passwordAdornment } : {}),
         },
       }}
       {...rest}
     />
+  );
+
+  if (!above) return input;
+  return (
+    <Stack spacing={0.75} sx={{ width: "100%" }}>
+      {label && (
+        <FormLabel
+          htmlFor={inputId}
+          error={Boolean(errorText)}
+          disabled={rest.disabled}
+          required={rest.required}
+          sx={{ typography: "body1", color: "text.primary" }}
+        >
+          {label}
+        </FormLabel>
+      )}
+      {input}
+    </Stack>
   );
 }

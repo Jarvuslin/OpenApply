@@ -55,6 +55,8 @@ export function ForgotPasswordForm(): ReactElement {
         <form.AppField name="email">
           {(field) => (
             <field.TextField
+              labelPosition="above"
+              size="medium"
               label="Email"
               type="email"
               autoComplete="email"
