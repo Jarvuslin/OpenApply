@@ -24,6 +24,23 @@ skill tree and keeps it updated.
 The main ones are `search`, `auto-apply`, `apply`, and
 `cover-letter`. The [root README](../README.md#skills) lists them all.
 
+## Gmail
+
+Use the provider's Gmail connection, then select **Check Gmail with Claude Code**
+or **Check Gmail with Codex** in OpenApply's email settings. The `connect-email`
+skill verifies the actual mailbox and imports recent job mail; `scan-inbox`
+classifies imported messages separately. A connection is recorded only after a
+successful import.
+
+For Claude Code, connect Gmail at [Claude connectors](https://claude.ai/customize/connectors)
+and sign in to the embedded agent with the same Claude subscription. Confirm the
+connector in `/mcp`; API-key and setup-token login do not inherit it. For Codex,
+use `/plugins` to install or enable Gmail, complete authorization, and start a new
+agent session. The setup needs no OpenApply Google Cloud client. See the
+[email setup guide](../apps/web/src/app/docs/email-setup/page.mdx),
+[Claude connector documentation](https://code.claude.com/docs/en/mcp#use-mcp-servers-from-claudeai),
+and [Codex plugin documentation](https://learn.chatgpt.com/docs/plugins).
+
 ## What's in here
 
 | Path | What it is |

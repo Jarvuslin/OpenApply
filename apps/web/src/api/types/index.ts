@@ -28,7 +28,7 @@ export {
   jobSummary,
 } from "./campaign";
 export type { CredentialDto } from "./credential";
-export type { EmailMessageDto, OAuthClientStatus, SyncResultDto } from "./email";
+export type { EmailMessageDto, SyncResultDto } from "./email";
 export type { JobBoardDto } from "./job-board";
 export type { AdminJobListingDto, JobListingDto, JobListingSummaryDto } from "./job-listing";
 export type { ResumeDto, ResumeVariantDto, ResumeVariantListItem } from "./resume";

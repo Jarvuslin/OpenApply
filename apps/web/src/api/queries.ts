@@ -115,10 +115,6 @@ export type InboxFilter = ReviewStatus | "all";
 
 export const emailQueries = {
   account: () => ({ queryKey: queryKeys.email.account(), queryFn: () => api.email.account.get() }),
-  oauthClient: () => ({
-    queryKey: queryKeys.email.oauthClient(),
-    queryFn: () => api.email.oauth.client.get(),
-  }),
   messages: (filter: InboxFilter, page: PaginationQuery) => ({
     queryKey: queryKeys.email.messages({ filter, ...page }),
     queryFn: () =>

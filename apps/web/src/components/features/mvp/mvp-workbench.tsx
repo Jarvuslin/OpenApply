@@ -8,7 +8,6 @@ import {
   CircleOutlined,
   DescriptionOutlined,
   Language,
-  MailOutlined,
   Tune,
 } from "@mui/icons-material";
 import {
@@ -27,6 +26,9 @@ import NextLink from "next/link";
 import { useSearchParams } from "next/navigation";
 import { api } from "@/api/client";
 import { apiErrorMessage } from "@/api/error";
+import { useApiQuery } from "@/api/hooks";
+import { emailQueries } from "@/api/queries";
+import { EmailSection } from "@/components/features/settings/sections";
 import { formatSkillCommand, getStatus, injectCommand } from "@/lib/terminal";
 import { useAgentDock } from "@/providers/agent-provider";
 import { DiscoveryConnections } from "./discovery-connections";
@@ -49,6 +51,7 @@ const tabs = [
 export function MvpWorkbench() {
   const slug = useSearchParams().get("job");
   const dock = useAgentDock();
+  const mailbox = useApiQuery(emailQueries.account());
   const [tab, setTab] = useState("assistant");
   const [readiness, setReadiness] = useState<Readiness | null>(null);
   const [provider, setProvider] = useState<
@@ -409,33 +412,38 @@ export function MvpWorkbench() {
                     href: "http://localhost:6080/vnc.html?autoconnect=1",
                   },
                 ] as const
-              ).map((item) => (
-                <Stack key={item.key} direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
-                  {readiness?.[item.key] ? (
-                    <CheckCircleOutlined fontSize="sm" sx={{ color: "success.main" }} />
-                  ) : (
-                    <CircleOutlined fontSize="sm" sx={{ color: "text.disabled" }} />
-                  )}
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="body2Strong">{item.label}</Typography>
-                    <Typography variant="captionMuted">
-                      {!readiness
-                        ? "Checking…"
-                        : readiness[item.key]
-                          ? "Connected"
-                          : "Setup needed"}
-                    </Typography>
-                  </Box>
-                  <IconButton
-                    component={NextLink}
-                    size="small"
-                    href={item.href}
-                    aria-label={`Open ${item.label}`}
+              ).map((item) => {
+                const ready =
+                  item.key === "gmail" ? mailbox.data?.connected : readiness?.[item.key];
+                let label = "Checking…";
+                if (ready !== undefined) label = ready ? "Connected" : "Setup needed";
+                return (
+                  <Stack
+                    key={item.key}
+                    direction="row"
+                    spacing={1.25}
+                    sx={{ alignItems: "center" }}
                   >
-                    <ArrowOutward fontSize="xs" />
-                  </IconButton>
-                </Stack>
-              ))}
+                    {ready ? (
+                      <CheckCircleOutlined fontSize="sm" sx={{ color: "success.main" }} />
+                    ) : (
+                      <CircleOutlined fontSize="sm" sx={{ color: "text.disabled" }} />
+                    )}
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="body2Strong">{item.label}</Typography>
+                      <Typography variant="captionMuted">{label}</Typography>
+                    </Box>
+                    <IconButton
+                      component={NextLink}
+                      size="small"
+                      href={item.href}
+                      aria-label={`Open ${item.label}`}
+                    >
+                      <ArrowOutward fontSize="xs" />
+                    </IconButton>
+                  </Stack>
+                );
+              })}
               <Divider />
               <Typography variant="body2Muted">
                 Start with one role. Follow the browser as your agent works, and answer anything it
@@ -528,37 +536,7 @@ export function MvpWorkbench() {
         {tab === "connections" && (
           <Stack spacing={3} sx={{ maxWidth: 800, mx: "auto" }}>
             <RuntimeStatus />
-            <Stack spacing={1}>
-              <MailOutlined />
-              <Typography variant="h2">Keep the loop connected.</Typography>
-              <Typography color="text.secondary">
-                Connect your own Gmail so the agent can find employer verification emails while it
-                works.
-              </Typography>
-            </Stack>
-            <Alert severity={readiness?.gmail ? "success" : "info"}>
-              {readiness?.gmail
-                ? "Gmail is connected to this app."
-                : "Connect Gmail in the agent running inside OpenApply. The agent reads messages and uploads them here. Connecting Gmail in a separate chat does not connect this runtime."}
-            </Alert>
-            <Button
-              variant="outlined"
-              disabled={busy}
-              onClick={() =>
-                void run(async () => {
-                  await requireAgent();
-                  await injectCommand(
-                    formatSkillCommand(dock.provider, "scan-inbox"),
-                    dock.provider,
-                  );
-                  setMessage(
-                    "Connection check sent to your agent. It will identify the mailbox and import recent job mail.",
-                  );
-                })
-              }
-            >
-              Check Gmail connection
-            </Button>
+            <EmailSection />
             <DiscoveryConnections />
             <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
               <Chip label="Personal Google account supported" variant="outlined" />

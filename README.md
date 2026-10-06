@@ -155,15 +155,15 @@ Agent commands use the `openapply` plugin namespace, such as `/openapply:mvp-tri
 
 ### Gmail through your agent
 
-1. Connect Gmail in the Claude Code or Codex runtime that OpenApply starts. The account must be the intended applicant's mailbox. A connector in a separate chat does not automatically appear in this runtime.
-2. For Claude Code, use `/mcp` in that local session to confirm the Gmail tools. The worker allowlist includes `mcp__gmail__*` and `mcp__codex_apps__gmail_*`. Match it to your installed connector's actual prefix. These names alone do not install or authorize a Gmail server.
-3. Open **Connections** and click **Check Gmail connection**. This sends the `scan-inbox` skill to the selected agent. The Claude command is `/openapply:scan-inbox`.
+1. For Claude Code, connect the intended Gmail account at [Claude connectors](https://claude.ai/customize/connectors), sign in to the embedded agent with that same Claude subscription, and confirm Gmail in `/mcp`. API-key and setup-token login do not inherit Claude account connectors. See [Claude's connector guide](https://code.claude.com/docs/en/mcp#use-mcp-servers-from-claudeai).
+2. For Codex, sign in with your ChatGPT account, open `/plugins` in the embedded agent, install or enable Gmail, and complete authorization. Restart the agent, then check `/apps` or `/mcp`. See [Codex plugin setup](https://learn.chatgpt.com/docs/plugins). An installation or connection in another chat does not prove access in the current session.
+3. Open **Settings → Email** or the workbench's **Connections** tab and select **Check Gmail with Claude Code** or **Check Gmail with Codex**. This runs `connect-email` to verify and import without classifying messages or changing application statuses. Use **Scan pending** in the inbox for classification.
 4. The agent reads its mailbox identity, searches recent job mail and uploads normalized batches of up to 100 messages to `POST /api/email/messages/ingest`. The first successful upload creates the connector account. Repeated message IDs are ignored within that mailbox.
 5. Verification searches pull fresh mail through the same connector. Approved replies use its send tool. OpenApply's OAuth sync and send endpoints return 409 for connector accounts.
 
 If a legacy Google OAuth mailbox is connected, disconnect it in email settings before switching. Existing OAuth data and routes remain available. OpenApply sign-in with Google is separate from Gmail access and still needs the login credentials described in [sign-in setup](docs/auth-setup.md).
 
-The backend ingest path is verified. Gmail access inside an embedded Claude worker still needs a live test with the installed connector and its actual tool prefix. If the runtime cannot expose Gmail tools, that part of unattended verification is blocked. Never enter your Gmail password into OpenApply.
+The backend ingest path is tested. A successful import verifies access at that time; Gmail access in the active agent and its worker must still be checked. If Gmail tools are unavailable, the application pauses for help. No OpenApply Google Cloud mail client or Gmail password is needed. See the full [email setup guide](apps/web/src/app/docs/email-setup/page.mdx).
 
 ### Discovery sources and blocked sites
 

@@ -6,16 +6,29 @@ export const metadata = buildDocsMetadata("email-setup", {
 
 # Email setup
 
-Your local Claude Code or Codex agent reads Gmail through its own connector. OpenApply stores the normalized messages and application history. This path does not require an OpenApply Google Cloud OAuth app.
+Connect Gmail through your chosen agent. OpenApply imports the messages the agent reads; the provider manages Gmail authorization. You do not need to create a Google Cloud project or enter a client secret in OpenApply.
 
-## Connect the running agent
+## Claude Code
 
-1. Connect the intended Gmail account in the agent runtime that OpenApply starts.
-2. In Claude Code, use `/mcp` to confirm Gmail tools are available. The job-worker allowlist must use the actual tool prefix. A connector available in another chat may not be available here.
-3. Open the workbench's **Connections** tab and click **Check Gmail connection**.
-4. The agent checks its mailbox identity, reads recent job mail and uploads messages through the authenticated ingest endpoint. A successful first upload creates the connector account.
+1. Connect the intended Gmail account at [Claude connectors](https://claude.ai/customize/connectors).
+2. In OpenApply's agent terminal, use `/login` to sign in with that same Claude account and subscription.
+3. Open `/mcp` and confirm Gmail appears. Restart the agent if you just connected it.
 
-The backend ingest path is tested. Access from a fresh embedded worker still needs a live test with your installed connector. An account showing as connected means an upload succeeded, not that future connector calls are guaranteed.
+Claude Code inherits claude.ai connectors with subscription login. API-key authentication and `claude setup-token` credentials do not load them. Use `/status` to check the active login. Anthropic's Gmail connector must be authorized on claude.ai; adding it as a local OAuth server does not work. See [Claude Code connector setup](https://code.claude.com/docs/en/mcp#use-mcp-servers-from-claudeai).
+
+## Codex
+
+1. Sign in to the embedded Codex terminal with the intended ChatGPT account.
+2. Open `/plugins`, find Gmail, install or enable it, and complete any account-connection prompts.
+3. Restart the agent after installation. Use `/apps` to find Gmail and `/mcp` to inspect the tools available to this session.
+
+An installed plugin or a connection in another chat does not by itself verify this session's access. Availability depends on the account and runtime. See [Codex plugins](https://learn.chatgpt.com/docs/plugins) and [CLI commands](https://learn.chatgpt.com/docs/developer-commands?surface=cli).
+
+## Check in OpenApply
+
+Open **Settings → Email**, or the workbench's **Connections** tab. Select **Check Gmail with Claude Code** or **Check Gmail with Codex** for your current agent.
+
+The `connect-email` skill verifies the mailbox identity and imports recent job mail. It does not classify messages or send email. Only a successful import creates the OpenApply connection; an empty batch is valid after a successful search finds no new mail. The displayed last-sync time records that success, not a guarantee that the provider is still authenticated. Use **Scan pending** in the inbox when you want classification.
 
 ## Verification and replies
 
@@ -25,6 +38,6 @@ Approved interview replies use the connector send tool. Connector accounts canno
 
 ## Existing OAuth accounts
 
-If a Google OAuth mailbox is already connected in **Settings → Email**, disconnect it before switching to the agent connector. Existing OAuth routes and encrypted records remain supported. Google sign-in for your OpenApply account is separate from Gmail access.
+If a legacy Google OAuth mailbox is already connected, disconnect it in **Settings → Email** before checking the agent connector. Existing OAuth records remain supported by the backend. Google sign-in for your OpenApply account is separate from Gmail access.
 
 Do not paste passwords or connector tokens into the agent conversation. Authenticate through the connector's own setup flow.

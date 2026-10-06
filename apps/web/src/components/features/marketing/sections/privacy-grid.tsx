@@ -18,8 +18,8 @@ const FACTS = [
     body: "Board logins and captcha keys are encrypted with a key only your account holds. Deleting your account destroys it.",
   },
   {
-    title: "Your own Gmail client",
-    body: "Email runs through your personal Google OAuth client. No shared app sits between OpenApply and your mail.",
+    title: "Gmail through your agent",
+    body: "Connect Gmail with Claude or Codex. The provider manages authorization; OpenApply imports the job mail your agent reads.",
   },
 ];
 
