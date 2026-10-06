@@ -29,6 +29,10 @@ export const EnvSchema = z
   .object({
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
     PORT: z.coerce.number().default(4101),
+    PUBLIC_SITE_ENABLED: z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((v) => v === "true"),
     MVP_LOCAL_RUNNER: z
       .enum(["true", "false"])
       .default("false")

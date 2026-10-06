@@ -7,6 +7,7 @@ import { getPublicFetchOptions } from "@/api/server";
 import { JobDetail } from "@/components/features/jobs";
 import { JsonLd } from "@/components/seo/json-ld";
 import { DetailSkeleton } from "@/components/ui/data";
+import { PUBLIC_SITE_ENABLED } from "@/lib/public-site";
 import { breadcrumbLd, jobPostingLd } from "@/lib/structured-data";
 
 interface JobPageProps {
@@ -22,6 +23,7 @@ const getJob = cache(async (slug: string) =>
 );
 
 export async function generateMetadata(props: JobPageProps): Promise<Metadata> {
+  if (!PUBLIC_SITE_ENABLED) notFound();
   const { slug } = await props.params;
   const job = await getJob(slug);
   if (!job) {
@@ -42,6 +44,7 @@ export async function generateMetadata(props: JobPageProps): Promise<Metadata> {
 }
 
 export default function JobPage(props: JobPageProps): ReactElement {
+  if (!PUBLIC_SITE_ENABLED) notFound();
   // The whole page is the listing, so the jobs layout is the shared App Shell.
   return (
     <Suspense fallback={<DetailSkeleton heights={[160, 400]} />}>

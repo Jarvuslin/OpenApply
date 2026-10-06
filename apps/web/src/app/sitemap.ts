@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { api } from "@/api/client";
 import { DOCS_NAV } from "@/components/features/docs";
 import { SITE_URL } from "@/lib/constants";
+import { PUBLIC_SITE_ENABLED } from "@/lib/public-site";
 import { PUBLIC_ROUTES } from "./public-routes";
 
 /** Every published listing, so the job pages are discoverable rather than orphaned. */
@@ -21,6 +22,7 @@ async function jobEntries(): Promise<MetadataRoute.Sitemap> {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  if (!PUBLIC_SITE_ENABLED) return [{ url: `${SITE_URL}/login` }];
   const docPaths = DOCS_NAV.map((entry) => entry.href as string);
   const staticEntries: MetadataRoute.Sitemap = [...PUBLIC_ROUTES, ...docPaths].map((path) => ({
     url: `${SITE_URL}${path === "/" ? "" : path}`,

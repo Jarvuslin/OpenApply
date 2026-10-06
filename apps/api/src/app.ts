@@ -24,6 +24,7 @@ import { healthController } from "@/modules/health/health.controller";
 import { adminBoardController } from "@/modules/job-board/admin-board.controller";
 import { jobBoardController } from "@/modules/job-board/job-board.controller";
 import { adminJobListingController, publicJobListingController } from "@/modules/job-listing";
+import { jobListingController } from "@/modules/job-listing/job-listing.controller";
 import { cleanupJob } from "@/modules/maintenance/cleanup.job";
 import { pdfCacheJob } from "@/modules/maintenance/pdf-cache.job";
 import { mvpController } from "@/modules/mvp/mvp.controller";
@@ -67,6 +68,7 @@ const app = new Elysia()
       .use(resumeController)
       .use(resumeVariantController)
       .use(publicJobListingController)
+      .use(jobListingController)
       .use(coverLetterController)
       .use(applicationController)
       .use(scoringController)

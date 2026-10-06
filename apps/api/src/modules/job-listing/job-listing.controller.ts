@@ -2,7 +2,10 @@ import { jobListingQuerySchema } from "@jobpilot/contracts/job-listing";
 import { Elysia } from "elysia";
 import { z } from "zod/v4";
 import { container } from "@/common/di/container";
+import { notFound } from "@/common/errors";
+import { authGuard } from "@/common/middleware";
 import { RATE_LIMITS, rateLimit } from "@/common/rate-limit";
+import { env } from "@/env";
 import {
   jobListingFacetsSchema,
   jobListingPageSchema,
@@ -19,7 +22,14 @@ export const publicJobListingController = new Elysia({
   detail: { tags: ["Jobs"] },
 })
   // Scoped once, so a route added later cannot forget it.
-  .guard({ beforeHandle: rateLimit(RATE_LIMITS.publicJobs) })
+  .guard({
+    beforeHandle: [
+      () => {
+        if (!env.PUBLIC_SITE_ENABLED) throw notFound("Public job listings are disabled.");
+      },
+      rateLimit(RATE_LIMITS.publicJobs),
+    ],
+  })
   .get("/", ({ query }) => svc.list(query), {
     query: jobListingQuerySchema,
     response: jobListingPageSchema,
@@ -54,4 +64,21 @@ export const publicJobListingController = new Elysia({
       description:
         "Returns one published listing by slug, including every board it was seen on. Unauthenticated.",
     },
+  });
+
+export const jobListingController = new Elysia({ prefix: "/jobs", detail: { tags: ["Jobs"] } })
+  .use(authGuard)
+  .get("/", ({ query }) => svc.list(query), {
+    query: jobListingQuerySchema,
+    response: jobListingPageSchema,
+    detail: { summary: "Browse jobs in Discover" },
+  })
+  .get("/facets", () => svc.facets(), {
+    response: jobListingFacetsSchema,
+    detail: { summary: "Discover filter options" },
+  })
+  .get("/:slug", ({ params }) => svc.bySlug(params.slug), {
+    params: z.object({ slug: z.string().min(1) }),
+    response: jobListingSchema,
+    detail: { summary: "Review a discovered job" },
   });

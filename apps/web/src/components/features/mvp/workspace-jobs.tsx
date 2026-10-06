@@ -16,7 +16,7 @@ import {
 import { api } from "@/api/client";
 import { apiErrorMessage } from "@/api/error";
 
-type Jobs = NonNullable<Awaited<ReturnType<typeof api.public.jobs.get>>["data"]>;
+type Jobs = NonNullable<Awaited<ReturnType<typeof api.jobs.get>>["data"]>;
 export function WorkspaceJobs() {
   const [input, setInput] = useState("");
   const [location, setLocation] = useState("");
@@ -35,7 +35,7 @@ export function WorkspaceJobs() {
     let cancelled = false;
     setLoading(true);
     setError("");
-    void api.public.jobs
+    void api.jobs
       .get({ query: { ...query, limit: 12, page: 1 } })
       .then((result) => {
         if (cancelled) return;
@@ -188,9 +188,6 @@ export function WorkspaceJobs() {
           No matches yet. Try a broader search or import a company board.
         </Typography>
       )}
-      <Button href="/jobs" sx={{ alignSelf: "flex-start" }}>
-        All jobs & filters
-      </Button>
     </Stack>
   );
 }
