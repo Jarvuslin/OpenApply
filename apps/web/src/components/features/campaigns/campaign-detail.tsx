@@ -8,6 +8,7 @@ import { useApiQuery } from "@/api/hooks";
 import { campaignQueries } from "@/api/queries";
 import { queryKeys } from "@/api/query-keys";
 import { useSseChannel } from "@/lib/sse/client";
+import { DiscoveryCoverage } from "./detail/discovery-coverage";
 import { CampaignHeaderCard } from "./detail/header-card";
 import { CampaignJobsPanel } from "./detail/jobs-panel";
 import { CampaignReasonBreakdown } from "./detail/reason-breakdown";
@@ -39,6 +40,7 @@ export function CampaignDetail(props: CampaignDetailProps): ReactElement {
         status: invalidateDetail,
         "job-update": () => {
           invalidate(queryKeys.campaigns.jobs(campaignId));
+          invalidate(queryKeys.campaigns.submissionAttempts(campaignId));
           invalidate(queryKeys.campaigns.reasons(campaignId));
           invalidateDetail();
         },
@@ -56,7 +58,7 @@ export function CampaignDetail(props: CampaignDetailProps): ReactElement {
   if (!campaign) {
     return (
       <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-        <Typography variant="body2Muted">Couldn't load this campaign.</Typography>
+        <Typography variant="body2Muted">Couldn't load this search.</Typography>
         <Button variant="text" size="small" onClick={() => void detail.refetch()}>
           Retry
         </Button>
@@ -67,6 +69,7 @@ export function CampaignDetail(props: CampaignDetailProps): ReactElement {
   return (
     <Stack spacing={3}>
       <CampaignHeaderCard campaign={campaign} />
+      <DiscoveryCoverage campaign={campaign} />
       <CampaignSummaryTiles campaign={campaign} />
       <CampaignReasonBreakdown campaign={campaign} />
       <CampaignJobsPanel campaign={campaign} />

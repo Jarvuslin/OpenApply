@@ -13,7 +13,7 @@ const AUTH_PATHS = new Set([
 export function loginDestination(next: string | null): Route {
   // biome-ignore lint/suspicious/noControlCharactersInRegex: Reject control characters in redirect targets before URL normalization.
   if (!next?.startsWith("/") || next.startsWith("//") || /[\\\x00-\x20]/.test(next)) {
-    return "/workspace";
+    return "/dashboard";
   }
   try {
     const url = new URL(next, "https://openapply.invalid");
@@ -26,10 +26,10 @@ export function loginDestination(next: string | null): Route {
       pathname.startsWith("/api/") ||
       pathname.startsWith("/_next/")
     ) {
-      return "/workspace";
+      return "/dashboard";
     }
     return `${url.pathname}${url.search}${url.hash}` as Route;
   } catch {
-    return "/workspace";
+    return "/dashboard";
   }
 }

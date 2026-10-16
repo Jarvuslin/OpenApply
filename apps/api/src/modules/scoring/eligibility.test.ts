@@ -56,6 +56,10 @@ describe("detectEligibilityRestrictions", () => {
       "We value diverse backgrounds and welcome applicants from everywhere.",
       "Visa sponsorship available for exceptional candidates.",
       "We sponsor H-1B and green cards.",
+      "The JD does not state any sponsorship restrictions.",
+      "This posting has no sponsorship restrictions.",
+      "Candidates do not need to discuss visa sponsorship at this stage.",
+      "We do not require sponsorship experience.",
       "",
       undefined,
     ]) {

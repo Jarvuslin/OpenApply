@@ -1,10 +1,10 @@
 import type { AgendaPayload } from "@openapply/contracts/pilot";
 import type { PrismaClient } from "@/generated/prisma/client";
-import { CRASH_OUTCOMES, GATHER_CAP } from "./claims";
+import { GATHER_CAP } from "./items";
 
 const INBOX_BATCH = 10;
 
-/** Answered questions no open or finished claim has consumed yet. */
+/** Answered questions, newest first. */
 export async function gatherAnsweredQuestions(
   prisma: PrismaClient,
   userId: string,
@@ -22,22 +22,11 @@ export async function gatherAnsweredQuestions(
       answer: true,
     },
   });
-  if (answered.length === 0) return [];
-
-  const claims = await prisma.pilotClaim.findMany({
-    where: {
-      userId,
-      subjectType: "question",
-      subjectId: { in: answered.map((question) => question.id) },
-      OR: [{ releasedAt: null }, { outcome: { notIn: CRASH_OUTCOMES } }],
-    },
-    take: GATHER_CAP,
-    select: { subjectId: true },
-  });
-  const consumed = new Set(claims.map((claim) => claim.subjectId));
-  return answered
-    .filter((question) => !consumed.has(question.id))
-    .map(({ id, kind, ...question }) => ({ ...question, questionId: id, questionKind: kind }));
+  return answered.map(({ id, kind, ...question }) => ({
+    ...question,
+    questionId: id,
+    questionKind: kind,
+  }));
 }
 
 /** The oldest unclassified mail, plus how much is waiting in total. */

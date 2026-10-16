@@ -1,3 +1,4 @@
+import { campaignConfigSchema } from "@openapply/contracts/campaign";
 import {
   type discoverInputSchema,
   discoveryConnectionSchema,
@@ -6,15 +7,18 @@ import {
 import { singleton } from "tsyringe";
 import type { z } from "zod/v4";
 import { CryptoService, SECRET_CONTEXTS } from "@/common/crypto";
-import { conflict, unprocessable } from "@/common/errors";
+import { conflict, findOwned, unprocessable } from "@/common/errors";
 import { PrismaClient } from "@/generated/prisma/client";
+import { publishCampaignStatus } from "@/modules/campaign/campaign.utils";
 import { JobListingPublisher } from "@/modules/job-listing/job-listing.publisher";
 import { listedExperience } from "@/modules/mvp/experience";
 import { apify } from "./apify";
 import { type AtsProvider, fetchAts } from "./ats";
-import { fetchSourceJson } from "./http";
+import { lockDiscovery, saveCandidate } from "./candidate-intake";
+import { fetchSourceJson, fetchSourceText } from "./http";
+import { type PublicFeedId, publicFeed } from "./public-feeds";
 import { EmployerResolver } from "./resolver";
-import { serpapi } from "./serpapi";
+import { serpapi, serpapiPage } from "./serpapi";
 import type { SourceJob } from "./types";
 
 type Provider = z.infer<typeof discoveryProviderSchema>;
@@ -58,11 +62,52 @@ export class JobSourcesService {
     });
     return { provider, enabled, configured: true };
   }
-  async publicBoard(provider: AtsProvider, slug: string) {
-    const jobs = await fetchAts(fetchSourceJson, provider, slug);
-    return this.store(jobs, provider);
+  async publicBoard(
+    provider: AtsProvider,
+    slug: string,
+    list?: { userId: string; campaignId: string },
+    company = slug,
+    maxJobs = 500,
+  ) {
+    if (list) await this.checkList(list.userId, list.campaignId);
+    let requests = 0;
+    const jobs = await fetchAts(
+      (url, init) => {
+        requests++;
+        return fetchSourceJson(url, init);
+      },
+      provider,
+      slug,
+      company,
+      (url) => {
+        requests++;
+        return fetchSourceText(url);
+      },
+    );
+    return this.store(jobs, provider, `${provider}/${slug}`, requests, list, false, maxJobs);
+  }
+  async publicFeed(source: PublicFeedId) {
+    let requests = 0;
+    const jobs = await publicFeed(
+      (url, init) => {
+        requests++;
+        return fetchSourceJson(url, init);
+      },
+      source,
+      (url) => {
+        requests++;
+        return fetchSourceText(url);
+      },
+    );
+    // Simplify's internship list alone has about 5,000 active roles; the other feeds stay well under.
+    return this.store(jobs, source, `public/${source}`, requests, undefined, false, 6000);
   }
   async discover(userId: string, input: z.infer<typeof discoverInputSchema>) {
+    if (input.board === "hiringcafe")
+      throw unprocessable(
+        "Use HiringCafe private search previews; this source cannot be imported into the shared index.",
+      );
+    if (input.campaignId) await this.checkList(userId, input.campaignId);
     const row = await this.prisma.jobSourceConnection.findUnique({
       where: { userId_provider: { userId, provider: input.provider } },
     });
@@ -77,17 +122,89 @@ export class JobSourcesService {
       ...(row.config as object),
       enabled: row.enabled,
     });
+    let requests = 0;
+    const fetch = (url: string, init?: RequestInit) => {
+      requests++;
+      return fetchSourceJson(url, init);
+    };
     const jobs =
       input.provider === "apify"
-        ? await apify(fetchSourceJson, key, config, input)
-        : await serpapi(fetchSourceJson, key, input);
-    return this.store(jobs, input.board ?? "google_jobs");
+        ? await apify(fetch, key, config, input)
+        : await serpapi(fetch, key, input);
+    return this.store(
+      jobs,
+      input.board ?? "google_jobs",
+      `${input.provider}: ${input.query} (${input.location})`,
+      requests,
+      input.campaignId ? { userId, campaignId: input.campaignId } : undefined,
+      jobs.length >= input.limit,
+    );
   }
-  private async store(jobs: SourceJob[], board: string) {
+  async discoverPage(
+    userId: string,
+    input: z.infer<typeof discoverInputSchema>,
+    cursor: string | null,
+  ) {
+    if (input.board === "hiringcafe")
+      throw unprocessable(
+        "Use HiringCafe private search previews; this source cannot be imported into the shared index.",
+      );
+    const row = await this.prisma.jobSourceConnection.findUnique({
+      where: { userId_provider: { userId, provider: input.provider } },
+    });
+    if (!row?.enabled)
+      throw conflict(
+        "Add and enable your own provider API key in Settings → Connections before searching this source.",
+      );
+    const key = await this.crypto.decryptFor(
+      userId,
+      SECRET_CONTEXTS.credentialApiKey,
+      row.encryptedKey,
+    );
+    const config = discoveryConnectionSchema.parse({ ...(row.config as object), enabled: true });
+    let requests = 0;
+    const fetch = (url: string, init?: RequestInit) => {
+      requests++;
+      return fetchSourceJson(url, init);
+    };
+    const page =
+      input.provider === "serpapi"
+        ? await serpapiPage(fetch, key, input, cursor)
+        : { jobs: await apify(fetch, key, config, input), nextCursor: null };
+    const result = await this.store(
+      page.jobs,
+      input.board ?? "google_jobs",
+      `${input.provider}: ${input.query} (${input.location})`,
+      requests,
+    );
+    return { ...result, nextCursor: page.nextCursor };
+  }
+  private async checkList(userId: string, campaignId: string) {
+    const campaign = await findOwned(
+      (where) => this.prisma.campaign.findFirst({ where }),
+      { campaignId, userId },
+      "Campaign",
+    );
+    if (
+      campaignConfigSchema.parse(campaign.config).discovery?.phase !== "collecting" ||
+      campaign.status !== "in_progress"
+    )
+      throw conflict("This candidate list is not collecting jobs.");
+  }
+  private async store(
+    jobs: SourceJob[],
+    board: string,
+    source: string,
+    requests: number,
+    list?: { userId: string; campaignId: string },
+    limited = false,
+    maxJobs = 500,
+  ) {
     const boards = new Map<string, Promise<unknown>>();
     const fetchBoard = (url: string) => {
       let response = boards.get(url);
       if (!response) {
+        requests++;
         response = fetchSourceJson(url);
         boards.set(url, response);
       }
@@ -95,11 +212,16 @@ export class JobSourcesService {
     };
     let imported = 0,
       resolved = 0;
-    for (const job of jobs.slice(0, 500)) {
+    const candidates: {
+      job: SourceJob;
+      resolution: { applyUrl: string | null; confidence: number };
+    }[] = [];
+    for (const job of jobs.slice(0, maxJobs)) {
       const resolution = await this.resolver.resolve(job, fetchBoard);
+      candidates.push({ job, resolution });
       const outcome = await this.publisher.publish({
         ...job,
-        url: job.attributionUrl,
+        url: job.identityUrl ?? job.attributionUrl,
         board,
         publicFeed: true,
         applyUrl: resolution.applyUrl,
@@ -116,6 +238,53 @@ export class JobSourcesService {
         if (resolution.applyUrl) resolved++;
       }
     }
-    return { imported, fetched: jobs.length, resolved };
+    let saved = 0;
+    let truncated = limited || jobs.length > maxJobs;
+    if (list) {
+      const campaign = await this.prisma.$transaction(
+        async (tx) => {
+          const { config, campaign } = await lockDiscovery(tx, list.userId, list.campaignId);
+          for (const { job, resolution } of candidates) {
+            const result = await saveCandidate(
+              tx,
+              list.campaignId,
+              job,
+              board,
+              resolution,
+              config.maxJobs ?? 100,
+            );
+            if (result.saved) saved++;
+            truncated ||= result.truncated;
+          }
+          await tx.campaign.update({
+            where: { campaignId: list.campaignId },
+            data: {
+              config: {
+                ...config,
+                discovery: {
+                  ...config.discovery!,
+                  sources: [
+                    ...config.discovery!.sources,
+                    {
+                      source,
+                      fetched: jobs.length,
+                      saved,
+                      resolved,
+                      requests,
+                      truncated,
+                      checkedAt: new Date().toISOString(),
+                    },
+                  ],
+                },
+              },
+            },
+          });
+          return campaign;
+        },
+        { timeout: 30_000 },
+      );
+      publishCampaignStatus(list.userId, campaign, campaign.status);
+    }
+    return { imported, fetched: jobs.length, resolved, saved, requests, truncated };
   }
 }

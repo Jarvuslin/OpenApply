@@ -20,6 +20,11 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Cache Bun dependencies
         uses: actions/cache@v6
         with:
@@ -77,15 +82,21 @@ jobs:
         run: bun run typecheck
         working-directory: apps/api
 
-      # Still no services. The admin guard test imports a real controller, so env.ts has to validate -
-      # these are dummies: pg pools are lazy, and the 401/403 paths it asserts never issue a query.
+      # The unit preload replaces inherited settings and rejects database access before sockets.
       - name: Test API
         run: bun run test
         working-directory: apps/api
-        env:
-          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
-          JWT_SECRET: ci-test-secret
-          SECRET_MASTER_KEY: Y2ktdGVzdC1tYXN0ZXIta2V5LTMyLWJ5dGVzLWxvbmc=
+
+      - name: Test contracts
+        run: bun run test
+        working-directory: packages/contracts
+
+      - name: Test web
+        run: bun run test
+        working-directory: apps/web
+
+      - name: Test classified local Node suites
+        run: bun run test:node
 
       - name: Typegen web
         run: bun run typegen

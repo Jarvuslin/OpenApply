@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { DEFAULT_MIN_MATCH_SCORE } from "../user";
 
 /** Stored as JSON in `PilotState.instructionsConfig`; `{}` parses to a full config. */
 export const pilotInstructionsConfigSchema = z.object({
@@ -8,6 +9,22 @@ export const pilotInstructionsConfigSchema = z.object({
   checkIntervalMinutes: z.number().int().min(5).default(30),
 });
 
+const pilotInstructionsInputConfigSchema = pilotInstructionsConfigSchema.extend({
+  minScore: z.number().min(0).max(100).optional(),
+});
+
+/** An absent stored minimum inherits the profile; an explicit zero remains an override. */
+export function resolvePilotInstructionsConfig(value: unknown, profileMinimum?: number | null) {
+  const saved = pilotInstructionsInputConfigSchema.parse(value);
+  return {
+    config: pilotInstructionsConfigSchema.parse({
+      ...saved,
+      minScore: saved.minScore ?? profileMinimum ?? DEFAULT_MIN_MATCH_SCORE,
+    }),
+    minScoreInherited: saved.minScore === undefined,
+  };
+}
+
 /** What to retire from the old goals. Nothing by default, so the web asks before sending any. */
 export const pilotInstructionsChangeSchema = z.object({
   // `strategy.bootstrap` only runs once no searches exist, so deleting them is what re-derives.
@@ -16,13 +33,9 @@ export const pilotInstructionsChangeSchema = z.object({
   dropApprovedJobs: z.boolean().default(false),
 });
 
-export const NO_INSTRUCTIONS_CHANGE: PilotInstructionsChange = pilotInstructionsChangeSchema.parse(
-  {},
-);
-
 export const updatePilotInstructionsSchema = z.object({
   goals: z.string().trim().min(1, "Write the pilot's goals before saving."),
-  config: pilotInstructionsConfigSchema,
+  config: pilotInstructionsInputConfigSchema,
   onChange: pilotInstructionsChangeSchema.prefault({}),
 });
 
@@ -40,6 +53,7 @@ export const pilotStateSchema = z.object({
   running: z.boolean(),
   instructionsGoals: z.string(),
   instructionsConfig: pilotInstructionsConfigSchema,
+  minScoreInherited: z.boolean(),
   instructionsUpdatedAt: z.date().nullable(),
   lastCycleAt: z.date().nullable(),
   cycleCount: z.number().int(),

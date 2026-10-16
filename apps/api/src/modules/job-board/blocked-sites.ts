@@ -42,6 +42,19 @@ export function allowedApplyUrl(value: string | null | undefined): string | null
   const url = URL.parse(value);
   if (url?.protocol !== "https:" || url.username || url.password || !url.hostname.includes("."))
     return null;
-  if (/(^|\.)(google|serpapi|apify)\.(com|[a-z]{2}|co\.[a-z]{2})$/.test(url.hostname)) return null;
+  if (
+    /(^|\.)(google|serpapi|apify)\.(com|[a-z]{2}|co\.[a-z]{2}|com\.[a-z]{2})$/.test(
+      url.hostname.replace(/\.$/, ""),
+    )
+  ) {
+    if (
+      url.hostname !== "www.google.com" ||
+      url.port ||
+      !/^\/about\/careers\/applications\/jobs\/results\/\d+-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(
+        url.pathname,
+      )
+    )
+      return null;
+  }
   return url.toString();
 }

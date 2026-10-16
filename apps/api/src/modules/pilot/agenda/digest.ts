@@ -1,5 +1,4 @@
 import { DAY_MS, minutesOfDay, startOfDay } from "@/common/date/buckets";
-import type { PushService } from "@/common/push/push.service";
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { PilotJournalService } from "../journal.service";
 
@@ -8,17 +7,16 @@ const DIGEST_HOUR_UTC = 7;
 interface DigestDeps {
   prisma: PrismaClient;
   journal: PilotJournalService;
-  push: PushService;
 }
 
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
 /**
- * Writes one "digest" journal entry per UTC day, after 07:00, and pushes it. Called fire-and-forget,
+ * Writes one "digest" journal entry per UTC day, after 07:00. Called fire-and-forget,
  * so it logs its own errors instead of rejecting.
  */
 export async function writeDigestIfDue(
-  { prisma, journal, push }: DigestDeps,
+  { prisma, journal }: DigestDeps,
   userId: string,
   now: Date,
   openQuestions: number,
@@ -60,12 +58,6 @@ export async function writeDigestIfDue(
         openQuestions,
       };
       await journal.appendJournal(userId, { entries: [{ kind: "digest", summary, detail }] });
-      void push.sendToUser(userId, {
-        title: "Your Pilot's morning digest",
-        body: summary,
-        url: "/pilot",
-        tag: "pilot-digest",
-      });
     });
   } catch (err) {
     console.error("[pilot] digest write failed", err);

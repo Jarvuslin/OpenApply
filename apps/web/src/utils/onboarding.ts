@@ -11,8 +11,8 @@ function isOnboardingIncomplete(user: IdentityFields): boolean {
 export function onboardingRedirect(
   pathname: string,
   user: IdentityFields,
-): "/onboarding" | "/mvp" | null {
+): "/onboarding" | "/dashboard" | null {
   const onboarding = pathname === "/onboarding";
   if (isOnboardingIncomplete(user)) return onboarding ? null : "/onboarding";
-  return onboarding ? "/mvp" : null;
+  return onboarding ? "/dashboard" : null;
 }

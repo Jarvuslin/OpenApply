@@ -1,31 +1,160 @@
 # How OpenApply works
 
-OpenApply has a web interface, an API backed by Postgres, and a local terminal companion. This repository currently runs all three for development. The web and API can later be hosted while each user's agent and browser stay on their machine. There is no public hosted OpenApply deployment yet.
+Verified against the implemented worktree on October 8, 2026. OpenApply has a
+Next.js web client, an Elysia API backed by PostgreSQL, a local .NET companion,
+and a provider plugin. The API owns durable product state; the companion owns
+local processes and leased execution. There is no accepted public production
+deployment. Completed model-free phase gates do not establish live-agent or
+hosted readiness. See the [engineering audit](post-completion-audit-2026-10-08.md)
+for findings and the [testing tiers](testing-tiers.md) for evidence boundaries.
 
-## Data and identity
+## Discovery through recorded submission
 
-The API owns accounts, profile facts, original resumes, variants, job listings, campaign queues, questions and application receipts. Google and GitHub login are optional alternatives to email/password. These sign-in providers do not grant Gmail access.
+```mermaid
+flowchart TD
+    FEEDS[Public ATS feeds / optional user discovery keys] --> CATALOG[Shared posting catalog and URL deduplication]
+    LINKS[Saved job links / manual selection] --> INTAKE[Owned intake and campaign jobs]
+    CATALOG --> INTAKE
+    ORIGINAL[Owned original resume and confirmed applicant facts] --> FIT[Original-source fit assessment and eligibility]
+    INTAKE --> FIT
+    FIT --> ADMIT[Idempotent common queue admission]
+    PILOT[Pilot schedule] --> ADMIT
+    MANUAL[Manual apply intent] --> ADMIT
+    ADMIT --> QUEUE[(WorkItem / lease / execution / reservations)]
+    QUEUE --> GATE[Local companion: exact finite grant and plugin preflight]
+    GATE --> WORKER[One leased job worker and private browser]
+    WORKER --> QUESTIONS[Current form questions / confirmed answers / exact PDF selection]
+    QUESTIONS --> REVIEW[Grounded tailoring and final review]
+    REVIEW --> BEGIN[API checkpoint and guarded submission-begin]
+    BEGIN --> SUBMIT[One form submission]
+    SUBMIT --> RECEIPT[Observed immutable receipt]
+    RECEIPT --> APP[(Canonical Application and exact artifacts)]
+    WORKER --> NEEDS[Needs you / blocked work]
+    BEGIN --> UNCERTAIN[Unknown outcome: recording or manual recovery only]
+    NEEDS --> QUEUE
+    APP --> UI[History / Analytics / dashboard]
+    QUEUE --> UI
+```
 
-Credentials and discovery keys are encrypted with a key specific to each user. Auth guards scope account data to that user. The admin panel remains restricted to admins. Shared job listings contain posting information, not applicant identity.
+This is the implemented ownership model, not a claim that every arrow has a
+currently available live executor. General campaign/search/inbox preparation
+work can be admitted, but the bounded queue runtime currently accepts application
+and intake-preparation allocations only. Production intake preparation remains
+disabled by its provider-isolation gate. Such work must remain visibly pending
+or blocked; there is no authorized independent Pilot fallback.
 
-## Discovery and application
+## Data, identity and persistence
 
-The API imports public Ashby, Greenhouse, Lever, SmartRecruiters and Workable feeds over HTTP. Users may opt into Apify or SerpApi with their own keys. Browser sessions and board cookies are never used by these connectors.
+- API guards scope account-owned records to the authenticated user. Email/password
+  and optional Google/GitHub sign-in use JWT cookies; local tools use personal
+  access tokens. Narrow preparation capabilities cannot replace ordinary account
+  authentication. Mailbox authorization is separate from sign-in.
+- PostgreSQL/Prisma owns profiles, originals, variants, campaigns, jobs, queue
+  leases, browser ownership, questions, preparation, attempts, receipts and
+  Applications. Per-user transactions and uniqueness constraints coordinate
+  admission, capacity, domain/company spacing and submission reservations.
+- Credentials and discovery keys use per-user encryption keys wrapped by a
+  master key. Resume/PDF and submission artifacts live in configured private
+  filesystem storage, with revision and byte hashes. Database backups alone
+  are not a complete artifact backup.
+- SSE delivers invalidations; clients refetch canonical API state. Each topic
+  retains at most 64 events, and a slow subscriber closes after 256 pending
+  frames. SSE and some operational state remain process-local, so horizontal
+  deployment needs additional work.
 
-A source keeps its attribution URL and a separate canonical apply URL. The resolver accepts direct allowed employer links or strong title-and-location matches from a nonempty ATS board. Unresolved listings remain visible but cannot be queued. Blocked board hosts are rejected by the API when approving or starting an application.
+## Discovery, matching and documents
 
-Discover selections enter a standing campaign. Duplicate URLs and previous applications are skipped. A database transaction serializes concurrent queue requests for each user. The local agent processes approved jobs sequentially and writes progress through the API.
+`job-sources` imports public Greenhouse, Lever, Ashby, SmartRecruiters and Workable
+feeds in code. Optional Apify/SerpApi connectors use user-supplied keys. Catalog
+publication uses bounded concurrency, canonical URL identities and database
+deduplication. Attribution URLs remain separate from application URLs. Unsupported
+or unresolved targets stay unresolved rather than being guessed.
 
-## Local agent and mailbox
+`job-intakes` resolves owned links; `mvp/apply-queue.service.ts` admits selected
+catalog jobs into saved campaigns and the common queue. Exact URL duplicate
+checks are authoritative. The fuzzy historical title/company fallback examines
+a limited candidate set and is not a universal semantic duplicate guarantee.
 
-The terminal companion starts Claude Code or Codex under the user's subscription and exposes the terminal in the web app. The plugin supplies skills and a per-job worker. The host clears Pilot context between cycles. Browser cookies persist in the VM while job-specific model context stays separate.
+`scoring` supplies full posting, original-source text and preferences for model
+judgments, then validates evidence and computes/persists the assessment in code.
+Its cache identity binds source bytes, job context and preferences. Original
+resume extraction has a bounded process-local cache keyed by actual SHA-256 and
+file extension. Every read still reads and hashes the bytes. A cache hit never
+authorizes a changed source or bypasses account ownership.
 
-The worker checks required eligibility questions before tailoring. Clear jobs can submit automatically. Missing facts and uncertain claims or fit become questions. A blocking CAPTCHA is parked unless the solver entitlement allows an attempt. Failed solving also parks the job.
+The local inference endpoint supports structured resume extraction. Per-job
+tailoring and independent factual review run in plugin workers; the API does not
+invoke an LLM. API rewrite/structure guards derive dates and restrict unsupported
+facts. PDF compilation and artifact hashing are deterministic. Variant publication
+locks and rechecks the owned base version after compilation, including rewrites
+with no added evidence. Reusable artifact revisions bind exact PDF/TeX bytes.
+Compilation success alone is neither factual validation nor upload consent.
 
-The local Gmail connector owns its authentication. The agent reads mail and uploads normalized messages to the API. The first ingest creates an account record with provider connector. Mail IDs are unique within each mailbox. Approved replies use the connector send tool. Legacy Google OAuth mailbox routes remain, but a user must disconnect that mailbox before switching to connector ingest.
+## Queue, browser and recovery
 
-## Runtime and deployment limits
+`work-queue` is the durable scheduling authority. Manual apply and campaign actions
+enqueue typed work; Pilot's scheduler feeds that same queue. The advanced
+interactive terminal still exists for manual skills, but guarded submission-begin
+rejects unleased manual execution.
 
-Windows uses WSL2 and Mac beta uses Lima for the browser VM. The API and document tools run on the host in the local setup. Files are explicitly staged into the VM before browser upload.
+The companion requires a finite grant bound to exact work IDs before claims or
+browser allocation. It stages a hash-verified plugin copy per allocation and
+adds finite subagent turn limits without editing the installed source. It owns
+heartbeats, cancellation, cleanup and completion. Capacity defaults to one and is
+bounded at three; API policy and reservations apply across those workers.
 
-The local database, noVNC and debugging ports are development services. Do not expose them as a hosted product. Production hosting, cross-instance event delivery, operational backups and deployment acceptance are separate work. See [MVP evidence](mvp.md), [setup](../README.md) and [development reference](development.md).
+Each application worker receives a separate browser process/profile/CDP endpoint
+and lease-bound API access. Windows uses WSL; Mac support uses Lima. Uploads stage
+exact host artifacts into the guest. The read-only browser viewer checks account,
+work, execution and browser identity; screenshots are not submission evidence.
+The current broker accepts reviewed Greenhouse/Lever/Ashby URL forms and explicitly
+authorized loopback fixtures. An unfamiliar loopback layout test does not prove
+arbitrary employer-host support.
+
+Question collection can run without a model. Saved answers are owned, consented,
+human-confirmed revisions matched to exact wording/options and relevant country
+context; reuse creates a draft, not automatic new consent. Preparation readback
+uses a frozen network context and never clicks Next/Submit. Unknown/custom controls
+and incomplete coverage stay blockers. This deterministic preparation is distinct
+from the disabled model-driven intake executor.
+
+Submission requires a reviewed checkpoint, exact artifact and answers, current
+lease, eligibility, authorization and a guarded begin transition. The worker then
+submits once, observes a receipt and persists the canonical Application. A model
+turn or process exit is not success. Begun/unknown attempts must not be resubmitted;
+retained receipts allow recording-only recovery. Expired leases and unanswered
+questions park work. Restarting does not erase submission ambiguity.
+
+## Providers and background work
+
+- Ordinary PTY sessions support Claude Code and Codex. They are separate from
+  the finite queue grant envelope; their complete token usage is not measured here.
+- Bounded queue application work currently uses the Claude subscription route
+  and Sonnet request configuration. Its stream ledger records observed usage,
+  requested/actual model, execution identity, duration and stop reason. Provider
+  token observations can arrive after spending; budget stops may overshoot by an
+  in-flight response. No token count converts directly to subscription quota.
+- Explicit `/inference` requests use the companion's bounded Claude process;
+  Haiku is its existing extraction default, not a new scoring default. A readiness
+  request can itself generate a model response. Gmail checks also contain a model
+  path. Version/hook checks and normal API health checks are deterministic.
+- Pilot cadence is code-owned. Catalog refresh, document-cache pruning, retention
+  and Telegram inbox/outbox work are API background services. Telegram delivery is
+  deterministic template processing, not a server-side LLM dispatcher.
+- The Gmail connector owns local authentication; normalized ingest and reviewed
+  reply proposals persist through the API. Legacy mailbox OAuth paths still exist.
+
+## UI and operational limits
+
+The web exposes Queue, inline activity, Needs you, application history, analytics,
+campaigns, resume studio, inbox and settings. The advanced terminal remains
+available. TanStack Query refetches on owned SSE events and clears
+account data when identity changes. Analytics queue depth counts canonical queued
+WorkItems rather than obsolete Job status values.
+
+Production readiness still requires reviewed provider context/tool isolation,
+current common-queue live acceptance, a supported preparation executor, host
+coverage beyond reviewed ATS shapes, deployment/backup testing and operational
+monitoring. The historical full-acceptance launcher
+remains disabled. A phase document saying its independent gate passed does not
+clear these restrictions. See [development commands](development.md).

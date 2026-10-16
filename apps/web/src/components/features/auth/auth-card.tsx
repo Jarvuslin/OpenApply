@@ -30,7 +30,7 @@ export function AuthCard(props: AuthCardProps): ReactElement {
           <Stack spacing={1} sx={{ alignItems: "center", textAlign: "center" }}>
             <Stack direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
               <OpenApplyMark size={36} />
-              <Typography variant="h2" component="h1">
+              <Typography variant="authTitle" component="h1">
                 OpenApply
               </Typography>
             </Stack>
@@ -40,7 +40,7 @@ export function AuthCard(props: AuthCardProps): ReactElement {
             <CardContent sx={{ p: { xs: 3, sm: 4 }, "&:last-child": { pb: { xs: 3, sm: 4 } } }}>
               <Stack spacing={3}>
                 <Stack spacing={0.5}>
-                  <Typography variant="h3" component="h2">
+                  <Typography variant="authTitle" component="h2">
                     {title}
                   </Typography>
                   {subtitle && <Typography variant="body2Muted">{subtitle}</Typography>}

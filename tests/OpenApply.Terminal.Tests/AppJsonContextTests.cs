@@ -30,11 +30,9 @@ public class AppJsonContextTests
         var pilot = JsonSerializer.Deserialize(
             """{"provider":"claude","apiToken":"tok","apiUrl":"https://api","webUrl":"https://web"}""",
             AppJsonContext.Default.PilotStartRequest);
-        var inject = JsonSerializer.Deserialize("""{"command":"$pilot"}""", AppJsonContext.Default.InjectRequest);
 
         Assert.Equal(new StartSessionRequest(120, 40, "codex", "tok", "https://api", "https://web"), start);
         Assert.Equal(new PilotStartRequest("claude", "tok", "https://api", "https://web"), pilot);
-        Assert.Equal(new InjectRequest("$pilot"), inject);
     }
 
     [Fact]

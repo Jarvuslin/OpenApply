@@ -1,4 +1,3 @@
-import { makePush, type SentPush } from "@/common/push/push.fake";
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { CampaignJobService } from "@/modules/campaign/jobs/job.service";
 import type { EmailSyncService } from "@/modules/email/sync/sync.service";
@@ -7,44 +6,31 @@ import { AgendaService } from "./agenda.service";
 
 type Row = Record<string, unknown>;
 
-/** A prior claim of one kind, as the dampers read it back. */
-interface ClaimRow {
-  subjectId: string;
-  grantedAt: Date;
-  releasedAt: Date | null;
-  outcome?: string | null;
-}
-
 interface Recorder {
   promoteScoredJobs: unknown[][];
   campaignUpdates: { where: Row; data: Row }[];
   /** Every campaign.findMany where-clause, so a gather's predicate can be asserted on. */
   campaignQueries: Row[];
   journals: Row[];
-  pushes: SentPush[];
   inboxSyncs: { userId: string; staleMs: number }[];
 }
 
 export interface Over {
+  profileMinimum?: number;
   instructionsConfig?: unknown;
   instructionsGoals?: string;
   appliedToday?: number;
   pilotSearches?: Row[];
   answered?: Row[];
-  questionClaims?: { subjectId: string }[];
   approvedJobs?: Row[];
 
-  searchClaims?: ClaimRow[];
   dueSearchCampaigns?: { campaignId: string; pilotSearchId: string }[];
   scorePendingCampaigns?: Row[];
-  scorePendingClaims?: ClaimRow[];
   scoredPendingJobs?: Row[];
   pausedCampaigns?: Row[];
   campaignQuestions?: { subjectId: string; status: string; answeredAt: Date | null }[];
-  pausedReviewClaims?: ClaimRow[];
   finalizeCampaigns?: Row[];
   queuedCampaigns?: Row[];
-  queueDrainClaims?: ClaimRow[];
   boardHealthJobs?: Row[];
 
   interviewReplyApps?: Row[];
@@ -55,34 +41,10 @@ export interface Over {
   quietJobCounts?: Row[];
   actionMarkers?: { subjectId: string | null; detail: unknown }[];
   skipReasonRows?: { campaignId: string; skipReason: string | null; _count: { _all: number } }[];
-  bootstrapClaim?: { releasedAt: Date | null } | null;
   existingDigests?: number;
   digestApps?: number;
   jobsFailed?: number;
   jobsSkipped?: number;
-}
-
-function fakePilotClaim(over: Over) {
-  const byKind: Record<string, ClaimRow[] | undefined> = {
-    "campaign.scorePending": over.scorePendingClaims,
-    "queue.drain": over.queueDrainClaims,
-
-    "campaign.reviewPaused": over.pausedReviewClaims,
-    "search.discover": over.searchClaims,
-  };
-  const latestByKind: Record<string, unknown> = {
-    "strategy.bootstrap": over.bootstrapClaim,
-  };
-  return {
-    findMany: async (a: { where: { subjectType?: string; kind?: string } }) => {
-      if (a.where.kind) return byKind[a.where.kind] ?? [];
-      if (a.where.subjectType === "question") return over.questionClaims ?? [];
-      return [];
-    },
-    findFirst: async (a: { where: { kind: string } }) => latestByKind[a.where.kind] ?? null,
-    count: async () => 0,
-    updateMany: async () => ({ count: 0 }),
-  };
 }
 
 function fakePilotQuestion(over: Over) {
@@ -147,13 +109,16 @@ function makeAgendaDb(over: Over = {}) {
     campaignUpdates: [],
     campaignQueries: [],
     journals: [],
-    pushes: [],
     inboxSyncs: [],
   };
   const config = over.instructionsConfig ?? {};
 
   let txChain: Promise<unknown> = Promise.resolve();
   const db = {
+    autoApplySettings: {
+      findUnique: async () => ({ minMatchScore: over.profileMinimum ?? 60 }),
+    },
+    submissionAttempt: { findFirst: async () => null, findMany: async () => [] },
     pilotState: {
       findUnique: async () => ({
         running: true,
@@ -167,7 +132,6 @@ function makeAgendaDb(over: Over = {}) {
       findMany: async () => over.pilotSearches ?? [],
       count: async () => (over.pilotSearches ?? []).length,
     },
-    pilotClaim: fakePilotClaim(over),
     pilotQuestion: fakePilotQuestion(over),
     job: fakeJob(over),
     application: {
@@ -217,12 +181,12 @@ export function makeAgendaDeps(over: Over = {}) {
       rec.inboxSyncs.push({ userId, staleMs });
     },
   } as unknown as EmailSyncService;
-  return { prisma, campaignJobs, journal, push: makePush(rec.pushes), emailSync, rec };
+  return { prisma, campaignJobs, journal, emailSync, rec };
 }
 
 export const serviceWithRec = (over: Over = {}) => {
-  const { prisma, campaignJobs, journal, push, emailSync, rec } = makeAgendaDeps(over);
-  return { svc: new AgendaService(prisma, campaignJobs, journal, push, emailSync), rec };
+  const { prisma, campaignJobs, journal, emailSync, rec } = makeAgendaDeps(over);
+  return { svc: new AgendaService(prisma, campaignJobs, journal, emailSync), rec };
 };
 
 export const service = (over: Over = {}) => serviceWithRec(over).svc;

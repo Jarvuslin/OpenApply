@@ -25,17 +25,16 @@ export function TabLink(props: TabLinkProps): ReactElement {
       sx={(theme) => ({
         display: "inline-flex",
         alignItems: "center",
-        minHeight: 38,
+        minHeight: theme.controlHeights.md,
         px: 1.5,
-        fontSize: "0.875rem",
-        fontWeight: 500,
+        typography: "button",
         textDecoration: "none",
         color: active ? "accent.primary" : "text.secondary",
         // Paints over the strip's inset-shadow divider (shadows render behind children).
         borderBottom: `2px solid ${active ? theme.palette.accent.primary : "transparent"}`,
         transition: `color ${theme.motion.fast}, border-color ${theme.motion.fast}`,
         "&:hover": { color: active ? "accent.primary" : "text.primary" },
-        "&:focus-visible": { outline: theme.shadows_custom.focus, outlineOffset: -2 },
+        "&:focus-visible": { outline: 0, boxShadow: theme.shadows_custom.focus },
       })}
     >
       {label}

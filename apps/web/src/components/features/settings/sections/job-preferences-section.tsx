@@ -2,6 +2,7 @@
 import {
   EMPLOYMENT_TYPES,
   JOB_LEVELS,
+  ROLE_FAMILIES,
   USER_DEFAULT_VALUES,
   WORK_MODES,
 } from "@openapply/contracts/user";
@@ -14,8 +15,18 @@ export const JobPreferencesSection = withForm({
     return (
       <FormSection
         title="Jobs you want"
-        description="Choose the levels and working arrangements you want to include in your search."
+        description="Choose the roles, levels and working arrangements you want to include in your search."
       >
+        <form.AppField name="jobPreferences.roles">
+          {(f) => (
+            <f.Multiselect
+              label="Desired roles"
+              options={ROLE_FAMILIES}
+              freeSolo={false}
+              helperText="Choose multiple roles, or leave empty for any role. These are preferences, not claims about your experience."
+            />
+          )}
+        </form.AppField>
         <form.AppField name="jobPreferences.levels">
           {(f) => <f.Multiselect label="Job levels" options={JOB_LEVELS} freeSolo={false} />}
         </form.AppField>

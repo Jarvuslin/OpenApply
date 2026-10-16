@@ -1,9 +1,5 @@
-import type { ReactElement } from "react";
-import type { Metadata } from "next";
-import { SettingsContent } from "@/components/features/settings";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Profile" };
-
-export default function ProfileSettingsPage(): ReactElement {
-  return <SettingsContent />;
+export default function ProfileSettingsPage(): never {
+  redirect("/profile");
 }

@@ -1,4 +1,5 @@
 import { PROTECTED_VARIANT_LABELS, resumeDataSchema } from "@openapply/contracts/resume";
+import { resumeEvidenceSnapshotSchema } from "@openapply/contracts/resume-evidence";
 import { z } from "zod/v4";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -19,7 +20,92 @@ export const pruneVariantsQuerySchema = z.object({
 
 export const prunedResponseSchema = z.object({ deleted: z.number().int() });
 
-const bulletRewriteSchema = z.object({ original: z.string(), tailored: z.string() });
+const rewriteGroundingSchema = z.object({
+  evidence: z
+    .array(
+      z.object({
+        path: z.string().min(1),
+        quote: z.string().trim().min(1),
+      }),
+    )
+    .min(1)
+    .max(20),
+  externalEvidence: z
+    .array(
+      z.object({
+        evidenceId: z.uuid(),
+        revision: z.number().int().positive(),
+        quote: z.string().trim().min(1),
+      }),
+    )
+    .max(20)
+    .optional(),
+  target: z.object({
+    kind: z.enum(["job_description", "general_review"]),
+    quote: z.string().trim().min(1),
+    reason: z.string().trim().min(1),
+  }),
+  review: z.object({
+    verdict: z.literal("supported"),
+    claimType: z.enum(["explicit", "supported_interpretation"]),
+    rationale: z.string().trim().min(1),
+  }),
+});
+
+export type RewriteGrounding = z.infer<typeof rewriteGroundingSchema>;
+
+const executionReferenceSchema = z.object({
+  runId: z.uuid().optional(),
+  toolInvocationId: z.string().trim().min(1).max(200).optional(),
+});
+const unavailableReviewSchema = z.object({
+  status: z.literal("unavailable"),
+  reason: z.string().trim().min(1),
+});
+const workflowReviewSchema = z.object({
+  evidencePlan: z
+    .array(
+      z.object({
+        target: z.string().trim().min(1),
+        sources: z.array(z.string().trim().min(1)).min(1),
+        change: z.string().trim().min(1),
+      }),
+    )
+    .min(1)
+    .max(100),
+  reviewer: z.discriminatedUnion("status", [
+    executionReferenceSchema.extend({
+      status: z.literal("completed"),
+      agentId: z.string().trim().min(1),
+      findings: z.array(z.string().trim().min(1)).max(100),
+      resolutions: z.array(z.string().trim().min(1)).max(100),
+    }),
+    unavailableReviewSchema,
+  ]),
+  humanizer: z.discriminatedUnion("status", [
+    executionReferenceSchema.extend({
+      status: z.literal("completed"),
+      skill: z.literal("humanizer"),
+      factualDriftChecked: z.literal(true),
+    }),
+    unavailableReviewSchema,
+  ]),
+  optionalQuestions: z.array(z.string().trim().min(1)).max(30),
+});
+export type WorkflowReview = z.infer<typeof workflowReviewSchema>;
+
+const bulletRewriteSchema = z.object({
+  original: z.string(),
+  tailored: z.string(),
+  // Older saved audits predate evidence review; missing data must not become a fabricated review.
+  grounding: rewriteGroundingSchema.optional(),
+});
+const reviewedRewriteSchema = bulletRewriteSchema.extend({
+  original: z.string().min(1),
+  tailored: z.string().trim().min(1),
+  grounding: rewriteGroundingSchema,
+});
+const reviewedTextAuditSchema = reviewedRewriteSchema.extend({ original: z.string() });
 
 const entryRewriteAuditSchema = z.object({
   entryIndex: z.number().int(),
@@ -28,6 +114,11 @@ const entryRewriteAuditSchema = z.object({
 });
 
 export type EntryRewriteAudit = z.infer<typeof entryRewriteAuditSchema>;
+const projectRewriteAuditSchema = z.object({
+  entryIndex: z.number().int(),
+  name: z.string(),
+  bullets: z.array(bulletRewriteSchema),
+});
 
 const structureAuditSchema = z.object({
   merged: z.array(
@@ -58,7 +149,32 @@ export type StructureAudit = z.infer<typeof structureAuditSchema>;
 /** Persisted `ResumeVariant.rewrites` shape. `structure` only on variants that restructured. */
 const variantRewriteAuditSchema = z.object({
   experience: z.array(entryRewriteAuditSchema),
+  projects: z.array(projectRewriteAuditSchema).optional(),
+  summary: reviewedTextAuditSchema.optional(),
+  headline: reviewedTextAuditSchema.optional(),
+  omissions: z
+    .array(
+      z.object({
+        section: z.enum(["experience", "projects"]),
+        entryIndex: z.number().int(),
+        original: z.string(),
+        reason: z.string(),
+      }),
+    )
+    .optional(),
+  reviewMeaning: z
+    .literal(
+      "Source references and factual invariants are checked; semantic support is an agent review judgment, not proof.",
+    )
+    .optional(),
   structure: structureAuditSchema.optional(),
+  additionalEvidence: z.array(resumeEvidenceSnapshotSchema).optional(),
+  workflowReview: workflowReviewSchema.optional(),
+  reviewEvidenceMeaning: z
+    .literal(
+      "Agent-reported workflow; tool execution and semantic correctness are not established by these fields.",
+    )
+    .optional(),
 });
 
 export type VariantRewriteAudit = z.infer<typeof variantRewriteAuditSchema>;
@@ -126,18 +242,28 @@ export const tailorResumeSchema = z.object({
   applicationId: z.uuid().optional().nullable(),
   summary: z.string().optional(),
   headline: z.string().optional(),
+  summaryGrounding: rewriteGroundingSchema.optional(),
+  headlineGrounding: rewriteGroundingSchema.optional(),
+  jobDescription: z.string().optional(),
   emphasizedTech: z.array(z.string()).optional(),
   jobKeywords: z.array(z.string()).optional(),
   diffNotes: z.string().optional().nullable(),
+  workflowReview: workflowReviewSchema.optional(),
   maxBulletsPerEntry: z.number().int().min(1).max(20).optional(),
   structure: resumeStructureSchema.optional(),
   bulletRewrites: z
     .array(
       z.object({
         entryIndex: z.number().int().min(0),
-        bullets: z
-          .array(z.object({ original: z.string().min(1), tailored: z.string().min(1) }))
-          .min(1),
+        bullets: z.array(reviewedRewriteSchema).min(1),
+      }),
+    )
+    .optional(),
+  projectBulletRewrites: z
+    .array(
+      z.object({
+        entryIndex: z.number().int().min(0),
+        bullets: z.array(reviewedRewriteSchema).min(1),
       }),
     )
     .optional(),

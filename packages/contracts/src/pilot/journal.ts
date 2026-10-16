@@ -48,7 +48,6 @@ export const pilotJournalPageSchema = cursorPageSchema(pilotJournalEntrySchema);
 export type PilotJournalKind = z.infer<typeof pilotJournalKindSchema>;
 export type CreatePilotJournalInput = z.infer<typeof createPilotJournalSchema>;
 export type PilotJournalEntry = z.infer<typeof pilotJournalEntrySchema>;
-export type PilotJournalPage = z.infer<typeof pilotJournalPageSchema>;
 
 /** Shared by the cycle journal detail and the host's sentinel. */
 export const pilotCycleStatusSchema = z.enum(["ok", "empty", "error"]);

@@ -9,7 +9,7 @@ export async function setupEnv(root) {
       .replace("JWT_SECRET=dev-insecure-change-me", `JWT_SECRET=${randomBytes(32).toString("hex")}`)
       .replace(/^SECRET_MASTER_KEY=.*$/m, `SECRET_MASTER_KEY=${randomBytes(32).toString("base64")}`)
       .replace(/^(?!(?:GOOGLE|GITHUB)_CLIENT_(?:ID|SECRET)=)[A-Z_]+=\r?$/gm, "") +
-    "\nMVP_LOCAL_RUNNER=true\nCLAUDE_BIN=claude\n";
+    "\nMVP_LOCAL_RUNNER=true\n";
   const web = await readFile(path.join(root, "apps/web/.env.example"), "utf8");
   for (const [name, body] of [
     ["apps/api/.env", api],

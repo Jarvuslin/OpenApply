@@ -3,6 +3,7 @@
 import type { ReactElement } from "react";
 import { Delete, PictureAsPdf } from "@mui/icons-material";
 import { Box, Button, IconButton, Stack, Typography } from "@mui/material";
+import Link from "next/link";
 import { api } from "@/api/client";
 import { useApiMutation } from "@/api/hooks";
 import { invalidations } from "@/api/query-keys";
@@ -73,6 +74,7 @@ export function SourceUploadCard(props: SourceUploadCardProps): ReactElement {
               accept=".pdf,.docx,.txt"
               maxBytes={MAX_RESUME_BYTES}
               loading={upload.isPending}
+              disabled={Boolean(resume.content)}
               label="Replace"
               onFile={(f) => upload.mutate(f)}
               onError={(msg) => toast.error(msg)}
@@ -90,12 +92,24 @@ export function SourceUploadCard(props: SourceUploadCardProps): ReactElement {
             accept=".pdf,.docx,.txt"
             maxBytes={MAX_RESUME_BYTES}
             loading={upload.isPending}
+            disabled={Boolean(resume.content)}
             label="Upload resume"
             onFile={(f) => upload.mutate(f)}
             onError={(msg) => toast.error(msg)}
           />
         )}
       </Stack>
+      {resume.content && (
+        <Stack spacing={1} sx={{ mt: 2 }}>
+          <Typography variant="body2Muted">
+            This resume already has extracted content. Upload a changed document as a new resume to
+            keep this original and its saved variants together.
+          </Typography>
+          <Button component={Link} href="/profile" sx={{ alignSelf: "flex-start" }}>
+            Upload a new resume in Documents
+          </Button>
+        </Stack>
+      )}
     </SectionCard>
   );
 }

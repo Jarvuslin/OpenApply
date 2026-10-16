@@ -1,83 +1,68 @@
 import type { ReactElement } from "react";
-import { alpha, Box, Container, Grid, Stack, Typography } from "@mui/material";
+import { Box, Container, Stack, Typography } from "@mui/material";
 import { LinkButton } from "@/components/ui/buttons";
-import { accent, fontFamilies, gradients } from "@/theme";
-import { SectionEyebrow } from "../section-eyebrow";
-import { AgentTranscript } from "./agent-transcript";
-
-// A server component, so sx must stay a plain object - a `(theme) => …` callback
-// is a function, and functions cannot cross the RSC boundary.
-const emberWash = `radial-gradient(ellipse 80% 60% at 50% -10%, ${alpha(accent.primary, 0.09)}, transparent 60%)`;
+import { LandingImage } from "../landing-image";
 
 export function Hero(): ReactElement {
   return (
-    <Box sx={{ position: "relative", overflow: "hidden" }}>
-      {/* Ember wash anchored above the fold - lifts the hero off the carbon base. */}
-      <Box
-        aria-hidden
-        sx={{
-          position: "absolute",
-          inset: 0,
-          background: emberWash,
-          pointerEvents: "none",
-        }}
-      />
-      {/* Ambient brand orb. */}
-      <Box
-        aria-hidden
-        sx={{
-          position: "absolute",
-          top: -180,
-          right: -120,
-          width: 520,
-          height: 520,
-          background: gradients.orb,
-          filter: "blur(120px)",
-          opacity: 0.16,
-          pointerEvents: "none",
-        }}
-      />
-      {/* Light bottom padding: the hero runs into the teaser rather than sitting a section apart. */}
-      <Container
-        maxWidth="lg"
-        sx={{
-          position: "relative",
-          paddingTop: { xs: 6, md: 10 },
-          paddingBottom: { xs: 2, md: 3 },
-        }}
-      >
-        <Grid container spacing={6} sx={{ alignItems: "center" }}>
-          <Grid size={{ xs: 12, md: 7 }}>
-            <Stack spacing={3}>
-              <SectionEyebrow color="accent.primary">AUTONOMOUS · LOCAL-FIRST</SectionEyebrow>
-              <Typography variant="displayLg" sx={{ textWrap: "balance" }}>
-                Job search on autopilot, on your machine.
-              </Typography>
-              <Typography variant="body1Muted" sx={{ fontSize: "1.05rem", maxWidth: 560 }}>
-                Tell OpenApply what you're looking for. It finds roles, tailors your resume,
-                applies, and messages recruiters, all on the Claude or Codex subscription you
-                already pay for. Every morning it leaves you a journal of what it did.
-              </Typography>
-              <Stack direction="row" spacing={1.5} sx={{ flexWrap: "wrap", gap: 1.5 }}>
-                <LinkButton href="/install" variant="contained" size="large">
-                  Install the agent
-                </LinkButton>
-                <LinkButton href="/login" variant="outlined" size="large">
-                  Sign in
-                </LinkButton>
-              </Stack>
-              <Typography
-                sx={{ fontFamily: fontFamilies.mono, fontSize: "0.75rem", color: "text.disabled" }}
-              >
-                No API keys · Runs on your Claude / Codex subscription
-              </Typography>
-            </Stack>
-          </Grid>
-          <Grid size={{ xs: 12, md: 5 }}>
-            <AgentTranscript />
-          </Grid>
-        </Grid>
-      </Container>
-    </Box>
+    <Container maxWidth="lg" sx={{ pt: { xs: 7, md: 11 }, pb: { xs: 5, md: 8 } }}>
+      <Stack spacing={2.5} sx={{ alignItems: "center", textAlign: "center" }}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: "center",
+            px: 1.75,
+            py: 0.75,
+            border: 1,
+            borderColor: "divider",
+            borderRadius: 999,
+          }}
+        >
+          <Box sx={{ width: 7, height: 7, borderRadius: "50%", bgcolor: "statusDots.done" }} />
+          <Typography variant="body2Strong" sx={{ color: "text.prose" }}>
+            Free · open source · runs on your computer
+          </Typography>
+        </Stack>
+        <Typography variant="displayLg" component="h1" sx={{ maxWidth: 860 }}>
+          Set the rules.
+          <br />
+          Wake up to applications.
+        </Typography>
+        <Typography
+          variant="body1Muted"
+          sx={{ fontSize: "1.125rem", lineHeight: 1.6, maxWidth: 640 }}
+        >
+          OpenApply finds new jobs minutes after they are posted, scores each one against your
+          resume, and applies with the Claude or Codex plan you already pay for. You only step in
+          when it needs you.
+        </Typography>
+        <Stack
+          direction="row"
+          spacing={1.25}
+          sx={{ pt: 1, flexWrap: "wrap", justifyContent: "center", gap: 1.25 }}
+        >
+          <LinkButton href="/install" variant="contained" size="large">
+            Get started — free
+          </LinkButton>
+          <LinkButton href="/#how-it-works" variant="outlined" size="large">
+            See how it works
+          </LinkButton>
+        </Stack>
+        <Typography variant="captionMuted">
+          No API keys · Works with Claude Code or Codex · Windows and macOS
+        </Typography>
+      </Stack>
+      <Box sx={{ mt: { xs: 5, md: 7 } }}>
+        <LandingImage
+          src="/landing/hero.png"
+          alt="A pilot's review page: jobs grouped by when they were posted, each with a match score, and a question from a Shopify application waiting for an answer."
+          width={2400}
+          height={1120}
+          priority
+          sizes="(max-width: 1200px) 100vw, 1200px"
+        />
+      </Box>
+    </Container>
   );
 }

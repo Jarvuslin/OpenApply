@@ -1,9 +1,10 @@
 "use client";
 
 import { type ReactElement, useState } from "react";
-import { Delete, Launch } from "@mui/icons-material";
+import { ArrowBack, Delete, Launch } from "@mui/icons-material";
 import { Button, IconButton, LinearProgress, Stack } from "@mui/material";
 import type { ApplicationStatus, StatusTransitionInput } from "@openapply/contracts/application";
+import NextLink from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/api/client";
 import { useApiMutation, useApiQuery } from "@/api/hooks";
@@ -43,7 +44,7 @@ export function ApplicationDetail(props: ApplicationDetailProps): ReactElement {
   const remove = useApiMutation<{ deleted: string }, void>(() => api.applied({ id }).delete(), {
     successMessage: "Application deleted",
     invalidate: invalidations.application,
-    onSuccess: () => router.replace("/"),
+    onSuccess: () => router.replace("/applications"),
   });
 
   const handleDelete = async (): Promise<void> => {
@@ -68,6 +69,9 @@ export function ApplicationDetail(props: ApplicationDetailProps): ReactElement {
   if (!app) {
     return (
       <PageShell maxWidth="lg">
+        <Button component={NextLink} href="/applications" startIcon={<ArrowBack />}>
+          Application history
+        </Button>
         <EmptyState
           title="Application not found"
           description="It may have been deleted, or the link is incorrect."
@@ -79,6 +83,14 @@ export function ApplicationDetail(props: ApplicationDetailProps): ReactElement {
   return (
     <>
       <PageShell maxWidth="lg">
+        <Button
+          component={NextLink}
+          href="/applications"
+          startIcon={<ArrowBack />}
+          sx={{ alignSelf: "flex-start" }}
+        >
+          Application history
+        </Button>
         <PageHeader
           eyebrow={app.company}
           title={app.title}

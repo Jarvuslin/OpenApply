@@ -21,16 +21,6 @@ export const messageFilters = z.object({
 
 export const messagesQuery = paginationQuerySchema.extend(messageFilters.shape);
 
-export const messageCountSchema = z.object({ count: z.number().int().min(0) });
-
-export const startQuery = z.object({ provider: emailProviderSchema.optional() });
-
-export const callbackQuery = z.object({
-  code: z.string().optional(),
-  state: z.string().optional(),
-  error: z.string().optional(),
-});
-
 export const emailAccountSchema = z.object({
   id: z.uuid(),
   provider: emailProviderSchema,
@@ -59,18 +49,6 @@ export const accountStatusSchema = z.union([
 
 /** Confirmation returned by disconnecting the mailbox (`account.disconnectAccount`). */
 export const accountDisconnectedSchema = z.object({ disconnected: z.boolean() });
-
-/** OAuth client config status (`account.getOAuthClient`) - never includes the secret. */
-export const oauthClientStatusSchema = z.object({
-  configured: z.boolean(),
-  provider: z.string(),
-  clientId: z.string().nullable(),
-  redirectUri: z.string(),
-  scopes: z.array(z.string()),
-});
-
-/** Confirmation returned by removing the OAuth client (`account.deleteOAuthClient`). */
-export const oauthClientDeletedSchema = z.object({ deleted: z.boolean() });
 
 /** Matched-application summary embedded on a message (`matchedApp` relation). */
 const matchedAppSchema = z
@@ -126,12 +104,6 @@ export const messageApprovedSchema = z.object({
   id: z.uuid(),
   applicationId: z.uuid(),
   status: statusSchema,
-});
-
-/** Provider message + thread ids returned after sending (`account.send`). */
-export const sentMessageSchema = z.object({
-  providerId: z.string(),
-  threadId: z.string(),
 });
 
 /** Fetched and newly-inserted counts from a sync run (`sync.syncInbox`). */

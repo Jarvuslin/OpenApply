@@ -1,6 +1,6 @@
 import type { ResumeData } from "@openapply/contracts/resume";
 import { buildCorpus } from "./facts";
-import { base, NLP_BULLET, PIPELINE_BULLET } from "./fakes";
+import { base, grounding, NLP_BULLET, PIPELINE_BULLET } from "./fakes";
 import { validateHeadline, validateRewrites, validateSummary } from "./guards";
 import { describe, expect, it } from "bun:test";
 
@@ -20,13 +20,13 @@ describe("validateSummary", () => {
     expect(violations).toEqual([]);
   });
 
-  it("refuses a rewrite that keeps little of the base wording", () => {
+  it("permits substantial rephrasing of existing evidence", () => {
     const violations = summaryViolations(
       base(),
-      "Data scientist with nine years building production ML and analytics systems, including predictive models over millions of records and statistical forecasting. Applied-math background.",
+      "Engineer applying machine learning to clinical NLP pipelines and medical imaging research.",
     );
 
-    expect(violations.some((v) => v.includes("% of the base summary"))).toBe(true);
+    expect(violations).toEqual([]);
   });
 
   it("names every stock phrase it finds", () => {
@@ -91,11 +91,18 @@ describe("validateHeadline", () => {
 
 function rewrite(entryIndex: number, original: string, tailored: string) {
   const data = base();
-  return validateRewrites(
-    data,
-    [{ entryIndex, bullets: [{ original, tailored }] }],
-    buildCorpus(data),
-  );
+  return validateRewrites(data, [
+    {
+      entryIndex,
+      bullets: [
+        {
+          original,
+          tailored,
+          grounding: grounding(`/experience/${entryIndex}/bullets/0`, original),
+        },
+      ],
+    },
+  ]);
 }
 
 describe("validateRewrites", () => {
@@ -107,7 +114,7 @@ describe("validateRewrites", () => {
     );
 
     expect(result.violations).toEqual([]);
-    expect(result.audit[0].bullets[0]).toEqual({
+    expect(result.audit[0].bullets[0]).toMatchObject({
       original: NLP_BULLET,
       tailored:
         "Clinical NLP pipeline extracting symptoms, medications, and care events from free-text notes; 0.90 F1.",
@@ -135,14 +142,14 @@ describe("validateRewrites", () => {
     expect(result.violations[0]).toContain("drops number");
   });
 
-  it("refuses a reword that adds a clause", () => {
+  it("refuses unbounded padding", () => {
     const result = rewrite(
       0,
       NLP_BULLET,
-      `Biomedical ${NLP_BULLET} Results fed a clinical decision-support workflow used by the care team daily.`,
+      `${NLP_BULLET} ${"The clinical notes were extracted again. ".repeat(30)}`,
     );
 
-    expect(result.violations[0]).toContain("grows from");
+    expect(result.violations[0]).toContain("exceeds 1000 characters");
   });
 
   it("refuses stock phrasing", () => {
@@ -166,13 +173,13 @@ describe("validateRewrites", () => {
     expect(result.violations[0]).toContain("GCP");
   });
 
-  it("accepts tech attested elsewhere in the resume", () => {
+  it("does not move tech from elsewhere into an unrelated accomplishment", () => {
     const result = rewrite(
       0,
       NLP_BULLET,
       "HIPAA NLP pipeline extracting symptoms, medications, and care events from clinical notes; 0.90 F1.",
     );
 
-    expect(result.violations).toEqual([]);
+    expect(result.violations[0]).toContain("absent from the cited entry");
   });
 });

@@ -6,7 +6,7 @@ argument-hint: "<digest-json | job-url | pasted-jd-text> [--base <resumeId>]"
 
 # Tailor Resume - Reuse or Create
 
-Choose or produce a resume for a specific job. You decide reuse vs create; the user does not pre-select.
+Choose or produce a resume for a specific job. Honor the user's selected base; decide reuse vs create only within that base.
 
 ## Setup
 
@@ -16,7 +16,11 @@ Follow `../_shared/setup.md`. The profile response includes `resumes` (every bas
 
 Detect the argument shape:
 
-- Starts with `{` → parse as digest JSON. **No navigation, no snapshot.**
+- A JSON object with `baseResumeId` and `job` is a dashboard request. Keep `baseResumeId` as the explicit base and parse `job` below (it may be a URL or pasted JD text).
+- Otherwise extract an optional `--base <resumeId>` argument before detecting the JD shape. If both forms provide different base IDs, stop and report the conflict.
+- Starts with `{` → parse as digest JSON. Reuse the full posting from the caller or saved Job
+  description. A digest alone is insufficient for rewriting: if the full text was not supplied,
+  retrieve the saved job or read its real posting URL before Step 5. Keep any active form intact.
 - Starts with `http` → `browser_navigate`, then `browser_snapshot` the posting body (per `../_shared/browser-tips.md`) and build the digest (`../_shared/digest-schema.md`) from it.
 - Otherwise → pasted JD text; parse the same fields manually.
 
@@ -30,9 +34,12 @@ From the digest (`title`, `requirements[]`, `responsibilities[]`, `skills[]`, `y
 
 ## Step 2: Pick the Base
 
-**Campaign choice wins.** If `--base <resumeId>` was passed (the campaign's selected resume) and
-that resume has `hasData` or a `sourceFilename`, use it as `BASE_ID` (skip scoring). Else **primary
-wins**: if `primaryResumeId` is set and that resume has `hasData` or a `sourceFilename`,
+**Explicit choice wins.** When `baseResumeId` or `--base <resumeId>` was supplied, fetch that exact
+resume. Use it as `BASE_ID` if it has `content` or a `sourceFilename` (skip base scoring). If the ID
+is invalid, unavailable, or has neither content nor a source, stop and report the problem. Never
+substitute the primary or another base for an explicit selection.
+
+Only without an explicit selection, **primary wins**: if `primaryResumeId` is set and that resume has `hasData` or a `sourceFilename`,
 use it as `BASE_ID` (skip scoring; Step 3 extracts content if missing). Otherwise score each
 `resumes` entry (max 10):
 
@@ -63,143 +70,141 @@ If `content` is `null`, run the `extract-resume` skill for `$BASE_ID`, wait for 
 
 > ⚠ resume disagrees with your profile: {field} says "{resume}", profile says "{profile}". Fix at $OPENAPPLY_WEB/resumes/{baseId}
 
-## Step 4: Decide Reuse vs Create
+## Step 4: Reuse only an equivalent, verified artifact
+
+Follow `../_shared/rewrite-quality.md`. Read the full JD, not only its digest, before writing prose.
+Retain its exact text as `jobDescription` for source-linked targeting.
+Follow `../_shared/resume-evidence.md` to gather reusable evidence from the original, profile,
+confirmed user conversations and attributable GitHub work. Reuse valid records; do not ask the
+same optional question before every rewrite or promote an assistant suggestion into a fact.
+
+List this base's variants. Reuse only when the selected source version, job requirements, requested
+editing scope and canonical template match, and its saved artifact passed review. Do not choose a
+weakly relevant variant because of a numeric reuse score or a variant-count cap. An explicit request
+to test a new rewrite requires a new draft. Never delete submitted/history variants to make room.
+
+On reuse, fetch the saved artifact and inspect the actual PDF before returning it. Say which version
+was reused; do not claim that another rewrite happened. Continue to Step 6.
+
+## Step 5: Create a source-grounded variant
+
+Build a short edit plan from the original source and full JD. Apply Google XYZ where real measures
+exist, otherwise use specific supported actions and outcomes. Improve relevant experience AND project
+bullets; there is no arbitrary two-bullet limit. Keep useful details, employers, dates, titles and
+scope intact. Every edit must be defensible from its cited source.
+
+Send:
+
+- `label`: company and role.
+- `jobUrl`: actual posting URL when known.
+- `jobDescription`: full posting text used for the target quotes.
+- `emphasizedTech` and `jobKeywords`: relevant terms already supported by the source.
+- `bulletRewrites`: grouped experience edits, indexed against the original selected base.
+- `projectBulletRewrites`: the same shape for project edits.
+- `summary` with `summaryGrounding`, or `headline` with `headlineGrounding`, only when useful.
+- `diffNotes`: concrete changes, reasons, meaningful omissions and remaining evidence gaps.
+- `workflowReview`: the per-JD evidence plan, actual independent-review and humanizer outcomes,
+  and optional questions, using the exact shape in `rewrite-quality.md`.
+
+Each rewrite is `{original, tailored, grounding}`. Copy `original` verbatim. Use the grounding shape
+in `../_shared/rewrite-quality.md`, citing the full original bullet and any additional supporting
+facts from that same entry. Source pointers and entry indexes always refer to the base before any
+structure operation. Grounding is a checkable claim record, not a self-certified guarantee.
+Additional supported ledger evidence uses `grounding.externalEvidence` with the exact owned
+`evidenceId`, current `revision` and complete `statement` as `quote`. Never change the base to
+smuggle new facts into its source evidence. Stronger phrasing may explain a capability, design
+decision or outcome entailed by the evidence; it need not merely move an existing clause first.
+
+```json
+{
+  "label": "<Company> - <Title>",
+  "jobUrl": "<actual job URL>",
+  "jobDescription": "<full posting text>",
+  "emphasizedTech": ["<supported relevant tool>"],
+  "bulletRewrites": [{
+    "entryIndex": 0,
+    "bullets": [{
+      "original": "<exact source bullet>",
+      "tailored": "<clearer, supported achievement/result/method>",
+      "grounding": {
+        "evidence": [{"path": "/experience/0/bullets/0", "quote": "<exact source bullet>"}],
+        "target": {"kind": "job_description", "quote": "<exact JD criterion>", "reason": "<relevance>"},
+        "review": {"verdict": "supported", "claimType": "explicit", "rationale": "<factual comparison>"}
+      }
+    }]
+  }],
+  "diffNotes": "<what changed, why, and what remains unsupported>"
+}
+```
+
+Keep all entries and bullets by default. Do not set `maxBulletsPerEntry` simply to make the renderer
+fit: first shorten repetition. Use explicit exclusions only within the user's editing scope and
+show the omitted source text in the audit. Ordinary tailoring does not authorize merging employers,
+promoting personal projects into employment or removing history.
+
+If the user explicitly requested restructuring, the existing `structure` object supports
+`entryOrder`, `dropEntries`, `mergeEntries`, `promoteProjects`, and `projectOrder`. Fetch its current
+API schema before using it. No rewrite may acquire facts from another entry after a merge. All
+rewrite and evidence indexes still refer to the unchanged base, not a merged intermediate.
+
+Avoid stock phrases: passionate, results-driven, detail-oriented, self-starter, track record,
+cutting-edge, leverage, spearheaded, seasoned, production-grade and best practices. Use precise
+source facts instead. Run the independent reviewer and invoke `humanizer` before saving, with the
+bounded correction in `rewrite-quality.md`. Missing optional facts do not block this work.
+
+Write the body to a job-prefixed file under `OPENAPPLY_TEMP`, then:
 
 ```bash
-openapply-api GET "/api/resumes/$BASE_ID/variants"
+openapply-api POST "/api/resumes/$BASE_ID/tailor" --data @"$OPENAPPLY_TEMP/$JOB_KEY-tailor.json"
 ```
 
-**Shortlist first.** Rank the list response by title similarity and fetch `GET /api/resumes/variants/<id>` for the **top 5** only - a base with 60 variants would otherwise cost 60 fetches per job.
+A validation failure names the rejected field and reason. Correct the factual issue; never bypass
+it through a raw variant endpoint. A compilation or PDF-fit failure is not a completed rewrite.
+Keep the proposed payload in the job scratch file and report the diagnostics. A failed create
+returns no variant ID; do not claim that a draft was saved in OpenApply.
 
-Compute `reuseScore` (0-100) for the shortlist. Variants failing the role-family gate (different family AND not adjacent) score 0. Skip `Suggested rewrite` variants - they are not tailored for any job.
+A timeout or lost response has an unknown outcome. Before resending, list the base's variants and
+inspect newly created candidates for the same job, content and audit. Reuse the matching saved
+artifact if the first request succeeded. If the outcome cannot be reconciled, report it instead of
+blindly creating another copy.
 
-| Component            | Max | Calculation                                                                                          |
-| -------------------- | --- | ---------------------------------------------------------------------------------------------------- |
-| Keyword coverage     | 40  | `40 × matched/10` of `JD.keywords` across skills + project keywords + summary + bullets.             |
-| Title similarity     | 20  | `20 ×` Jaccard token overlap of `JD.title` vs `variant.label`, stripping `engineer/senior/the/at/-`. |
-| Responsibility cover | 15  | `15 × matched/5` of `JD.responsibilityTerms` in summary + bullets.                                   |
-| Seniority alignment  | 15  | Exact 15; one step off (mid↔senior, senior↔staff) 8; further 0.                                      |
-| Domain match         | 5   | `JD.domain` appears in summary or any bullet.                                                        |
-| Recency              | 5   | ≤180d 5; else 0.                                                                                     |
+## Step 6: Verify the registered artifact
 
-Pick the highest scorer:
-
-- **≥60** → reuse.
-- **45-59** → reuse, echo a one-line caveat naming the weakest component.
-- **<45** or no variant passes the gate → Step 5.
-
-**Hard cap.** At **≥15** variants on a base, reuse the best scorer passing the role-family gate whatever it scored, and say so:
-
-> Reusing variant {id} (score {n}/100) - {baseId} is at {count} variants. Prune at $OPENAPPLY_WEB/resumes/{baseId} to allow new ones.
-
-Reuse is the default; creating is the exception. A variant is a near-duplicate of its base with reordered bullets, so a fresh one gains little at unbounded cost. Recency contributes almost nothing on purpose - decaying a good variant's score is what turns every application into a new row.
-
-On reuse:
-
-> Reusing variant {id}: {label} (score {n}/100).
-> $OPENAPPLY_API/api/resumes/variants/{id}/pdf
-> `RESUME_USED base={baseId} variant={id}`
-
-Stop.
-
-## Step 5: Create a New Variant
-
-A variant is the base resume with the JD-relevant parts moved to the front. It is not a new resume. The reader should not be able to tell it was tailored, only that it fits. The server reorders skills and ranks bullets from your hints, so most of the work is choosing terms, not writing prose.
-
-Send only what changes something:
-
-- **`label`** - `"{Company} - {Title}"`.
-- **`jobUrl`** - whenever the argument was a URL or the digest carried one. It is how the server ties the variant to its application.
-- **`emphasizedTech`** - 4-8 lowercase terms from `JD.keywords`. They move to the front of their skill groups.
-- **`jobKeywords`** - optional, about 10 terms. They rank bullets inside each entry. Defaults to `emphasizedTech`.
-- **`diffNotes`** - one or two sentences on what was emphasized and why.
-
-### Summary
-
-Leave `summary` out when the base already fits. It usually does.
-
-When one sentence of the base speaks to the wrong audience, swap that sentence and keep the rest word for word. The new sentence states one fact from the resume that this JD cares about, in plain words. Match the sentences around it (person, tense, length) so it doesn't stand out as the one that was swapped in. Keep the base's proof: its publications, its years, its domains, its numbers. Never restate the JD, and never open with a title followed by a list of tools.
-
-The server rejects stock phrasing in anything you write (summary, headline, reworded bullets), so don't use: passionate, enjoys, comfortable with, hands-on, results-driven, detail-oriented, self-starter, fast-paced, track record, cutting-edge, state-of-the-art, leverage, spearheaded, seasoned, stakeholders, business requirements, production-grade, best practices, cross-functional, end-to-end, quick learner, eager to, thrives, suited to, the same, downstream.
-
-### Headline
-
-Optional. A job title, nothing more. Retarget it only when the base headline names a different discipline than the JD.
-
-### Bullet rewrites
-
-Reordering is the default and usually suffices. Reword a bullet only when its JD-relevant fact sits mid-sentence, and reword at most two or three across the whole resume.
-
-`bulletRewrites` is `[{ entryIndex, bullets: [{ original, tailored }] }]`. Copy `original` verbatim from `experience[entryIndex].bullets`. `tailored` is the same sentence with the relevant fact first, and it still reads as a natural bullet: start with a verb, not "Using X," or "Leveraging X,". Every noun, number, and tech name stays. Nothing is added: no audience, no consequence, no clause on why the work mattered. A concrete noun never becomes a vaguer one; "clinical notes" turning into "unstructured records" is a loss, not tailoring.
-
-### Restructure
-
-Use `structure` only when reordering and rewording cannot close the gap: the base's role family differs from the JD, or no variant scored above 40 in Step 4. Every move is one more thing to defend in an interview.
-
-- **`entryOrder`** - permutation of the surviving indices.
-- **`dropEntries`** - at most half, never all.
-- **`mergeEntries`** - `[{ into, from[], company?, title? }]`. Use on short or overlapping roles. `company` is one of the merged employers or an umbrella name (`Independent / Contract`, `Freelance`, `Self-employed`, `Independent Software Development`). There is no date field: the server derives the range from the merged roles.
-- **`promoteProjects`** - `{ projects[], company?, title? }`. Lifts projects onto the timeline. Each project needs a `start` on the base first (`PUT /api/resumes/{id}`). Umbrella `company` only.
-- **`projectOrder`** - listed projects move to the front, the rest keep their order.
-
-Indices refer to the base resume, never an intermediate state. The server applies merge, drop, promote, reorder in that order. `bulletRewrites` indices refer to the result.
-
-### When the server says no
-
-The server checks that every field you wrote states only what the resume states, keeps the facts it started with, and reads like the candidate rather than a job ad. A failure is a 422 whose `details` name the field and the reason. Apart from `structure`, which is checked first on its own, `details` lists every problem in one response, so fix them together. Read it, then send less: drop the summary or the rewrite instead of rephrasing it a third time. Never work around a rejection.
-
-The response also carries non-blocking `flags`, currently only a retitle that shares no word with the original. Echo them; they are what the candidate will be asked about.
-
-Write the body to `"$OPENAPPLY_TEMP/tailor.json"` (omit `jobUrl` when there is none), then:
+Fetch `GET /api/resumes/variants/<id>` and its generated artifact metadata. Download the exact saved
+PDF and LaTeX source through the returned routes; do not run an independent PDF generator, replace a
+cache file, or claim that a standalone file belongs to an unrelated variant ID.
 
 ```bash
-openapply-api POST "/api/resumes/$BASE_ID/tailor" --data @"$OPENAPPLY_TEMP/tailor.json"
+openapply-api GET "/api/resumes/variants/$VARIANT_ID/artifacts"
 ```
 
-A plain reorder:
+Read `.artifact`, including `revision`, `pdfSha256`, `pdfUrl`, `texUrl`, `metadataUrl`, `source`,
+`job` and `validation`. Download the returned `pdfUrl` and `texUrl` with `openapply-api --out`.
+A null artifact means no current generated file exists. For a deliberately selected older draft,
+POST `/api/resumes/variants/<id>/artifacts` to convert it explicitly, then review it. Do not claim
+that this conversion recovers the exact file from a historical application.
 
-```json
-{ "label": "<Company> - <Title>", "jobUrl": "<job-url>",
-  "emphasizedTech": ["typescript", "react", "next.js", "aws"],
-  "jobKeywords": ["typescript", "react", "next.js", "aws"],
-  "diffNotes": "Surfaced React/Next.js ahead of other tech." }
-```
+Compare the saved content and `rewrites` audit against the original source. Inspect the actual PDF
+visually and verify one page, canonical fonts, readable text and no clipping. Use the persisted
+artifact revision/hash when reporting the file so preview and eventual staging identify the same
+bytes. If any review cannot be performed, say which check is incomplete.
 
-With a swapped summary sentence and one reword:
-
-```json
-{ "label": "<Company> - <Title>", "jobUrl": "<job-url>",
-  "emphasizedTech": ["typescript", "react", "next.js", "aws"],
-  "jobKeywords": ["typescript", "react", "next.js", "aws"],
-  "summary": "<base summary with one sentence swapped>",
-  "bulletRewrites": [{ "entryIndex": 0, "bullets": [{ "original": "<verbatim base bullet>", "tailored": "<same facts, relevant one first>" }] }],
-  "diffNotes": "Swapped the summary's last sentence for the HIPAA work; led the EmTech entry with the NLP bullet." }
-```
-
-With a restructure:
-
-```json
-{ "label": "<Company> - <Title>", "headline": "<job title>",
-  "emphasizedTech": ["pytorch", "computer vision", "python"],
-  "jobKeywords": ["pytorch", "computer vision", "python"],
-  "structure": { "mergeEntries": [{ "into": 2, "from": [3], "company": "Independent / Contract" }],
-    "promoteProjects": { "projects": [4] }, "entryOrder": [0, 1, 2] },
-  "diffNotes": "Merged two overlapping 2020-21 roles; promoted the CV research project; led with ML." }
-```
-
-Response `{ id, pdfUrl, rewordedBullets, flags }`. Echo:
-
-> Created variant {id} from base {baseId} ({rewordedBullets} reworded).
-> $OPENAPPLY_API{pdfUrl}
-> `RESUME_USED base={baseId} variant={id}`
-
-If `flags` is non-empty, append: `⚠ verify - {flags}`.
-
-`GET /api/resumes/variants/{id}` returns the `rewrites` audit, which records every reword and structural move.
+Report a concise before/after comparison, source support, clearer JD evidence, remaining gaps and
+links to the saved resume, PDF and LaTeX. Echo nonblocking server `flags` as review concerns. Keep
+original-source scoring separate from this document review; never label either as an ATS pass rate.
 
 ## Return to the caller
 
-Every path - reuse and create alike - ends with the `RESUME_USED base={baseId} variant={id}` line
-above. Apply flows read it to report what was submitted on the job result, and an application whose
-result carries no resume shows nothing under Documents. Omit `variant=` only when no variant is
-involved at all and the base PDF itself goes to the form.
+Only return an application-ready document after its actual artifact passes review:
+
+> Created/reused variant {id} from base {baseId} ({rewordedBullets} rewritten bullets).
+> [Rewritten PDF](<API origin + saved artifact.pdfUrl>)
+> `RESUME_USED base={baseId} variant={id}`
+
+For preview-only requests, explicitly say no application was submitted. For a failed or incomplete
+artifact, return only links that actually exist and the failure, not an application-ready
+`RESUME_USED` marker. A rejected create has no saved variant link. Preserve
+an explicit original-PDF submission preference; previewing a variant does not change it.
+
+Apply flows consume the returned IDs and must verify the downloaded file hash at staging. Omit
+`variant=` only when no variant is involved and the selected base/original document is used.

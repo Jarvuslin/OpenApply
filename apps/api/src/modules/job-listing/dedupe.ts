@@ -5,7 +5,7 @@
  * would merge a Senior and a Junior opening at one company into a single public listing.
  */
 
-import { createHash } from "node:crypto";
+import { sha256 } from "@/common/crypto/hash";
 import { parseCanonicalUrl, slugify } from "@/common/utils";
 import { normalizeCompanyName } from "@/modules/scoring/applied-duplicates";
 import { normalizePhrase } from "@/modules/scoring/keyword-normalize";
@@ -13,7 +13,7 @@ import { normalizePhrase } from "@/modules/scoring/keyword-normalize";
 /** Query params that identify the referrer, not the posting. */
 const TRACKING_PARAMS = [
   /^utm_/,
-  /^gh_/,
+  /^gh_src$/,
   /^ref$/,
   /^refid$/,
   /^referer$/,
@@ -84,7 +84,7 @@ export function dedupeKey(input: DedupeInput): string {
     normalizeCompanyName(input.company),
     normalizeListingLocation(input.location),
   ];
-  return createHash("sha256").update(parts.join("|")).digest("hex");
+  return sha256(parts.join("|"));
 }
 
 /** SEO slug. The key suffix makes it collision-free without a retry loop, and stable. */

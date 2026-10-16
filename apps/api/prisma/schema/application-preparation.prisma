@@ -1,0 +1,63 @@
+enum PreparationMode {
+  preview
+  worker
+  @@map("preparation_mode")
+}
+
+enum PreparationStatus {
+  filled
+  partial
+  blocked
+  @@map("preparation_status")
+}
+
+model ApplicationDocumentSelection {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  jobId String @map("job_id")
+  job Job @relation(fields:[jobId],references:[id],onDelete:Cascade)
+  questionId String @map("question_id")
+  question ApplicationQuestion @relation(fields:[questionId],references:[id],onDelete:Cascade)
+  fieldKey String @map("field_key")
+  questionRevision Int @map("question_revision")
+  definitionHash String @map("definition_hash")
+  requestId String @map("request_id")
+  payloadHash String @map("payload_hash")
+  current Boolean @default(true)
+  invalidatedAt DateTime? @map("invalidated_at")
+  invalidReason String? @map("invalid_reason")
+  // Retain immutable source identities even when an owned document is later deleted.
+  resumeId String @map("resume_id")
+  variantId String? @map("variant_id")
+  artifactRevision String @map("artifact_revision")
+  pdfSha256 String @map("pdf_sha256")
+  sizeBytes Int @map("size_bytes")
+  sourceSnapshot Json @map("source_snapshot")
+  authorship QuestionAuthorship
+  confirmedAt DateTime @map("confirmed_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@unique([userId,requestId])
+  @@index([userId,jobId,current])
+  @@map("application_document_selections")
+}
+
+model ApplicationPreparationResult {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  jobId String @map("job_id")
+  job Job @relation(fields:[jobId],references:[id],onDelete:Cascade)
+  requestId String @map("request_id")
+  payloadHash String @map("payload_hash")
+  collectionVersion Int @map("collection_version")
+  manifestHash String @map("manifest_hash")
+  mode PreparationMode
+  status PreparationStatus
+  authorship QuestionAuthorship
+  observation Json
+  createdAt DateTime @default(now()) @map("created_at")
+  @@unique([userId,requestId])
+  @@index([userId,jobId,createdAt])
+  @@map("application_preparation_results")
+}

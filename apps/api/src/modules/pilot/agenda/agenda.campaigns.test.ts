@@ -1,3 +1,4 @@
+import { Prisma } from "@/generated/prisma/client";
 import { hasKind, service, serviceWithRec } from "./fakes";
 import { describe, expect, it } from "bun:test";
 
@@ -17,25 +18,26 @@ describe("AgendaService campaign.scorePending", () => {
     expect(item?.payload).toMatchObject({ board: "linkedin", minScore: 70, pendingCount: 9 });
   });
 
-  // An unscorable row stays pending forever and outranks discovery, so a recent run must hold it back.
-  it("holds a campaign back while its last run is recent", async () => {
-    const agenda = await service({
-      scorePendingCampaigns: [campaign],
-      scorePendingClaims: [{ subjectId: "c1", grantedAt: new Date(), releasedAt: new Date() }],
-    }).refresh("p1");
-    expect(hasKind(agenda, "campaign.scorePending")).toBe(false);
-  });
-
   // Gating on matchScore alone would leave a row scored off the results page without a digest.
-  it("counts rows missing either a score or a digest", async () => {
+  it("offers missing evidence and unclear roles in automatic and pasted-link campaigns", async () => {
     const { svc, rec } = serviceWithRec({ scorePendingCampaigns: [campaign] });
     await svc.refresh("p1");
     const gather = rec.campaignQueries.find(
-      (where) => "jobs" in where && where.source === "auto_apply" && !("OR" in where),
-    ) as { jobs: { some: unknown } };
+      (where) =>
+        "jobs" in where &&
+        "source" in where &&
+        typeof where.source === "object" &&
+        !("NOT" in where),
+    ) as { source: unknown; jobs: { some: unknown } };
+    expect(gather.source).toEqual({ in: ["auto_apply", "apply"] });
     expect(gather.jobs.some).toEqual({
       status: "pending",
-      OR: [{ matchScore: null }, { digest: null }],
+      OR: [
+        { matchScore: null },
+        { digest: null },
+        { fitAssessment: { equals: Prisma.DbNull } },
+        { fitAssessment: { path: ["roleMatch", "family"], equals: "Unclear" } },
+      ],
     });
   });
 });
@@ -72,14 +74,6 @@ describe("AgendaService campaign.reviewPaused", () => {
     }).refresh("p1");
     expect(hasKind(agenda, "campaign.reviewPaused")).toBe(true);
   });
-
-  it("holds a campaign back while its last review is recent", async () => {
-    const agenda = await service({
-      pausedCampaigns: [paused],
-      pausedReviewClaims: [{ subjectId: "c9", grantedAt: new Date(), releasedAt: null }],
-    }).refresh("p1");
-    expect(hasKind(agenda, "campaign.reviewPaused")).toBe(false);
-  });
 });
 
 describe("AgendaService queue.drain", () => {
@@ -101,14 +95,6 @@ describe("AgendaService queue.drain", () => {
       queuedCount: 3,
       entries: [{ key: "q1", url: "https://x/1" }],
     });
-  });
-
-  it("holds a campaign back while its last drain is still open", async () => {
-    const agenda = await service({
-      queuedCampaigns: [queued],
-      queueDrainClaims: [{ subjectId: "c1", grantedAt: new Date(), releasedAt: null }],
-    }).refresh("p1");
-    expect(hasKind(agenda, "queue.drain")).toBe(false);
   });
 });
 
@@ -138,7 +124,7 @@ describe("AgendaService campaign reviews", () => {
     const payloadOf = (kind: string) => agenda.items.find((i) => i.kind === kind)?.payload;
     expect(payloadOf("campaign.strategyReview")).toMatchObject({
       config: { minScore: 70, board: "linkedin" },
-      counts: { totalFound: 40, qualified: 4, applied: 1, skipped: 36 },
+      counts: { totalFound: 40, qualified: 1, applied: 1, skipped: 36 },
       topSkipReasons: ["overqualified"],
     });
     expect(payloadOf("job.rescanSkipped")).toMatchObject({ skippedCount: 36 });

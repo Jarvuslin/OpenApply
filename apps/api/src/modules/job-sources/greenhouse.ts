@@ -8,7 +8,7 @@ const feed = z.object({
       absolute_url: z.url(),
       location: z.object({ name: z.string() }),
       content: z.string().default(""),
-      updated_at: z.string().nullish(),
+      first_published: z.string().nullish(),
     }),
   ),
 });
@@ -29,6 +29,7 @@ export async function greenhouse(
     url: j.absolute_url,
     attributionUrl: j.absolute_url,
     description: plainText(j.content),
-    postedAt: postedAt(j.updated_at),
+    // `updated_at` is the last edit; `first_published` is when the posting first went live.
+    postedAt: postedAt(j.first_published),
   }));
 }

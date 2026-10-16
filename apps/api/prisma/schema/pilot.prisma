@@ -1,12 +1,3 @@
-enum PilotClaimOutcome {
-  done
-  failed
-  abandoned
-  expired
-
-  @@map("pilot_claim_outcome")
-}
-
 enum PilotQuestionKind {
   question
   choice
@@ -93,29 +84,25 @@ model PilotSearch {
   @@map("pilot_searches")
 }
 
-model PilotClaim {
-  id          String             @id @default(uuid())
-  userId      String             @map("user_id")
-  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  kind        String
-  subjectType String             @map("subject_type")
-  subjectId   String             @map("subject_id")
-  payload     Json               @default("{}")
-  grantedAt   DateTime           @default(now()) @map("granted_at")
-  heartbeatAt DateTime?          @map("heartbeat_at")
-  expiresAt   DateTime           @map("expires_at")
-  releasedAt  DateTime?          @map("released_at")
-  outcome     PilotClaimOutcome?
-
-  @@index([userId, expiresAt])
-  @@index([userId, subjectType, subjectId])
-  @@index([releasedAt])
-  // No @@unique on (userId, kind, subject): one open claim per subject is an *open*-claim rule, and
-  // released rows are kept as history for the retry damper. ClaimService enforces it in-transaction.
-  @@map("pilot_claims")
+enum CheckpointDecision {
+  approve
+  skip
+  @@map("checkpoint_decision")
 }
 
 model PilotQuestion {
+  approval Json?
+  approvalAttemptId String? @map("approval_attempt_id")
+  approvalCheckpointId String? @map("approval_checkpoint_id")
+  approvalCheckpointHash String? @map("approval_checkpoint_hash")
+  approvalJobUpdatedAt DateTime? @map("approval_job_updated_at")
+  approvalDecision CheckpointDecision? @map("approval_decision")
+  approvalAuthorship QuestionAuthorship? @map("approval_authorship")
+  approvalRequestId String? @map("approval_request_id")
+  approvalPayloadHash String? @map("approval_payload_hash")
+  approvalConsumedAt DateTime? @map("approval_consumed_at")
+  applicationQuestionId String? @map("application_question_id")
+  applicationQuestion ApplicationQuestion? @relation(fields:[applicationQuestionId], references:[id], onDelete:SetNull)
   id          String              @id @default(uuid())
   userId      String              @map("user_id")
   user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -131,6 +118,9 @@ model PilotQuestion {
   expiresAt   DateTime?           @map("expires_at")
   createdAt   DateTime            @default(now()) @map("created_at")
 
+  @@index([applicationQuestionId])
+  @@unique([userId,approvalRequestId])
+  @@index([approvalAttemptId,approvalCheckpointId])
   @@index([userId, status])
   @@index([status, expiresAt])
   @@map("pilot_questions")

@@ -48,7 +48,6 @@ export interface AgendaInput {
   // Rotates discovery across the configured boards.
   cycleCount: number;
   openQuestions: number;
-  activeClaims: number;
   appliedToday: number;
 
   // No searches yet, or no goals to derive them from.
@@ -152,7 +151,6 @@ export function buildAgenda(input: AgendaInput): AgendaContent {
     items: ranked,
     counts: {
       openQuestions: input.openQuestions,
-      activeClaims: input.activeClaims,
       approvedJobs: input.approvedJobs.length,
       appliedToday: input.appliedToday,
     },

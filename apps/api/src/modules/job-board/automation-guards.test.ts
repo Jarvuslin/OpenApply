@@ -1,17 +1,16 @@
-import type { CryptoService } from "@/common/crypto";
 import type { PrismaClient } from "@/generated/prisma/client";
+import type { SubmissionService } from "@/modules/application/submission.service";
 import { CampaignService } from "@/modules/campaign/campaign.service";
 import { assertNotDuplicateApply } from "@/modules/campaign/jobs/apply-guard";
 import { CampaignJobService } from "@/modules/campaign/jobs/job.service";
-import { CredentialService } from "@/modules/credential/credential.service";
 import type { JobListingPublisher } from "@/modules/job-listing/job-listing.publisher";
+import type { ScoringService } from "@/modules/scoring/scoring.service";
 import { JobBoardService } from "./job-board.service";
 import { describe, expect, it } from "bun:test";
 
 const db = {} as PrismaClient;
 describe("discovery-only API refusals", () => {
   const campaigns = new CampaignService(db);
-  const creds = new CredentialService(db, {} as CryptoService);
   it("refuses campaign boards and apply links before database writes", async () => {
     await expect(
       campaigns.create("u", {
@@ -34,22 +33,21 @@ describe("discovery-only API refusals", () => {
       campaigns.updateConfig("u", "c", { config: { board: "linkedin.com" } }),
     ).rejects.toMatchObject({ status: 422 });
   });
-  it("refuses links and domain credentials", async () => {
+  it("refuses blocked job-board links", async () => {
     await expect(new JobBoardService(db).create("u", { domain: "wellfound.com" })).rejects.toThrow(
       "Wellfound",
     );
-    await expect(
-      creds.create("u", { scope: "indeed.com", email: "u@example.com", password: "test" }),
-    ).rejects.toMatchObject({ status: 422 });
-    await expect(creds.update("u", "id", { scope: "glassdoor.co.uk" })).rejects.toMatchObject({
-      status: 422,
-    });
   });
   it("refuses approval, applying, retries and worker claims", async () => {
     for (const status of ["pending", "approved", "failed"]) {
       const row = { status, url: "https://linkedin.com/jobs/1", campaign: { source: "apply" } };
       const fake = { job: { findFirst: async () => row } } as unknown as PrismaClient;
-      const jobs = new CampaignJobService(fake, {} as JobListingPublisher);
+      const jobs = new CampaignJobService(
+        fake,
+        {} as JobListingPublisher,
+        {} as SubmissionService,
+        {} as ScoringService,
+      );
       if (status === "failed")
         await expect(jobs.retryJob("u", "c", "j", {})).rejects.toMatchObject({ status: 422 });
       else

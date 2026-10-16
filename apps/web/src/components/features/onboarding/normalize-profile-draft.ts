@@ -9,8 +9,17 @@ export function normalizeProfileDraft(values: UserWithAutoApplyInput): UserWithA
   );
   return {
     ...values,
+    preferredName: values.preferredName ?? "",
+    namePronunciation: values.namePronunciation ?? "",
+    pronouns: values.pronouns ?? "",
+    currentCompany: values.currentCompany ?? "",
+    portfolio: values.portfolio ?? "",
+    additionalLinks: values.additionalLinks ?? [],
     jobPreferences: values.jobPreferences ?? structuredClone(USER_DEFAULT_VALUES.jobPreferences),
     workAuthorization: values.workAuthorization ?? [],
+    applicationAnswers: values.applicationAnswers ?? {},
+    educationHistory: values.educationHistory ?? [],
+    workHistory: values.workHistory ?? [],
     phone: values.phone ? normalizePhone(values.phone, country) : values.phone,
     autoApply: values.autoApply
       ? {

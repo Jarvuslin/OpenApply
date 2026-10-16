@@ -18,12 +18,12 @@ statuses, or launch application work.
 Read `GET /api/email/account` and retain the selected mailbox's `id` and `email` for the entire
 run. If none is selected, use `user.contactEmail` from `GET /api/user` only for initial setup.
 If no intended address is available, return `needs_user` and direct the user to add or select
-an email in OpenApply. Do not substitute the OpenApply login, resume address, or another chat's
-account. Do not change `contactEmail` while connecting a mailbox.
+an email in OpenApply. Do not substitute the OpenApply login, resume address, or another
+conversation's account. Do not change `contactEmail` while connecting a mailbox.
 
-A selected non-connector mailbox requires the user to choose a connector mailbox in
-`$OPENAPPLY_WEB/settings/email`. Return `needs_user`. Do not remove or replace existing accounts;
-multiple mailboxes may coexist and switching selection should preserve their imported history.
+The mailbox is the job login email. A selected non-connector mailbox requires the user to check
+Gmail on the job login card at `$OPENAPPLY_WEB/queue#login`. Return `needs_user`. Do not remove
+existing accounts or their imported history.
 
 ## 2. Verify the current agent's Gmail tools
 

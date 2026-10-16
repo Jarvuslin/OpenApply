@@ -1,23 +1,51 @@
-import { USER_DEFAULT_VALUES, type UserWithAutoApplyInput } from "@openapply/contracts/user";
+import {
+  USER_DEFAULT_VALUES,
+  type UserWithAutoApplyInput,
+  userWithAutoApplySchema,
+} from "@openapply/contracts/user";
 import type { UserAggregateResponse } from "@/api/types";
 import { normalizeProfileDraft } from "@/components/features/onboarding/normalize-profile-draft";
+
+export async function saveProfileSettings<T>(
+  values: UserWithAutoApplyInput,
+  readPrimary: () => Promise<string | null>,
+  write: (input: UserWithAutoApplyInput) => Promise<T>,
+): Promise<T> {
+  // Auto-apply defaults are edited in Queue settings; a stale profile tab must not overwrite them.
+  const { autoApply: _, ...input } = userWithAutoApplySchema.parse(values);
+  // The current API treats an omitted primary as null; preserve the latest saved selection.
+  input.primaryResumeId = await readPrimary();
+  return write(input);
+}
+
 export function toFormValues(data: UserAggregateResponse): UserWithAutoApplyInput {
   const p = data.user;
   const a = data.autoApply ?? USER_DEFAULT_VALUES.autoApply!;
   return normalizeProfileDraft({
     firstName: p.firstName,
     lastName: p.lastName,
+    preferredName: p.preferredName ?? "",
+    namePronunciation: p.namePronunciation ?? "",
+    pronouns: p.pronouns ?? "",
+    currentCompany: p.currentCompany ?? "",
     contactEmail: p.contactEmail,
     phone: p.phone ?? "",
     website: p.website ?? "",
     linkedin: p.linkedin ?? "",
     github: p.github ?? "",
+    portfolio: p.portfolio ?? "",
+    additionalLinks: p.additionalLinks,
     street: p.street ?? "",
     aptUnit: p.aptUnit ?? "",
     city: p.city ?? "",
     state: p.state ?? "",
     zipCode: p.zipCode ?? "",
     country: p.country ?? "",
+    gpa: p.gpa,
+    gpaScale: p.gpaScale,
+    applicationAnswers: p.applicationAnswers,
+    educationHistory: p.educationHistory,
+    workHistory: p.workHistory,
     jobPreferences: p.jobPreferences,
     workAuthorization: p.workAuthorization,
     usAuthorized: p.usAuthorized,

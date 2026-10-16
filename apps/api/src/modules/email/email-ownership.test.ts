@@ -167,17 +167,15 @@ function mailboxFixture(selectedId: string | null = "selected") {
 }
 
 describe("email message mailbox boundaries", () => {
-  it("lists and counts only the user's selected mailbox by default", async () => {
+  it("lists only the user's selected mailbox by default", async () => {
     const { service, queries } = mailboxFixture();
 
     const result = await service.listMessages("user", { page: 1, limit: 25 });
-    const count = await service.countMessages("user", {});
 
     expect(result.items.map(({ id }) => id)).toEqual(["selected-message"]);
     expect(result.pagination.total).toBe(1);
-    expect(count).toEqual({ count: 1 });
     expect(queries).toEqual(
-      Array(3).fill({ account: { userId: "user", activeForUser: { id: "user" } } }),
+      Array(2).fill({ account: { userId: "user", activeForUser: { id: "user" } } }),
     );
   });
 
@@ -185,32 +183,26 @@ describe("email message mailbox boundaries", () => {
     const { service, queries } = mailboxFixture();
 
     const result = await service.listMessages("user", { page: 1, limit: 25, accountId: "saved" });
-    const count = await service.countMessages("user", { accountId: "saved" });
 
     expect(result.items.map(({ id }) => id)).toEqual(["saved-message"]);
-    expect(count).toEqual({ count: 1 });
-    expect(queries).toEqual(Array(3).fill({ account: { userId: "user" }, accountId: "saved" }));
+    expect(queries).toEqual(Array(2).fill({ account: { userId: "user" }, accountId: "saved" }));
   });
 
-  it("returns no messages or count for a foreign mailbox ID", async () => {
+  it("returns no messages for a foreign mailbox ID", async () => {
     const { service } = mailboxFixture();
 
     const result = await service.listMessages("user", { page: 1, limit: 25, accountId: "foreign" });
-    const count = await service.countMessages("user", { accountId: "foreign" });
 
     expect(result.items).toEqual([]);
     expect(result.pagination.total).toBe(0);
-    expect(count).toEqual({ count: 0 });
   });
 
   it("returns an empty inbox when there is no selected mailbox", async () => {
     const { service } = mailboxFixture(null);
 
     const result = await service.listMessages("user", { page: 1, limit: 25 });
-    const count = await service.countMessages("user", {});
 
     expect(result.items).toEqual([]);
     expect(result.pagination.total).toBe(0);
-    expect(count).toEqual({ count: 0 });
   });
 });

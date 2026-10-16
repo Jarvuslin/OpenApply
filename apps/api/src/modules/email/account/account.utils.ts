@@ -7,7 +7,7 @@ import { getProvider } from "../gmail.provider";
 import { getActiveEmailAccount } from "./account-selection";
 
 /** Resolve the user's own Google OAuth client; 400s if unconfigured (no shared client). Redirect URI is env-derived. */
-export async function resolveOAuthClient(
+async function resolveOAuthClient(
   prisma: PrismaClient,
   crypto: CryptoService,
   userId: string,

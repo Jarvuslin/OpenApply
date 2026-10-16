@@ -5,7 +5,7 @@ import {
   type ScanMessageInput,
 } from "@openapply/contracts/email";
 import { type PaginationQuery, pageSlice, paginate } from "@openapply/contracts/pagination";
-import { inboxChannel } from "@openapply/contracts/sse";
+import { inboxChannel, workspaceChannel } from "@openapply/contracts/sse";
 import { singleton } from "tsyringe";
 import type { z } from "zod/v4";
 import { ErrorCodes, findOwned, HttpError, notFound } from "@/common/errors";
@@ -54,13 +54,6 @@ export class EmailService {
     }
 
     return where;
-  }
-
-  /** Just the total, for callers that render a number and would otherwise page a row to get it. */
-  async countMessages(userId: string, query: MessageQuery) {
-    return {
-      count: await this.prisma.emailMessage.count({ where: this.messageWhere(userId, query) }),
-    };
   }
 
   async listMessages(userId: string, query: PaginationQuery & MessageQuery) {
@@ -178,6 +171,11 @@ export class EmailService {
     publish(inboxChannel, { userId }, { type: "message.scanned", id });
     if (autoRejection) {
       publish(inboxChannel, { userId }, { type: "message.reviewed", id, status: "approved" });
+      publish(
+        workspaceChannel,
+        { userId },
+        { type: "application.updated", id: autoRejection.applicationId },
+      );
     }
 
     return row;
@@ -239,6 +237,8 @@ export class EmailService {
     );
 
     publish(inboxChannel, { userId }, { type: "message.reviewed", id, status: "approved" });
+    // Approval also writes a status-history event, which the weekly analytics count.
+    publish(workspaceChannel, { userId }, { type: "application.updated", id: app.id });
 
     return { id, applicationId: app.id, status: inferred };
   }

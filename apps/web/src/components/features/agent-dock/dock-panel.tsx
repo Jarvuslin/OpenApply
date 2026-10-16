@@ -57,7 +57,7 @@ export function DockPanel(): ReactElement {
         <Stack direction="row" spacing={1.25} sx={{ alignItems: "center", flex: 1, minWidth: 0 }}>
           <AgentOrb size="xxl" />
           <Stack sx={{ minWidth: 0 }}>
-            <Typography variant="h6">Agent</Typography>
+            <Typography variant="h6">Advanced terminal</Typography>
             <Stack direction="row" spacing={0.75} sx={{ alignItems: "center", marginTop: "2px" }}>
               <PulseDot
                 tone="muted"
@@ -71,7 +71,7 @@ export function DockPanel(): ReactElement {
             </Stack>
           </Stack>
         </Stack>
-        <IconButton size="small" onClick={collapse} aria-label="Collapse agent dock">
+        <IconButton size="small" onClick={collapse} aria-label="Collapse terminal">
           <ChevronRight fontSize="md" />
         </IconButton>
       </Stack>

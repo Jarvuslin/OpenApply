@@ -20,14 +20,17 @@ export interface EligibilityRestriction {
  * before the rest so a posting saying both is reported as the sponsorship problem it is.
  */
 const RESTRICTION_PATTERNS: { kind: EligibilityRestrictionKind; pattern: RegExp }[] = [
-  // Negation near "sponsor…"/"visa…". The bounded gap absorbs hedging ("is not able to provide")
-  // without reaching across a paragraph to an unrelated "not".
+  // Require a denial of sponsoring/providing, not merely negation near the word sponsorship.
+  // For example, "does not state any sponsorship restrictions" asserts no such bar.
   {
     kind: "sponsorship",
     pattern:
-      /\b(?:not|unable|cannot|can(?:'|’)t|won(?:'|’)t)\b[^.!?]{0,45}?\b(?:sponsor\w*|visa\w*)\b/i,
+      /\b(?:not|unable|cannot|can(?:'|’)t|won(?:'|’)t)\b(?:\s+(?:(?:be\s+)?(?:able|willing)\s+to|to))?\s+(?:sponsor\b|(?:offer|provide|support|arrange)\b[^.!?]{0,35}?\b(?:sponsor\w*|visas?)\b)/i,
   },
-  { kind: "sponsorship", pattern: /\bno\s+(?:visa\s+)?sponsorship\b/i },
+  {
+    kind: "sponsorship",
+    pattern: /\bno\s+(?:visa\s+)?sponsorship\b(?!\s+(?:restrictions?|limitations?|barriers?)\b)/i,
+  },
   { kind: "sponsorship", pattern: /\bsponsorship\s+is\s+not\s+(?:available|offered|provided)\b/i },
   {
     kind: "sponsorship",

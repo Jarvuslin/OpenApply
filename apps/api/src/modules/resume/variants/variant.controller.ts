@@ -7,8 +7,15 @@ import { idParam } from "@openapply/contracts/shared";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { authGuard } from "@/common/middleware";
+import { RATE_LIMITS, rateLimit } from "@/common/rate-limit";
 import { deletedResponseSchema, idResponseSchema } from "@/types/response";
 import { resumeUpdatedSchema } from "../resume.schema";
+import {
+  artifactParams,
+  currentArtifactSchema,
+  resumeArtifactSchema,
+} from "../resume-artifact.schema";
+import { ResumeArtifactService } from "../resume-artifact.service";
 import {
   prunedResponseSchema,
   pruneVariantsQuerySchema,
@@ -20,6 +27,7 @@ import {
 import { ResumeVariantService } from "./variant.service";
 
 const svc = container.resolve(ResumeVariantService);
+const artifacts = container.resolve(ResumeArtifactService);
 
 export const resumeVariantController = new Elysia({
   name: "resume-variants",
@@ -32,9 +40,79 @@ export const resumeVariantController = new Elysia({
     detail: {
       summary: "Render variant PDF",
       description:
-        "Streams a tailored resume variant as a cached PDF, rendering it from the variant's structured content on first request.",
+        "Streams the persisted canonical PDF revision matching this variant. It never regenerates submitted or previewed bytes.",
     },
   })
+  .get(
+    "/variants/:id/artifacts",
+    async ({ user, params }) =>
+      artifacts.current(user.id, await artifacts.variantResumeId(user.id, params.id), params.id),
+    {
+      params: idParam,
+      response: currentArtifactSchema,
+      beforeHandle: rateLimit(RATE_LIMITS.resumeArtifactRead),
+      detail: { summary: "Get the current immutable variant revision, if generated" },
+    },
+  )
+  .post(
+    "/variants/:id/artifacts",
+    async ({ user, params }) =>
+      artifacts.create(user.id, await artifacts.variantResumeId(user.id, params.id), params.id),
+    {
+      params: idParam,
+      response: resumeArtifactSchema,
+      beforeHandle: rateLimit(RATE_LIMITS.resumeCompile),
+      detail: { summary: "Explicitly compile a saved variant into the canonical resume format" },
+    },
+  )
+  .get(
+    "/variants/:id/artifacts/:revision",
+    async ({ user, params }) =>
+      artifacts.get(
+        user.id,
+        await artifacts.variantResumeId(user.id, params.id),
+        params.id,
+        params.revision,
+      ),
+    {
+      params: artifactParams,
+      response: resumeArtifactSchema,
+      beforeHandle: rateLimit(RATE_LIMITS.resumeArtifactRead),
+      detail: { summary: "Get a saved variant revision with its exact review evidence" },
+    },
+  )
+  .get(
+    "/variants/:id/artifacts/:revision/pdf",
+    async ({ user, params }) =>
+      artifacts.file(
+        user.id,
+        await artifacts.variantResumeId(user.id, params.id),
+        params.id,
+        params.revision,
+        "pdf",
+      ),
+    {
+      params: artifactParams,
+      beforeHandle: rateLimit(RATE_LIMITS.resumeArtifactRead),
+      detail: { summary: "Download the exact PDF for an immutable variant revision" },
+    },
+  )
+  .get(
+    "/variants/:id/artifacts/:revision/tex",
+    async ({ user, params }) =>
+      artifacts.file(
+        user.id,
+        await artifacts.variantResumeId(user.id, params.id),
+        params.id,
+        params.revision,
+        "tex",
+      ),
+    {
+      params: artifactParams,
+      beforeHandle: rateLimit(RATE_LIMITS.resumeArtifactRead),
+      detail: { summary: "Download the exact LaTeX source for an immutable variant revision" },
+    },
+  )
   .get("/:id/variants", ({ user, params }) => svc.listVariants(user.id, params.id), {
     params: idParam,
     response: variantListSchema,
@@ -45,6 +123,7 @@ export const resumeVariantController = new Elysia({
     },
   })
   .post("/:id/variants", ({ user, params, body }) => svc.createVariant(user.id, params.id, body), {
+    beforeHandle: rateLimit(RATE_LIMITS.resumeCompile),
     params: idParam,
     body: resumeVariantCreateSchema,
     response: idResponseSchema,
@@ -60,6 +139,7 @@ export const resumeVariantController = new Elysia({
     {
       params: idParam,
       body: tailorResumeSchema,
+      beforeHandle: rateLimit(RATE_LIMITS.resumeCompile),
       response: tailoredVariantSchema,
       detail: {
         summary: "Create tailored variant",

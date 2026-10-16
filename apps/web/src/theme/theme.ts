@@ -1,10 +1,20 @@
-import { createTheme, responsiveFontSizes } from "@mui/material/styles";
+import { createTheme } from "@mui/material/styles";
 import { componentOverrides } from "./overrides";
-import { accent, feedback, line, stages, surfaces, textColors } from "./palette";
+import {
+  accent,
+  feedback,
+  line,
+  stages,
+  statusBorders,
+  statusDots,
+  statusTints,
+  surfaces,
+  textColors,
+} from "./palette";
 import { controlHeights, gradients, iconSizes, motion, radii, shadows } from "./tokens";
 import { typography } from "./typography";
 
-const baseTheme = createTheme({
+export const theme = createTheme({
   cssVariables: true,
   palette: {
     mode: "light",
@@ -14,6 +24,7 @@ const baseTheme = createTheme({
     error: { main: feedback.error },
     success: { main: feedback.success },
     info: { main: feedback.info },
+    attention: { main: feedback.attention },
     background: { default: surfaces.base, paper: surfaces.card },
     text: {
       primary: textColors.primary,
@@ -26,6 +37,17 @@ const baseTheme = createTheme({
     accent,
     line,
     stages,
+    status: feedback,
+    statusTints,
+    statusBorders,
+    statusDots,
+    action: {
+      hover: surfaces.hover,
+      selected: surfaces.elevated,
+      disabled: textColors.disabled,
+      disabledBackground: surfaces.elevated,
+      focus: statusTints.info,
+    },
   },
   // Keep the sx multiplier at 1 so a `radii` token in sx means that many px, exactly as in
   // styleOverrides. Component overrides pin the real radii (card md, dialog lg) explicitly.
@@ -39,6 +61,3 @@ const baseTheme = createTheme({
   controlHeights,
   components: componentOverrides,
 });
-
-// Scale headings (h1-h4) down on smaller viewports so page/marketing titles fit phones.
-export const theme = responsiveFontSizes(baseTheme, { variants: ["h1", "h2", "h3", "h4"] });

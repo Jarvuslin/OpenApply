@@ -1,10 +1,23 @@
 ---
 name: search
-description: Search a chosen job board via Playwright, rank results by fit against the user's resume, and save them to the campaign so the user can review.
-argument-hint: "<job_title_keywords_location> --board <domain> [--max-jobs N] [--campaign <campaign-id>]"
+description: Discover suitable jobs from the profile and original resume, save a scored candidate list, and show evidence and preference checks without applying.
+argument-hint: "[query] [--board <domain>] [--max-jobs N] [--campaign <campaign-id>]"
 ---
 
 # Job Search
+
+Start with `openapply-api GET /api/health`. Stop clearly if the API is unavailable.
+
+## Profile candidate lists
+
+For `--campaign <id>`, fetch the exact campaign first. If it has `config.discovery`, follow
+`../_shared/profile-discovery.md` in preview mode and stop after collection/scoring. Keep its
+selected resume and campaign in progress; `discovery.phase:"complete"` identifies the finished
+preview. Never apply through this skill, even if a different command previously authorized
+that list. With no board or campaign, create a profile list with intent `preview` through the
+same workflow. A natural request such as "find entry-level jobs for me" needs no CLI flags.
+
+The board-specific steps below apply only to older explicit single-board search campaigns.
 
 Read `$OPENAPPLY_SKILLS_ROOT/_shared/blocked-sites.md` before any browser action.
 
@@ -27,7 +40,7 @@ Search a single board (picked by the user when launching the campaign) and rank 
 
 ## Phase 1: Parse Query
 
-Extract title/role, keywords, location, other preferences (e.g. "no startups", "FAANG only", salary). If vague, ask before searching.
+Read saved `jobPreferences.roles`, levels, work modes, employment types and preferred locations. Include selected roles in the query alongside the user's keywords/location. Empty selections are unrestricted; never silently alter saved preferences. Resolve a genuinely ambiguous user target before searching.
 
 ## Phase 2: Search the Board
 
@@ -35,37 +48,23 @@ Extract title/role, keywords, location, other preferences (e.g. "no startups", "
 2. Follow `../_shared/auth.md` to log in proactively.
 3. Fill the search fields and submit.
 4. Take a `browser_snapshot` narrowed to the results list (per `../_shared/browser-tips.md`) and read `{ title, company, location, url, postedAt }` per row. While under `--max-jobs` (or always, when it's absent/unlimited), scroll/paginate per **Pagination & infinite scroll** in `../_shared/browser-tips.md` until the cap is met or results run dry.
-5. Take the first `--max-jobs` results (or all of them when unlimited); if fewer after paginating, take what's there. Per row:
-   - **Listing preview suffices** (the normal case) → rank from the row; no per-job navigation.
-   - **A brief description is needed for the ranked table and the preview lacks one** → delegate that row to the `job-worker` subagent with `mode:"score"` and `minMatchScore:0` (so nothing is auto-skipped - search keeps every result for review). It opens the posting, scores, and saves the Job row in isolated context. Such rows are already saved - exclude them from the Phase 5 bulk save.
+5. Take the first `--max-jobs` results (or all when unlimited). Snippets are discovery data only: do not rank or score them. Assign each a stable shell-safe key and save a pending, unscored Job with `{key,title,company,location,url,board,status:"pending"}`. The next phases use these existing rows; never create a second copy after scoring.
 
 ## Phase 3: Exclude Previously Applied
 
 Run the applied-check (`../_shared/campaign-flow.md`) per result. If `.applied`, tag with
-"Previously Applied" (note `.match.kind`). In Phase 5, create these rows as `pending`, then
-record `skipped` through `/jobs/<key>/result`; do not offer them for apply.
+"Previously Applied" (note `.match.kind`), then record `skipped` through the saved row's
+`/jobs/<key>/result`; do not offer it for apply.
 
 ## Phase 4: Fit Review
 
-Score each non-applied result server-side, like every other campaign skill. Build the digest (`../_shared/digest-schema.md`) and write `{"digest": <digest>, "minScore": 0, "resumeId": "<config.resumeId>"}` to `$OPENAPPLY_TEMP/fit.json` (drop `resumeId` when the campaign has none; the server uses the primary):
+Delegate every surviving row to `job-worker` in batches of at most five, one worker at a time: `{mode:"score",campaignId,jobs:[{jobKey,url,title,company}],save:"patch",resumeId,minMatchScore:<campaign minimum or profile default>}`. The worker visits each full posting, saves its complete description, and follows `../_shared/original-fit.md`. A digest is only a display/tailoring summary. Never use a zero threshold to bypass the campaign minimum.
 
-```bash
-openapply-api POST /api/score-fit --data @"$OPENAPPLY_TEMP/fit.json"
-```
+Collect the saved server score, evidence and separate preference decision. Below-threshold or known-mismatch jobs are skipped with an exact reason. Unavailable postings stay unscored. For each scoring needs_user, save its named question and PATCH that row to needs_user per campaign-flow, preserve the tab and continue. Known-role needs_review assessments receive agent inspection; do not turn candid gaps into routine user approval. Do not offer unscored or parked rows as qualified.
 
-Use `.score` when `.verdict` is `trust`; on `deliberate`, adjust it from `strongMatches`/`partialMatches`/`gaps`. `minScore: 0` because search keeps every result for the user to review.
+## Phase 5: Verify Saved Results
 
-## Phase 5: Save Results to the Campaign
-
-Save every result as a `Job` on `<campaign-id>` so it appears on the campaigns detail page. **Don't offer apply/search-again commands** - the user applies from there. Use a stable, shell-safe `key` per result (slug of `company-title` + rank, no spaces).
-
-Carry the `digest` you scored from (`../_shared/digest-schema.md`). Per result, write `{key, title, company, location, url, board:"<domain>", matchScore, matchReason:"<one-line verdict>", status:"pending", digest}` (`digest` as a JSON string) to `$OPENAPPLY_TEMP/job-<key>.json`, then:
-
-```bash
-openapply-api POST /api/campaigns/<campaign-id>/jobs --data @"$OPENAPPLY_TEMP/job-<key>.json"
-```
-
-Previously-applied results (Phase 3) → create as `pending`, then POST `/jobs/<key>/result` with `{outcome:"skipped",skipReason:"Already applied (<kind>)"}`. Then close the campaign:
+Read the campaign's saved rows and reconcile scored, skipped and unscored counts. The assessment endpoint already saved each score and reason; never PATCH them or bulk-create the jobs again. **Don't offer apply/search-again commands** - the user applies from the campaign page. Leave incomplete discovery/scoring work visible. When discovery and scoring are finished, close the search campaign:
 
 ```bash
 openapply-api POST /api/campaigns/<campaign-id>/status --data '{"status":"completed"}'

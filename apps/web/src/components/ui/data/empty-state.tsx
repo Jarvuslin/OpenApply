@@ -8,7 +8,7 @@ interface EmptyStateProps {
   description?: string;
   action?: ReactNode;
   /**
-   * `card` (default) renders a full dashed-border panel. `inline` renders a
+   * `card` (default) renders a full centered panel. `inline` renders a
    * compact centered message - use inside a SectionCard or list where a panel
    * would be too heavy.
    */
@@ -38,14 +38,12 @@ export function EmptyState(props: EmptyStateProps): ReactElement {
         py: 6,
         px: 3,
         textAlign: "center",
-        border: `1px dashed ${t.palette.line.border}`,
         borderRadius: t.radii.md,
-        backgroundColor: t.palette.surfaces.card,
       })}
     >
       <Stack spacing={1} sx={{ alignItems: "center" }}>
         <Typography variant="h4">{title}</Typography>
-        {description && <Typography variant="body2Muted">{description}</Typography>}
+        {description && <Typography variant="body1Muted">{description}</Typography>}
         {action && <Box sx={{ pt: 1 }}>{action}</Box>}
       </Stack>
     </Box>

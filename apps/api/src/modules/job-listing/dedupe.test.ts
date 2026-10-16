@@ -4,6 +4,16 @@ import { describe, expect, it } from "bun:test";
 const acme = { title: "Senior Software Engineer", company: "Acme Inc.", location: "New York, NY" };
 
 describe("canonicalizeUrl", () => {
+  it("preserves Greenhouse job identifiers while dropping its referral source", () => {
+    const first = canonicalizeUrl(
+      "https://www.mongodb.com/careers/jobs?gh_jid=100&gh_src=referral&utm_source=feed",
+    );
+    const second = canonicalizeUrl("https://www.mongodb.com/careers/jobs?gh_jid=200&gh_src=search");
+    expect(first).toBe("https://mongodb.com/careers/jobs?gh_jid=100");
+    expect(second).toBe("https://mongodb.com/careers/jobs?gh_jid=200");
+    expect(first).not.toBe(second);
+    expect(canonicalizeUrl("https://mongodb.com/careers/jobs?gh_jid=100&gh_src=other")).toBe(first);
+  });
   it("strips tracking params, fragment, trailing slash and www", () => {
     expect(
       canonicalizeUrl(

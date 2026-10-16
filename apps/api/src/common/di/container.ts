@@ -1,3 +1,4 @@
+import { TELEGRAM_CONFIG, type TelegramConfigHolder } from "@/modules/telegram/telegram.config";
 import "reflect-metadata";
 import { container } from "tsyringe";
 import { db } from "@/common/database/prisma.client";
@@ -27,5 +28,25 @@ const vapid =
       }
     : null;
 container.register<VapidConfigHolder>(VAPID_CONFIG, { useValue: { vapid } });
+
+container.register<TelegramConfigHolder>(TELEGRAM_CONFIG, {
+  useValue: {
+    telegram:
+      env.TELEGRAM_BOT_TOKEN &&
+      env.TELEGRAM_BOT_USERNAME &&
+      env.TELEGRAM_WEBHOOK_SECRET &&
+      env.TELEGRAM_PAIRING_HMAC_KEY
+        ? {
+            botToken: env.TELEGRAM_BOT_TOKEN,
+            botUsername: env.TELEGRAM_BOT_USERNAME,
+            webhookSecret: env.TELEGRAM_WEBHOOK_SECRET,
+            pairingKey: env.TELEGRAM_PAIRING_HMAC_KEY,
+            updates: env.TELEGRAM_UPDATES,
+            deliveryEnabled: env.TELEGRAM_DELIVERY_ENABLED,
+            webUrl: env.APP_URL,
+          }
+        : null,
+  },
+});
 
 export { container };

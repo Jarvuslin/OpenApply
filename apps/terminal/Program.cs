@@ -1,4 +1,8 @@
 using OpenApply.Terminal.Hosting;
+using OpenApply.Terminal.Agent;
+using OpenApply.Terminal.Queue;
+using OpenApply.Terminal.Questions;
+using OpenApply.Terminal.Preparation;
 using OpenApply.Terminal.Connectors;
 using OpenApply.Terminal.Inference;
 using OpenApply.Terminal.Pilot;
@@ -10,6 +14,13 @@ if (args.Length > 0 && args[0] == GmailToolGate.Flag)
 {
     Environment.ExitCode = args.Length == 3
         ? await GmailToolGate.RunAsync(args[1], args[2], Console.In, Console.Out) : 2;
+    return;
+}
+
+if (args.Length > 0 && args[0] == AccountToolGate.Flag)
+{
+    Environment.ExitCode = args.Length == 3
+        ? await AccountToolGate.RunAsync(args[1], args[2], Console.In, Console.Out) : 2;
     return;
 }
 
@@ -27,6 +38,12 @@ if (args.Contains("--version", StringComparer.OrdinalIgnoreCase))
 
 if (args.Contains("--unregister", StringComparer.OrdinalIgnoreCase))
 {
+    if (BudgetedHost.Enabled)
+    {
+        Console.Error.WriteLine("OpenApply: URL scheme changes are disabled in an isolated budgeted host.");
+        Environment.ExitCode = 2;
+        return;
+    }
     UrlScheme.Unregister(NullLogger.Instance);
     Console.WriteLine("OpenApply: removed the openapply:// URL scheme.");
     return;
@@ -41,20 +58,21 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 builder.Services.AddTerminalHost(builder.Configuration);
 var app = builder.Build();
 
-app.Services.GetRequiredService<UrlScheme>().Register();
-
-// A successful startup update launches its replacement before this process binds.
-if (await app.Services.GetRequiredService<HostUpdater>().UpdateAtStartupAsync())
+if (!BudgetedHost.Enabled)
 {
-    return;
+    app.Services.GetRequiredService<UrlScheme>().Register();
+    // A successful startup update launches its replacement before this process binds.
+    if (await app.Services.GetRequiredService<HostUpdater>().UpdateAtStartupAsync()) return;
+    await HostHandoff.WaitForPreviousHostAsync(app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Handoff"));
 }
-
-await HostHandoff.WaitForPreviousHostAsync(app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Handoff"));
 
 app.UseTerminalPipeline();
 app.MapHostEndpoints();
 app.MapSessionEndpoints();
 app.MapInferenceEndpoints();
+app.MapQueueEndpoints();
+app.MapQuestionEndpoints();
+app.MapPreparationEndpoints();
 app.MapGmailCheckEndpoints();
 app.MapPilotEndpoints();
 app.MapUpdateEndpoints();

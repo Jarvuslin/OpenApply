@@ -150,7 +150,7 @@ describe("PushService sendToUser", () => {
     }) as unknown as typeof webpush.sendNotification;
 
     const { push, rec } = svc({ findMany: subs });
-    await push.sendToUser("p1", { title: "t", body: "b", url: "/pilot" });
+    await push.sendToUser("p1", { title: "t", body: "b", url: "/queue" });
 
     expect(rec.deletedIds).toEqual(["dead"]);
   });

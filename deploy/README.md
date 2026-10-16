@@ -8,8 +8,8 @@ No hosted OpenApply deployment is currently provisioned or verified. Required
 inputs: a domain and DNS access, Linux server with Docker Compose and nginx,
 TLS certificate, PostgreSQL connection string, OAuth clients, and a Resend key
 with a verified sending domain. See [auth setup](../docs/auth-setup.md).
-Keep `MVP_LOCAL_RUNNER=false` on a shared server; the development résumé reader
-runs the server owner's CLI and is not a hosted multi-user worker.
+Keep `MVP_LOCAL_RUNNER=false` on a shared server; `true` binds the API to
+loopback for one local user. The API does not launch an LLM; model execution belongs to the companion.
 
 ## Build this fork from source
 
@@ -48,7 +48,7 @@ access. Back up PostgreSQL and the private `api-storage` volume; do not use
 with independent disks are unsupported until a shared storage adapter is added.
 
 Moving an existing local profile requires a tested database dump/restore plus
-résumé-file copy. Preserve `SECRET_MASTER_KEY` to read encrypted credentials.
+resume-file copy. Preserve `SECRET_MASTER_KEY` to read encrypted credentials.
 Audit/reverify development accounts whose email ownership was never checked
 before opening the server to other people. This change does not migrate data.
 

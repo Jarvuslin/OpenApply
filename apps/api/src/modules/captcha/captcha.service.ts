@@ -9,7 +9,6 @@ import { singleton } from "tsyringe";
 import { CryptoService, SECRET_CONTEXTS } from "@/common/crypto";
 import { ErrorCodes, HttpError, notFound } from "@/common/errors";
 import { acquireSlot, RATE_LIMITS } from "@/common/rate-limit";
-import { sleep } from "@/common/utils";
 import { PrismaClient } from "@/generated/prisma/client";
 
 /** A single CAPTCHA to solve, normalized across providers. */
@@ -134,7 +133,7 @@ export class CaptchaService {
 
     const { taskId } = created;
     for (let i = 0; i < MAX_POLLS; i++) {
-      await sleep(POLL_INTERVAL_MS);
+      await Bun.sleep(POLL_INTERVAL_MS);
 
       const res = await this.capSolverPost(apiKey, "getTaskResult", { taskId });
       if (res.errorId !== 0) {

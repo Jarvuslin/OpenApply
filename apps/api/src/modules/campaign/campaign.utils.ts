@@ -12,7 +12,7 @@ import type {
 export const PROMOTABLE_SOURCES: CampaignSource[] = ["auto_apply", "apply"];
 
 export async function ensureCampaignOwned(
-  prisma: PrismaClient,
+  prisma: Pick<PrismaClient, "campaign">,
   userId: string,
   campaignId: string,
 ): Promise<void> {

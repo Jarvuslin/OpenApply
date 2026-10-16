@@ -1,10 +1,6 @@
-import { DAY_MS, startOfDay } from "@/common/date/buckets";
+import { startOfDay } from "@/common/date/buckets";
 import type { PrismaClient } from "@/generated/prisma/client";
-import { isCrash } from "./agenda/claims";
 import { classifySkipReason, type SkipBucket } from "./skip-reasons";
-
-/** Claims older than a week describe a version of the agent you are no longer running. */
-const COST_WINDOW_MS = 7 * DAY_MS;
 
 export function countAppliedToday(
   prisma: Pick<PrismaClient, "application">,
@@ -49,47 +45,4 @@ export async function countTodayOutcomes(
       .map(([reason, count]) => ({ reason, count }))
       .sort((a, b) => b.count - a.count),
   };
-}
-
-function median(sorted: number[]): number {
-  const mid = Math.floor(sorted.length / 2);
-  if (sorted.length % 2 === 1) return sorted[mid];
-  return Math.round((sorted[mid - 1] + sorted[mid]) / 2);
-}
-
-/**
- * Where the week's cycles went, by agenda kind, heaviest first. A released claim already brackets
- * one run of one kind, so its wall clock stands in for token spend without a telemetry write.
- */
-export async function costByKind(
-  prisma: Pick<PrismaClient, "pilotClaim">,
-  userId: string,
-  now: Date,
-) {
-  const claims = await prisma.pilotClaim.findMany({
-    where: {
-      userId,
-      releasedAt: { not: null },
-      grantedAt: { gte: new Date(now.getTime() - COST_WINDOW_MS) },
-    },
-    // Uncapped: any cap short enough to matter would quietly shorten the week being reported.
-    select: { kind: true, grantedAt: true, releasedAt: true, outcome: true },
-  });
-
-  const released = claims.flatMap(({ releasedAt, ...claim }) =>
-    releasedAt ? [{ ...claim, ms: releasedAt.getTime() - claim.grantedAt.getTime() }] : [],
-  );
-  return [...Map.groupBy(released, (run) => run.kind)]
-    .map(([kind, runs]) => {
-      const durations = runs.map((run) => run.ms).sort((a, b) => a - b);
-      return {
-        kind,
-        runs: runs.length,
-        medianMs: median(durations),
-        totalMs: durations.reduce((sum, ms) => sum + ms, 0),
-        failed: runs.filter((run) => run.outcome === "failed").length,
-        abandoned: runs.filter((run) => isCrash(run.outcome)).length,
-      };
-    })
-    .sort((a, b) => b.totalMs - a.totalMs);
 }

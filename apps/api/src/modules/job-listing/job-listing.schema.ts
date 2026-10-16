@@ -1,4 +1,10 @@
-import { JOB_LEVELS, jobListingStatusSchema } from "@openapply/contracts/job-listing";
+import {
+  JOB_EMPLOYMENT_TYPES,
+  JOB_LEVELS,
+  JOB_SALARY_PERIODS,
+  JOB_WORK_MODES,
+  jobListingStatusSchema,
+} from "@openapply/contracts/job-listing";
 import { paginatedSchema } from "@openapply/contracts/pagination";
 import { z } from "zod/v4";
 
@@ -22,9 +28,22 @@ const jobListingSummarySchema = z.object({
   yearsExperience: z.number().int().nullable(),
   company: z.string(),
   location: z.string().nullable(),
+  countries: z.array(z.string()),
   remote: z.boolean(),
+  workMode: z.enum(JOB_WORK_MODES).nullable(),
   salary: z.string().nullable(),
+  salaryMin: z.number().nullable(),
+  salaryMax: z.number().nullable(),
+  salaryCurrency: z.string().nullable(),
+  salaryPeriod: z.enum(JOB_SALARY_PERIODS).nullable(),
   employmentType: z.string().nullable(),
+  employmentKind: z.enum(JOB_EMPLOYMENT_TYPES).nullable(),
+  employerUrl: z.string().nullable(),
+  sourceUrl: z.string().nullable(),
+  attributionLinks: z.array(z.object({ board: z.string().nullable(), url: z.string() })),
+  companyLogoUrl: z.string().nullable(),
+  postedAt: z.date().nullable(),
+  listedAt: z.date(),
   skills: z.array(z.string()),
   descriptionExcerpt: z.string().nullable(),
   firstSeenAt: z.date(),
@@ -44,6 +63,34 @@ export const jobListingSchema = jobListingSummarySchema.extend({
 });
 
 export const jobListingPageSchema = paginatedSchema(jobListingSummarySchema);
+const applicationStateSchema = z.object({
+  isApplied: z.boolean(),
+  appliedAt: z.date().nullable(),
+  applicationId: z.uuid().nullable(),
+  canUndoApplied: z.boolean(),
+});
+export const discoverJobListingPageSchema = paginatedSchema(
+  jobListingSummarySchema.extend({ isSaved: z.boolean(), ...applicationStateSchema.shape }),
+).extend({ indexedTotal: z.number().int().nonnegative(), indexedBefore: z.date() });
+export const discoverJobListingSchema = jobListingSchema.extend({
+  isSaved: z.boolean(),
+  ...applicationStateSchema.shape,
+});
+export const savedJobListingPageSchema = paginatedSchema(
+  jobListingSummarySchema.extend({
+    isSaved: z.literal(true),
+    savedAt: z.date(),
+    ...applicationStateSchema.shape,
+  }),
+).extend({ indexedTotal: z.number().int().nonnegative(), indexedBefore: z.date() });
+export const appliedJobListingResultSchema = applicationStateSchema.extend({ slug: z.string() });
+export const savedJobListingSlugsSchema = paginatedSchema(z.object({ slug: z.string() }));
+export const savedJobListingCountSchema = z.object({ count: z.number().int().nonnegative() });
+export const savedJobListingResultSchema = z.object({
+  slug: z.string(),
+  isSaved: z.boolean(),
+  savedCount: z.number().int().nonnegative(),
+});
 
 /** The `?tech=` option list: what the index actually contains, so the filter can't be guessed wrong. */
 export const jobListingFacetsSchema = z.object({

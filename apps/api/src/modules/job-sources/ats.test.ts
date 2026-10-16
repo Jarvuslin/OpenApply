@@ -69,3 +69,22 @@ it("rejects board path injection and malformed feeds", async () => {
     fetchAts(async () => ({ jobs: [{ title: "No URL" }] }), "greenhouse", "acme"),
   ).rejects.toThrow();
 });
+
+it("retains Workable requirements and benefits alongside the full description", async () => {
+  const jobs = await fetchAts(
+    async () => ({
+      jobs: [
+        {
+          title: "Engineer",
+          shortlink: "https://apply.workable.com/acme/j/1",
+          description: "<p>Build software.</p>",
+          requirements: "<p>Python experience.</p>",
+          benefits: "<p>Remote in Canada.</p>",
+        },
+      ],
+    }),
+    "workable",
+    "acme",
+  );
+  expect(jobs[0]!.description).toBe("Build software.\n\nPython experience.\n\nRemote in Canada.");
+});

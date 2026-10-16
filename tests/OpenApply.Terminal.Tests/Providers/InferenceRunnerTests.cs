@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Text;
 using OpenApply.Terminal.Inference;
 using Xunit;
 
@@ -8,6 +9,43 @@ namespace OpenApply.Terminal.Tests;
 public sealed class InferenceRunnerTests
 {
     private static readonly InferenceResponse Ready = new("codex", "default", "OPENAPPLY_READY");
+
+    [Fact]
+    public async Task ResumeTextRoundTripsThroughUtf8PipesWithoutBom()
+    {
+        const string resume = "Yuchen 林 — résumé, Montréal; C++ engineer";
+        var windows = OperatingSystem.IsWindows();
+        var start = new ProcessStartInfo(windows ? "powershell.exe" : "/bin/sh")
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            StandardInputEncoding = Encoding.Latin1,
+            StandardOutputEncoding = Encoding.Latin1,
+            StandardErrorEncoding = Encoding.Latin1,
+        };
+        if (windows)
+        {
+            start.ArgumentList.Add("-NoProfile");
+            start.ArgumentList.Add("-NonInteractive");
+            start.ArgumentList.Add("-Command");
+            start.ArgumentList.Add("$utf8 = [Text.UTF8Encoding]::new($false, $true); $reader = [IO.StreamReader]::new([Console]::OpenStandardInput(), $utf8, $false); $received = $reader.ReadToEnd(); $bytes = $utf8.GetBytes($received); $output = [Console]::OpenStandardOutput(); $output.Write($bytes, 0, $bytes.Length); $output.Flush()");
+        }
+        else
+        {
+            start.ArgumentList.Add("-c");
+            start.ArgumentList.Add("cat");
+        }
+
+        var output = await InferenceRunner.RunProcessAsync(start, resume, TestContext.Current.CancellationToken);
+
+        Assert.Equal(resume, output);
+        Assert.Empty(start.StandardInputEncoding!.GetPreamble());
+        Assert.Equal(Encoding.UTF8.CodePage, start.StandardOutputEncoding!.CodePage);
+        Assert.Equal(Encoding.UTF8.CodePage, start.StandardErrorEncoding!.CodePage);
+    }
 
     [Fact]
     public async Task CancellationKillsTheProcessTreeAndLetsAnotherProviderRetry()
@@ -56,7 +94,13 @@ public sealed class InferenceRunnerTests
     {
         using var dir = new TempDir();
         var runner = new InferenceRunner();
-        var missing = new ProcessStartInfo(Path.Combine(dir.Root, "missing-openapply-agent")) { UseShellExecute = false };
+        var missing = new ProcessStartInfo(Path.Combine(dir.Root, "missing-openapply-agent"))
+        {
+            UseShellExecute = false,
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
 
         await Assert.ThrowsAsync<Win32Exception>(() => runner.RunAsync(async ct =>
         {
@@ -117,5 +161,33 @@ public sealed class InferenceRunnerTests
             return process.HasExited;
         }
         catch (ArgumentException) { return true; }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task OverflowStopsTheFakeProcessAndReleasesTheBusyGate(bool stderr)
+    {
+        var windows = OperatingSystem.IsWindows();
+        var start = new ProcessStartInfo(windows ? "powershell.exe" : "/bin/sh")
+        {
+            UseShellExecute = false, CreateNoWindow = true,
+            RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true,
+        };
+        if (windows)
+        {
+            start.ArgumentList.Add("-NoProfile"); start.ArgumentList.Add("-NonInteractive"); start.ArgumentList.Add("-Command");
+            start.ArgumentList.Add("$writer = [Console]::" + (stderr ? "Error" : "Out") + "; $chunk = 'x' * 4096; for (;;) { $writer.Write($chunk); $writer.Flush() }");
+        }
+        else
+        {
+            start.ArgumentList.Add("-c"); start.ArgumentList.Add("while :; do printf '%04096d' 0" + (stderr ? " >&2" : "") + "; done");
+        }
+        var runner = new InferenceRunner();
+        await Assert.ThrowsAsync<InvalidDataException>(() => runner.RunAsync(async ct =>
+        {
+            await InferenceRunner.RunProcessAsync(start, "synthetic", ct); return Ready;
+        }, TimeSpan.FromSeconds(20), TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken));
+        Assert.Equal(Ready, await runner.RunAsync(_ => Task.FromResult(Ready), TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken));
     }
 }

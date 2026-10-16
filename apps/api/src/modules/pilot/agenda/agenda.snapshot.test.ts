@@ -1,5 +1,4 @@
 import type { AgendaResponse } from "@openapply/contracts/pilot";
-import type { PushService } from "@/common/push/push.service";
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { CampaignJobService } from "@/modules/campaign/jobs/job.service";
 import type { EmailSyncService } from "@/modules/email/sync/sync.service";
@@ -13,7 +12,7 @@ const snapshot: AgendaResponse = {
   generatedAt: now,
   expiresAt: new Date(now.getTime() + 60_000),
   items: [],
-  counts: { openQuestions: 0, activeClaims: 0, approvedJobs: 0, appliedToday: 0 },
+  counts: { openQuestions: 0, approvedJobs: 0, appliedToday: 0 },
   budget: {
     dailyApplyCap: 10,
     appliedToday: 0,
@@ -41,7 +40,6 @@ function service(row: Record<string, unknown> | null) {
       prisma,
       {} as CampaignJobService,
       {} as PilotJournalService,
-      {} as PushService,
       {} as EmailSyncService,
     ),
     reads: () => reads,

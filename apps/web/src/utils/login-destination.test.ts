@@ -24,6 +24,6 @@ describe("return after sign-in", () => {
     "/_next/static/app.js",
     "/%broken",
   ])("rejects an external, malformed or looping return path: %s", (next) => {
-    expect(loginDestination(next)).toBe("/workspace");
+    expect(loginDestination(next)).toBe("/dashboard");
   });
 });

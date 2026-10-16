@@ -5,7 +5,6 @@ import {
 } from "@openapply/contracts/campaign";
 import { z } from "zod/v4";
 import type { CreateCampaignRequest, JobBoardDto } from "@/api/types";
-import { buildCliArgs } from "@/utils/cli-args";
 
 /** Splits pasted text on whitespace/commas and dedupes - shared by validation and submit. */
 function parseUrls(raw: string): string[] {
@@ -130,27 +129,6 @@ export function buildCreateCampaignRequest(values: ComposerFormValues): CreateCa
     config: { resumeId: values.resumeId, ...buildCampaignConfig(values) },
     createdBy: "user",
   };
-}
-
-export function buildSkillArg(values: ComposerFormValues, campaignId: string): string {
-  if (values.mode === "apply") {
-    // The apply skill looks the campaign up by id rather than taking search flags.
-    return buildCliArgs({ positional: ["campaign", campaignId] });
-  }
-
-  return buildCliArgs({
-    positional: [values.query.trim()],
-    flags: {
-      board: values.board,
-      "min-score": values.mode === "auto_apply" ? values.minScore : undefined,
-      "max-apps":
-        values.mode === "auto_apply" && isCap(values.maxApps) ? values.maxApps : undefined,
-      "max-jobs": values.mode === "search" && isCap(values.maxJobs) ? values.maxJobs : undefined,
-      // Search saves results onto this campaign; pass the id the UI just created so
-      // the skill doesn't have to rediscover it.
-      campaign: values.mode === "search" || values.mode === "auto_apply" ? campaignId : undefined,
-    },
-  });
 }
 
 export const SUBMIT_LABELS: Record<CampaignMode, string> = {

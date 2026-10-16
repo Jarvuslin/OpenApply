@@ -7,13 +7,23 @@ import {
   findAppliedDuplicate,
 } from "@/modules/application/duplicate";
 import { canonicalizeJobUrl } from "@/modules/application/job-url";
+import { assertApplicationAllowed } from "@/modules/application-rules/application-rules.guard";
 import { assertAutomationAllowed } from "@/modules/job-board/blocked-sites";
 import { findFuzzyDuplicate } from "@/modules/scoring/applied-duplicates";
+import type { ScoringService } from "@/modules/scoring/scoring.service";
+import {
+  assertDiscoveryReady,
+  listRulesApply,
+  reserveDiscoveryApplication,
+} from "./discovery-guard";
+import { assertCurrentFit } from "./fit-guard";
 import { publishStatusChange } from "./job-events";
+import { assertNoSubmissionConflict, SUBMISSION_NOT_STARTED } from "./submission-guard";
 
-type GuardReader = DuplicateReader & Pick<Prisma.TransactionClient, "job">;
+type GuardReader = DuplicateReader & Pick<Prisma.TransactionClient, "job" | "submissionAttempt">;
 
 export interface JobPosting {
+  id?: string;
   campaignId: string;
   key: string;
   url: string;
@@ -87,6 +97,7 @@ export async function assertNotDuplicateApply(
   job: JobPosting,
 ): Promise<void> {
   assertAutomationAllowed(job.url);
+  await assertNoSubmissionConflict(db, userId, job);
   const sibling = await findApplyingSibling(db, userId, job);
   if (sibling) {
     throw conflict(
@@ -116,7 +127,12 @@ export async function guardApply<T>(
 
     const { campaignId, key } = error.job;
     const [skipped] = await prisma.job.updateManyAndReturn({
-      where: { campaignId, key, status: { in: ["approved", "needs_user"] } },
+      where: {
+        campaignId,
+        key,
+        status: { in: ["approved", "needs_user"] },
+        AND: [SUBMISSION_NOT_STARTED],
+      },
       data: { status: "skipped", skipReason: duplicateSkipReason(error.duplicate) },
     });
     if (skipped) {
@@ -136,6 +152,7 @@ export async function claimJobForApply(
   userId: string,
   campaignId: string,
   key: string,
+  scoring: Pick<ScoringService, "currentAssessment">,
 ): Promise<Job> {
   const where = {
     campaignId,
@@ -146,13 +163,33 @@ export async function claimJobForApply(
 
   const target = await tx.job.findFirst({
     where,
-    select: { url: true, title: true, company: true },
+    select: {
+      id: true,
+      url: true,
+      title: true,
+      company: true,
+      campaignId: true,
+      key: true,
+      fitAssessment: true,
+      intakeDecisionRequired: true,
+      updatedAt: true,
+      campaign: { select: { config: true } },
+    },
   });
   if (!target) throw conflict("Job is no longer approved.");
+  await assertApplicationAllowed(tx, userId, target);
   await assertNotDuplicateApply(tx, userId, { ...target, campaignId, key });
+  const assessment = await assertCurrentFit(scoring, userId, target, false, tx);
+  if (await listRulesApply(tx, userId, target.id)) {
+    assertDiscoveryReady(target.campaign?.config, assessment);
+    await reserveDiscoveryApplication(tx, userId, target, target.campaign?.config);
+  }
 
   // An empty result is the lost race.
-  const [claimed] = await tx.job.updateManyAndReturn({ where, data: { status: "applying" } });
+  const [claimed] = await tx.job.updateManyAndReturn({
+    where: { ...where, updatedAt: target.updatedAt, AND: [SUBMISSION_NOT_STARTED] },
+    data: { status: "applying" },
+  });
   if (!claimed) throw conflict("Job is no longer approved.");
   return claimed;
 }

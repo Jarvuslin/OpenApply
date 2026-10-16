@@ -1,7 +1,7 @@
 "use client";
 
-import { type ReactElement, useState } from "react";
-import { Button, Stack, TextField } from "@mui/material";
+import type { ReactElement } from "react";
+import { Alert, Button, LinearProgress, Stack, TextField } from "@mui/material";
 import { SINGLE_APPLY_CAMPAIGN } from "@openapply/contracts/application";
 import { useSearchParams } from "next/navigation";
 import { useApiQuery } from "@/api/hooks";
@@ -16,10 +16,10 @@ import { FUNNEL_GROUPS, FunnelBar, type FunnelKey } from "./funnel-bar";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
-/** Tab 2 - cross-campaign application funnel + filterable, attributed table. */
+/** Cross-campaign application history with server-side filters. */
 export function ApplicationsPanel(): ReactElement {
-  const [search, setSearch] = useState("");
   const params = useSearchParams();
+  const search = params.get("search") ?? "";
   const board = params.get("board");
   const campaignId = params.get("campaign");
   const groupParam = params.get("group");
@@ -47,6 +47,7 @@ export function ApplicationsPanel(): ReactElement {
   const boards = useApiQuery(jobBoardQueries.list());
 
   const rows = apps.data?.items ?? [];
+  const emptyPage = rows.length === 0 && (apps.data?.pagination.total ?? 0) > 0;
   const campaignLabel = new Map((campaigns.data?.items ?? []).map((c) => [c.campaignId, c.query]));
 
   const counts = FUNNEL_GROUPS.reduce(
@@ -69,32 +70,36 @@ export function ApplicationsPanel(): ReactElement {
   const isFiltered = search !== "" || board !== null || campaignId !== null || group !== null;
 
   const clear = (): void => {
-    setSearch("");
-    setFilters({ board: null, campaign: null, group: null });
+    setFilters({ search: null, board: null, campaign: null, group: null });
   };
 
   return (
     <Stack spacing={2}>
-      <FunnelBar
-        counts={counts}
-        selected={group}
-        onSelect={(next) => setFilters({ group: next })}
-      />
+      {summary.isLoading && <LinearProgress />}
+      {summary.error && (
+        <Alert
+          severity="error"
+          action={<Button onClick={() => void summary.refetch()}>Retry</Button>}
+        >
+          Could not load application totals.
+        </Alert>
+      )}
+      {summary.data && (
+        <FunnelBar
+          counts={counts}
+          selected={group}
+          onSelect={(next) => setFilters({ group: next })}
+        />
+      )}
       <SectionCard>
         <Stack spacing={2}>
-          <Stack
-            direction={{ xs: "column", md: "row" }}
-            spacing={1.25}
-            sx={{ alignItems: { md: "center" } }}
-          >
+          <Stack direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
             <TextField
               size="small"
               placeholder="Search role, company, URL"
+              label="Search applications"
               value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
+              onChange={(e) => setFilters({ search: e.target.value })}
               sx={{ flex: 1, minWidth: 200 }}
             />
             <SelectField
@@ -117,8 +122,24 @@ export function ApplicationsPanel(): ReactElement {
               </Button>
             )}
           </Stack>
-          <ApplicationsTable rows={rows} campaignLabel={campaignLabel} />
-          {apps.data && (
+          {apps.isLoading && <LinearProgress />}
+          {apps.error && (
+            <Alert
+              severity="error"
+              action={<Button onClick={() => void apps.refetch()}>Retry</Button>}
+            >
+              Could not load application history.
+            </Alert>
+          )}
+          {!apps.isLoading && !apps.error && emptyPage && (
+            <Alert severity="info" action={<Button onClick={() => setPage(1)}>First page</Button>}>
+              No applications remain on this page.
+            </Alert>
+          )}
+          {!apps.isLoading && !apps.error && !emptyPage && (
+            <ApplicationsTable rows={rows} campaignLabel={campaignLabel} filtered={isFiltered} />
+          )}
+          {apps.data && !emptyPage && (
             <PaginationFooter
               pagination={apps.data.pagination}
               onPageChange={setPage}

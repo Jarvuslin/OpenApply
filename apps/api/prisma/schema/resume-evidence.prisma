@@ -1,0 +1,26 @@
+enum ResumeEvidenceStatus {
+  supported
+  unverified
+  retracted
+
+  @@map("resume_evidence_status")
+}
+
+model ResumeEvidence {
+  id               String               @id @default(uuid())
+  resumeId         String               @map("resume_id")
+  resume           Resume               @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  revision         Int                  @default(1)
+  status           ResumeEvidenceStatus @default(unverified)
+  statement        String
+  scope            String
+  source           Json
+  review           Json
+  verification     Json
+  optionalQuestion String?              @map("optional_question")
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+
+  @@index([resumeId, status, updatedAt])
+  @@map("resume_evidence")
+}

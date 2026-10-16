@@ -1,16 +1,15 @@
-import type { PropsWithChildren, ReactNode } from "react";
-import { QuestionBadge } from "@/components/features/pilot/attention/question-badge";
+import type { ReactNode } from "react";
+import { NeedsYouCount } from "@/components/features/questions/needs-you-badge";
+import { QueueCount } from "@/components/features/queue/queue-badge";
 import type { NavItem } from "./shell-config";
 
-interface NavBadgeProps extends PropsWithChildren {
+interface NavCountProps {
   badge: NavItem["badge"];
+  active: boolean;
 }
 
-export function NavBadge(props: NavBadgeProps): ReactNode {
-  const { badge, children } = props;
-
-  if (badge === "questions") {
-    return <QuestionBadge>{children}</QuestionBadge>;
-  }
-  return children;
+export function NavCount({ badge, active }: NavCountProps): ReactNode {
+  if (badge === "queue") return <QueueCount active={active} />;
+  if (badge === "needs-you") return <NeedsYouCount />;
+  return null;
 }

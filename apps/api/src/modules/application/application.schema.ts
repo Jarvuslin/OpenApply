@@ -6,6 +6,7 @@ import {
   statusSchema,
 } from "@openapply/contracts/application";
 import { paginatedSchema, paginationQuerySchema } from "@openapply/contracts/pagination";
+import { applicationSubmissionSchema } from "@openapply/contracts/submission";
 import { z } from "zod/v4";
 import { campaignJobSchema } from "@/modules/campaign/jobs/job.schema";
 import { emailMessageSchema } from "@/modules/email/email.schema";
@@ -20,12 +21,6 @@ export const applicationQuerySchema = z.object({
   url: z.string().trim().min(1).optional(),
   title: z.string().trim().min(1).optional(),
   company: z.string().trim().min(1).optional(),
-});
-
-/** Append a free-text note to an application's timeline (e.g. a generated interview prep sheet). */
-export const appendNoteSchema = z.object({
-  kind: z.literal("note"),
-  notes: z.string().min(1),
 });
 
 // Response schemas
@@ -61,7 +56,7 @@ export const applicationSummarySchema = z.object({
 });
 
 /** An activity-timeline event (mirrors the `ApplicationEvent` Prisma model with dates stringified). */
-export const applicationEventSchema = z.object({
+const applicationEventSchema = z.object({
   id: z.uuid(),
   applicationId: z.uuid(),
   kind: applicationEventKindSchema,
@@ -105,8 +100,22 @@ const applicationJobSchema = campaignJobSchema.pick({
   type: true,
 });
 
+const submissionResponseSchema = applicationSubmissionSchema.extend({
+  confirmation: applicationSubmissionSchema.shape.confirmation.extend({ observedAt: z.date() }),
+});
+
+export const submittedResumeQuerySchema = z.object({
+  sha256: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .optional(),
+});
+
 /** A single application with the documents sent, the posting, and everything that came back. */
 export const applicationDetailSchema = applicationSchema.extend({
+  submission: submissionResponseSchema
+    .extend({ previous: z.array(submissionResponseSchema) })
+    .nullable(),
   events: z.array(applicationEventSchema),
   resume: applicationResumeSchema.nullable(),
   resumeVariantUsed: applicationResumeUsedSchema.nullable(),

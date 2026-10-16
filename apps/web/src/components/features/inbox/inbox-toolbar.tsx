@@ -1,15 +1,13 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { CloudSync, FormatListBulleted } from "@mui/icons-material";
+import { CloudSync } from "@mui/icons-material";
 import { Button, Stack, ToggleButton, ToggleButtonGroup, Tooltip } from "@mui/material";
 import { api } from "@/api/client";
 import { useApiMutation, useApiQuery } from "@/api/hooks";
 import { emailQueries, type InboxFilter } from "@/api/queries";
 import { queryKeys } from "@/api/query-keys";
 import type { SyncResultDto } from "@/api/types";
-import { AgentOnlyButton } from "@/components/ui/buttons";
-import { useAgent } from "@/providers/agent-provider";
 
 interface InboxToolbarProps {
   filter: InboxFilter;
@@ -26,8 +24,6 @@ const FILTERS: ReadonlyArray<{ key: InboxFilter; label: string }> = [
 
 export function InboxToolbar(props: InboxToolbarProps): ReactElement {
   const { filter, onFilterChange } = props;
-  const { injectSkill } = useAgent();
-
   const account = useApiQuery(emailQueries.account());
   const connector = account.data?.connected && account.data.provider === "connector";
   const sync = useApiMutation<SyncResultDto, void>(() => api.email.sync.post(), {
@@ -35,32 +31,21 @@ export function InboxToolbar(props: InboxToolbarProps): ReactElement {
     invalidate: [queryKeys.email.all],
   });
 
-  const handleScan = async (): Promise<void> => {
-    await injectSkill("scan-inbox");
-  };
-
   return (
     <Stack direction="row" spacing={1.5} sx={{ flexWrap: "wrap", alignItems: "center" }}>
-      <Tooltip title="Fetch new mail from Gmail">
-        <Button
-          size="small"
-          variant="outlined"
-          startIcon={<CloudSync />}
-          onClick={() => (connector ? void handleScan() : sync.mutate())}
-          disabled={sync.isPending}
-        >
-          {sync.isPending ? "Syncing" : "Sync"}
-        </Button>
-      </Tooltip>
-      <AgentOnlyButton
-        size="small"
-        variant="contained"
-        startIcon={<FormatListBulleted />}
-        onClick={handleScan}
-        tooltip="Run the scan-inbox skill to classify pending messages"
-      >
-        Scan pending
-      </AgentOnlyButton>
+      {!connector && (
+        <Tooltip title="Fetch new mail from Gmail">
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<CloudSync />}
+            onClick={() => sync.mutate()}
+            disabled={sync.isPending}
+          >
+            {sync.isPending ? "Syncing" : "Sync"}
+          </Button>
+        </Tooltip>
+      )}
       <ToggleButtonGroup
         size="small"
         exclusive

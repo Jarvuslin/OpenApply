@@ -2,7 +2,10 @@ param([switch]$VmOnly, [switch]$Dev)
 $ErrorActionPreference = 'Stop'
 $mvpRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $mvpBun = (Get-Command bun -ErrorAction Stop).Source
-$mvpDotnet = (Get-Command dotnet -ErrorAction Stop).Source
+# A runtime-only dotnet earlier on PATH cannot `dotnet run`; take the first one with an SDK.
+$mvpDotnet = Get-Command dotnet -All -ErrorAction Stop | ForEach-Object Source |
+  Where-Object { & $_ --list-sdks 2>$null } | Select-Object -First 1
+if (!$mvpDotnet) { throw 'No .NET SDK found. Install the .NET 10 SDK to run the terminal companion.' }
 $env:DOTNET_ROOT = Split-Path $mvpDotnet
 $env:PATH = (Split-Path $mvpBun) + ';' + (Split-Path $mvpDotnet) + ';' + $env:PATH
 $mvpLogs = Join-Path $mvpRoot '.temp/mvp'

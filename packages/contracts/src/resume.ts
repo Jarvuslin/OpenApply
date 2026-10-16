@@ -22,6 +22,7 @@ const resumeExperienceSchema = z.object({
   location: z.string().optional(),
   start: z.string(),
   end: z.string().optional(),
+  dateNote: z.string().optional(),
   bullets: z.array(z.string()),
 });
 
@@ -49,9 +50,11 @@ const resumeEducationSchema = z.object({
   id: z.string().optional(),
   school: z.string().min(1, "Required"),
   degree: z.string().min(1, "Required"),
+  location: z.string().optional(),
   start: z.string().optional(),
   end: z.string().optional(),
   details: z.array(z.string()).default([]),
+  bullets: z.array(z.string()).optional(),
 });
 
 const resumePublicationSchema = z.object({
@@ -158,8 +161,8 @@ export const EMPTY_RESUME_DATA: ResumeData = {
 };
 
 /**
- * Characters per rendered bullet line: ~498pt of usable width, Helvetica 9.5pt at ~4.75pt a
- * character. Keep in step with `bulletList`/`bulletText` in `common/pdf/jake-template.tsx`.
+ * Rough editorial line estimate only. Canonical LaTeX rendering and actual PDF page validation
+ * determine whether content fits; this estimate never authorizes truncation or font changes.
  */
 export const RESUME_BULLET_CHARS_PER_LINE = 104;
 

@@ -5,13 +5,14 @@ import { Security } from "@mui/icons-material";
 import {
   Avatar,
   Box,
+  ButtonBase,
   Divider,
-  IconButton,
   ListItemIcon,
   ListItemText,
   Menu,
   MenuItem,
-  Tooltip,
+  Stack,
+  Typography,
 } from "@mui/material";
 import type { Route } from "next";
 import NextLink from "next/link";
@@ -50,35 +51,44 @@ export function AccountMenu(): ReactNode {
   const handleClose = () => setAnchor(null);
 
   return (
-    <Box sx={{ pb: 1 }}>
-      <Tooltip title={displayName(user)} placement="right">
-        <IconButton
-          aria-label={`Account: ${displayName(user)}`}
-          aria-haspopup="menu"
-          aria-controls={open ? "account-menu" : undefined}
-          aria-expanded={open}
-          onClick={handleOpen}
-          sx={(theme) => ({
-            p: 0,
-            borderRadius: theme.radii.sm,
-            "&:focus-visible": { boxShadow: theme.shadows_custom.focus },
-          })}
+    <Box sx={{ flex: 1, minWidth: 0 }}>
+      <ButtonBase
+        aria-label={`Account: ${displayName(user)}`}
+        aria-haspopup="menu"
+        aria-controls={open ? "account-menu" : undefined}
+        aria-expanded={open}
+        onClick={handleOpen}
+        sx={(theme) => ({
+          p: 1,
+          gap: 1.25,
+          width: "100%",
+          justifyContent: "flex-start",
+          textAlign: "left",
+          borderRadius: theme.radii.sm,
+          "&:hover": { bgcolor: "surfaces.hover" },
+          "&:focus-visible": { boxShadow: theme.shadows_custom.focus },
+        })}
+      >
+        <Avatar
+          sx={{
+            width: 28,
+            height: 28,
+            typography: "body2",
+            bgcolor: "surfaces.hover",
+            color: "text.primary",
+          }}
         >
-          <Avatar
-            sx={(theme) => ({
-              width: 36,
-              height: 36,
-              fontSize: 14,
-              fontWeight: 600,
-              bgcolor: theme.palette.accent.primary,
-              color: "primary.contrastText",
-              border: `1px solid ${theme.palette.line.borderHi}`,
-            })}
-          >
-            {initials(user)}
-          </Avatar>
-        </IconButton>
-      </Tooltip>
+          {initials(user)}
+        </Avatar>
+        <Stack sx={{ minWidth: 0 }}>
+          <Typography variant="body2" noWrap>
+            {displayName(user)}
+          </Typography>
+          <Typography variant="captionMuted" noWrap>
+            {user.email}
+          </Typography>
+        </Stack>
+      </ButtonBase>
       <Menu
         id="account-menu"
         anchorEl={anchor}

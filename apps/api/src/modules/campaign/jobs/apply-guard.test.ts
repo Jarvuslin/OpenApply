@@ -17,6 +17,7 @@ const EXISTING = {
 /** Honors the NOT clause the real query sends, so self-exclusion is actually exercised. */
 function db(applications: (typeof EXISTING)[], applying: JobPosting[] = []) {
   return {
+    submissionAttempt: { findFirst: async () => null, findMany: async () => [] },
     application: {
       findUnique: async ({ where }: { where: { userId_url: { url: string } } }) =>
         applications.find((r) => r.url === where.userId_url.url) ?? null,

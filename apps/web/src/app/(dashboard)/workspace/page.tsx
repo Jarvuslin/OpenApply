@@ -1,21 +1,19 @@
-import type { ReactElement } from "react";
-import { Container } from "@mui/material";
-import type { Metadata } from "next";
-import { StealthCodeBanner } from "@/components/features/workspace/stealth-code-banner";
-import { WorkspaceView } from "@/components/features/workspace/workspace-view";
-import { PageHeader } from "@/components/ui/layout";
+import { type ReactElement, Suspense } from "react";
+import { redirect } from "next/navigation";
+import { workspaceDestination } from "@/utils/workspace-destination";
 
-export const metadata: Metadata = { title: "Workspace" };
+interface WorkspacePageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
 
-export default function WorkspacePage(): ReactElement {
+export default function WorkspacePage(props: WorkspacePageProps): ReactElement {
   return (
-    <Container
-      maxWidth="xl"
-      sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
-    >
-      <PageHeader eyebrow="Workspace" title="Workspace" />
-      <WorkspaceView />
-      <StealthCodeBanner />
-    </Container>
+    <Suspense>
+      <WorkspaceRedirect {...props} />
+    </Suspense>
   );
+}
+
+async function WorkspaceRedirect({ searchParams }: WorkspacePageProps): Promise<never> {
+  redirect(workspaceDestination(await searchParams));
 }

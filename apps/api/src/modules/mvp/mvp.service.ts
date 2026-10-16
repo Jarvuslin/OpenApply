@@ -1,7 +1,5 @@
-import { chromium } from "playwright-core";
 import { singleton } from "tsyringe";
 import type { z } from "zod/v4";
-import { badRequest } from "@/common/errors";
 import { PrismaClient } from "@/generated/prisma/client";
 import { canUseCaptchaSolver } from "@/modules/captcha/entitlement";
 import { getActiveEmailAccount } from "@/modules/email/account/account-selection";
@@ -76,62 +74,12 @@ export class MvpService {
     };
   }
 
-  async start(userId: string, slugs: string[]) {
-    return this.queue.enqueue(userId, slugs);
-  }
-
-  async observe(userId: string) {
-    const browser = await chromium.connectOverCDP("http://127.0.0.1:9222", { timeout: 5000 });
-    try {
-      const pages = browser.contexts()[0]?.pages() ?? [];
-      if (!pages.length) throw badRequest("No browser tab is open.");
-      const results = [];
-      for (const page of pages) {
-        if (!/^https?:/.test(page.url())) continue;
-        const title = await page.title();
-        const body = (await page.locator("body").innerText({ timeout: 3000 })).slice(0, 10000);
-        const widgetPresent =
-          (await page
-            .locator(
-              'iframe[src*="recaptcha"], iframe[src*="hcaptcha"], iframe[src*="challenges.cloudflare.com"], .cf-turnstile, .g-recaptcha, .h-captcha',
-            )
-            .count()) > 0;
-        const challengePage =
-          /just a moment|verify you are human|checking your browser|unusual traffic|complete the security check/i.test(
-            `${title}\n${body}`,
-          );
-        const url = new URL(page.url());
-        url.search = "";
-        url.hash = "";
-        const result = {
-          url: url.toString(),
-          title,
-          widgetPresent,
-          challengePage,
-          checkedAt: new Date(),
-        };
-        await this.journal.appendJournal(userId, {
-          entries: [
-            {
-              kind: "observation",
-              summary: challengePage
-                ? "Browser challenge detected; human review required"
-                : "Browser observation captured",
-              detail: {
-                url: result.url,
-                title,
-                widgetPresent,
-                challengePage,
-                mode: "live_browser_observation",
-              },
-            },
-          ],
-        });
-        results.push(result);
-      }
-      return results;
-    } finally {
-      await browser.close();
-    }
+  async start(
+    userId: string,
+    slugs: string[],
+    idempotencyKey?: string,
+    provider: "claude" | "codex" = "claude",
+  ) {
+    return this.queue.enqueue(userId, slugs, idempotencyKey, provider);
   }
 }

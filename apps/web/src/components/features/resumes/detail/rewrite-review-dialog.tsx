@@ -13,9 +13,10 @@ import {
   Typography,
 } from "@mui/material";
 import { EMPTY_RESUME_DATA } from "@openapply/contracts/resume";
-import { resumePdfUrl, resumeSourceUrl, variantPdfUrl } from "@/api/resume-urls";
+import { resumeSourceUrl } from "@/api/resume-urls";
 import type { ResumeDto, ResumeVariantDto } from "@/api/types";
 import { FormDialogShell } from "@/components/ui/form";
+import { ArtifactPreview } from "./artifact-preview";
 import { diffRewrite } from "./rewrite-diff";
 
 interface RewriteReviewDialogProps {
@@ -48,8 +49,8 @@ export function RewriteReviewDialog(props: RewriteReviewDialogProps): ReactEleme
     >
       <Stack spacing={2}>
         <Typography variant="body2Muted">
-          Your original upload stays unchanged. Generated PDFs use the OpenApply template, so their
-          fonts, section order and spacing can differ from the original even before a rewrite.
+          Your original upload stays unchanged. Rewrites use the shared LaTeX resume layout, with
+          fixed fonts and a one-page check. Review the wording changes and the actual PDF below.
         </Typography>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
           {resume.sourceFilename && (
@@ -65,29 +66,21 @@ export function RewriteReviewDialog(props: RewriteReviewDialogProps): ReactEleme
               Original upload
             </Button>
           )}
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<OpenInNew fontSize="sm" />}
-            component="a"
-            href={resumePdfUrl(resume.id, resume.updatedAt)}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Current generated PDF
-          </Button>
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<OpenInNew fontSize="sm" />}
-            component="a"
-            href={variantPdfUrl(suggestion.id, suggestion.updatedAt)}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Rewritten PDF
-          </Button>
         </Stack>
+        <Typography variant="body2Strong">Current base PDF</Typography>
+        <ArtifactPreview
+          key={`base:${resume.updatedAt}`}
+          resumeId={resume.id}
+          updatedAt={resume.updatedAt}
+          preview={false}
+        />
+        <Typography variant="body2Strong">Rewritten PDF</Typography>
+        <ArtifactPreview
+          key={`${suggestion.id}:${suggestion.updatedAt}`}
+          resumeId={resume.id}
+          variantId={suggestion.id}
+          updatedAt={suggestion.updatedAt}
+        />
 
         {notes && (
           <Accordion>

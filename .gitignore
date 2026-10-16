@@ -15,6 +15,7 @@ node_modules/
 !/CLAUDE.md
 !/AGENTS.md
 !/CHANGELOG.md
+!/GLOSSARY.md
 /*.json
 !/package.json
 !/global.json

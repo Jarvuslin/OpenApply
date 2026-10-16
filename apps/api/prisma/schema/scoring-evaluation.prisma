@@ -1,0 +1,107 @@
+enum ScoringEvaluationOrigin {
+  historical
+  simulated
+  local_inference
+  @@map("scoring_evaluation_origin")
+}
+enum ScoringEvaluationSlot {
+  baseline
+  candidate
+  @@map("scoring_evaluation_slot")
+}
+enum ScoringEvaluationStatus {
+  completed
+  failed
+  budget_stopped
+  rejected
+  @@map("scoring_evaluation_status")
+}
+enum ScoringEvaluationCohort {
+  owned
+  historical_synthetic
+  authored
+  @@map("scoring_evaluation_cohort")
+}
+enum ScoringEvaluationModel {
+  sonnet
+  haiku
+  @@map("scoring_evaluation_model")
+}
+enum ScoringEvaluationFailure {
+  invalid_output
+  missing_usage
+  budget_requests
+  budget_tokens
+  budget_time
+  output_limit
+  provider_error
+  cancelled
+  model_mismatch
+  unsafe_tool_use
+  @@map("scoring_evaluation_failure")
+}
+model ScoringEvaluationRun {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  requestId String @map("request_id")
+  payloadHash String @map("payload_hash")
+  name String
+  cohort ScoringEvaluationCohort
+  caseCount Int @map("case_count")
+  escalationBand Int @map("escalation_band")
+  policyVersion Int @default(1) @map("policy_version")
+  createdAt DateTime @default(now()) @map("created_at")
+  cases ScoringEvaluationCase[]
+  @@unique([userId,requestId])
+  @@unique([id,userId])
+  @@index([userId,createdAt])
+  @@map("scoring_evaluation_runs")
+}
+model ScoringEvaluationCase {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  runId String @map("run_id")
+  run ScoringEvaluationRun @relation(fields:[runId,userId],references:[id,userId],onDelete:Cascade)
+  ordinal Int
+  // Source identities remain in the immutable snapshot after a campaign is deleted.
+  jobId String @map("job_id")
+  campaignId String @map("campaign_id")
+  jobKey String @map("job_key")
+  contextHash String @map("context_hash")
+  context Json
+  historicalReference Json? @map("historical_reference")
+  eligibility Json
+  factsConfirmedAt DateTime? @map("facts_confirmed_at")
+  results ScoringEvaluationResult[]
+  @@unique([id,userId])
+  @@unique([runId,ordinal])
+  @@unique([runId,jobId])
+  @@index([userId,runId])
+  @@map("scoring_evaluation_cases")
+}
+model ScoringEvaluationResult {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  caseId String @map("case_id")
+  case ScoringEvaluationCase @relation(fields:[caseId,userId],references:[id,userId],onDelete:Cascade)
+  requestId String @map("request_id")
+  payloadHash String @map("payload_hash")
+  slot ScoringEvaluationSlot
+  origin ScoringEvaluationOrigin
+  requestedModel ScoringEvaluationModel @map("requested_model")
+  actualModels Json @map("actual_models")
+  modelVersion String? @map("model_version")
+  status ScoringEvaluationStatus
+  failureCode ScoringEvaluationFailure? @map("failure_code")
+  judgments Json?
+  assessment Json?
+  telemetry Json
+  requestIdentityHashes Json @map("request_identity_hashes")
+  validationReason String? @map("validation_reason")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@unique([userId,requestId])
+  @@unique([caseId,slot])
+  @@index([userId,caseId])
+  @@map("scoring_evaluation_results")
+}

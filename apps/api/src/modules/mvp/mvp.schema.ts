@@ -24,16 +24,15 @@ export const readinessResult = z.object({
   resume: z.boolean(),
   captchaSolver: z.enum(["disabled", "enabled"]),
 });
-export const startInput = z.object({ slugs: z.array(z.string().min(1).max(300)).min(1).max(100) });
+export const startInput = z.object({
+  idempotencyKey: z.uuid().optional(),
+  provider: z.enum(["claude", "codex"]).default("claude"),
+  slugs: z.array(z.string().min(1).max(300)).min(1).max(100),
+});
 export const startResult = z.object({
   campaignId: z.string(),
+  workItemIds: z.array(z.uuid()),
   queued: z.array(z.string()),
+  jobKeys: z.array(z.string()),
   skipped: z.array(z.object({ slug: z.string(), reason: z.string() })),
-});
-export const observationResult = z.object({
-  url: z.string(),
-  title: z.string(),
-  widgetPresent: z.boolean(),
-  challengePage: z.boolean(),
-  checkedAt: z.date(),
 });

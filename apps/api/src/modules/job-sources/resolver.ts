@@ -1,8 +1,10 @@
 import { singleton } from "tsyringe";
 import { PrismaClient } from "@/generated/prisma/client";
 import { allowedApplyUrl } from "@/modules/job-board/blocked-sites";
-import { ATS, type AtsProvider, fetchAts } from "./ats";
+import { ATS, type AtsProvider, fetchAts, SITE_PROVIDERS } from "./ats";
+import { JOB_FEED_CATALOG } from "./catalog";
 import { fetchSourceJson } from "./http";
+import { canonicalLocationMatch } from "./resolver-location";
 import type { FetchJson, SourceJob } from "./types";
 
 const THRESHOLD = 0.88;
@@ -23,7 +25,9 @@ export function matchEmployerJob(job: SourceJob, candidates: SourceJob[]) {
   const ranked = candidates
     .map((candidate) => {
       const title = similarity(job.title, candidate.title);
-      const location = similarity(job.location, candidate.location);
+      const samePlace = canonicalLocationMatch(job.location, candidate.location);
+      const location =
+        samePlace === null ? similarity(job.location, candidate.location) : Number(samePlace);
       const confidence = title * 0.8 + location * 0.2;
       return { candidate, confidence };
     })
@@ -40,7 +44,27 @@ export function matchEmployerJob(job: SourceJob, candidates: SourceJob[]) {
         ? allowedApplyUrl(best.candidate.url)
         : null,
     confidence: best?.confidence ?? 0,
+    matchedJob:
+      best && best.confidence >= THRESHOLD && !ambiguous && allowedApplyUrl(best.candidate.url)
+        ? best.candidate
+        : null,
   };
+}
+
+function boardFromUrl(value: string | null) {
+  const url = value ? URL.parse(value) : null;
+  if (!url) return null;
+  const hosts: Record<string, AtsProvider> = {
+    "jobs.ashbyhq.com": "ashby",
+    "boards.greenhouse.io": "greenhouse",
+    "job-boards.greenhouse.io": "greenhouse",
+    "jobs.lever.co": "lever",
+    "jobs.smartrecruiters.com": "smartrecruiters",
+    "apply.workable.com": "workable",
+  };
+  const provider = hosts[url.hostname];
+  const slug = url.pathname.split("/")[1];
+  return provider && slug ? { provider, slug } : null;
 }
 
 @singleton()
@@ -48,7 +72,7 @@ export class EmployerResolver {
   constructor(private readonly prisma: PrismaClient) {}
   async resolve(job: SourceJob, fetch: FetchJson = fetchSourceJson) {
     const direct = allowedApplyUrl(job.url);
-    if (direct) return { applyUrl: direct, confidence: 1 };
+    if (direct) return { applyUrl: direct, confidence: 1, matchedJob: job };
     const companyKey = normalize(job.company);
     const cached = await this.prisma.companyAtsBoard.findUnique({ where: { companyKey } });
     const slugs = [
@@ -57,8 +81,28 @@ export class EmployerResolver {
     const probes: { provider: AtsProvider; slug: string }[] = [];
     if (cached && cached.checkedAt.getTime() > Date.now() - 7 * 86400_000 && cached.provider in ATS)
       probes.push({ provider: cached.provider as AtsProvider, slug: cached.slug });
+    const known = JOB_FEED_CATALOG.filter((board) => normalize(board.company) === companyKey);
+    const sources = await this.prisma.jobListingSource.findMany({
+      where: {
+        isPublic: true,
+        listing: { company: { equals: job.company, mode: "insensitive" } },
+      },
+      select: { applyUrl: true, url: true },
+      take: 20,
+    });
+    for (const source of sources) {
+      const board = boardFromUrl(source.applyUrl) ?? boardFromUrl(source.url);
+      if (board) known.push({ ...board, company: job.company });
+    }
+    for (const board of known)
+      if (!probes.some((probe) => probe.provider === board.provider && probe.slug === board.slug))
+        probes.push({ provider: board.provider, slug: board.slug });
+    // A Workday slug names a tenant, instance, and site; it cannot be guessed from a company name.
+    // A site slug names a tenant or a domain; a company name cannot guess it.
     for (const slug of slugs)
-      for (const provider of Object.keys(ATS) as AtsProvider[])
+      for (const provider of (Object.keys(ATS) as AtsProvider[]).filter(
+        (p) => !SITE_PROVIDERS.includes(p),
+      ))
         if (!probes.some((p) => p.slug === slug && p.provider === provider))
           probes.push({ provider, slug });
     let confidence = 0;
@@ -80,6 +124,6 @@ export class EmployerResolver {
       });
       return match;
     }
-    return { applyUrl: null, confidence };
+    return { applyUrl: null, confidence, matchedJob: null };
   }
 }

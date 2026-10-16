@@ -4,10 +4,6 @@ import {
   Alert,
   Button,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Stack,
   ToggleButton,
   ToggleButtonGroup,
@@ -15,10 +11,13 @@ import {
 } from "@mui/material";
 import { useTerminalHealth } from "@/components/features/agent-dock/use-terminal-health";
 import { PluginInstallCommands } from "@/components/features/install";
-import { TerminalPanel } from "@/components/features/terminal/terminal-panel";
-import { providerDisplayName, runInference } from "@/lib/terminal";
-import { useAgentAvailable, useAgentDock } from "@/providers/agent-provider";
-import type { ProviderConnection } from "./agent-connection-status";
+import { providerDisplayName, runInference, type TerminalProviderId } from "@/lib/terminal";
+import { useAgentDock } from "@/providers/agent-provider";
+
+export interface ProviderConnection {
+  provider: TerminalProviderId;
+  state: "verifying" | "connected";
+}
 
 interface AgentSetupStepProps {
   connection: ProviderConnection | null;
@@ -28,8 +27,6 @@ interface AgentSetupStepProps {
 export function AgentSetupStep({ connection, onConnectionChange }: AgentSetupStepProps) {
   const { health, recheck } = useTerminalHealth();
   const dock = useAgentDock();
-  const desktop = useAgentAvailable();
-  const [terminalOpen, setTerminalOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const verified = connection?.state === "connected" ? connection.provider : null;
   const [error, setError] = useState("");
@@ -133,13 +130,7 @@ export function AgentSetupStep({ connection, onConnectionChange }: AgentSetupSte
               : "Companion detected. Verify your model connection before importing a resume."}
           </Alert>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-            <Button
-              variant="outlined"
-              onClick={() => {
-                if (desktop) dock.expand();
-                else setTerminalOpen(true);
-              }}
-            >
+            <Button variant="outlined" onClick={dock.expand}>
               Open agent terminal to sign in
             </Button>
             <Button variant="contained" onClick={() => void check()} disabled={busy}>
@@ -165,16 +156,6 @@ export function AgentSetupStep({ connection, onConnectionChange }: AgentSetupSte
           Verification cancelled. You can retry or choose another provider.
         </Alert>
       )}
-      <Dialog open={terminalOpen} onClose={() => setTerminalOpen(false)} fullWidth maxWidth="lg">
-        <DialogTitle>Sign in to {providerDisplayName(dock.provider)}</DialogTitle>
-        <DialogContent sx={{ height: "60dvh" }}>
-          <TerminalPanel key={dock.terminalRevision} provider={dock.provider} />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => void dock.restart()}>Restart terminal</Button>
-          <Button onClick={() => setTerminalOpen(false)}>Done</Button>
-        </DialogActions>
-      </Dialog>
       <Typography variant="body2" color="text.secondary">
         You can fill your profile manually and connect later. Your computer must stay awake with the
         companion running for local agent work.

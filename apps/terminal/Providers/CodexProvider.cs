@@ -17,7 +17,6 @@ public sealed record PluginMcpServer(string? Command, string[]? Args, string? Ur
 
 internal sealed partial class CodexProvider : Provider
 {
-    private const string SkillPrefix = "$";
 
     // The marketplace plugin owns the setup bootstrap, so the workspace copy leaves it out.
     private const string BootstrapSkill = "setup";
@@ -44,12 +43,6 @@ internal sealed partial class CodexProvider : Provider
         FileTree.Copy(paths.SkillsDir, target);
         FileTree.DeleteIfExists(Path.Combine(target, BootstrapSkill));
     }
-
-    public override string SkillCommand(string skill) => SkillPrefix + skill;
-
-    // The first Enter only accepts the selected $skill autocomplete item.
-    public override int SubmitKeyPresses(string command) =>
-        command.StartsWith(SkillPrefix, StringComparison.Ordinal) ? 2 : 1;
 
     /// <summary>codex.json overrides followed by the bundled MCP servers; a missing or bad file is skipped with a warning.</summary>
     internal static string[] ConfigOverrides(string pluginDir, ILogger logger, Func<string, string?> resolveExecutable)

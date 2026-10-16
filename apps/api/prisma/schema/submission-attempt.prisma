@@ -1,0 +1,27 @@
+model SubmissionAttempt {
+  id                   String       @id @default(uuid())
+  userId               String       @map("user_id")
+  user                 User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId                String?      @unique @map("job_id")
+  job                  Job?         @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  originalUrl          String       @map("original_url")
+  // Legacy reservations are normalized in the shared reader, never approximated by migration SQL.
+  canonicalUrl         String?      @map("canonical_url")
+  legacyOutcomeUnknown Boolean      @default(false) @map("legacy_outcome_unknown")
+  checkpointId         String?      @unique @map("checkpoint_id")
+  checkpoint           Json?
+  checkpointHash       String?      @map("checkpoint_hash")
+  startedAt            DateTime?    @map("started_at")
+  receipt              Json?
+  receiptHash          String?      @map("receipt_hash")
+  receiptStoredAt      DateTime?    @map("receipt_stored_at")
+  recordedAt           DateTime?    @map("recorded_at")
+  applicationId        String?      @unique @map("application_id")
+  application          Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  createdAt            DateTime     @default(now()) @map("created_at")
+  updatedAt            DateTime     @updatedAt @map("updated_at")
+
+  @@unique([userId, canonicalUrl])
+  @@index([userId, legacyOutcomeUnknown, id])
+  @@map("submission_attempts")
+}

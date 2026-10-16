@@ -29,29 +29,37 @@ export const EnvSchema = z
   .object({
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
     PORT: z.coerce.number().default(4101),
-    CAPTCHA_SOLVER_ENABLED: z
-      .enum(["true", "false"])
-      .default("false")
-      .transform((v) => v === "true"),
-    PUBLIC_SITE_ENABLED: z
-      .enum(["true", "false"])
-      .default("false")
-      .transform((v) => v === "true"),
-    MVP_LOCAL_RUNNER: z
-      .enum(["true", "false"])
-      .default("false")
-      .transform((v) => v === "true"),
-    CLAUDE_BIN: z.string().default("claude"),
+    JOB_FEED_REFRESH_ENABLED: z.stringbool().default(true),
+    CAPTCHA_SOLVER_ENABLED: z.stringbool().default(false),
+    PUBLIC_SITE_ENABLED: z.stringbool().default(false),
+    MVP_LOCAL_RUNNER: z.stringbool().default(false),
+    TELEGRAM_BOT_TOKEN: optionalSecret,
+    TELEGRAM_BOT_USERNAME: optionalSecret.pipe(
+      z
+        .string()
+        .regex(/^[A-Za-z0-9_]{5,32}$/)
+        .optional(),
+    ),
+    TELEGRAM_WEBHOOK_SECRET: optionalSecret.pipe(
+      z
+        .string()
+        .min(32)
+        .max(256)
+        .regex(/^[A-Za-z0-9_-]+$/)
+        .optional(),
+    ),
+    // Separate from the webhook secret so rotating one does not invalidate the other.
+    TELEGRAM_PAIRING_HMAC_KEY: optionalSecret.pipe(z.string().min(32).max(256).optional()),
+    TELEGRAM_DELIVERY_ENABLED: z.stringbool().default(false),
+    // Polling calls getUpdates, which Telegram refuses while a webhook is set; use a separate dev bot.
+    TELEGRAM_UPDATES: z.enum(["webhook", "polling"]).default("webhook"),
 
     DATABASE_URL: z.string().min(1),
 
     JWT_SECRET: z.string().min(1),
     JWT_EXPIRY: z.string().default("1d"),
     REFRESH_TOKEN_EXPIRY: z.string().default("30d"),
-    AUTH_REQUIRE_EMAIL_VERIFICATION: z
-      .enum(["true", "false"])
-      .default("false")
-      .transform((v) => v === "true"),
+    AUTH_REQUIRE_EMAIL_VERIFICATION: z.stringbool().default(false),
 
     // Master key wrapping per-user DEKs (`openssl rand -base64 32`); rotating it re-wraps DEKs, not the data.
     SECRET_MASTER_KEY: z
@@ -72,6 +80,11 @@ export const EnvSchema = z
 
     // Filesystem root for resumes / generated PDFs.
     STORAGE_ROOT: z.string().default("./storage"),
+    OPENAPPLY_TECTONIC_PATH: optionalSecret,
+    TECTONIC_CACHE_DIR: optionalSecret,
+    OPENAPPLY_TECTONIC_BUNDLE: optionalSecret,
+    OPENAPPLY_TECTONIC_ONLY_CACHED: z.stringbool().default(false),
+    OPENAPPLY_TECTONIC_TIMEOUT_MS: z.coerce.number().int().min(1000).max(90000).default(90000),
 
     LOG_LEVEL: z.string().default("info"),
 

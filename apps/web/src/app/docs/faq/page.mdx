@@ -2,7 +2,7 @@ import { buildDocsMetadata } from "@/components/features/docs";
 
 export const metadata = buildDocsMetadata("faq", {
   description:
-    "Common questions about OpenApply: the agent, the Pilot, boards, email, and your data.",
+    "Common questions about OpenApply: the agent, pilots, boards, email, and your data.",
 });
 
 # FAQ
@@ -19,7 +19,7 @@ A mid-tier one: **Claude Sonnet 5.5** or **GPT 6 Luna**.
 **Avoid top-tier models like Claude Opus 5.5.** Applying to jobs is reading
 postings and filling forms, not hard reasoning, so the top tier thinks longer
 at every step and eats your weekly usage limits far faster without applying to
-more jobs. On a Pilot running cycles all day you can burn a week's allowance in
+more jobs. On a queue running all day you can burn a week's allowance in
 a day or two. Mid-tier is also faster, so more of your backlog gets done.
 
 OpenApply starts Claude Code sessions on the latest Sonnet and Codex sessions on
@@ -45,40 +45,28 @@ once. [Getting started](/docs/getting-started) explains why.
 
 Use an employer careers page or ATS. Discovery sources are listed in the job picker.
 
-## How many jobs does the Pilot apply to per day?
+## How many jobs does OpenApply apply to?
 
-Up to your daily apply cap, one application per cycle. The cap is enforced by
-the server, not just by the AI's instructions, so it holds even if a cycle
-goes off-script.
+As many as your queue settings allow. Set **Runs left** on the Queue page to cap
+how many more applications run, or leave it empty for no limit. Each pilot also
+has a **Max jobs per run**. The server enforces these limits, not just the
+agent's instructions.
 
-## How does the Pilot decide what to do first?
+## Does OpenApply ever send messages or post publicly without me?
 
-The server ranks the agenda every cycle: your answered questions come first,
-then interview replies, then applications ordered by match score, then
-discovery of new postings. You steer it with your goals text
-and limits. See [the Pilot](/docs/pilot).
+It submits applications within your queue limits. Anything else that goes out,
+such as an email reply, waits for your approval.
 
-## Does the Pilot ever send messages or post publicly without me?
+## What happens if my computer sleeps or crashes mid-application?
 
-The Pilot applies within your configured limits. Interview replies are drafted for review.
+Nothing is lost. Each application saves its progress as it goes. Work held by a
+computer that went away times out and returns to the queue, and the agent picks
+the queue back up when it restarts.
 
-## What happens if my computer sleeps or crashes mid-cycle?
+## Can I use OpenApply manually while the queue is running?
 
-Nothing is lost. Each cycle does one unit of work and saves the result before
-moving on; work claimed by a crashed cycle times out and returns to the
-agenda. The host restarts cycles on its own after a reboot or wake.
-
-## Can I use OpenApply manually while the Pilot is running?
-
-Yes. Campaigns and dashboard actions work as usual. If you launch a session
-with the other provider yourself, the Pilot pauses instead of fighting for the
-terminal and resumes when you're done.
-
-## Why does the journal show "cycles"?
-
-A cycle is one unit of autonomous work: one application, one inbox review,
-one search. The Activity tab's "By cycle" view groups the journal so you can
-see what each cycle did, its outcome, and how long it took.
+Yes. Searches, pilots and dashboard actions work as usual, and anything you
+start joins the same queue.
 
 ## How long do I have to answer a question?
 
@@ -86,8 +74,8 @@ Most questions wait indefinitely; the related job is parked until you answer.
 The exception is a login code, which expires after about five minutes; missing
 one just skips that job cleanly. You only see those for codes the agent can't
 read itself, meaning SMS and authenticator apps. Codes that arrive by email are
-pulled from your connected mailbox without asking you. Turn on notifications
-under **Settings → Notifications** to get questions as a push on your phone.
+pulled from your connected mailbox without asking you. Turn on the
+notifications switch in the sidebar to get questions as a push on your phone.
 
 ## Can OpenApply read and send email?
 

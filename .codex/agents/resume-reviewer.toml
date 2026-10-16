@@ -1,0 +1,6 @@
+# Codex discovery shim; the procedure lives in plugin/agents/resume-reviewer.md.
+name = "resume-reviewer"
+description = "Independently assess a resume rewrite against the original evidence and full JD; findings only, no writes or application actions."
+developer_instructions = """
+Read $OPENAPPLY_SKILLS_ROOT/../agents/resume-reviewer.md and follow it. Review the supplied exact source, evidence provenance, job description, edit plan and diff. Return findings only. Never write files, browse, mutate API records, or perform application actions.
+"""

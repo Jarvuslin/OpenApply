@@ -6,6 +6,8 @@ export const metadata = buildDocsMetadata("email-setup", {
 
 # Email setup
 
+[Back to Email settings](/settings/email) · [Open dashboard](/dashboard)
+
 Connect Gmail through your chosen agent. OpenApply imports the messages the agent reads; the provider manages Gmail authorization. You do not need to create a Google Cloud project or enter a client secret in OpenApply.
 
 ## Claude Code
@@ -22,11 +24,13 @@ Claude Code inherits claude.ai connectors with subscription login. API-key authe
 2. Open `/plugins`, find Gmail, install or enable it, and complete any account-connection prompts.
 3. Restart the agent after installation. Use `/apps` to find Gmail and `/mcp` to inspect the tools available to this session.
 
-An installed plugin or a connection in another chat does not by itself verify this session's access. Availability depends on the account and runtime. See [Codex plugins](https://learn.chatgpt.com/docs/plugins) and [CLI commands](https://learn.chatgpt.com/docs/developer-commands?surface=cli).
+An installed plugin or a connection in another conversation does not by itself verify this session's access. Availability depends on the account and runtime. See [Codex plugins](https://learn.chatgpt.com/docs/plugins) and [CLI commands](https://learn.chatgpt.com/docs/developer-commands?surface=cli).
 
 ## Check in OpenApply
 
-Open **Settings → Email**, or the workbench's **Connections** tab. Select **Check Gmail**. With Claude Code, OpenApply runs a separate background check and shows its result on this page. Your interactive agent does not need to be open or running.
+Open [**Settings → Email**](/settings/email) and select **Check Gmail**. With Claude Code, OpenApply starts a separate agent to check Gmail access and shows its result in Email settings. Your interactive agent does not need to be open or running.
+
+This is a connector-access check, not just an email-format check. Starting Claude and checking its Gmail tools can take up to 90 seconds. Email settings shows the elapsed time and a **Cancel check** button. Keep that page open until the result appears. **Setup guide** opens in another tab so reading these instructions does not cancel the check; navigating away from Email settings does cancel it.
 
 The check performs a bounded search of recent job mail. It does not import, classify, send or delete messages. You can cancel a running check without stopping your interactive agent.
 
@@ -43,9 +47,9 @@ Codex background Gmail checks are not supported yet. OpenApply reports this expl
 
 Use **Add email** to enter another Gmail address. Authorize that address in your provider, then select **Check and add**. The new mailbox is saved after a successful check and, when authenticated identity is unavailable, your explicit address confirmation. Adding it preserves your other saved emails and their imported messages.
 
-Use **Change email**, or **Use this email** beside a saved mailbox, to choose the mailbox OpenApply uses. Changing the selection does not switch the Gmail account authorized in Claude or Codex. If the two addresses differ, the check asks you to switch accounts in your provider first. It also does not change your applicant profile or résumé email.
+Use **Change email**, or **Use this email** beside a saved mailbox, to choose the mailbox OpenApply uses. Changing the selection does not switch the Gmail account authorized in Claude or Codex. If the two addresses differ, the check asks you to switch accounts in your provider first. It also does not change your applicant profile or resume email.
 
-Removing an email deletes only that mailbox's imported records from OpenApply. It does not delete Gmail messages or revoke the provider's Gmail authorization. Inbox lists and verification-code lookups use the selected mailbox unless an explicit owned mailbox is requested.
+Removing an email deletes only that mailbox's imported records from OpenApply. It does not delete Gmail messages or revoke the provider's Gmail authorization. Inbox lists use the selected mailbox unless an explicit owned mailbox is requested. The worker's direct verification-code lookup stays bound to the confirmed signup mailbox for that task and never changes the saved selection.
 
 Automated message imports still require a trustworthy authenticated mailbox identity in the current agent session. Your address confirmation does not replace that requirement. The standard Claude connector currently lacks the profile tool needed for these imports, even when its background read check succeeds.
 
@@ -53,7 +57,9 @@ When the connector meets that identity requirement, use the agent's `connect-ema
 
 ## Verification and replies
 
-The agent verifies authenticated mailbox identity before pulling new mail for verification codes, then checks the recipient, sender, employer and request time. A saved user-confirmed address or successful background read check alone does not enable this flow. Missing identity evidence, missing access or an ambiguous message parks the application and asks for help.
+For an employer verification code, the agent uses a matching authenticated mailbox profile when the connector provides one. If no profile tool exists, you can explicitly confirm which Gmail address is connected to the chosen agent. The worker can then read only verification mail matching the signup recipient, expected sender, employer and current request time. It labels the address user-confirmed and does not mark it provider-verified.
+
+The worker still needs working Gmail search and message-read tools. An available profile that fails or identifies another address, missing access, or an ambiguous message parks the application. A saved row or read-check timestamp alone does not establish your confirmation. This narrow code lookup does not import the inbox, save verification secrets, send mail, or change the selected mailbox. General imports and replies retain their authenticated identity requirements.
 
 Approved interview replies use the connector send tool. Connector accounts cannot use OpenApply's OAuth sync or send endpoints. These return a clear conflict error directing the agent to its connector.
 

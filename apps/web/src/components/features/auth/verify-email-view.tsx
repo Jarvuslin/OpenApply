@@ -38,7 +38,7 @@ function VerifyTokenView(props: { token: string }): ReactElement {
       pendingText="Verifying your email…"
       successText="Your email is verified."
       successLabel="Continue"
-      successHref="/workspace"
+      successHref="/dashboard"
       errorHint="This link may have expired or already been used."
     />
   );

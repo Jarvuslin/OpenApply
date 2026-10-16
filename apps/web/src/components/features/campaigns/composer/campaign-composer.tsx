@@ -1,64 +1,65 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { Button, LinearProgress, Stack } from "@mui/material";
+import { Alert, Box, Button, LinearProgress, Stack, Tooltip } from "@mui/material";
 import { useSelector } from "@tanstack/react-form";
 import { useRouter } from "next/navigation";
 import { api } from "@/api/client";
+import { ApiError } from "@/api/error";
 import { useApiMutation, useApiQuery } from "@/api/hooks";
 import { campaignQueries, jobBoardQueries, userQueries } from "@/api/queries";
-import { queryKeys } from "@/api/query-keys";
+import { invalidations } from "@/api/query-keys";
 import type { CampaignDto, CreateCampaignRequest } from "@/api/types";
-import { useLinkBoard } from "@/components/features/boards/use-link-board";
 import { useAppForm } from "@/components/ui/form/tanstack";
 import { SectionCard } from "@/components/ui/layout";
-import { useAgent } from "@/providers/agent-provider";
+import { useSession } from "@/hooks/use-auth";
+import { getStoredProvider } from "@/lib/agent-storage";
+import { queueRequests, sendQueueRequest } from "@/lib/queue-request";
 import { ApplyFields } from "./apply-fields";
 import { AutoApplyFields } from "./auto-apply-fields";
 import { CampaignBasicsFields } from "./campaign-basics-fields";
 import {
-  type BoardOption,
   buildCreateCampaignRequest,
-  buildSkillArg,
   COMPOSER_DEFAULT_VALUES,
   composerFormSchema,
   SUBMIT_LABELS,
 } from "./form-config";
 
-interface CampaignComposerProps {
-  defaultBoard?: string;
-}
-
-export function CampaignComposer(props: CampaignComposerProps): ReactElement {
-  const { defaultBoard } = props;
+export function CampaignComposer(): ReactElement {
   const router = useRouter();
-  const agent = useAgent();
+  const { user } = useSession();
 
   const boardsQuery = useApiQuery(jobBoardQueries.list());
   const profileQuery = useApiQuery(userQueries.detail());
   const recentCampaignsQuery = useApiQuery(campaignQueries.list());
 
-  const linkedBoards = boardsQuery.data ?? [];
-
-  // linked. Offer it from the catalog instead of falling back to the first linked board.
-  const catalogQuery = useApiQuery(jobBoardQueries.catalog(), {
-    enabled: Boolean(defaultBoard),
-    staleTime: 10 * 60_000,
-  });
+  const boards = boardsQuery.data ?? [];
 
   const createCampaign = useApiMutation<CampaignDto, CreateCampaignRequest>(
-    (body) => api.campaigns.post(body),
-    { invalidate: [queryKeys.campaigns.all] },
+    async (body) => {
+      const provider = getStoredProvider();
+      const data = await sendQueueRequest(
+        queueRequests,
+        user?.id ?? "",
+        ["create-campaign", body, provider],
+        async (idempotencyKey) => {
+          const created = await api.campaigns.post({ ...body, clientCampaignId: idempotencyKey });
+          if (created.error) throw new ApiError(created.error);
+          const queued = await api["work-queue"]
+            .campaign({ id: created.data.campaignId })
+            .post({ idempotencyKey, action: "start", provider });
+          if (queued.error) throw new ApiError(queued.error);
+          return created.data;
+        },
+      );
+      return { data, error: null };
+    },
+    {
+      invalidate: invalidations.queue,
+      retry: false,
+      successMessage: "Search added to your queue.",
+    },
   );
-
-  const linkBoard = useLinkBoard();
-
-  // The catalog lists only boards this profile has not linked, so a hit here is always unlinked.
-  const presetCatalogBoard = (catalogQuery.data ?? []).find((b) => b.domain === defaultBoard);
-
-  const boards: BoardOption[] = presetCatalogBoard
-    ? [...linkedBoards, presetCatalogBoard]
-    : linkedBoards;
 
   const resumes = profileQuery.data?.resumes ?? [];
   const recentQueries = Array.from(
@@ -68,51 +69,54 @@ export function CampaignComposer(props: CampaignComposerProps): ReactElement {
   const hasBoards = boards.length > 0;
   const hasResumes = resumes.length > 0;
 
-  const presetBoard = boards.find((b) => b.domain === defaultBoard)?.domain;
-
-  /** Skills read the board off the profile's own list, so adopt a catalog board before running one. */
-  const adoptBoard = async (domain: string): Promise<boolean> => {
-    if (presetCatalogBoard?.domain !== domain) {
-      return true;
-    }
-    try {
-      await linkBoard.mutateAsync({ domain });
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
   const form = useAppForm({
     defaultValues: {
       ...COMPOSER_DEFAULT_VALUES,
-      board: presetBoard ?? boards[0]?.domain ?? "",
+      board: boards[0]?.domain ?? "",
 
       resumeId: resumes.find((r) => r.isPrimary)?.id ?? resumes[0]?.id ?? "",
       minScore: profileQuery.data?.autoApply?.minMatchScore ?? COMPOSER_DEFAULT_VALUES.minScore,
     },
     validators: { onSubmit: composerFormSchema },
     onSubmit: async ({ value }) => {
-      const effective = value;
-
-      if (!(await adoptBoard(effective.board))) {
-        return;
-      }
-
-      const campaign = await createCampaign.mutateAsync(buildCreateCampaignRequest(effective));
+      const campaign = await createCampaign.mutateAsync(buildCreateCampaignRequest(value));
       const campaignId = campaign.campaignId;
       router.push(`/campaigns/${encodeURIComponent(campaignId)}`);
-
-      void agent.injectSkill(effective.mode, buildSkillArg(effective, campaignId));
     },
   });
 
   const mode = useSelector(form.store, (s) => s.values.mode);
 
   const isApply = mode === "apply";
+  let setupHint = "";
+  if (!isApply && !hasResumes && !hasBoards)
+    setupHint = "Add a job board and upload a resume first.";
+  else if (!isApply && !hasBoards) setupHint = "Add a job board first.";
+  else if (!isApply && !hasResumes) setupHint = "Upload a resume first.";
 
-  if (boardsQuery.isLoading || catalogQuery.isLoading || profileQuery.isLoading) {
+  if (boardsQuery.isLoading || profileQuery.isLoading) {
     return <LinearProgress />;
+  }
+
+  if (boardsQuery.isError || profileQuery.isError) {
+    return (
+      <Alert
+        severity="error"
+        action={
+          <Button
+            color="inherit"
+            onClick={() => {
+              void boardsQuery.refetch();
+              void profileQuery.refetch();
+            }}
+          >
+            Retry
+          </Button>
+        }
+      >
+        Could not load your search setup.
+      </Alert>
+    );
   }
 
   return (
@@ -151,13 +155,19 @@ export function CampaignComposer(props: CampaignComposerProps): ReactElement {
             <Button onClick={() => router.back()}>Cancel</Button>
             <form.Subscribe selector={(s) => [s.canSubmit, s.isSubmitting] as const}>
               {([canSubmit, isSubmitting]) => (
-                <Button
-                  type="submit"
-                  variant="contained"
-                  disabled={!canSubmit || isSubmitting || (!isApply && (!hasResumes || !hasBoards))}
+                <Tooltip
+                  title={setupHint || (!canSubmit ? "Complete the required fields above." : "")}
                 >
-                  {SUBMIT_LABELS[mode]}
-                </Button>
+                  <Box component="span">
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={!canSubmit || isSubmitting || Boolean(setupHint)}
+                    >
+                      {isSubmitting ? "Starting…" : SUBMIT_LABELS[mode]}
+                    </Button>
+                  </Box>
+                </Tooltip>
               )}
             </form.Subscribe>
           </Stack>

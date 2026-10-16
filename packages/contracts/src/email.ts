@@ -3,7 +3,6 @@ import { type ApplicationStatus, statusSchema } from "./application";
 
 export const EMAIL_PROVIDERS = ["gmail", "outlook", "imap", "connector"] as const;
 export const emailProviderSchema = z.enum(EMAIL_PROVIDERS);
-export type EmailProvider = z.infer<typeof emailProviderSchema>;
 
 export const EMAIL_RUNTIME_PROVIDERS = ["claude", "codex"] as const;
 export const emailRuntimeProviderSchema = z.enum(EMAIL_RUNTIME_PROVIDERS);
@@ -53,40 +52,10 @@ export const approveSchema = z.object({
   note: z.string().optional().nullable(),
 });
 
-/**
- * Upsert the user's own Google OAuth client. `clientSecret` is optional so an
- * edit can leave it blank to keep the stored one; the service requires it on
- * first create.
- */
-export const oauthClientUpsertSchema = z.object({
-  provider: emailProviderSchema.optional(),
-  clientId: z.string().trim().min(1, "Client ID is required"),
-  clientSecret: z.string().optional(),
-});
-
 export type Classification = z.infer<typeof classificationSchema>;
 export type ReviewStatus = z.infer<typeof reviewStatusSchema>;
 export type ScanMessageInput = z.infer<typeof scanMessageSchema>;
 export type ApproveInput = z.infer<typeof approveSchema>;
-export type OAuthClientUpsertInput = z.infer<typeof oauthClientUpsertSchema>;
-
-export const sendEmailSchema = z.object({
-  to: z.email(),
-  subject: z.string().default(""),
-  body: z.string().default(""),
-  threadId: z.string().optional(),
-  attachments: z
-    .array(
-      z.object({
-        filename: z.string().min(1),
-        mimeType: z.string().min(1),
-        contentBase64: z.string().min(1),
-      }),
-    )
-    .optional(),
-});
-
-export type SendEmailInput = z.infer<typeof sendEmailSchema>;
 
 export const ingestMessagesSchema = z.object({
   mailbox: mailboxAddressSchema,

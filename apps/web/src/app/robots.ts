@@ -18,9 +18,10 @@ export default function robots(): MetadataRoute.Robots {
         allow: [...PUBLIC_ROUTES],
         disallow: [
           "/admin",
-          "/pilot",
-
           "/workspace",
+          "/dashboard",
+          "/discover",
+          "/mvp",
           "/campaigns",
           "/applications",
           "/analytics",

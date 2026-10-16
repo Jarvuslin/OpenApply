@@ -8,27 +8,14 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { useMediaQuery } from "@mui/material";
+import { getStoredProvider, patchAgentStorage, subscribeAgentStorage } from "@/lib/agent-storage";
 import {
-  getStoredExpanded,
-  getStoredProvider,
-  patchAgentStorage,
-  subscribeAgentStorage,
-} from "@/lib/agent-storage";
-import {
-  formatSkillCommand,
-  injectCommand,
   killSession,
   shutdownHost,
   TerminalApiError,
   type TerminalProviderId,
 } from "@/lib/terminal";
 import { useToast } from "@/providers/notification-provider";
-
-export interface AgentContextValue {
-  inject: (command: string) => Promise<void>;
-  injectSkill: (skill: string, args?: string) => Promise<void>;
-}
 
 export interface AgentDockContextValue {
   provider: TerminalProviderId;
@@ -42,29 +29,7 @@ export interface AgentDockContextValue {
   collapse: () => void;
 }
 
-const AgentContext = createContext<AgentContextValue | null>(null);
 const AgentDockContext = createContext<AgentDockContextValue | null>(null);
-
-function describeInjectError(error: unknown): string {
-  if (error instanceof TypeError) {
-    return "The OpenApply agent isn't reachable. Open the agent dock to install and start it, then try again.";
-  }
-
-  if (error instanceof TerminalApiError) {
-    if (error.status === 404) {
-      return "Terminal session has ended. Restart it from the Terminal tab in the dock.";
-    }
-    // The host answers 409 both for "not running" and for a provider mismatch.
-    if (error.status === 409 && /provider/i.test(error.message)) {
-      return "A different provider is running in the terminal. Switch provider in the dock or restart it.";
-    }
-    if (error.status === 409 || error.status === 500) {
-      return "No active terminal session. Open the Terminal tab in the dock and start one.";
-    }
-  }
-  const message = error instanceof Error ? error.message : String(error);
-  return `Failed to send command to terminal: ${message}`;
-}
 
 export function AgentProvider(props: PropsWithChildren): ReactElement {
   const { children } = props;
@@ -78,7 +43,7 @@ export function AgentProvider(props: PropsWithChildren): ReactElement {
     (): TerminalProviderId => "claude",
   );
 
-  const expanded = useSyncExternalStore(subscribeAgentStorage, getStoredExpanded, () => false);
+  const [expanded, setExpanded] = useState(false);
   const [terminalRevision, setTerminalRevision] = useState(0);
 
   // Resolves true only when the host is actually going down, so the dock knows whether to keep its
@@ -123,20 +88,6 @@ export function AgentProvider(props: PropsWithChildren): ReactElement {
     setTerminalRevision((n) => n + 1);
   };
 
-  const runInject = async (command: string): Promise<void> => {
-    patchAgentStorage({ dockExpanded: true });
-    try {
-      await injectCommand(command, provider);
-    } catch (error) {
-      toast.error(describeInjectError(error));
-    }
-  };
-
-  const publicValue: AgentContextValue = {
-    inject: (command) => runInject(command),
-    injectSkill: (skill, args) => runInject(formatSkillCommand(provider, skill, args)),
-  };
-
   const dockValue: AgentDockContextValue = {
     provider,
     switchProvider,
@@ -144,23 +95,14 @@ export function AgentProvider(props: PropsWithChildren): ReactElement {
     stop,
     terminalRevision,
     expanded,
-    expand: () => patchAgentStorage({ dockExpanded: true }),
-    collapse: () => patchAgentStorage({ dockExpanded: false }),
+    expand: () => {
+      patchAgentStorage({ advancedTools: true });
+      setExpanded(true);
+    },
+    collapse: () => setExpanded(false),
   };
 
-  return (
-    <AgentContext.Provider value={publicValue}>
-      <AgentDockContext.Provider value={dockValue}>{children}</AgentDockContext.Provider>
-    </AgentContext.Provider>
-  );
-}
-
-export function useAgent(): AgentContextValue {
-  const ctx = useContext(AgentContext);
-  if (!ctx) {
-    throw new Error("useAgent must be used within an AgentProvider");
-  }
-  return ctx;
+  return <AgentDockContext.Provider value={dockValue}>{children}</AgentDockContext.Provider>;
 }
 
 export function useAgentDock(): AgentDockContextValue {
@@ -169,12 +111,4 @@ export function useAgentDock(): AgentDockContextValue {
     throw new Error("useAgentDock must be used within an AgentProvider");
   }
   return ctx;
-}
-
-/**
- * True only on desktop, where the local agent terminal runs. Below md there is
- * no dock to inject into, so agent-driving controls hide themselves against this.
- */
-export function useAgentAvailable(): boolean {
-  return useMediaQuery((theme) => theme.breakpoints.up("md"));
 }

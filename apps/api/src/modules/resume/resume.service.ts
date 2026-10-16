@@ -2,23 +2,26 @@ import path from "node:path";
 import { resumeChannel } from "@openapply/contracts/sse";
 import { singleton } from "tsyringe";
 import type { z } from "zod/v4";
-import { badRequest, findOwned, notFound } from "@/common/errors";
-import { renderResumePdf } from "@/common/pdf/render";
+import { badRequest, conflict, findOwned, notFound } from "@/common/errors";
 import { publish } from "@/common/sse";
 import {
-  deleteAllResumeArtifacts,
   deleteResumeFile,
-  generatedResumePath,
   resumePath,
   saveResumeSource,
-  serveCachedPdf,
   streamFile,
 } from "@/common/storage/storage";
 import { PrismaClient, type Resume } from "@/generated/prisma/client";
+import {
+  invalidateDocumentSelections,
+  publishDocumentInvalidation,
+} from "@/modules/application-question/document.invalidation";
+import { lockWorkUser } from "@/modules/work-queue/work-queue.admission";
 import { findProfileMismatches } from "./consistency";
 import { readContent, toStoredContent } from "./content";
 import { extractSourceText } from "./extract-source";
 import type { createResumeSchema, updateResumeSchema } from "./resume.schema";
+import { ResumeArtifactService } from "./resume-artifact.service";
+import { sourceReplacementWhere } from "./source-replacement";
 
 const MAX_RESUME_BYTES = 5 * 1024 * 1024;
 
@@ -33,7 +36,10 @@ interface SavedSource {
 
 @singleton()
 export class ResumeService {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly artifacts: ResumeArtifactService,
+  ) {}
 
   async sourceText(userId: string, id: string) {
     const resume = await this.findOwned(userId, id);
@@ -141,18 +147,22 @@ export class ResumeService {
     if (body.label === undefined && body.content === undefined) {
       throw badRequest("label or content required");
     }
-    await this.findOwned(userId, id);
-
-    const updated = await this.prisma.resume.update({
-      where: { id },
-      data: {
-        label: body.label,
-        ...(body.content && {
-          content: toStoredContent(body.content),
-          version: { increment: 1 },
-        }),
-      },
+    const { updated, affected } = await this.prisma.$transaction(async (tx) => {
+      await lockWorkUser(tx, userId);
+      await findOwned((where) => tx.resume.findFirst({ where }), { id, userId }, "Resume");
+      const updated = await tx.resume.update({
+        where: { id },
+        data: {
+          label: body.label,
+          ...(body.content
+            ? { content: toStoredContent(body.content), version: { increment: 1 } }
+            : {}),
+        },
+      });
+      const affected = body.content ? await invalidateDocumentSelections(tx, userId, id) : [];
+      return { updated, affected };
     });
+    publishDocumentInvalidation(userId, affected);
 
     if (body.content) {
       publish(
@@ -165,23 +175,23 @@ export class ResumeService {
   }
 
   async remove(userId: string, id: string) {
-    const resume = await findOwned(
-      (where) =>
-        this.prisma.resume.findFirst({
-          where,
-          select: { sourceFilename: true, variants: { select: { id: true } } },
-        }),
-      { id, userId },
-      "Resume",
-    );
-
-    // `User.primaryResume` is `onDelete: SetNull`, so the pointer clears with the row.
-    await this.prisma.resume.delete({ where: { id } });
-    await deleteAllResumeArtifacts({
-      resumeId: id,
-      sourceFilename: resume.sourceFilename,
-      variantIds: resume.variants.map((v) => v.id),
+    const { resume, affected } = await this.prisma.$transaction(async (tx) => {
+      await lockWorkUser(tx, userId);
+      const resume = await findOwned(
+        (where) =>
+          tx.resume.findFirst({
+            where,
+            select: { sourceFilename: true },
+          }),
+        { id, userId },
+        "Resume",
+      );
+      await tx.resume.delete({ where: { id } });
+      return { resume, affected: await invalidateDocumentSelections(tx, userId, id) };
     });
+    publishDocumentInvalidation(userId, affected);
+    if (resume.sourceFilename) await deleteResumeFile(resume.sourceFilename);
+    await this.artifacts.removeFiles(userId, id);
 
     return { deleted: id };
   }
@@ -191,21 +201,8 @@ export class ResumeService {
   }
 
   async renderPdf(userId: string, id: string) {
-    return this.streamPdf(await this.findOwned(userId, id));
-  }
-
-  /** Unauthenticated: the resume's v4 uuid is the capability token. */
-
-  /** Rendered from structured content when there is some, else the uploaded source. */
-  private async streamPdf(resume: Resume): Promise<Response> {
-    const { content } = resume;
-    if (content !== null) {
-      return serveCachedPdf(
-        generatedResumePath(resume.id, resume.updatedAt.getTime()),
-        () => renderResumePdf(readContent(content)),
-        resume.label,
-      );
-    }
+    const resume = await this.findOwned(userId, id);
+    if (resume.content !== null) return this.artifacts.currentPdf(userId, id);
     return this.streamSource(resume);
   }
 
@@ -229,27 +226,58 @@ export class ResumeService {
   }
 
   async uploadSource(userId: string, id: string, file: File) {
-    const resume = await this.findOwned(userId, id);
-    const source = await this.withSavedSource(file, async (source) => {
-      await this.prisma.resume.update({ where: { id }, data: source });
-      return source;
-    });
-    // Only once the row points at the new file, so a failed write never leaves it dangling.
-    if (resume.sourceFilename) {
-      await deleteResumeFile(resume.sourceFilename);
-    }
-    return { id, sourceFilename: source.sourceFilename };
+    await this.findOwned(userId, id);
+    const saved = await this.withSavedSource(file, async (source) =>
+      this.prisma.$transaction(async (tx) => {
+        await lockWorkUser(tx, userId);
+        const resume = await findOwned(
+          (where) =>
+            tx.resume.findFirst({
+              where,
+              include: { _count: { select: { variants: true, applications: true } } },
+            }),
+          { id, userId },
+          "Resume",
+        );
+        const updated = await tx.resume.updateMany({
+          where: sourceReplacementWhere(resume),
+          data: source,
+        });
+        if (updated.count !== 1)
+          throw conflict(
+            "The resume changed while uploading. Upload a new resume in Documents instead.",
+          );
+        return {
+          source,
+          previous: resume.sourceFilename,
+          affected: await invalidateDocumentSelections(tx, userId, id),
+        };
+      }),
+    );
+    publishDocumentInvalidation(userId, saved.affected);
+    if (saved.previous) await deleteResumeFile(saved.previous);
+    return { id, sourceFilename: saved.source.sourceFilename };
   }
 
   async deleteSource(userId: string, id: string) {
-    const resume = await this.findOwned(userId, id);
-    await this.prisma.resume.update({
-      where: { id },
-      data: { sourceFilename: null, sourceMimeType: null, sourceSizeBytes: null },
+    const saved = await this.prisma.$transaction(async (tx) => {
+      await lockWorkUser(tx, userId);
+      const resume = await findOwned(
+        (where) => tx.resume.findFirst({ where }),
+        { id, userId },
+        "Resume",
+      );
+      await tx.resume.update({
+        where: { id },
+        data: { sourceFilename: null, sourceMimeType: null, sourceSizeBytes: null },
+      });
+      return {
+        previous: resume.sourceFilename,
+        affected: await invalidateDocumentSelections(tx, userId, id),
+      };
     });
-    if (resume.sourceFilename) {
-      await deleteResumeFile(resume.sourceFilename);
-    }
+    publishDocumentInvalidation(userId, saved.affected);
+    if (saved.previous) await deleteResumeFile(saved.previous);
     return { id };
   }
 

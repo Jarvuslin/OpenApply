@@ -72,7 +72,7 @@ export function paginate<T>(items: T[], query: PaginationQuery, total: number): 
 
 // Cursor pagination (append-only feeds)
 
-export const DEFAULT_CURSOR_PAGE_SIZE = 50;
+const DEFAULT_CURSOR_PAGE_SIZE = 50;
 
 /** The cursor query for an append-only feed; extend it with the feed's filters. */
 export const cursorQuerySchema = z.object({

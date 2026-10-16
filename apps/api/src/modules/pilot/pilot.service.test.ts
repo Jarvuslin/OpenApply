@@ -1,8 +1,10 @@
 import {
   pilotInstructionsChangeSchema,
   pilotInstructionsConfigSchema,
+  updatePilotInstructionsSchema,
 } from "@openapply/contracts/pilot";
 import type { PrismaClient } from "@/generated/prisma/client";
+import { SUBMISSION_NOT_STARTED } from "@/modules/campaign/jobs/submission-guard";
 import { PilotService } from "./pilot.service";
 import { describe, expect, it } from "bun:test";
 
@@ -19,11 +21,11 @@ const stateRow = (over: Record<string, unknown>) => ({
   ...over,
 });
 
-function stateService(savedGoals: string) {
+function stateService(savedGoals: string, profileMinimum = 60) {
+  const jobWrites: { where: Record<string, unknown> }[] = [];
   const rec = {
     searchResets: 0,
     searchDeletes: 0,
-    bootstrapClaimDeletes: 0,
     campaignsCompleted: 0,
     jobsDropped: 0,
   };
@@ -32,23 +34,30 @@ function stateService(savedGoals: string) {
     return { count: 1 };
   };
   const db = {
+    autoApplySettings: { findUnique: async () => ({ minMatchScore: profileMinimum }) },
+    $queryRaw: async () => [],
     pilotState: {
       findUnique: async () => ({ instructionsGoals: savedGoals }),
       upsert: async (a: { update: Record<string, unknown> }) =>
         stateRow({ instructionsGoals: savedGoals, ...a.update }),
     },
     pilotSearch: { updateMany: count("searchResets"), deleteMany: count("searchDeletes") },
-    pilotClaim: { deleteMany: count("bootstrapClaimDeletes") },
     campaign: {
       findMany: async () => [{ campaignId: "c1", source: "auto_apply" }],
       updateMany: count("campaignsCompleted"),
     },
-    job: { updateMany: count("jobsDropped") },
+    job: {
+      updateMany: async (input: { where: Record<string, unknown> }) => {
+        jobWrites.push(input);
+        return count("jobsDropped")();
+      },
+    },
     application: { count: async () => 0 },
 
-    $transaction: async (ops: Promise<unknown>[]) => Promise.all(ops),
+    $transaction: async (ops: Promise<unknown>[] | ((tx: unknown) => Promise<unknown>)) =>
+      typeof ops === "function" ? ops(db) : Promise.all(ops),
   };
-  return { svc: new PilotService(db as unknown as PrismaClient), rec };
+  return { svc: new PilotService(db as unknown as PrismaClient), rec, jobWrites };
 }
 
 describe("PilotService.updateInstructions", () => {
@@ -58,13 +67,30 @@ describe("PilotService.updateInstructions", () => {
     onChange: pilotInstructionsChangeSchema.parse(onChange),
   });
 
+  it("returns profile20 for inherited instructions and honors an explicit override", async () => {
+    const { svc } = stateService("Entry software Toronto", 20);
+    expect(await svc.getState("p1")).toMatchObject({
+      instructionsConfig: { minScore: 20 },
+      minScoreInherited: true,
+    });
+    for (const minimum of [undefined, 0, 60]) {
+      const input = updatePilotInstructionsSchema.parse({
+        goals: "Entry software Toronto",
+        config: minimum === undefined ? {} : { minScore: minimum },
+      });
+      expect(await svc.updateInstructions("p1", input)).toMatchObject({
+        instructionsConfig: { minScore: minimum ?? 20 },
+        minScoreInherited: minimum === undefined,
+      });
+    }
+  });
+
   it("makes every search due when the goals change, and retires nothing unasked", async () => {
     const { svc, rec } = stateService("old goals");
     await svc.updateInstructions("p1", body("new goals"));
     expect(rec).toEqual({
       searchResets: 1,
       searchDeletes: 0,
-      bootstrapClaimDeletes: 0,
       campaignsCompleted: 0,
       jobsDropped: 0,
     });
@@ -76,19 +102,20 @@ describe("PilotService.updateInstructions", () => {
     expect(rec.searchResets).toBe(0);
   });
 
-  it("clears the bootstrap damper with the searches, or the re-derive waits a day", async () => {
+  it("deletes the searches when asked to re-derive them", async () => {
     const { svc, rec } = stateService("old goals");
     await svc.updateInstructions("p1", body("new goals", { rederiveSearches: true }));
-    expect(rec).toMatchObject({ searchResets: 0, searchDeletes: 1, bootstrapClaimDeletes: 1 });
+    expect(rec).toMatchObject({ searchResets: 0, searchDeletes: 1 });
   });
 
   it("completes campaigns and drops the approved backlog when asked", async () => {
-    const { svc, rec } = stateService("old goals");
+    const { svc, rec, jobWrites } = stateService("old goals");
     await svc.updateInstructions(
       "p1",
       body("new goals", { completeCampaigns: true, dropApprovedJobs: true }),
     );
     expect(rec).toMatchObject({ campaignsCompleted: 1, jobsDropped: 1 });
+    expect(jobWrites[0]?.where).toMatchObject({ AND: [SUBMISSION_NOT_STARTED] });
   });
 });
 
@@ -113,7 +140,6 @@ describe("PilotService.getActivity", () => {
   ) {
     const noMax = { _max: { createdAt: null, updatedAt: null } };
     const db = {
-      pilotClaim: { findMany: async () => [] },
       pilotJournalEntry: { aggregate: async () => noMax, findFirst: async () => cycleEntry },
       campaign: { aggregate: async () => noMax },
       job: { aggregate: async () => noMax },

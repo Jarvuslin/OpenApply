@@ -1,5 +1,6 @@
 using System.Net;
 using OpenApply.Terminal.Pilot;
+using OpenApply.Terminal.Providers;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 using static OpenApply.Terminal.Tests.Builders;
@@ -93,6 +94,23 @@ public sealed class PilotApiTests
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => api.GetActivityAsync(Settings(), cts.Token));
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => api.ReportAsync(Settings(), "stop", cts.Token));
+    }
+
+    [Fact]
+    public async Task ScheduleOnlyCallsQueueAdmissionAndPreservesSelectedProvider()
+    {
+        var calls = 0;
+        var api = Api(async (request, ct) =>
+        {
+            calls++;
+            Assert.Equal(HttpMethod.Post, request.Method);
+            Assert.Equal("https://api/api/work-queue/schedule", request.RequestUri!.ToString());
+            Assert.Equal("Bearer tok", request.Headers.Authorization!.ToString());
+            Assert.Equal("""{"provider":"codex"}""", await request.Content!.ReadAsStringAsync(ct));
+            return new(HttpStatusCode.OK) { Content = new StringContent("""{"enqueued":2}""") };
+        });
+        Assert.Equal(2, await api.ScheduleAsync(Settings() with { Provider = Provider.Codex }, TestContext.Current.CancellationToken));
+        Assert.Equal(1, calls);
     }
 
     private sealed class StubHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> respond)

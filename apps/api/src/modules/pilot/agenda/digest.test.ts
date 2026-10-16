@@ -5,15 +5,15 @@ import { describe, expect, it, spyOn } from "bun:test";
 const MORNING = new Date("2026-07-15T08:00:00.000Z"); // past 07:00 UTC
 
 const run = (over: Over, now: Date, openQuestions: number) => {
-  const { prisma, journal, push, rec } = makeAgendaDeps(over);
+  const { prisma, journal, rec } = makeAgendaDeps(over);
   return {
-    write: () => writeDigestIfDue({ prisma, journal, push }, "p1", now, openQuestions),
+    write: () => writeDigestIfDue({ prisma, journal }, "p1", now, openQuestions),
     rec,
   };
 };
 
 describe("AgendaService morning digest", () => {
-  it("writes one digest entry with counts and fires the digest push", async () => {
+  it("writes one digest entry with counts", async () => {
     const { write, rec } = run(
       {
         existingDigests: 0,
@@ -35,24 +35,18 @@ describe("AgendaService morning digest", () => {
       jobsSkipped: 2,
       openQuestions: 5,
     });
-    expect(rec.pushes[0]?.payload).toMatchObject({
-      title: "Your Pilot's morning digest",
-      tag: "pilot-digest",
-    });
   });
 
   it("does not write a second digest when one already exists for the tz-day", async () => {
     const { write, rec } = run({ existingDigests: 1 }, MORNING, 0);
     await write();
     expect(rec.journals).toHaveLength(0);
-    expect(rec.pushes).toHaveLength(0);
   });
 
   it("writes exactly one digest when two refreshes race at the digest hour", async () => {
     const { write, rec } = run({ existingDigests: 0 }, MORNING, 0);
     await Promise.all([write(), write()]);
     expect(rec.journals).toHaveLength(1);
-    expect(rec.pushes).toHaveLength(1);
   });
 
   it("stays quiet before the digest hour", async () => {
@@ -63,15 +57,14 @@ describe("AgendaService morning digest", () => {
 
   it("swallows a db failure and writes nothing", async () => {
     const errorSpy = spyOn(console, "error").mockImplementation(() => {});
-    const { prisma, journal, push, rec } = makeAgendaDeps({ existingDigests: 0 });
+    const { prisma, journal, rec } = makeAgendaDeps({ existingDigests: 0 });
     (
       prisma as unknown as { pilotJournalEntry: { count: () => Promise<number> } }
     ).pilotJournalEntry.count = async () => {
       throw new Error("db down");
     };
-    await writeDigestIfDue({ prisma, journal, push }, "p1", MORNING, 0);
+    await writeDigestIfDue({ prisma, journal }, "p1", MORNING, 0);
     expect(rec.journals).toHaveLength(0);
-    expect(rec.pushes).toHaveLength(0);
     expect(errorSpy).toHaveBeenCalled();
     errorSpy.mockRestore();
   });

@@ -10,7 +10,7 @@ The upstream license, attribution and historical changelog remain intact.
 
 - Source and independent Git history: `D:\Dev\OpenApply`.
 - Browser VM: `D:\Dev\OpenApply-vm`.
-- Recovery export, résumé storage and API environment backup: `D:\Dev\OpenApply-backups`.
+- Recovery export, resume storage and API environment backup: `D:\Dev\OpenApply-backups`.
 - Development tools: `D:\Dev\tools`, added to the user PATH.
 - API environment: `D:\Dev\OpenApply\apps\api\.env`.
 

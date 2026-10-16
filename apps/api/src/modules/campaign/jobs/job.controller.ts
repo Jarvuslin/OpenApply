@@ -6,9 +6,14 @@ import {
   retryCampaignJobSchema,
 } from "@openapply/contracts/campaign";
 import { idParam } from "@openapply/contracts/shared";
+import { submittedResumeSchema } from "@openapply/contracts/submission";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
+import { badRequest } from "@/common/errors";
 import { authGuard } from "@/common/middleware";
+import { RATE_LIMITS, rateLimit } from "@/common/rate-limit";
+import { SubmissionService } from "@/modules/application/submission.service";
+import { submissionAttemptController } from "@/modules/application/submission-attempt.controller";
 import {
   campaignJobListSchema,
   campaignJobParams,
@@ -22,6 +27,7 @@ import { CampaignJobQueryService } from "./job-query.service";
 
 const svc = container.resolve(CampaignJobService);
 const queries = container.resolve(CampaignJobQueryService);
+const submissions = container.resolve(SubmissionService);
 
 export const campaignJobController = new Elysia({
   name: "campaign-jobs",
@@ -29,6 +35,7 @@ export const campaignJobController = new Elysia({
   detail: { tags: ["Campaigns"] },
 })
   .use(authGuard)
+  .use(submissionAttemptController)
   .get("/:id/jobs", ({ user, params, query }) => queries.listJobs(user.id, params.id, query), {
     params: idParam,
     query: campaignJobsQuery,
@@ -45,6 +52,15 @@ export const campaignJobController = new Elysia({
     detail: {
       summary: "List campaign skip/fail reasons",
       description: "Returns every skip and fail reason with its job count, most frequent first.",
+    },
+  })
+  .get("/:id/jobs/:key", ({ user, params }) => queries.getJob(user.id, params.id, params.key), {
+    params: campaignJobParams,
+    response: campaignJobSchema,
+    detail: {
+      summary: "Read campaign job",
+      description:
+        "Returns one job in an owned campaign, independent of list filters and pagination.",
     },
   })
   .post("/:id/jobs", ({ user, params, body }) => svc.addJob(user.id, params.id, body), {
@@ -68,6 +84,27 @@ export const campaignJobController = new Elysia({
         summary: "Update campaign job",
         description:
           "Applies a validated non-terminal status transition or content update, emits SSE updates, and returns the updated job. Terminal outcomes are accepted only by the result route.",
+      },
+    },
+  )
+  .post(
+    "/:id/jobs/:key/submission-resume",
+    async ({ user, params, request }) => {
+      const form = await request.formData();
+      const file = form.get("file");
+      if (!(file instanceof File)) throw badRequest("file field is required");
+      return submissions.uploadResume(user.id, params.id, params.key, file);
+    },
+    {
+      params: campaignJobParams,
+      response: submittedResumeSchema,
+      // The handler reads FormData; the rate-limit hook otherwise makes Elysia parse it first.
+      parse: "none",
+      beforeHandle: rateLimit(RATE_LIMITS.submissionUpload),
+      detail: {
+        summary: "Retain the exact resume PDF submitted for an owned campaign job",
+        description:
+          "Upload the same PDF bytes staged to the employer. Returns the job, filename and SHA-256 reference required by a new applied result; does not record an application.",
       },
     },
   )
@@ -109,7 +146,7 @@ export const campaignJobController = new Elysia({
       detail: {
         summary: "Record a skipped-job rescan",
         description:
-          "Conditionally records a fresh score for a skipped job and either promotes it to approved or keeps it skipped with a new reason.",
+          "Refresh skipped-job posting fields with action:refresh, obtain a verified score, then send a separate decision to approve or keep it skipped. Scores are written only by score-fit.",
       },
     },
   );

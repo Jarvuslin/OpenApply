@@ -50,16 +50,17 @@ export function tailorBase(
   base: ResumeData,
   opts: RankOptions,
   rewrites: Map<number, Map<string, string>> = new Map(),
+  projectRewrites: Map<number, Map<string, string>> = new Map(),
 ): ResumeData {
   const emphasized = (opts.emphasizedTech ?? []).map((t) => t.trim()).filter(Boolean);
   const keywords = (opts.jobKeywords ?? emphasized).map((t) => t.trim()).filter(Boolean);
-  const maxBullets = Math.max(1, opts.maxBulletsPerEntry ?? 6);
+  const maxBullets = opts.maxBulletsPerEntry;
 
   const skills = reorderSkillGroups(base.skills ?? [], emphasized);
 
   const sortBullets = (bullets: string[]): string[] => {
     if (keywords.length === 0) {
-      return bullets;
+      return maxBullets === undefined ? bullets : bullets.slice(0, maxBullets);
     }
     return [...bullets]
       .map((bullet, idx) => ({ bullet, idx, score: bulletScore(bullet, keywords) }))
@@ -78,9 +79,13 @@ export function tailorBase(
     return { ...entry, bullets: sortBullets(bullets) };
   });
 
-  const projects = (base.projects ?? []).map((entry) => ({
+  const projects = (base.projects ?? []).map((entry, index) => ({
     ...entry,
-    bullets: sortBullets(entry.bullets ?? []),
+    bullets: sortBullets(
+      (entry.bullets ?? []).map(
+        (bullet) => projectRewrites.get(index)?.get(bullet.trim()) ?? bullet,
+      ),
+    ),
   }));
 
   return {

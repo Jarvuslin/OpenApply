@@ -2,13 +2,24 @@ import type { CampaignJobReason } from "@openapply/contracts/campaign";
 import { pageSlice, paginate } from "@openapply/contracts/pagination";
 import { singleton } from "tsyringe";
 import type { z } from "zod/v4";
+import { findOwned } from "@/common/errors";
 import { type Prisma, PrismaClient } from "@/generated/prisma/client";
 import { ensureCampaignOwned } from "../campaign.utils";
 import type { campaignJobsQuery } from "./job.schema";
+import { jobView } from "./job-view";
 
 @singleton()
 export class CampaignJobQueryService {
   constructor(private readonly prisma: PrismaClient) {}
+
+  async getJob(userId: string, campaignId: string, key: string) {
+    const job = await findOwned(
+      (where) => this.prisma.job.findFirst({ where }),
+      { campaignId, key, campaign: { userId } },
+      "Job",
+    );
+    return jobView(job);
+  }
 
   async listJobs(userId: string, campaignId: string, query: z.infer<typeof campaignJobsQuery>) {
     const where: Prisma.JobWhereInput = {
@@ -28,7 +39,7 @@ export class CampaignJobQueryService {
       this.prisma.job.findMany({ where, orderBy: { createdAt: "asc" }, ...pageSlice(query) }),
       this.prisma.job.count({ where }),
     ]);
-    return paginate(jobs, query, total);
+    return paginate(jobs.map(jobView), query, total);
   }
 
   /** Grouped across every job, so the breakdown is not page-scoped. */

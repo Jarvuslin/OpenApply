@@ -1,7 +1,7 @@
 import { Elysia } from "elysia";
 import { z } from "zod/v4";
 import { authGuard } from "@/common/middleware";
-import { locationSuggestions } from "./locations.service";
+import { locationSuggestions, searchPlaces } from "./locations.service";
 
 export const locationsController = new Elysia({ prefix: "/locations" })
   .use(authGuard)
@@ -17,4 +17,17 @@ export const locationsController = new Elysia({ prefix: "/locations" })
       countryCode: z.string().nullable(),
     }),
     detail: { summary: "Country, region and city suggestions from the local geographic dataset" },
+  })
+  .get("/search", ({ query }) => searchPlaces(query.q), {
+    query: z.object({ q: z.string().max(100) }),
+    response: z.array(
+      z.object({
+        label: z.string(),
+        kind: z.enum(["postal", "continent", "country", "region", "city"]),
+        postalCode: z.string().optional(),
+      }),
+    ),
+    detail: {
+      summary: "Places matching a name, US ZIP code or Canadian postal code, for job locations",
+    },
   });

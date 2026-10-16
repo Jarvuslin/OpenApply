@@ -1,4 +1,4 @@
-import { blockedSiteFor } from "./blocked-sites";
+import { allowedApplyUrl, blockedSiteFor } from "./blocked-sites";
 import { describe, expect, it } from "bun:test";
 
 describe("blockedSiteFor", () => {
@@ -21,4 +21,32 @@ describe("blockedSiteFor", () => {
     "jobs.lever.co/acme",
     "https://greenhouse.io/jobs/1",
   ])("does not confuse %s with a board", (value) => expect(blockedSiteFor(value)).toBeNull());
+});
+
+describe("Google employer apply URLs", () => {
+  it("allows exact official numeric Careers detail pages", () => {
+    const url =
+      "https://www.google.com/about/careers/applications/jobs/results/143221669039612614-data-center-technician-ii";
+    expect(allowedApplyUrl(url)).toBe(url);
+    expect(allowedApplyUrl(`${url}?location=Canada`)).toBe(`${url}?location=Canada`);
+  });
+  it.each([
+    "https://www.google.com/search?q=jobs",
+    "https://www.google.com/url?q=https://employer.example",
+    "https://www.google.com/about/careers/applications/jobs/results/",
+    "https://www.google.com/about/careers/applications/jobs/results/not-a-job",
+    "https://www.google.com/about/careers/applications/jobs/results/123-role/redirect",
+    "https://google.com/about/careers/applications/jobs/results/123-role",
+    "https://careers.google.com/about/careers/applications/jobs/results/123-role",
+    "https://www.google.ca/about/careers/applications/jobs/results/123-role",
+    "https://www.google.com.au/about/careers/applications/jobs/results/123-role",
+    "https://www.google.com./url?q=https://employer.example",
+    "https://www.google.com:8443/about/careers/applications/jobs/results/123-role",
+    "http://www.google.com/about/careers/applications/jobs/results/123-role",
+    "https://secret@www.google.com/about/careers/applications/jobs/results/123-role",
+    "https://serpapi.com/search?engine=google_jobs",
+    "https://api.apify.com/v2/acts",
+  ])("keeps discovery and non-career URLs blocked: %s", (url) => {
+    expect(allowedApplyUrl(url)).toBeNull();
+  });
 });

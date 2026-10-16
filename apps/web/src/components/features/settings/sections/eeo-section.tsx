@@ -49,7 +49,7 @@ export const EeoSection = withForm({
     return (
       <FormSection
         title="EEO"
-        description="Used only when an application asks. Default is 'Prefer not to disclose'."
+        description="Optional answers used when an application asks. Blank means unanswered; choose 'Prefer not to disclose' if that is your preference."
       >
         <form.AppField name="eeoGender">
           {(field) => <field.Select label="Gender" items={GENDER} optional />}

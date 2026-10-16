@@ -3,7 +3,7 @@
 import type { ReactElement } from "react";
 import { Box, type Theme } from "@mui/material";
 
-export type PulseDotTone = "violet" | "green" | "amber" | "red" | "blue" | "peach" | "muted";
+type PulseDotTone = "violet" | "green" | "amber" | "red" | "blue" | "peach" | "muted";
 
 type PulseDotSize = "xs" | "sm" | "md";
 
@@ -17,7 +17,7 @@ const DOT_SIZE: Record<PulseDotSize, number> = { xs: 5, sm: 7, md: 9 };
 
 // Standard keys via theme.vars (raw theme.palette.* drifts SSR vs client under
 // cssVariables); custom keys (accent/stages) have no var and stay raw hex.
-export function toneColor(theme: Theme, tone: PulseDotTone): string {
+function toneColor(theme: Theme, tone: PulseDotTone): string {
   const vars = theme.vars ?? theme;
   switch (tone) {
     case "violet":

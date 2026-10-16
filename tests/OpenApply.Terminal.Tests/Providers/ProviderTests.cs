@@ -61,21 +61,4 @@ public class ProviderTests
             ["--no-alt-screen", "--sandbox", "workspace-write", "--ask-for-approval", "on-request", "-c", "a=1", "-c", "b=\"two\""],
             Provider.Codex.BuildArgs(temp.Root, NullLogger.Instance));
     }
-
-    [Theory]
-    [InlineData("claude", "/openapply:pilot")]
-    [InlineData("codex", "$pilot")]
-    public void SkillCommand_UsesTheProvidersInvocationSyntax(string id, string expected)
-    {
-        Assert.Equal(expected, Provider.Find(id).SkillCommand("pilot"));
-    }
-
-    [Theory]
-    [InlineData("claude", "/openapply:pilot", 1)]
-    [InlineData("codex", "$pilot", 2)]
-    [InlineData("codex", "Checking in", 1)]
-    public void SubmitKeyPresses_AcceptsCodexAutocompleteFirst(string id, string command, int expected)
-    {
-        Assert.Equal(expected, Provider.Find(id).SubmitKeyPresses(command));
-    }
 }

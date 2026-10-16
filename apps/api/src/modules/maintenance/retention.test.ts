@@ -1,8 +1,6 @@
 import { DAY_MS } from "@/common/date/buckets";
 import {
   applicationEventWhere,
-  claimDiscoverWhere,
-  claimReleasedWhere,
   cutoffs,
   emailBodyWhere,
   journalDigestOldWhere,
@@ -26,8 +24,6 @@ describe("cutoffs", () => {
     const c = cutoffs(NOW);
     expect(c.journal).toEqual(daysBefore(RETENTION_DAYS.journal));
     expect(c.journalDigest).toEqual(daysBefore(RETENTION_DAYS.journalDigest));
-    expect(c.claim).toEqual(daysBefore(RETENTION_DAYS.claim));
-    expect(c.claimDiscover).toEqual(daysBefore(RETENTION_DAYS.claimDiscover));
     expect(c.question).toEqual(daysBefore(RETENTION_DAYS.question));
     expect(c.token).toEqual(daysBefore(RETENTION_DAYS.token));
     expect(c.promotion).toEqual(daysBefore(RETENTION_DAYS.promotion));
@@ -51,21 +47,6 @@ describe("where-builders", () => {
     });
   });
 
-  it("claimReleasedWhere never matches an open claim (releasedAt null) and excludes search.discover", () => {
-    const where = claimReleasedWhere(c);
-    expect(where).toEqual({
-      releasedAt: { not: null, lt: c.claim },
-      kind: { not: "search.discover" },
-    });
-  });
-
-  it("claimDiscoverWhere isolates search.discover on the 90d tier", () => {
-    expect(claimDiscoverWhere(c)).toEqual({
-      kind: "search.discover",
-      releasedAt: { not: null, lt: c.claimDiscover },
-    });
-  });
-
   it("questionTerminalWhere never includes open, and keeps answered email/campaign tombstones", () => {
     const where = questionTerminalWhere(c);
     expect(where).toEqual({
@@ -77,10 +58,6 @@ describe("where-builders", () => {
       ],
     });
     expect(JSON.stringify(where)).not.toContain('"open"');
-  });
-
-  it("keeps claims at least as long as the questions they consume", () => {
-    expect(RETENTION_DAYS.claim).toBeGreaterThanOrEqual(RETENTION_DAYS.question);
   });
 
   it("verificationTokenWhere matches expiry or consumption past grace", () => {

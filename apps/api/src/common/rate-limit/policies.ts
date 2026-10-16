@@ -9,9 +9,22 @@ const HOUR = 60 * MINUTE;
  * it could only strand a user half-logged-out.
  */
 export const RATE_LIMITS = {
+  workQueueRead: { key: byUser, limit: 1200, windowMs: HOUR, burst: 80 },
+  // Three visible workers at a two-second frame cadence, with bounded refresh headroom.
+  workQueueObserver: { key: byUser, limit: 7200, windowMs: HOUR, burst: 20 },
+  workQueueMutation: { key: byUser, limit: 240, windowMs: HOUR, burst: 20 },
+  workQueueRuntime: { key: byUser, limit: 3600, windowMs: HOUR, burst: 100 },
+  discoverRead: { key: byUser, limit: 360, windowMs: MINUTE },
+  discoverSave: { key: byUser, limit: 120, windowMs: MINUTE },
+  discoverRefresh: { key: byUser, limit: 3, windowMs: MINUTE, maxInFlight: 1 },
+  discoverSearch: { key: byUser, limit: 20, windowMs: HOUR, maxInFlight: 1 },
+  evidenceRead: { key: byUser, limit: 360, windowMs: MINUTE },
+  evidenceMutation: { key: byUser, limit: 120, windowMs: MINUTE },
   mailboxIngest: { key: byUser, limit: 120, windowMs: MINUTE, maxInFlight: 1 },
   applyQueue: { key: byUser, limit: 30, windowMs: MINUTE, maxInFlight: 1 },
   localExtraction: { key: byUser, limit: 10, windowMs: HOUR, maxInFlight: 1 },
+  resumeCompile: { key: byUser, limit: 60, windowMs: HOUR, maxInFlight: 1 },
+  resumeArtifactRead: { key: byUser, limit: 180, windowMs: MINUTE },
   /** Credential stuffing against one account. Keyed by (email, IP) so one bad actor can't lock out
    *  everyone else behind the same office/CGNAT address. */
   loginPerAccount: {
@@ -60,11 +73,6 @@ export const RATE_LIMITS = {
   /** Magic-link consumption; same shape as passwordReset (high-entropy token, DB-cost cap). */
   emailChangeConfirm: { key: byIp, limit: 10, windowMs: HOUR },
 
-  /** The only unauthenticated route that does real work: a cache miss re-renders the PDF. The uuid is
-   *  the capability token, so this caps how fast a leaked link can be replayed - a recruiter opening
-   *  and reloading the link a few times never trips it. */
-  publicResumePdf: { key: byIp, limit: 30, windowMs: HOUR, burst: 10 },
-
   /** Sized for a crawler walking the paginated public job index, not just a human browsing it -
    *  too tight here and we deindex ourselves. A scraper brake, not an anti-abuse wall. */
   publicJobs: { key: byIp, limit: 1800, windowMs: HOUR, burst: 120 },
@@ -81,6 +89,15 @@ export const RATE_LIMITS = {
     message: "Too many CAPTCHA solves in flight. Slow the loop down.",
   },
 
+  /** Pilots pages: the list and a running pilot poll every few seconds, two queries each. */
+  pilotsRead: { key: byUser, limit: 3600, windowMs: HOUR, burst: 60 },
+
+  /** The set up wizard's live match count, debounced on the client but fired per rule change. */
+  pilotsPreview: { key: byUser, limit: 1200, windowMs: HOUR, burst: 20 },
+
+  /** Run, stop, edit and bulk add/remove on pilots - clicks, never a loop. */
+  pilotsMutation: { key: byUser, limit: 600, windowMs: HOUR, burst: 30 },
+
   /** Pilot polls the agenda once per cycle; burst covers a tight claim-then-repoll loop. */
   pilotAgenda: { key: byUser, limit: 240, windowMs: HOUR, burst: 10 },
 
@@ -90,12 +107,10 @@ export const RATE_LIMITS = {
   /** Full-history NDJSON export - heavy (streams every row), user-initiated, rarely needed. */
   pilotJournalExport: { key: byUser, limit: 10, windowMs: HOUR },
 
-  /** Claim/heartbeat/release bookkeeping, a few per worked item. */
-  pilotClaim: { key: byUser, limit: 240, windowMs: HOUR, burst: 10 },
-
   /** User- or agent-driven Pilot mutations (instructions, enable, questions) - infrequent. */
   pilotMutation: { key: byUser, limit: 120, windowMs: HOUR },
 
-  /** Agent/user appends a timeline note (e.g. an interview prep sheet) to an application - infrequent. */
-  applicationNote: { key: byUser, limit: 120, windowMs: HOUR },
+  questionRead: { key: byUser, limit: 600, windowMs: HOUR },
+  questionMutation: { key: byUser, limit: 240, windowMs: HOUR },
+  submissionUpload: { key: byUser, limit: 120, windowMs: HOUR, maxInFlight: 1 },
 } as const satisfies Record<string, RateLimitPolicy>;

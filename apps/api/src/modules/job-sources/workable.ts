@@ -11,6 +11,8 @@ const feed = z.object({
       city: z.string().nullish(),
       country: z.string().nullish(),
       description: z.string().default(""),
+      requirements: z.string().default(""),
+      benefits: z.string().default(""),
       published_on: z.string().nullish(),
     }),
   ),
@@ -35,7 +37,11 @@ export async function workable(
         location: [j.city, j.country].filter(Boolean).join(", "),
         url,
         attributionUrl: url,
-        description: plainText(j.description),
+        companyLogoPageUrl: `https://apply.workable.com/${encodeURIComponent(slug)}`,
+        description: [j.description, j.requirements, j.benefits]
+          .map(plainText)
+          .filter(Boolean)
+          .join("\n\n"),
         postedAt: postedAt(j.published_on),
       },
     ];

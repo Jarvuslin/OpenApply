@@ -24,14 +24,6 @@ describe("AgendaService answered questions", () => {
       answer: "yes",
     });
   });
-
-  it("drops a question once a claim has consumed it", async () => {
-    const agenda = await service({
-      answered: [answered],
-      questionClaims: [{ subjectId: "E1" }],
-    }).refresh("p1");
-    expect(hasKind(agenda, "question.answered")).toBe(false);
-  });
 });
 
 describe("AgendaService interviews", () => {

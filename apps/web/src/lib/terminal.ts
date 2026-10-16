@@ -11,23 +11,13 @@ export const TERMINAL_PROTOCOL_URL = "openapply://start";
 
 export type TerminalProviderId = "claude" | "codex";
 
-/** Shared chip colors for a cycle outcome (status hero, journal cycle cards). */
-export const CYCLE_STATUS_COLOR: Record<
-  PilotCycleStatus,
-  "success" | "warning" | "error" | "default"
-> = {
-  ok: "success",
-  empty: "default",
-  error: "error",
-};
-
 interface TerminalProviderInfo {
   id: TerminalProviderId;
   displayName: string;
 }
 
 /** Autonomous pilot-mode health from the host's /healthz. Additive; absent on older hosts. */
-export interface PilotHealth {
+interface PilotHealth {
   running: boolean;
   paired: boolean;
   conducting: boolean;
@@ -164,14 +154,6 @@ export function startSession(options: StartOptions): Promise<SessionStatus> {
   return send<SessionStatus>("POST", "/sessions/start", options, { timeoutMs: 45_000 });
 }
 
-/**
- * Inject a command into the active session. Pass a bare command line with no
- * trailing newline - the terminal host submits it with a separate Enter keystroke.
- */
-export function injectCommand(command: string, provider?: TerminalProviderId): Promise<void> {
-  return send<void>("POST", "/sessions/inject", { command, provider });
-}
-
 export function killSession(): Promise<SessionStatus> {
   return send<SessionStatus>("DELETE", "/sessions/current");
 }
@@ -181,26 +163,6 @@ export function shutdownHost(): Promise<void> {
   return send<void>("POST", "/shutdown");
 }
 
-interface PilotStartOptions {
-  provider: TerminalProviderId;
-  /** Per-user agent PAT the pilot loop authenticates with. */
-  apiToken: string;
-  /** Backend base URL injected into the pilot PTY as OPENAPPLY_API. */
-  apiUrl: string;
-  /** Web origin injected as OPENAPPLY_WEB for user-facing links. */
-  webUrl: string;
-}
-
-/** Store the provider pairing and start the local pilot loop. */
-export function pilotStart(options: PilotStartOptions): Promise<SessionStatus> {
-  return send<SessionStatus>("POST", "/pilot/start", options);
-}
-
-/** Stop the local pilot loop; the host keeps the pairing and any mid-cycle session. */
-export function pilotStop(): Promise<SessionStatus> {
-  return send<SessionStatus>("POST", "/pilot/stop");
-}
-
 /** Ask the running host to self-update and relaunch; on `updating: true` poll health to see it return on the new version. */
 export function triggerUpdate(): Promise<UpdateResult> {
   return send<UpdateResult>("POST", "/update");
@@ -208,14 +170,4 @@ export function triggerUpdate(): Promise<UpdateResult> {
 
 export function providerDisplayName(provider: TerminalProviderId): string {
   return provider === "codex" ? "Codex" : "Claude Code";
-}
-
-export function formatSkillCommand(
-  provider: TerminalProviderId,
-  skill: string,
-  args?: string,
-): string {
-  const suffix = args?.trim();
-  const command = provider === "codex" ? `$${skill}` : `/openapply:${skill}`;
-  return suffix ? `${command} ${suffix}` : command;
 }

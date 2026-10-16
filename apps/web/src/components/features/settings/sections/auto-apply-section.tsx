@@ -17,7 +17,14 @@ export const AutoApplySection = withForm({
       >
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
           <form.AppField name="autoApply.minMatchScore">
-            {(field) => <field.TextField label="Min match score (0-100)" type="number" />}
+            {(field) => (
+              <field.TextField
+                label="Your minimum score for applying"
+                type="number"
+                helperText="Choose 0–100. Lower values include more stretch jobs without changing their evidence scores. Campaign and Pilot settings may override this default."
+                slotProps={{ htmlInput: { min: 0, max: 100, step: 1 } }}
+              />
+            )}
           </form.AppField>
           <form.AppField name="autoApply.maxApplicationsPerCampaign">
             {(field) => (
@@ -47,7 +54,7 @@ export const AutoApplySection = withForm({
               label="Availability"
               freeSolo
               options={["Immediately", "2 weeks notice", "4 weeks notice"]}
-              helperText="Choose a notice period or type a specific start date."
+              helperText="Enter your confirmed availability, or leave blank to be asked when an application requires it."
             />
           )}
         </form.AppField>

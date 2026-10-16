@@ -1,11 +1,10 @@
-import type { CryptoService } from "@/common/crypto";
 import { EmailAccountService } from "./account.service";
 import { createMailboxFixture } from "./fakes";
 import { describe, expect, it } from "bun:test";
 
 function fixture() {
   const state = createMailboxFixture();
-  return { ...state, service: new EmailAccountService(state.prisma, {} as CryptoService) };
+  return { ...state, service: new EmailAccountService(state.prisma) };
 }
 
 describe("saved mailbox accounts", () => {

@@ -1,12 +1,18 @@
 import {
+  type AutoApplySettingsInput,
+  additionalLinksSchema,
+  applicationAnswersSchema,
+  educationEntrySchema,
   jobPreferencesSchema,
   type SalaryCurrency,
   type SalaryPeriod,
   type UserWithAutoApplyInput,
   workAuthorizationSchema,
+  workEntrySchema,
 } from "@openapply/contracts/user";
 import { Country } from "country-state-city";
 import { singleton } from "tsyringe";
+import { z } from "zod/v4";
 import { findOwned } from "@/common/errors";
 import { resumePath } from "@/common/storage/storage";
 import { Prisma, PrismaClient } from "@/generated/prisma/client";
@@ -15,11 +21,17 @@ const USER_SCALAR_SELECT = {
   id: true,
   firstName: true,
   lastName: true,
+  preferredName: true,
+  namePronunciation: true,
+  pronouns: true,
+  currentCompany: true,
   contactEmail: true,
   phone: true,
   website: true,
   linkedin: true,
   github: true,
+  portfolio: true,
+  additionalLinks: true,
   street: true,
   aptUnit: true,
   city: true,
@@ -27,6 +39,12 @@ const USER_SCALAR_SELECT = {
   zipCode: true,
   country: true,
   countryCode: true,
+  gpa: true,
+  gpaScale: true,
+  transcriptOriginalName: true,
+  applicationAnswers: true,
+  educationHistory: true,
+  workHistory: true,
   jobPreferences: true,
   workAuthorization: true,
   usAuthorized: true,
@@ -120,6 +138,10 @@ export class UserService {
     return {
       user: {
         ...user,
+        additionalLinks: additionalLinksSchema.parse(user.additionalLinks ?? []),
+        applicationAnswers: applicationAnswersSchema.parse(user.applicationAnswers),
+        educationHistory: z.array(educationEntrySchema).parse(user.educationHistory),
+        workHistory: z.array(workEntrySchema).parse(user.workHistory),
         jobPreferences: jobPreferencesSchema.parse(user.jobPreferences),
         workAuthorization: workAuthorizationSchema.parse(user.workAuthorization),
         preferredLocations: JSON.parse(user.preferredLocations) as string[],
@@ -154,6 +176,7 @@ export class UserService {
       where: { id: userId },
       data: {
         ...userFields,
+        gpaScale: userFields.gpaScale ?? 4,
         countryCode:
           Country.getAllCountries().find(
             (c) => c.name === userFields.country || c.isoCode === userFields.country,
@@ -191,15 +214,18 @@ export class UserService {
       }),
     ]);
 
-    if (autoApply) {
-      await this.prisma.autoApplySettings.upsert({
-        where: { userId },
-        create: { userId, ...autoApply },
-        update: autoApply,
-      });
-    }
+    if (autoApply) await this.setAutoApply(userId, autoApply);
 
     return { id: userId };
+  }
+
+  async setAutoApply(userId: string, autoApply: AutoApplySettingsInput) {
+    await this.prisma.autoApplySettings.upsert({
+      where: { userId },
+      create: { userId, ...autoApply },
+      update: autoApply,
+    });
+    return { ok: true as const };
   }
 
   /** Point the user at one of their own resumes (or clear it with `null`). */

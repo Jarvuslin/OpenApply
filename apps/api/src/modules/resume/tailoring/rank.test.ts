@@ -59,9 +59,26 @@ describe("tailorBase - bullet ranking", () => {
     expect(result.experience[0]?.bullets).toHaveLength(2);
   });
 
+  it("preserves every experience and project bullet unless a cap is explicitly requested", () => {
+    const bullets = Array.from({ length: 8 }, (_, i) => `Built service ${i}`);
+    const original = base({
+      experience: [{ company: "Acme", title: "Engineer", start: "2020", bullets }],
+      projects: [{ name: "Tools", bullets, keywords: [] }],
+    });
+    const result = tailorBase(original, { jobKeywords: ["service"] });
+    expect(result.experience[0]?.bullets).toEqual(bullets);
+    expect(result.projects[0]?.bullets).toEqual(bullets);
+    expect(original.experience[0]?.bullets).toEqual(bullets);
+  });
+
   it("leaves bullets untouched when no keywords are given", () => {
     const result = tailorBase(withBullets(["b", "a"]), {});
     expect(result.experience[0]?.bullets).toEqual(["b", "a"]);
+  });
+
+  it("honors an explicit cap without requiring keyword ranking", () => {
+    const result = tailorBase(withBullets(["b", "a"]), { maxBulletsPerEntry: 1 });
+    expect(result.experience[0]?.bullets).toEqual(["b"]);
   });
 });
 

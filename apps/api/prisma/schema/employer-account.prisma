@@ -1,0 +1,59 @@
+enum EmployerAccountMode {
+  account_only
+  apply
+
+  @@map("employer_account_mode")
+}
+
+enum EmployerAccountState {
+  checking
+  signup_ready
+  signup_started
+  verification_pending
+  needs_user
+  authenticated
+  unknown
+  skipped
+
+  @@map("employer_account_state")
+}
+
+enum EmployerAccountReason {
+  existing_account_credentials
+  password_entry
+  terms_confirmation
+  mailbox_identity
+  verification
+  captcha
+
+  @@map("employer_account_reason")
+}
+
+model EmployerAccountAttempt {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mode EmployerAccountMode
+  targetUrl String @map("target_url")
+  scope String
+  email String
+  credentialId String? @map("credential_id")
+  campaignId String? @map("campaign_id")
+  jobId String? @map("job_id")
+  state EmployerAccountState @default(checking)
+  needsUserReason EmployerAccountReason? @map("needs_user_reason")
+  questionId String? @map("question_id")
+  browserTabId String? @map("browser_tab_id")
+  currentUrl String? @map("current_url")
+  existingAccount Boolean @default(false) @map("existing_account")
+  noAccountObserved Boolean @default(false) @map("no_account_observed")
+  signupStartedAt DateTime? @map("signup_started_at")
+  authenticatedAt DateTime? @map("authenticated_at")
+  version Int @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, scope, email])
+  @@index([userId, state])
+  @@map("employer_account_attempts")
+}

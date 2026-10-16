@@ -1,15 +1,25 @@
 "use client";
 import { useState } from "react";
-import { Alert, Button, CircularProgress, Stack, Typography } from "@mui/material";
+import {
+  Alert,
+  Button,
+  CircularProgress,
+  DialogActions,
+  DialogContent,
+  Stack,
+  Typography,
+} from "@mui/material";
 import { USER_DEFAULT_VALUES } from "@openapply/contracts/user";
 import { api } from "@/api/client";
 import { apiErrorMessage } from "@/api/error";
 import { useTerminalHealth } from "@/components/features/agent-dock/use-terminal-health";
 import { extractUpload } from "@/components/features/resumes/extract-upload";
+import { Dialog, DialogTitle } from "@/components/ui/feedback";
 import { FileUpload } from "@/components/ui/form";
 import { withForm } from "@/components/ui/form/tanstack";
 import { MAX_RESUME_BYTES } from "@/lib/constants";
 import { useAgentDock } from "@/providers/agent-provider";
+import { AgentSetupStep, type ProviderConnection } from "./agent-setup-step";
 import { applyBasicsToForm } from "./map-basics-to-profile";
 
 export const ResumeUploadStep = withForm({
@@ -17,7 +27,9 @@ export const ResumeUploadStep = withForm({
   props: { onContinue: () => {} },
   render: function ResumeUploadStep({ form, onContinue }) {
     const { health } = useTerminalHealth();
-    const { provider, expand } = useAgentDock();
+    const { provider } = useAgentDock();
+    const [setupOpen, setSetupOpen] = useState(false);
+    const [connection, setConnection] = useState<ProviderConnection | null>(null);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState("");
     const [done, setDone] = useState(false);
@@ -86,8 +98,10 @@ export const ResumeUploadStep = withForm({
           </Alert>
         )}
         {error && <Alert severity="error">{error}</Alert>}
-        {health !== "reachable" && (
-          <Button onClick={expand}>Connect agent for automatic extraction</Button>
+        {!done && (
+          <Button onClick={() => setSetupOpen(true)}>
+            Set up automatic resume import (optional)
+          </Button>
         )}
         {uploadedId && !done && (
           <Button disabled={busy || health !== "reachable"} onClick={() => void read(uploadedId)}>
@@ -119,6 +133,15 @@ export const ResumeUploadStep = withForm({
           Document extraction uses open-source PDF.js and Mammoth. Scanned image-only PDFs need OCR
           and are not supported in this MVP.
         </Typography>
+        <Dialog open={setupOpen} onClose={() => setSetupOpen(false)} fullWidth maxWidth="sm">
+          <DialogTitle>Automatic resume import</DialogTitle>
+          <DialogContent>
+            <AgentSetupStep connection={connection} onConnectionChange={setConnection} />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setSetupOpen(false)}>Back to resume</Button>
+          </DialogActions>
+        </Dialog>
       </Stack>
     );
   },

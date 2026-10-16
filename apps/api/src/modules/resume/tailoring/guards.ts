@@ -1,8 +1,17 @@
 // Every validator returns violations; empty means accepted. Tailoring may rephrase a real
 // accomplishment but never fabricate, drop a fact, or pad it with stock phrasing.
 import type { ResumeData } from "@openapply/contracts/resume";
+import type { ResumeEvidenceSnapshot } from "@openapply/contracts/resume-evidence";
 import type { EntryRewriteAudit, TailorVariantBody } from "../variants/variant.schema";
-import { type Corpus, droppedTerms, extractNumbers, unverifiedTerms } from "./facts";
+import {
+  buildCorpus,
+  type Corpus,
+  corpusFromText,
+  droppedTerms,
+  extractNumbers,
+  unverifiedTerms,
+} from "./facts";
+import { reviewSources, unsupportedClaims } from "./source-review";
 
 /**
  * Stock resume phrasing that reads as machine-written. Matched whole-word, case-insensitive.
@@ -53,28 +62,14 @@ function stockPhrases(text: string): string[] {
   return STOCK_PHRASES.filter(({ pattern }) => pattern.test(lower)).map(({ phrase }) => phrase);
 }
 
-/** Below this many content words a summary is a stub, and rewriting it is fine. */
-const SUMMARY_STUB_WORDS = 8;
-const SUMMARY_MIN_RETAINED = 0.5;
-const SUMMARY_MAX_GROWTH = 1.25;
 const SUMMARY_MAX_SENTENCES = 3;
 
 function countSentences(text: string): number {
   return text.split(/[.!?]+(?:\s+|$)/).filter((s) => s.trim()).length;
 }
 
-/** Lowercased words of four or more letters: the wording a light edit is expected to keep. */
-function contentWords(text: string): Set<string> {
-  return new Set(
-    text
-      .toLowerCase()
-      .split(/[^a-z]+/)
-      .filter((word) => word.length >= 4),
-  );
-}
-
 /** Violations for a tailored summary. */
-export function validateSummary(baseSummary: string, summary: string, corpus: Corpus): string[] {
+export function validateSummary(_baseSummary: string, summary: string, corpus: Corpus): string[] {
   const violations: string[] = [];
 
   const stock = stockPhrases(summary);
@@ -96,23 +91,8 @@ export function validateSummary(baseSummary: string, summary: string, corpus: Co
     violations.push(`summary names tech the resume never mentions (${unverified.join(", ")}).`);
   }
 
-  const baseWords = contentWords(baseSummary);
-  if (baseWords.size < SUMMARY_STUB_WORDS) {
-    return violations;
-  }
-  const tailoredWords = contentWords(summary);
-  const kept = [...baseWords].filter((word) => tailoredWords.has(word)).length;
-  const retained = kept / baseWords.size;
-  if (retained < SUMMARY_MIN_RETAINED) {
-    violations.push(
-      `summary keeps ${Math.round(retained * 100)}% of the base summary's wording; edit one or two sentences instead of rewriting it.`,
-    );
-  }
-  if (summary.length > baseSummary.length * SUMMARY_MAX_GROWTH) {
-    violations.push(
-      `summary is ${summary.length} characters against ${baseSummary.length} in the base; it may grow by a quarter at most.`,
-    );
-  }
+  if (summary.length > 1_000)
+    violations.push("summary exceeds 1,000 characters; keep the review bounded");
   return violations;
 }
 
@@ -127,6 +107,9 @@ export function validateHeadline(headline: string, corpus: Corpus): string[] {
   if (unverified.length > 0) {
     violations.push(`headline names tech the resume never mentions (${unverified.join(", ")}).`);
   }
+  const numbers = [...extractNumbers(headline)].filter((number) => !corpus.numbers.has(number));
+  if (numbers.length)
+    violations.push(`headline introduces unsupported number(s) (${numbers.join(", ")}).`);
   return violations;
 }
 
@@ -141,26 +124,51 @@ interface RewriteValidation {
   map: Map<number, Map<string, string>>;
 }
 
-const BULLET_MAX_GROWTH = 1.4;
+const BULLET_MAX_LENGTH = 1_000;
+
+/** A new metric keeps its complete cited statement, including the outcome and unit it measures. */
+export function unsupportedAddedMeasurements(
+  original: string,
+  tailored: string,
+  statements: string[],
+): string[] {
+  const originalNumbers = extractNumbers(original);
+  const unsupported = [...extractNumbers(tailored)].filter(
+    (number) =>
+      !originalNumbers.has(number) &&
+      !statements.some(
+        (statement) => extractNumbers(statement).has(number) && tailored.includes(statement),
+      ),
+  );
+  return unsupported.length
+    ? [
+        `introduces number(s) without their complete cited outcome statement (${unsupported.join(", ")})`,
+      ]
+    : [];
+}
 
 function truncate(s: string, n = 60): string {
   return s.length > n ? `${s.slice(0, n)}…` : s;
 }
 
-function bulletProblem(original: string, tailored: string, corpus: Corpus): string | null {
+function bulletProblem(
+  original: string,
+  tailored: string,
+  evidence: string,
+  recognized: string[],
+  completeStatements: string[],
+): string | null {
   const originalNumbers = extractNumbers(original);
   const tailoredNumbers = extractNumbers(tailored);
-  const added = [...tailoredNumbers].filter((n) => !originalNumbers.has(n));
-  if (added.length > 0) {
-    return `introduces number(s) not in the original (${added.join(", ")})`;
-  }
+  const measurements = unsupportedAddedMeasurements(original, tailored, completeStatements);
+  if (measurements.length) return measurements.join("; ");
   const dropped = [...originalNumbers].filter((n) => !tailoredNumbers.has(n));
   if (dropped.length > 0) {
     return `drops number(s) the original stated (${dropped.join(", ")})`;
   }
-  const unverified = unverifiedTerms(tailored, corpus);
+  const unverified = unverifiedTerms(tailored, corpusFromText(evidence, recognized));
   if (unverified.length > 0) {
-    return `names tech the resume never mentions (${unverified.join(", ")})`;
+    return `names tools or identities absent from the cited entry (${unverified.join(", ")})`;
   }
   const droppedTech = droppedTerms(original, tailored);
   if (droppedTech.length > 0) {
@@ -170,9 +178,21 @@ function bulletProblem(original: string, tailored: string, corpus: Corpus): stri
   if (stock.length > 0) {
     return `uses stock phrasing (${stock.join(", ")})`;
   }
-  if (tailored.length > original.length * BULLET_MAX_GROWTH) {
-    return `grows from ${original.length} to ${tailored.length} characters; a reword may not add clauses`;
+  if (tailored.length > BULLET_MAX_LENGTH) {
+    return `exceeds ${BULLET_MAX_LENGTH} characters; tighten the supported wording`;
   }
+  let metricText = tailored;
+  for (const statement of completeStatements) {
+    if ([...extractNumbers(statement)].some((number) => !originalNumbers.has(number))) {
+      metricText = metricText.replaceAll(statement, "");
+    }
+  }
+  const claims = unsupportedClaims(
+    metricText,
+    evidence,
+    originalNumbers.size ? original : undefined,
+  );
+  if (claims.length) return claims.join("; ");
   return null;
 }
 
@@ -183,23 +203,33 @@ function bulletProblem(original: string, tailored: string, corpus: Corpus): stri
 export function validateRewrites(
   base: ResumeData,
   rewrites: BulletRewrite[],
-  corpus: Corpus,
+  jobDescription?: string,
+  section: "experience" | "projects" = "experience",
+  additionalEvidence: ResumeEvidenceSnapshot[] = [],
 ): RewriteValidation {
   const violations: string[] = [];
   const audit: EntryRewriteAudit[] = [];
   const map = new Map<number, Map<string, string>>();
-  const experience = base.experience ?? [];
+  const entries = section === "experience" ? base.experience : base.projects;
+  const seenEntries = new Set<number>();
+  const recognized = buildCorpus(base).recognized;
 
   for (const { entryIndex, bullets } of rewrites) {
-    const entry = experience[entryIndex];
+    const entry = entries[entryIndex];
     if (!entry) {
-      violations.push(`Experience entry ${entryIndex} does not exist.`);
+      violations.push(`${section} entry ${entryIndex} does not exist.`);
       continue;
     }
+    if (seenEntries.has(entryIndex)) {
+      violations.push(`${section} entry ${entryIndex} has duplicate rewrite groups.`);
+      continue;
+    }
+    seenEntries.add(entryIndex);
 
-    const { company } = entry;
+    const company = "company" in entry ? entry.company : entry.name;
     const masterSet = new Set((entry.bullets ?? []).map((b) => b.trim()));
     const entryMap = new Map<string, string>();
+    const reviewed: EntryRewriteAudit["bullets"] = [];
 
     for (const pair of bullets) {
       const original = pair.original.trim();
@@ -214,11 +244,26 @@ export function validateRewrites(
       } else if (entryMap.has(original)) {
         violations.push(`${company}: bullet rewritten more than once: "${truncate(original)}".`);
       } else {
-        const problem = bulletProblem(original, tailored, corpus);
+        const bulletIndex = entry.bullets.findIndex((bullet) => bullet.trim() === original);
+        const source = reviewSources(
+          base,
+          pair.grounding,
+          jobDescription,
+          {
+            scope: `/${section}/${entryIndex}`,
+            path: `/${section}/${entryIndex}/bullets/${bulletIndex}`,
+            original,
+          },
+          additionalEvidence,
+        );
+        const problem = source.violations.length
+          ? source.violations.join("; ")
+          : bulletProblem(original, tailored, source.text, recognized, source.completeStatements);
         if (problem) {
           violations.push(`${company}: reworded bullet ${problem}: "${truncate(tailored)}".`);
         } else {
           entryMap.set(original, tailored);
+          reviewed.push({ original, tailored, grounding: pair.grounding });
         }
       }
     }
@@ -228,7 +273,7 @@ export function validateRewrites(
       audit.push({
         entryIndex,
         company,
-        bullets: [...entryMap].map(([original, tailored]) => ({ original, tailored })),
+        bullets: reviewed,
       });
     }
   }

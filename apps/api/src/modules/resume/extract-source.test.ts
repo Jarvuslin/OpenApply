@@ -18,6 +18,12 @@ it("reads original Unicode resume text", async () => {
   expect(await extractSourceText(filename)).toBe("Zoë Example\nToronto · TypeScript");
 });
 
+it("rejects oversized original text instead of silently truncating it", async () => {
+  const filename = path.join(folder, "oversized.txt");
+  await writeFile(filename, "x".repeat(80_001));
+  await expect(extractSourceText(filename)).rejects.toThrow("not truncated");
+});
+
 it("extracts text from an actual PDF document", async () => {
   const stream = "BT /F1 12 Tf 50 700 Td (Alex Example - Software Engineer) Tj ET";
   const objects = [

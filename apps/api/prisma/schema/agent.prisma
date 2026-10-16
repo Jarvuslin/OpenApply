@@ -1,0 +1,13 @@
+enum AgentProvider {
+  claude
+  codex
+  @@map("agent_provider")
+}
+
+enum AgentEventKind {
+  text
+  activity
+  question
+  error
+  @@map("agent_event_kind")
+}

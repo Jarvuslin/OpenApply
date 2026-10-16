@@ -1,17 +1,14 @@
 import { campaignConfigSchema } from "@openapply/contracts/campaign";
 import type { AgendaPayload } from "@openapply/contracts/pilot";
 import { z } from "zod/v4";
-import { DAY_MS, HOUR_MS } from "@/common/date/buckets";
-import type { Prisma, PrismaClient } from "@/generated/prisma/client";
+import { DAY_MS } from "@/common/date/buckets";
+import { Prisma, type PrismaClient } from "@/generated/prisma/client";
 import { summarizeCampaigns } from "@/modules/campaign/campaign.summary";
-import { claimDamped, GATHER_CAP, latestClaimBySubject, withoutRecentClaims } from "./claims";
+import { PROMOTABLE_SOURCES } from "@/modules/campaign/campaign.utils";
+import { GATHER_CAP } from "./items";
 
 const BATCH_SIZE = 5;
-/** A row nothing can visit (dead URL, login wall) stays a candidate, so it must not win every cycle. */
-const BATCH_COOLDOWN_MS = HOUR_MS;
 const PAUSED_CANDIDATES = 20;
-/** Damps resume/re-pause loops. */
-const PAUSED_REVIEW_RETRY_MS = DAY_MS;
 const STRATEGY_MIN_JOBS = 20;
 const STRATEGY_MAX_QUALIFIED_RATIO = 0.2;
 const RESCAN_MIN_SKIPPED = 5;
@@ -19,26 +16,30 @@ const RETRY_MIN_FAILED = 3;
 const TOP_SKIP_REASONS = 3;
 const REVIEW_REPEAT_MS = 7 * DAY_MS;
 
-/** Pending rows a worker must open: never scored, or scored off a results row without a digest. */
-export const NEEDS_WORKER_VISIT = {
+/** Pending rows a worker must open for missing posting details or original-source evidence. */
+const NEEDS_WORKER_VISIT = {
   status: "pending",
-  OR: [{ matchScore: null }, { digest: null }],
+  OR: [
+    { matchScore: null },
+    { digest: null },
+    { fitAssessment: { equals: Prisma.DbNull } },
+    { fitAssessment: { path: ["roleMatch", "family"], equals: "Unclear" } },
+  ],
 } satisfies Prisma.JobWhereInput;
 
 const QUEUED = { status: "queued" } satisfies Prisma.JobWhereInput;
 
-/** Auto-apply campaigns holding rows that still need a score or a digest. */
+/** Application campaigns holding rows that still need posting details or role inspection. */
 export async function gatherScorePending(
   prisma: PrismaClient,
   userId: string,
   fallbackMinScore: number,
-  now: Date,
 ): Promise<AgendaPayload<"campaign.scorePending">[]> {
   const campaigns = await prisma.campaign.findMany({
     where: {
       userId,
       status: "in_progress",
-      source: "auto_apply",
+      source: { in: PROMOTABLE_SOURCES },
       jobs: { some: NEEDS_WORKER_VISIT },
     },
     take: GATHER_CAP,
@@ -55,16 +56,7 @@ export async function gatherScorePending(
       },
     },
   });
-  const claimable = await withoutRecentClaims(
-    prisma,
-    userId,
-    "campaign.scorePending",
-    now,
-    BATCH_COOLDOWN_MS,
-    campaigns,
-    (campaign) => campaign.campaignId,
-  );
-  return claimable.map((campaign) => {
+  return campaigns.map((campaign) => {
     const config = campaignConfigSchema.parse(campaign.config);
     return {
       campaignId: campaign.campaignId,
@@ -83,7 +75,6 @@ export async function gatherQueueDrains(
   prisma: PrismaClient,
   userId: string,
   fallbackMinScore: number,
-  now: Date,
 ): Promise<AgendaPayload<"queue.drain">[]> {
   const campaigns = await prisma.campaign.findMany({
     where: { userId, status: "in_progress", source: "apply", jobs: { some: QUEUED } },
@@ -100,16 +91,7 @@ export async function gatherQueueDrains(
       },
     },
   });
-  const claimable = await withoutRecentClaims(
-    prisma,
-    userId,
-    "queue.drain",
-    now,
-    BATCH_COOLDOWN_MS,
-    campaigns,
-    (campaign) => campaign.campaignId,
-  );
-  return claimable.map((campaign) => {
+  return campaigns.map((campaign) => {
     const config = campaignConfigSchema.parse(campaign.config);
     return {
       campaignId: campaign.campaignId,
@@ -125,7 +107,6 @@ export async function gatherQueueDrains(
 export async function gatherPausedCampaigns(
   prisma: PrismaClient,
   userId: string,
-  now: Date,
 ): Promise<AgendaPayload<"campaign.reviewPaused">[]> {
   const campaigns = await prisma.campaign.findMany({
     where: { userId, status: "paused", source: "auto_apply" },
@@ -135,31 +116,26 @@ export async function gatherPausedCampaigns(
   });
   if (campaigns.length === 0) return [];
 
-  const ids = campaigns.map((campaign) => campaign.campaignId);
-  const [questions, latest] = await Promise.all([
-    prisma.pilotQuestion.findMany({
-      where: {
-        userId,
-        subjectType: "campaign",
-        subjectId: { in: ids },
-        status: { in: ["open", "answered"] },
-      },
-      take: PAUSED_CANDIDATES,
-      select: { subjectId: true, status: true, answeredAt: true },
-    }),
-    latestClaimBySubject(prisma, userId, "campaign.reviewPaused", ids),
-  ]);
+  const questions = await prisma.pilotQuestion.findMany({
+    where: {
+      userId,
+      subjectType: "campaign",
+      subjectId: { in: campaigns.map((campaign) => campaign.campaignId) },
+      status: { in: ["open", "answered"] },
+    },
+    take: PAUSED_CANDIDATES,
+    select: { subjectId: true, status: true, answeredAt: true },
+  });
   const questionsByCampaign = Map.groupBy(questions, (question) => question.subjectId);
 
   return campaigns
-    .filter((campaign) => {
-      // An answer older than the pause belongs to an earlier pause episode.
-      const decided = (questionsByCampaign.get(campaign.campaignId) ?? []).some(
-        (q) => q.status === "open" || (q.answeredAt != null && q.answeredAt > campaign.updatedAt),
-      );
-      const damped = claimDamped(latest.get(campaign.campaignId), now, PAUSED_REVIEW_RETRY_MS);
-      return !decided && !damped;
-    })
+    .filter(
+      (campaign) =>
+        // An answer older than the pause belongs to an earlier pause episode.
+        !(questionsByCampaign.get(campaign.campaignId) ?? []).some(
+          (q) => q.status === "open" || (q.answeredAt != null && q.answeredAt > campaign.updatedAt),
+        ),
+    )
     .map((campaign) => ({
       campaignId: campaign.campaignId,
       query: campaign.query,

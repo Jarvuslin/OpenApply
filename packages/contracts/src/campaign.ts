@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { applicationSubmissionSchema } from "./submission";
 import { isJsonObject } from "./utils/json";
 import { cleanReplacementChars } from "./utils/text";
 
@@ -38,6 +39,26 @@ export const CAMPAIGN_JOB_STATUSES = [
 ] as const;
 export const campaignJobStatusSchema = z.enum(CAMPAIGN_JOB_STATUSES);
 
+export const discoverySearchSchema = z.object({ query: z.string(), location: z.string() });
+export const discoveryCoverageSchema = z.object({
+  phase: z.enum(["collecting", "complete"]),
+  intent: z.enum(["preview", "apply"]),
+  searches: z.array(discoverySearchSchema),
+  sources: z.array(
+    z.object({
+      source: z.string(),
+      fetched: z.number().int().nonnegative(),
+      saved: z.number().int().nonnegative(),
+      resolved: z.number().int().nonnegative(),
+      requests: z.number().int().nonnegative(),
+      truncated: z.boolean(),
+      checkedAt: z.iso.datetime(),
+    }),
+  ),
+  completedAt: z.iso.datetime().nullable(),
+  reason: z.string().nullable(),
+});
+
 export const campaignConfigSchema = z.object({
   standing: z.boolean().optional(),
   board: z.string().min(1).optional(),
@@ -46,6 +67,7 @@ export const campaignConfigSchema = z.object({
   maxApplications: z.number().int().min(1).max(500).optional(),
   // No upper cap: absent = unlimited (search runs until the board is exhausted).
   maxJobs: z.number().int().min(1).optional(),
+  discovery: discoveryCoverageSchema.optional(),
 });
 
 const campaignJobSummarySchema = z.object({
@@ -84,6 +106,7 @@ export const applyUrlsSchema = z.array(z.url()).min(1).max(MAX_APPLY_URLS);
 
 export const createCampaignSchema = z
   .object({
+    clientCampaignId: z.uuid().optional(),
     query: z.string().min(1),
     source: z.enum(["search", "auto_apply", "apply"]),
     config: campaignConfigSchema.optional(),
@@ -127,7 +150,7 @@ export const CAMPAIGN_JOB_ACTIVE_STATUSES = [
   "needs_user",
 ] as const;
 
-export const addCampaignJobSchema = z.object({
+export const addCampaignJobSchema = z.strictObject({
   key: z.string().min(1),
   title: z.string().min(1),
   company: z.string().min(1),
@@ -136,14 +159,12 @@ export const addCampaignJobSchema = z.object({
   type: z.string().optional().nullable(),
   url: z.url(),
   board: z.string().optional().nullable(),
-  matchScore: z.number().int().min(0).max(100).optional().nullable(),
-  matchReason: reasonText.optional().nullable(),
   status: z.enum(CAMPAIGN_JOB_ACTIVE_STATUSES).optional(),
   description: z.string().optional().nullable(),
   digest: jobDigest.optional().nullable(),
 });
 
-export const patchCampaignJobSchema = z.object({
+export const patchCampaignJobSchema = z.strictObject({
   status: z.enum(CAMPAIGN_JOB_ACTIVE_STATUSES).optional(),
   // The score pass fleshes out a queued row - seeded from a bare URL - with the real posting.
   title: z.string().min(1).optional(),
@@ -153,25 +174,32 @@ export const patchCampaignJobSchema = z.object({
   type: z.string().optional().nullable(),
   board: z.string().optional().nullable(),
   retryNotes: reasonText.optional().nullable(),
-  matchScore: z.number().int().min(0).max(100).optional().nullable(),
-  matchReason: reasonText.optional().nullable(),
   description: z.string().optional().nullable(),
   digest: jobDigest.optional().nullable(),
 });
 
-export const rescanCampaignJobSchema = z
-  .object({
+const rescanDecisionSchema = z
+  .strictObject({
     decision: z.enum(["approved", "skipped"]),
-    matchScore: z.number().int().min(0).max(100),
-    matchReason: reasonText,
     skipReason: z.string().min(1).transform(cleanReplacementChars).optional(),
-    description: z.string().optional().nullable(),
-    digest: jobDigest.optional().nullable(),
   })
   .refine((value) => value.decision !== "skipped" || !!value.skipReason, {
     message: "A skipped rescan decision requires skipReason.",
     path: ["skipReason"],
   });
+
+export const rescanCampaignJobSchema = z.union([
+  z.strictObject({
+    action: z.literal("refresh"),
+    title: z.string().min(1).optional(),
+    company: z.string().min(1).optional(),
+    location: z.string().optional().nullable(),
+    type: z.string().optional().nullable(),
+    description: z.string().optional().nullable(),
+    digest: jobDigest.optional().nullable(),
+  }),
+  rescanDecisionSchema,
+]);
 
 export const retryCampaignJobSchema = z.object({
   retryNotes: reasonText.optional().nullable(),
@@ -185,26 +213,24 @@ export const campaignJobReasonSchema = z.object({
 });
 
 export const campaignJobResultSchema = z
-  .object({
+  .strictObject({
     outcome: campaignJobOutcomeSchema,
+    checkpointId: z.uuid().optional(),
     appliedAt: z.iso.datetime().optional(),
     failReason: z.string().min(1).transform(cleanReplacementChars).optional(),
     skipReason: z.string().min(1).transform(cleanReplacementChars).optional(),
     retryNotes: reasonText.optional().nullable(),
-    matchScore: z.number().int().min(0).max(100).optional(),
-    // The resume actually submitted. `resumeVariantId` is absent when the base went out untailored;
-    // both are absent on an outcome that never reached a form.
+    // Legacy replay fields only. New applied results use checkpointId and reject reconstructed data.
     resumeId: z.uuid().optional(),
     resumeVariantId: z.uuid().optional(),
+    // Accepted only by already-applied historical replays, never as new submission evidence.
+    submission: applicationSubmissionSchema.optional(),
   })
   .refine(
     (v) =>
-      (v.outcome !== "applied" || !!v.appliedAt) &&
-      (v.outcome !== "failed" || !!v.failReason) &&
-      (v.outcome !== "skipped" || !!v.skipReason),
+      (v.outcome !== "failed" || !!v.failReason) && (v.outcome !== "skipped" || !!v.skipReason),
     {
-      message:
-        "applied requires appliedAt; failed requires failReason; skipped requires skipReason.",
+      message: "failed requires failReason; skipped requires skipReason.",
     },
   );
 

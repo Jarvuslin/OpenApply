@@ -9,8 +9,6 @@ namespace OpenApply.Terminal.Tests;
 
 public sealed class TerminalSessionTests : IDisposable
 {
-    private static readonly byte[] Enter = "\r"u8.ToArray();
-
     private readonly TempDir temp = new();
     private readonly List<FakePtyConnection> spawned = [];
     private readonly TerminalSession session;
@@ -162,81 +160,5 @@ public sealed class TerminalSessionTests : IDisposable
         var exit = Assert.Single(exits);
         Assert.True(exit.Requested);
         Assert.Null(TerminalRelay.ExitBanner(exit));
-    }
-
-    [Fact]
-    public async Task SendCommand_WritesTheCommandThenASeparateEnter()
-    {
-        Start();
-
-        var result = await session.SendCommandAsync("/openapply:setup", ct: TestContext.Current.CancellationToken);
-
-        Assert.Equal(SendResult.Sent, result);
-        Assert.Equal(["/openapply:setup"u8.ToArray(), Enter], Live.Writes);
-    }
-
-    [Fact]
-    public async Task SendCommand_PressesEnterTwice_ForACodexSkill()
-    {
-        Start(Provider.Codex);
-
-        await session.SendCommandAsync("$pilot", ct: TestContext.Current.CancellationToken);
-
-        Assert.Equal(["$pilot"u8.ToArray(), Enter, Enter], Live.Writes);
-    }
-
-    [Theory]
-    [InlineData("claude")]
-    [InlineData("codex")]
-    public async Task SendCommand_PreservesLongMultilineUnicodePromptAsOnePaste(string provider)
-    {
-        Start(Provider.Find(provider));
-        var command = "START résumé\n" + new string('x', 2000) + "\nEND";
-
-        await session.SendCommandAsync(command, ct: TestContext.Current.CancellationToken);
-
-        Assert.Equal(2, Live.Writes.Count);
-        Assert.Equal("\e[200~" + command + "\e[201~", System.Text.Encoding.UTF8.GetString(Live.Writes[0]));
-        Assert.Equal(Enter, Live.Writes[1]);
-    }
-
-    [Fact]
-    public async Task SendCommand_IsRejected_WhenStoppedOrForAnotherProvider()
-    {
-        var ct = TestContext.Current.CancellationToken;
-        Assert.Equal(SendResult.NotRunning, await session.SendCommandAsync("x", ct: ct));
-
-        Start(Provider.Claude);
-        Assert.Equal(SendResult.ProviderMismatch, await session.SendCommandAsync("x", Provider.Codex, ct));
-        Assert.Empty(Live.Writes);
-    }
-
-    [Fact]
-    public async Task SendCommand_DoesNotPressEnter_WhenTheSessionIsReplacedDuringTheDelay()
-    {
-        Start(Provider.Claude);
-        var original = Live;
-
-        var send = session.SendCommandAsync("rm -rf /", ct: TestContext.Current.CancellationToken);
-        await Task.Delay(15, TestContext.Current.CancellationToken);
-        Start(Provider.Codex);
-
-        Assert.Equal(SendResult.NotRunning, await send);
-        Assert.DoesNotContain(original.Writes, w => w.AsSpan().SequenceEqual(Enter));
-        Assert.Empty(Live.Writes);
-    }
-
-    [Fact]
-    public async Task SendCommand_DoesNotPressEnter_WhenTheCallerCancelsDuringTheDelay()
-    {
-        Start();
-        using var cts = new CancellationTokenSource();
-
-        var send = session.SendCommandAsync("hello", ct: cts.Token);
-        await Task.Delay(15, TestContext.Current.CancellationToken);
-        cts.Cancel();
-
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => send);
-        Assert.Single(Live.Writes);
     }
 }

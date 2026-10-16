@@ -1,4 +1,4 @@
-import { registerConnectorAccountSchema, sendEmailSchema } from "@openapply/contracts/email";
+import { registerConnectorAccountSchema } from "@openapply/contracts/email";
 import { idParam } from "@openapply/contracts/shared";
 import { Elysia } from "elysia";
 import { verifyAccessToken } from "@/common/auth";
@@ -10,14 +10,13 @@ import {
   accountStatusSchema,
   emailAccountSchema,
   emailAccountsSchema,
-  sentMessageSchema,
 } from "../email.schema";
 import { EmailAccountService } from "./account.service";
 import { requireConnectorBrowserSession } from "./connector-registration";
 
 const account = container.resolve(EmailAccountService);
 
-/** Mailbox account status, disconnect, and outbound send. */
+/** Mailbox account status, selection and disconnect. */
 export const emailAccountController = new Elysia({
   prefix: "/email",
   detail: { tags: ["Email"] },
@@ -68,14 +67,5 @@ export const emailAccountController = new Elysia({
       summary: "Disconnect mailbox account",
       description:
         "Removes only the selected mailbox and its imported messages. Other saved mailboxes and their messages are preserved.",
-    },
-  })
-  .post("/send", ({ user, body }) => account.send(user.id, body), {
-    body: sendEmailSchema,
-    response: sentMessageSchema,
-    detail: {
-      summary: "Send outbound email",
-      description:
-        "Sends an email from the profile's connected mailbox (refreshing the token first), and returns the provider send result or errors when no account is connected or the mailbox lacks send access.",
     },
   });

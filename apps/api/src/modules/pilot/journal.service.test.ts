@@ -1,5 +1,3 @@
-import { makePush } from "@/common/push/push.fake";
-import type { PushPayload } from "@/common/push/push.service";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { PilotJournalService } from "./journal.service";
 import { describe, expect, it } from "bun:test";
@@ -10,7 +8,6 @@ function makeService(rows: Row[] = [], pageSize = 2) {
   const rec = {
     creates: [] as Row[],
     stateUpserts: [] as { update: Row }[],
-    pushes: [] as { userId: string; payload: PushPayload }[],
     wheres: [] as Row[],
   };
   const db = {
@@ -33,7 +30,7 @@ function makeService(rows: Row[] = [], pageSize = 2) {
     },
     $transaction: async (work: (tx: unknown) => Promise<unknown>) => work(db),
   };
-  const svc = new PilotJournalService(db as unknown as PrismaClient, makePush(rec.pushes));
+  const svc = new PilotJournalService(db as unknown as PrismaClient);
   return { svc, rec };
 }
 
@@ -56,27 +53,6 @@ describe("PilotJournalService.appendJournal", () => {
 
     await svc.appendJournal("p1", { entries: [{ kind: "action", summary: "did a thing" }] });
     expect(rec.stateUpserts).toHaveLength(1);
-  });
-
-  it("pushes an alert for a system entry only", async () => {
-    const { svc, rec } = makeService();
-    await svc.appendJournal("p1", {
-      entries: [
-        { kind: "action", summary: "applied to a job" },
-        { kind: "system", summary: "Pilot stopped unexpectedly (orchestrator)" },
-      ],
-    });
-    expect(rec.pushes).toEqual([
-      {
-        userId: "p1",
-        payload: {
-          title: "Pilot alert",
-          body: "Pilot stopped unexpectedly (orchestrator)",
-          url: "/pilot",
-          tag: "pilot-system",
-        },
-      },
-    ]);
   });
 });
 

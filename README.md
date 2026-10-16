@@ -3,7 +3,7 @@
 
 # OpenApply
 
-A workspace for finding employer roles, tailoring your résumé and applying through your own local agent. Accounts, profiles and application history live in Postgres.
+A workspace for finding employer roles, tailoring your resume and applying through your own local agent. Accounts, profiles and application history live in Postgres.
 
 [Setup](#setup) · [Mac beta](#clone-and-setup-mac-beta) · [Current capabilities](#current-capabilities) · [MIT license](LICENSE)
 </div>
@@ -11,15 +11,16 @@ A workspace for finding employer roles, tailoring your résumé and applying thr
 ## Current capabilities
 
 - Email/password accounts, optional Google and GitHub sign-in, and an onboarding profile with autosaved drafts.
-- PDF, DOCX and TXT résumé extraction through your local Claude Code session, with manual entry available.
-- Original résumé preservation, tailored variants, PDF export and a before/after rewrite review.
+- PDF, DOCX and TXT resume extraction through your local Claude Code session, with manual entry available.
+- Original resume preservation, tailored variants, PDF export and a before/after rewrite review.
 - Authenticated Discover with location, level and experience filters, multi-select and a standing application queue.
 - Public employer feeds from Ashby, Greenhouse, Lever, SmartRecruiters and Workable.
+- Shared background refresh of 57 employer ATS boards, bounded Google Careers searches, and Remote OK, We Work Remotely and Hacker News feeds; Canada/US filters, new-job alerts, cached paging, and applied status. Optional provider searches are configured in Settings → Connections. See [Discover sources and scale](docs/discover-sources-and-scale.md).
 - Optional HTTP discovery through your own Apify or SerpApi key. Unresolved listings stay visible but cannot be queued.
 - Claude Code or Codex runs locally through the terminal companion. The persistent VM browser uses WSL2 on Windows or Lima on Mac beta.
 - Gmail messages can be read by the local agent connector and uploaded to OpenApply. No OpenApply Google Cloud mail app is needed for this path.
 - Required-question pre-scan before tailoring, per-job workers and questions for missing facts or uncertain fit.
-- A preparation-only trial that inspects a real posting and form, generates a résumé variant and records missing answers.
+- A preparation-only trial that inspects a real posting and form, generates a resume variant and records missing answers.
 - Existing campaign, credential-vault, inbox and Pilot infrastructure inherited from the upstream project.
 
 **Status: development MVP.** The backend queue and mailbox ingest are tested, including real Postgres concurrency. Fully autonomous employer signup, email activation and application submission have not passed an independent end-to-end test. CAPTCHA solving is off by default. A blocking challenge parks that job and lets the queue continue. There is no published hosted OpenApply service or installer release.
@@ -68,7 +69,7 @@ browser/database packages, applies database migrations and builds the terminal.
 Initial downloads may take several minutes. If VM provisioning fails, inspect
 Lima's logs before retrying. the setup command does not delete existing VMs.
 
-Open **http://localhost:4100/mvp**. The agent and résumé extraction run on your
+Open **http://localhost:4100/mvp**. The agent and resume extraction run on your
 Mac using your Claude login. Chromium runs inside Linux. The VM does not mount
 your home directory. `openapply-stage "<resume path>"` copies an explicitly
 selected document to the VM for the agent's upload tool.
@@ -112,14 +113,14 @@ After the Windows setup below, you can also use the shared commands
 git clone https://github.com/Jarvuslin/OpenApply.git
 cd OpenApply
 bun install --frozen-lockfile
-.\scripts\setup-env.ps1
+node scripts/openapply.mjs env
 bun run --cwd apps/api db:generate
 dotnet build apps/terminal
 ```
 
 For a private repository, authenticate Git with your GitHub account before cloning. If PowerShell blocks a script, use your machine's approved script-execution process.
 
-`setup-env.ps1` creates ignored `apps/api/.env` and `apps/web/.env.local` files, generating a unique JWT secret and 32-byte encryption master key. It **never overwrites existing configuration**. Keep the master key: replacing it makes existing encrypted credentials unreadable. It enables the local Claude résumé reader. Set `CLAUDE_BIN` in the API environment if `claude` is not discoverable on PATH.
+The `env` command creates ignored `apps/api/.env` and `apps/web/.env.local` files, generating a unique JWT secret and 32-byte encryption master key. It **never overwrites existing configuration**. Keep the master key: replacing it makes existing encrypted credentials unreadable. Local mode binds the API to loopback and enables development browser observation. Model-based resume extraction runs through the local companion; the API does not launch Claude.
 
 ### 2. Create the browser/database VM
 
@@ -147,7 +148,7 @@ First start downloads the pinned Playwright MCP package inside the VM. Allow tha
 - **API health:** http://localhost:4101/api/health
 - **Terminal health:** http://localhost:4102/healthz
 
-Register your own local account using email/password. Development registration does not send a verification email. Google/GitHub login buttons need separately configured app credentials. they are not required for local registration. Upload a résumé or complete the profile manually. Open the agent panel and complete any Claude sign-in/workspace prompts yourself.
+Register your own local account using email/password. Development registration does not send a verification email. Google/GitHub login buttons need separately configured app credentials. they are not required for local registration. Upload a resume or complete the profile manually. Open the agent panel and complete any Claude sign-in/workspace prompts yourself.
 
 In the workbench, choose an ATS provider and import a company board slug. For example, use Ashby with the slug `ashby`. Filter roles in Discover, select the ones you want and click **Apply to N selected**. Only resolved employer links are selectable. The queue skips duplicates and uses one standing campaign with no per-campaign cap. Start the local agent to drain that queue. A stopped agent leaves the jobs queued.
 
@@ -158,7 +159,7 @@ Agent commands use the `openapply` plugin namespace, such as `/openapply:mvp-tri
 ### Gmail through your agent
 
 1. For Claude Code, connect the intended Gmail account at [Claude connectors](https://claude.ai/customize/connectors), sign in to the embedded agent with that same Claude subscription, and confirm Gmail in `/mcp`. API-key and setup-token login do not inherit Claude account connectors. See [Claude's connector guide](https://code.claude.com/docs/en/mcp#use-mcp-servers-from-claudeai).
-2. For Codex, sign in with your ChatGPT account, open `/plugins` in the embedded agent, install or enable Gmail, and complete authorization. Restart the agent, then check `/apps` or `/mcp`. See [Codex plugin setup](https://learn.chatgpt.com/docs/plugins). An installation or connection in another chat does not prove access in the current session.
+2. For Codex, sign in with your ChatGPT account, open `/plugins` in the embedded agent, install or enable Gmail, and complete authorization. Restart the agent, then check `/apps` or `/mcp`. See [Codex plugin setup](https://learn.chatgpt.com/docs/plugins). An installation or connection in another conversation does not prove access in the current session.
 3. Open **Settings → Email** or the workbench's **Connections** tab and select **Check Gmail**. Claude runs a separate, bounded read-access check without opening the terminal or importing messages. If the connector exposes an authenticated account-profile tool, OpenApply also verifies that its address matches the requested mailbox. The standard Claude Gmail connector has search tools but no account-profile tool: a successful metadata-only search proves read access, not the signed-in address. OpenApply then asks you to check the account in your provider settings and explicitly confirm the address before saving it as user-confirmed. Codex background checks are not supported yet.
 4. Use **Add email** to check and save another address, and **Change email** to select a saved mailbox without deleting its imported mail. This does not switch the provider's authorized Gmail account or change the applicant profile. **Last checked** records a connection check; **last sync** records an import. A user-confirmed address is distinct from an address verified by an authenticated profile response.
 5. The agent's `connect-email` skill can verify and import recent job mail without classification when its connector supplies trustworthy account identity. It uploads normalized batches of up to 100 messages to `POST /api/email/messages/ingest`, scoped to that verified mailbox. Repeated message IDs are ignored within that mailbox. Use **Scan pending** in the inbox for classification. These interactive skills are available for Claude and Codex, subject to the tools exposed in that session.
@@ -203,7 +204,7 @@ For hot reload while editing, use `node scripts/openapply.mjs start --dev` (Wind
 
 This setup is for your own trusted machine: PostgreSQL uses local trust authentication. noVNC and browser debugging are loopback services without application authentication. Do not publish these ports or use this setup as a multi-user hosted deployment.
 
-Personal data is stored in the VM database, the VM browser profile and `apps/api/storage/`. `.env*`, storage, `.temp/`, browser snapshots and logs are ignored by Git. Back up your database and encryption key together. Review generated résumé changes. the model can still make factual or editorial mistakes.
+Personal data is stored in the VM database, the VM browser profile and `apps/api/storage/`. `.env*`, storage, `.temp/`, browser snapshots and logs are ignored by Git. Back up your database and encryption key together. Review generated resume changes. the model can still make factual or editorial mistakes.
 
 Staged application files live in `/home/pilot/openapply` inside the VM and persist
 across restarts. remove them when no longer needed. Staging does not send files

@@ -1,7 +1,12 @@
 import { campaignConfigSchema } from "@openapply/contracts/campaign";
 import type { AgendaPayload } from "@openapply/contracts/pilot";
 import type { PrismaClient } from "@/generated/prisma/client";
-import { GATHER_CAP } from "./claims";
+import { findSubmissionAttempt } from "@/modules/application/submission-attempt-state";
+import {
+  SUBMISSION_NOT_STARTED,
+  submissionConflict,
+} from "@/modules/campaign/jobs/submission-guard";
+import { GATHER_CAP } from "./items";
 
 /** "I just applied" outreach still lands this long after the apply. */
 
@@ -28,10 +33,15 @@ export async function gatherApprovedJobs(
   userId: string,
 ): Promise<AgendaJob[]> {
   const rows = await prisma.job.findMany({
-    where: { status: "approved", campaign: { userId, status: "in_progress" } },
+    where: {
+      status: "approved",
+      campaign: { userId, status: "in_progress" },
+      AND: [SUBMISSION_NOT_STARTED],
+    },
     orderBy: { matchScore: "desc" },
     take: GATHER_CAP,
     select: {
+      id: true,
       campaignId: true,
       key: true,
       title: true,
@@ -43,10 +53,18 @@ export async function gatherApprovedJobs(
       campaign: { select: { config: true } },
     },
   });
-  return rows.map(({ campaign, ...job }) => ({
-    ...job,
-    resumeId: campaignConfigSchema.parse(campaign.config).resumeId,
-  }));
+  const available = await Promise.all(
+    rows.map(async (job) => {
+      const attempt = await findSubmissionAttempt(prisma, userId, { jobId: job.id, url: job.url });
+      return !submissionConflict(attempt, job.id);
+    }),
+  );
+  return rows
+    .filter((_job, index) => available[index])
+    .map(({ campaign, id: _, ...job }) => ({
+      ...job,
+      resumeId: campaignConfigSchema.parse(campaign.config).resumeId,
+    }));
 }
 
 /**

@@ -1,11 +1,13 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { Box, Card, CardContent, Stack, Typography, useTheme } from "@mui/material";
+import { Box, Stack, Typography, useTheme } from "@mui/material";
 import { PieChart } from "@mui/x-charts/PieChart";
 import type { ApplicationStatus } from "@openapply/contracts/application";
+import { ChartPie } from "lucide-react";
 import type { AnalyticsStatusBreakdownEntry } from "@/api/types";
 import { STATUS_LABEL } from "@/components/ui/display";
+import { SectionCard } from "@/components/ui/layout";
 
 const CHART_HEIGHT = 220;
 
@@ -41,49 +43,47 @@ export function StatusBreakdownChart(props: StatusBreakdownChartProps): ReactEle
   const total = series.reduce((sum, s) => sum + s.value, 0);
 
   return (
-    <Card sx={{ height: "100%" }}>
-      <CardContent>
-        <Typography variant="overlineMuted">Status breakdown</Typography>
-        <Typography variant="h5" sx={{ mt: 0.5 }}>
-          {total} applications by status
-        </Typography>
-
-        {series.length === 0 ? (
-          <Stack
-            sx={{
-              mt: 2,
-              flex: 1,
-              minHeight: CHART_HEIGHT,
-              alignItems: "center",
-              justifyContent: "center",
-              color: "text.disabled",
+    <SectionCard
+      fullHeight
+      title="Status breakdown"
+      description={`${total} applications by status`}
+      icon={<ChartPie size={18} strokeWidth={1.75} aria-hidden />}
+    >
+      {series.length === 0 ? (
+        <Stack
+          sx={{
+            mt: 2,
+            flex: 1,
+            minHeight: CHART_HEIGHT,
+            alignItems: "center",
+            justifyContent: "center",
+            color: "text.disabled",
+          }}
+        >
+          <Typography variant="captionMuted">No applications yet.</Typography>
+        </Stack>
+      ) : (
+        <Box sx={{ mt: 1, flex: 1 }}>
+          <PieChart
+            series={[
+              {
+                data: series,
+                innerRadius: 48,
+                paddingAngle: 1.5,
+                cornerRadius: 2,
+                highlightScope: { fade: "global", highlight: "item" },
+              },
+            ]}
+            height={CHART_HEIGHT}
+            slotProps={{
+              legend: {
+                direction: "vertical",
+                position: { vertical: "middle", horizontal: "end" },
+              },
             }}
-          >
-            <Typography variant="captionMuted">No applications yet.</Typography>
-          </Stack>
-        ) : (
-          <Box sx={{ mt: 1, flex: 1 }}>
-            <PieChart
-              series={[
-                {
-                  data: series,
-                  innerRadius: 48,
-                  paddingAngle: 1.5,
-                  cornerRadius: 2,
-                  highlightScope: { fade: "global", highlight: "item" },
-                },
-              ]}
-              height={CHART_HEIGHT}
-              slotProps={{
-                legend: {
-                  direction: "vertical",
-                  position: { vertical: "middle", horizontal: "end" },
-                },
-              }}
-            />
-          </Box>
-        )}
-      </CardContent>
-    </Card>
+          />
+        </Box>
+      )}
+    </SectionCard>
   );
 }

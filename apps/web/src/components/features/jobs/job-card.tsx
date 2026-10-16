@@ -3,6 +3,7 @@ import { Card, CardActionArea, CardContent, Chip, Stack, Typography } from "@mui
 import { JOB_LEVEL_LABELS } from "@openapply/contracts/job-listing";
 import type { Route } from "next";
 import type { JobListingSummaryDto } from "@/api/types";
+import { JobAttribution } from "@/components/features/discover/job-attribution";
 import { fontFamilies } from "@/theme";
 import { formatRelativeTime } from "@/utils/format";
 import { SkillChips } from "./skill-chips";
@@ -13,15 +14,15 @@ interface JobCardProps {
   maxSkills?: number;
 }
 
-/** A listing in the public index; the whole card is one link. */
+/** The main card links to details; source attribution remains independently accessible. */
 export function JobCard(props: JobCardProps): ReactElement {
   const { job, maxSkills = 5 } = props;
 
   return (
-    <Card variant="lift">
+    <Card variant="lift" sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
       {/* CardActionArea is a ButtonBase, so the theme's NextLink default turns a plain href into a
           client-side link - no `component` prop, and this card stays a server component. */}
-      <CardActionArea href={`/jobs/${job.slug}` as Route} sx={{ height: "100%" }}>
+      <CardActionArea href={`/jobs/${job.slug}` as Route} sx={{ flex: 1 }}>
         <CardContent sx={{ height: "100%", display: "flex", flexDirection: "column", gap: 1.5 }}>
           <Stack spacing={0.5}>
             {/* Scraped titles can be one long unbroken token; on a phone that overflows the card. */}
@@ -65,6 +66,11 @@ export function JobCard(props: JobCardProps): ReactElement {
           </Stack>
         </CardContent>
       </CardActionArea>
+      {job.attributionLinks.length > 0 && (
+        <CardContent sx={{ pt: 0 }}>
+          <JobAttribution links={job.attributionLinks} />
+        </CardContent>
+      )}
     </Card>
   );
 }

@@ -68,9 +68,10 @@ test("environment setup generates distinct keys and never overwrites existing se
     const encoded = first.match(/^SECRET_MASTER_KEY=(.+)$/m)[1];
     assert.equal(Buffer.from(encoded, "base64").length, 32);
     assert.doesNotMatch(first, /^OPTIONAL=/m);
+    assert.doesNotMatch(first, /^CLAUDE_BIN=/m);
     for (const provider of ["GOOGLE", "GITHUB"]) {
-      assert.match(first, new RegExp("^" + provider + "_CLIENT_ID=$", "m"));
-      assert.match(first, new RegExp("^" + provider + "_CLIENT_SECRET=$", "m"));
+      assert.match(first, new RegExp(`^${provider}_CLIENT_ID=$`, "m"));
+      assert.match(first, new RegExp(`^${provider}_CLIENT_SECRET=$`, "m"));
     }
     assert.ok(first.includes("postgresql://postgres@127.0.0.1:5433/openapply"));
     await setupEnv(root);

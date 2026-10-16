@@ -10,7 +10,7 @@ export function TableSkeleton(): ReactElement {
     <Stack spacing={1}>
       <Skeleton variant="rounded" height={40} />
       {ROW_KEYS.map((key) => (
-        <Skeleton key={key} variant="rounded" height={52} />
+        <Skeleton key={key} variant="rounded" height={56} />
       ))}
     </Stack>
   );

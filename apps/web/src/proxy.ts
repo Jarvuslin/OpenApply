@@ -45,7 +45,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
   // The /me call above already carried the role, so gating /admin here is free
   if (request.nextUrl.pathname.startsWith("/admin") && !isAdminRole(data.role)) {
-    return NextResponse.redirect(new URL("/workspace", request.url));
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   return NextResponse.next();

@@ -3,23 +3,22 @@ import { idParam } from "@openapply/contracts/shared";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { authGuard } from "@/common/middleware";
-import { RATE_LIMITS, rateLimit } from "@/common/rate-limit";
 import { deletedResponseSchema } from "@/types/response";
 import {
-  appendNoteSchema,
   applicationCheckSchema,
   applicationDetailSchema,
-  applicationEventSchema,
   applicationListQuerySchema,
   applicationListSchema,
   applicationQuerySchema,
   applicationSummarySchema,
   statusTransitionResultSchema,
+  submittedResumeQuerySchema,
 } from "./application.schema";
 import { ApplicationService } from "./application.service";
+import { SubmissionService } from "./submission.service";
 
 const svc = container.resolve(ApplicationService);
-const limitNote = rateLimit(RATE_LIMITS.applicationNote);
+const submissions = container.resolve(SubmissionService);
 
 export const applicationController = new Elysia({
   prefix: "/applied",
@@ -53,6 +52,17 @@ export const applicationController = new Elysia({
         "Checks whether the profile already applied to a job by exact URL or by a fuzzy title-and-company match within the dedupe window, returning whether a duplicate exists and the matching application when found.",
     },
   })
+  .get(
+    "/:id/submitted-resume",
+    ({ user, params, query }) => submissions.resumePdf(user.id, params.id, query.sha256),
+    {
+      params: idParam,
+      query: submittedResumeQuerySchema,
+      detail: {
+        summary: "Read the immutable PDF retained with this owned application's submission",
+      },
+    },
+  )
   .get("/:id", ({ user, params }) => svc.get(user.id, params.id), {
     params: idParam,
     response: applicationDetailSchema,
@@ -79,16 +89,5 @@ export const applicationController = new Elysia({
       summary: "Transition application status",
       description:
         "Moves the owned application to the requested status, recording a status-change activity event and updating its rejection timestamp, then returns the new status (no-op if already in that status).",
-    },
-  })
-  .post("/:id/events", ({ user, params, body }) => svc.addEvent(user.id, params.id, body), {
-    params: idParam,
-    body: appendNoteSchema,
-    beforeHandle: limitNote,
-    response: applicationEventSchema,
-    detail: {
-      summary: "Append a note to an application",
-      description:
-        "Appends a free-text note event to the owned application's activity timeline (e.g. a generated interview prep sheet) and returns the created event, or 404 if it does not belong to the profile.",
     },
   });

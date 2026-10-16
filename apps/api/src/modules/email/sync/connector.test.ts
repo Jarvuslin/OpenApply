@@ -1,6 +1,5 @@
 import { ingestMessagesSchema } from "@openapply/contracts/email";
 import type { CryptoService } from "@/common/crypto";
-import { EmailAccountService } from "../account/account.service";
 import { createMailboxFixture } from "../account/fakes";
 import { EmailSyncService } from "./sync.service";
 import { describe, expect, it } from "bun:test";
@@ -18,11 +17,7 @@ const message = {
 };
 function fixture() {
   const state = createMailboxFixture();
-  return {
-    ...state,
-    sync: new EmailSyncService(state.prisma, {} as CryptoService),
-    send: new EmailAccountService(state.prisma, {} as CryptoService),
-  };
+  return { ...state, sync: new EmailSyncService(state.prisma, {} as CryptoService) };
 }
 describe("agent mailbox ingest", () => {
   it("creates an account and ignores duplicate provider ids on repeated uploads", async () => {
@@ -158,13 +153,10 @@ describe("agent mailbox ingest", () => {
     expect(activeForUser.get("user")).toBe(selected.id);
   });
 
-  it("requires connector tools for sending and syncing and skips background sync", async () => {
-    const { sync, send, seedAccount } = fixture();
+  it("requires connector tools for syncing and skips background sync", async () => {
+    const { sync, seedAccount } = fixture();
     seedAccount({ userId: "user", email: "applicant@example.com" }, true);
     await expect(sync.syncInbox("user")).rejects.toMatchObject({ status: 409 });
-    await expect(
-      send.send("user", { to: "jobs@example.com", subject: "Reply", body: "Thanks" }),
-    ).rejects.toMatchObject({ status: 409 });
     let called = false;
     sync.syncInbox = async () => {
       called = true;

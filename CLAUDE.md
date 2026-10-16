@@ -51,3 +51,20 @@ Invoke the `verify` skill before committing. Commit with the `commit` skill.
   named re-exports. `export *` only for a `package.json` `exports` target.
 - Split a test file past a few hundred lines by domain. Shared fixtures go in `fakes.ts` or
   `builders.ts`.
+
+## Agent skills
+
+When to use which skill, and the light path for small fixes: `docs/agents/workflow.md`.
+
+### Issue tracker
+
+Local markdown under `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default roles (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`,
+`wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: root `GLOSSARY.md` plus `docs/adr/`. See `docs/agents/domain.md`.

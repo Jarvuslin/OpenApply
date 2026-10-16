@@ -4,12 +4,21 @@ import mammoth from "mammoth";
 
 export async function extractSourceText(filename: string): Promise<string> {
   const buffer = await readFile(filename);
-  const ext = path.extname(filename).toLowerCase();
+  return extractSourceBuffer(buffer, path.extname(filename).toLowerCase());
+}
+
+function completeText(text: string): string {
+  if (text.length > 80_000)
+    throw new Error("Resume text exceeds 80,000 characters; it was not truncated.");
+  return text;
+}
+
+export async function extractSourceBuffer(buffer: Buffer, ext: string): Promise<string> {
   if (ext === ".docx") {
     const result = await mammoth.extractRawText({ buffer });
-    return result.value.slice(0, 80_000);
+    return completeText(result.value);
   }
-  if (ext === ".txt") return buffer.toString("utf8").slice(0, 80_000);
+  if (ext === ".txt") return completeText(buffer.toString("utf8"));
   if (ext !== ".pdf") throw new Error("Use a PDF, DOCX or plain text resume.");
   const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
   const task = getDocument({ data: new Uint8Array(buffer), useSystemFonts: true });
@@ -26,7 +35,7 @@ export async function extractSourceText(filename: string): Promise<string> {
           .join(""),
       );
     }
-    return pages.join("\n").slice(0, 80_000);
+    return completeText(pages.join("\n"));
   } finally {
     await task.destroy();
   }

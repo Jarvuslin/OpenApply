@@ -1,6 +1,12 @@
 // The public job index is built from the digest, so a garbled or empty one silently loses the job.
 
-import { addCampaignJobSchema, createCampaignSchema, patchCampaignJobSchema } from "./campaign";
+import {
+  addCampaignJobSchema,
+  campaignJobResultSchema,
+  createCampaignSchema,
+  patchCampaignJobSchema,
+  rescanCampaignJobSchema,
+} from "./campaign";
 import { describe, expect, it } from "bun:test";
 
 const job = (digest?: string) => ({
@@ -42,4 +48,36 @@ it("rejects the retired campaign source", () => {
   expect(
     createCampaignSchema.safeParse({ query: "Engineer", source: "networking", config: {} }).success,
   ).toBe(false);
+});
+
+describe("server-owned fit assessment", () => {
+  it("rejects client score and assessment writes through every job mutation", () => {
+    const writes = [
+      { schema: addCampaignJobSchema, body: job() },
+      { schema: patchCampaignJobSchema, body: {} },
+      { schema: rescanCampaignJobSchema, body: { action: "refresh", description: "Full posting" } },
+      { schema: rescanCampaignJobSchema, body: { decision: "approved" } },
+      { schema: campaignJobResultSchema, body: { outcome: "failed", failReason: "timeout" } },
+    ];
+    for (const { schema, body } of writes) {
+      for (const [key, value] of Object.entries({
+        matchScore: 99,
+        matchReason: "trust me",
+        fitAssessment: { score: 99 },
+      })) {
+        expect(schema.safeParse({ ...body, [key]: value }).success).toBe(false);
+      }
+    }
+  });
+
+  it("separates skipped posting refresh from the later decision", () => {
+    expect(
+      rescanCampaignJobSchema.parse({ action: "refresh", description: "Full posting" }),
+    ).toEqual({ action: "refresh", description: "Full posting" });
+    expect(
+      rescanCampaignJobSchema.safeParse({ decision: "approved", description: "Changed posting" })
+        .success,
+    ).toBe(false);
+    expect(rescanCampaignJobSchema.safeParse({ decision: "skipped" }).success).toBe(false);
+  });
 });

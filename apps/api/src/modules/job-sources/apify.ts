@@ -27,7 +27,14 @@ export async function apify(
   config: z.infer<typeof discoveryConnectionSchema>,
   input: z.infer<typeof discoverInputSchema>,
 ): Promise<SourceJob[]> {
-  const actor = input.board === "linkedin" ? config.linkedinActor : config.indeedActor;
+  const actors = {
+    linkedin: config.linkedinActor,
+    indeed: config.indeedActor,
+    glassdoor: config.glassdoorActor,
+    hiringcafe: config.hiringcafeActor,
+    ycombinator: config.ycombinatorActor,
+  };
+  const actor = input.board ? actors[input.board] : undefined;
   if (!input.board || !actor)
     throw unprocessable("Choose a board and configure its Apify actor first.");
   const data = await fetch(

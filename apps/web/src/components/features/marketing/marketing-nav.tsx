@@ -15,8 +15,10 @@ interface NavLink {
 
 /** `/#how-it-works`, not `#how-it-works`: from /jobs or /docs the bare hash points at nothing. */
 const NAV_LINKS: NavLink[] = [
-  { href: "/docs" as Route, label: "Docs" },
   { href: "/#how-it-works" as Route, label: "How it works" },
+  { href: "/#pilots" as Route, label: "Pilots" },
+  { href: "/docs" as Route, label: "Docs" },
+  { href: "/#faq" as Route, label: "FAQ" },
 ];
 
 function NavLinks(): ReactElement {

@@ -5,10 +5,17 @@ import { allowedApplyUrl } from "@/modules/job-board/blocked-sites";
  * the part that unit-tests with no database.
  */
 
-import { type JOB_LEVELS, jobLevelFromTitle } from "@openapply/contracts/job-listing";
+import {
+  type JOB_LEVELS,
+  JOB_WORK_MODES,
+  jobLevelFromTitle,
+} from "@openapply/contracts/job-listing";
 import { z } from "zod/v4";
 import { MAX_YEARS_EXPERIENCE } from "@/modules/scoring/scoring.schema";
+import { validatePublicLogoUrl } from "./company-logo-http";
 import { canonicalizeUrl, dedupeKey, listingSlug, normalizeListingLocation } from "./dedupe";
+import { listingCountryCodes } from "./listing-countries";
+import { listingEmploymentKind, listingWorkMode, normalizeListingSalary } from "./listing-metadata";
 
 const MAX_EXCERPT = 600;
 
@@ -27,6 +34,7 @@ const digestSchema = z.object({
   salary: z.string().optional(),
   employmentType: z.string().optional(),
   remote: z.boolean().optional(),
+  workMode: z.enum(JOB_WORK_MODES).optional(),
   requirements: z.array(z.string()).optional(),
   responsibilities: z.array(z.string()).optional(),
   yearsExperience: z.number().optional(),
@@ -40,6 +48,11 @@ export interface ListingSourceJob {
   attributionUrl?: string;
   resolutionConfidence?: number;
   postedAt?: Date | null;
+  workMode?: (typeof JOB_WORK_MODES)[number] | null;
+  companyLogoUrl?: string | null;
+  companyLogoPageUrl?: string;
+  countries?: string[];
+  level?: (typeof JOB_LEVELS)[number];
   title: string;
   company: string;
   url: string;
@@ -53,6 +66,7 @@ export interface ListingSourceJob {
 }
 
 export interface ListingDraft {
+  countries: string[];
   applyUrl: string | null;
   attributionUrl: string;
   resolutionConfidence: number;
@@ -64,7 +78,14 @@ export interface ListingDraft {
   company: string;
   location: string | null;
   remote: boolean;
+  workMode: ReturnType<typeof listingWorkMode>;
+  employmentKind: ReturnType<typeof listingEmploymentKind>;
+  companyLogoUrl: string | null;
   salary: string | null;
+  salaryMin: number | null;
+  salaryMax: number | null;
+  salaryCurrency: string | null;
+  salaryPeriod: ReturnType<typeof normalizeListingSalary>["salaryPeriod"];
   employmentType: string | null;
   skills: string[];
   descriptionExcerpt: string | null;
@@ -143,21 +164,31 @@ export function buildListingDraft(job: ListingSourceJob): ListingDraft | null {
 
   const location = clean(job.location) ?? clean(digest.location);
   const key = dedupeKey({ title, company, location });
+  const salary = clean(job.salary) ?? clean(digest.salary);
+  const employmentType = clean(job.type) ?? clean(digest.employmentType);
+  const remote = digest.remote === true || normalizeListingLocation(location) === "remote";
+  const titleLevel = jobLevelFromTitle(title);
 
   return {
     applyUrl: job.applyUrl === undefined ? allowedApplyUrl(url) : allowedApplyUrl(job.applyUrl),
     attributionUrl: job.attributionUrl ?? url,
     resolutionConfidence: job.resolutionConfidence ?? (allowedApplyUrl(url) ? 1 : 0),
     postedAt: job.postedAt ?? null,
-    level: jobLevelFromTitle(title),
+    level:
+      titleLevel === "unknown" && job.publicFeed === true ? (job.level ?? titleLevel) : titleLevel,
     dedupeKey: key,
     slug: listingSlug({ title, company, location }, key),
     title,
     company,
     location,
-    remote: digest.remote === true || normalizeListingLocation(location) === "remote",
-    salary: clean(job.salary) ?? clean(digest.salary),
-    employmentType: clean(job.type) ?? clean(digest.employmentType),
+    countries: listingCountryCodes(job.countries, location),
+    remote,
+    workMode: listingWorkMode(location, remote, job.workMode ?? digest.workMode),
+    companyLogoUrl: job.companyLogoUrl ? validatePublicLogoUrl(job.companyLogoUrl) : null,
+    salary,
+    ...normalizeListingSalary(salary),
+    employmentType,
+    employmentKind: listingEmploymentKind(employmentType),
     skills,
     descriptionExcerpt: excerpt(clean(digest.descriptionExcerpt) ?? clean(job.description)),
     requirements: bullets(digest.requirements),

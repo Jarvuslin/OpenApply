@@ -17,8 +17,15 @@ import {
   updateResumeSchema,
 } from "./resume.schema";
 import { ResumeService } from "./resume.service";
+import {
+  artifactParams,
+  currentArtifactSchema,
+  resumeArtifactSchema,
+} from "./resume-artifact.schema";
+import { ResumeArtifactService } from "./resume-artifact.service";
 
 const svc = container.resolve(ResumeService);
+const artifacts = container.resolve(ResumeArtifactService);
 
 interface Upload {
   file: File;
@@ -126,9 +133,51 @@ export const resumeController = new Elysia({
     detail: {
       summary: "Render resume PDF",
       description:
-        "Streams the master resume as a cached PDF, rendered from structured content when present, else the uploaded source file.",
+        "Streams the saved canonical PDF revision for current content, or the original upload when content has not been extracted. Generate a revision explicitly before using a structured draft.",
     },
   })
+  .get("/:id/artifacts", ({ user, params }) => artifacts.current(user.id, params.id), {
+    params: idParam,
+    response: currentArtifactSchema,
+    beforeHandle: rateLimit(RATE_LIMITS.resumeArtifactRead),
+    detail: { summary: "Get the current immutable resume revision, if generated" },
+  })
+  .post("/:id/artifacts", ({ user, params }) => artifacts.create(user.id, params.id), {
+    params: idParam,
+    response: resumeArtifactSchema,
+    beforeHandle: rateLimit(RATE_LIMITS.resumeCompile),
+    detail: {
+      summary: "Compile and validate current resume content into a canonical immutable revision",
+    },
+  })
+  .get(
+    "/:id/artifacts/:revision",
+    ({ user, params }) => artifacts.get(user.id, params.id, undefined, params.revision),
+    {
+      params: artifactParams,
+      response: resumeArtifactSchema,
+      beforeHandle: rateLimit(RATE_LIMITS.resumeArtifactRead),
+      detail: { summary: "Get an owned immutable resume revision and its provenance" },
+    },
+  )
+  .get(
+    "/:id/artifacts/:revision/pdf",
+    ({ user, params }) => artifacts.file(user.id, params.id, undefined, params.revision, "pdf"),
+    {
+      params: artifactParams,
+      beforeHandle: rateLimit(RATE_LIMITS.resumeArtifactRead),
+      detail: { summary: "Download the exact PDF bytes for a saved resume revision" },
+    },
+  )
+  .get(
+    "/:id/artifacts/:revision/tex",
+    ({ user, params }) => artifacts.file(user.id, params.id, undefined, params.revision, "tex"),
+    {
+      params: artifactParams,
+      beforeHandle: rateLimit(RATE_LIMITS.resumeArtifactRead),
+      detail: { summary: "Download the exact LaTeX source for a saved resume revision" },
+    },
+  )
   .get("/:id/source", ({ user, params }) => svc.getSource(user.id, params.id), {
     params: idParam,
     detail: {

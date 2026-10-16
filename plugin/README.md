@@ -47,7 +47,6 @@ and [Codex plugin documentation](https://learn.chatgpt.com/docs/plugins).
 | --- | --- |
 | `skills/<name>/SKILL.md` | One skill per directory. The same file serves Claude and Codex. |
 | `skills/_shared/` | Docs several skills read: setup, login, form filling, browser tips, eligibility. No `SKILL.md`, so it isn't listed as a skill. |
-| `skills/pilot/kinds/` | One file per task type the autonomous Pilot can pick up. |
 | `skills/humanizer/` | Rewrites letters, proposals, and messages so they read like a person wrote them. Adapted from [blader/humanizer](https://github.com/blader/humanizer) (MIT). |
 | `agents/` | `job-worker`, the subagent that handles one job at a time so browser output stays out of the main session. |
 | `bin/` | `openapply-api`, the helper every skill uses to call the API. |

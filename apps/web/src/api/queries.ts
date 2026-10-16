@@ -5,12 +5,9 @@ import type {
   CampaignStatus,
 } from "@openapply/contracts/campaign";
 import type { ReviewStatus } from "@openapply/contracts/email";
-import {
-  DEFAULT_CURSOR_PAGE_SIZE,
-  MAX_PAGE_SIZE,
-  type PaginationQuery,
-} from "@openapply/contracts/pagination";
-import type { PilotJournalKind, PilotQuestionStatus } from "@openapply/contracts/pilot";
+import { MAX_PAGE_SIZE, type PaginationQuery } from "@openapply/contracts/pagination";
+import type { PilotQuestionStatus } from "@openapply/contracts/pilot";
+import type { ResumeEvidenceQuery } from "@openapply/contracts/resume-evidence";
 import { api } from "@/api/client";
 import { queryKeys } from "@/api/query-keys";
 
@@ -19,7 +16,7 @@ import { queryKeys } from "@/api/query-keys";
  * page of it. One page at the API's cap is that read - and it stays bounded. Pass it explicitly
  * when the read is "everything matching this filter" rather than a pager's page.
  */
-export const OPTIONS_PAGE: PaginationQuery = { page: 1, limit: MAX_PAGE_SIZE };
+const OPTIONS_PAGE: PaginationQuery = { page: 1, limit: MAX_PAGE_SIZE };
 
 /**
  * Per-endpoint query defs: one (queryKey, queryFn) pair per read, mirroring the
@@ -37,7 +34,10 @@ export const userQueries = {
 };
 
 export const credentialQueries = {
-  list: () => ({ queryKey: queryKeys.credentials.list(), queryFn: () => api.credentials.get() }),
+  login: () => ({
+    queryKey: queryKeys.credentials.login(),
+    queryFn: () => api.credentials.login.get(),
+  }),
 };
 
 export const resumeQueries = {
@@ -53,6 +53,18 @@ export const resumeQueries = {
   variantDetail: (id: string) => ({
     queryKey: queryKeys.resume.variantDetail(id),
     queryFn: () => api.resumes.variants({ id }).get(),
+  }),
+  evidence: (resumeId: string, query: ResumeEvidenceQuery) => ({
+    queryKey: queryKeys.resume.evidenceList(resumeId, query),
+    queryFn: () => api.resumes({ id: resumeId }).evidence.get({ query }),
+  }),
+  artifact: (resumeId: string, variantId: string | undefined, updatedAt: Date | string) => ({
+    queryKey: queryKeys.resume.artifact(resumeId, variantId, updatedAt),
+    queryFn: () =>
+      (variantId
+        ? api.resumes.variants({ id: variantId })
+        : api.resumes({ id: resumeId })
+      ).artifacts.get(),
   }),
 };
 
@@ -85,6 +97,10 @@ export const applicationQueries = {
 };
 
 export const campaignQueries = {
+  submissionAttempt: (id: string, key: string) => ({
+    queryKey: queryKeys.campaigns.submissionAttempt(id, key),
+    queryFn: () => api.campaigns({ id }).jobs({ key })["submission-attempt"].get(),
+  }),
   list: (
     query: PaginationQuery & { status?: CampaignStatus[]; source?: CampaignSource } = OPTIONS_PAGE,
   ) => ({
@@ -115,10 +131,6 @@ export type InboxFilter = ReviewStatus | "all";
 
 export const emailQueries = {
   account: () => ({ queryKey: queryKeys.email.account(), queryFn: () => api.email.account.get() }),
-  accounts: () => ({
-    queryKey: queryKeys.email.accounts(),
-    queryFn: () => api.email.accounts.get(),
-  }),
   messages: (filter: InboxFilter, page: PaginationQuery) => ({
     queryKey: queryKeys.email.messages({ filter, ...page }),
     queryFn: () =>
@@ -137,44 +149,6 @@ export const analyticsQueries = {
 };
 
 export const pilotQueries = {
-  state: () => ({ queryKey: queryKeys.pilot.state(), queryFn: () => api.pilot.get() }),
-  todayOutcomes: () => ({
-    queryKey: queryKeys.pilot.todayOutcomes(),
-    queryFn: () => api.pilot.stats.today.get(),
-  }),
-  cost: () => ({
-    queryKey: queryKeys.pilot.cost(),
-    queryFn: () => api.pilot.stats.cost.get(),
-  }),
-  searches: () => ({
-    queryKey: queryKeys.pilot.searches(),
-    queryFn: () => api.pilot.searches.get(),
-  }),
-  instructionsImpact: () => ({
-    queryKey: queryKeys.pilot.instructionsImpact(),
-    queryFn: () => api.pilot.instructions.impact.get(),
-  }),
-  agenda: () => ({
-    queryKey: queryKeys.pilot.agenda(),
-    queryFn: async () => {
-      const result = await api.pilot.agenda.get();
-      return { ...result, data: result.data?.agenda ?? null };
-    },
-  }),
-  // Sorted so the same filter set toggled in a different order shares one cache entry.
-  journal: (kinds: PilotJournalKind[] = []) => {
-    const filter = [...kinds].sort();
-    return {
-      queryKey: queryKeys.pilot.journal({ kinds: filter }),
-      queryFn: () =>
-        api.pilot.journal.get({
-          query: {
-            limit: DEFAULT_CURSOR_PAGE_SIZE,
-            ...(filter.length > 0 ? { kinds: filter } : {}),
-          },
-        }),
-    };
-  },
   questions: (status?: PilotQuestionStatus) => ({
     queryKey: queryKeys.pilot.questions({ status: status ?? "all" }),
     queryFn: () => api.pilot.questions.get({ query: status ? { status } : {} }),
@@ -183,9 +157,5 @@ export const pilotQueries = {
   pushKey: () => ({
     queryKey: queryKeys.pilot.pushKey(),
     queryFn: () => api.push["vapid-key"].get(),
-  }),
-  pushDevices: () => ({
-    queryKey: queryKeys.pilot.pushDevices(),
-    queryFn: () => api.push.subscriptions.get(),
   }),
 };

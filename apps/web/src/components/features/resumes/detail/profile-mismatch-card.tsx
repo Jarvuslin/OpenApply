@@ -34,7 +34,7 @@ export function ProfileMismatchCard(props: ProfileMismatchCardProps): ReactNode 
       severity="warning"
       variant="outlined"
       action={
-        <Button component={Link} href="/settings/profile" color="inherit" size="small">
+        <Button component={Link} href="/profile" color="inherit" size="small">
           Edit profile
         </Button>
       }

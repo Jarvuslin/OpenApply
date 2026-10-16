@@ -39,4 +39,3 @@ export const pilotSearchListSchema = z.array(pilotSearchSchema);
 export type CreatePilotSearchInput = z.infer<typeof createPilotSearchSchema>;
 export type UpdatePilotSearchInput = z.infer<typeof updatePilotSearchSchema>;
 export type ReportPilotSearchRunInput = z.infer<typeof reportPilotSearchRunSchema>;
-export type PilotSearch = z.infer<typeof pilotSearchSchema>;

@@ -27,16 +27,20 @@ export function jobSummary(rows: StatusCount[]): CampaignJobSummary {
     number
   >;
   let scored = 0;
+  let qualified = 0;
   for (const row of rows) {
     byStatus[row.status as CampaignJobStatus] += row.count;
     scored += row.scored ?? 0;
+    // Approval and scoring establish fit; historical submissions may predate scoring.
+    if (row.status === "applied") qualified += row.count;
+    else if (row.status === "approved" || row.status === "applying") qualified += row.scored ?? 0;
   }
   const totalFound = CAMPAIGN_JOB_STATUSES.reduce((n, status) => n + byStatus[status], 0);
 
   return {
     kind: "jobs",
     totalFound,
-    qualified: totalFound - byStatus.skipped,
+    qualified,
     applied: byStatus.applied,
     failed: byStatus.failed,
     skipped: byStatus.skipped,

@@ -1,4 +1,5 @@
 "use client";
+import type { ReactElement } from "react";
 import { Button, MenuItem, Stack, TextField } from "@mui/material";
 import { USER_DEFAULT_VALUES } from "@openapply/contracts/user";
 import { useSelector } from "@tanstack/react-form";
@@ -32,7 +33,7 @@ export const WorkAuthSection = withForm({
         <form.AppField name="workAuthorization" mode="array">
           {(field) => (
             <Stack spacing={3}>
-              {(field.state.value ?? []).map((entry, i) => (
+              {(field.state.value ?? []).map((_, i) => (
                 <Stack key={keys[i]} spacing={2}>
                   <form.AppField name={`workAuthorization[${i}].country`}>
                     {(f) => (
@@ -43,36 +44,24 @@ export const WorkAuthSection = withForm({
                     )}
                   </form.AppField>
                   <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                    <TextField
-                      fullWidth
-                      select
-                      label="Authorized to work here?"
-                      value={entry.authorized == null ? "" : String(entry.authorized)}
-                      onChange={(e) =>
-                        form.setFieldValue(
-                          `workAuthorization[${i}].authorized`,
-                          e.target.value === "true",
-                        )
-                      }
-                    >
-                      <MenuItem value="true">Yes</MenuItem>
-                      <MenuItem value="false">No</MenuItem>
-                    </TextField>
-                    <TextField
-                      fullWidth
-                      select
-                      label="Need visa sponsorship?"
-                      value={entry.sponsorship == null ? "" : String(entry.sponsorship)}
-                      onChange={(e) =>
-                        form.setFieldValue(
-                          `workAuthorization[${i}].sponsorship`,
-                          e.target.value === "true",
-                        )
-                      }
-                    >
-                      <MenuItem value="true">Yes</MenuItem>
-                      <MenuItem value="false">No</MenuItem>
-                    </TextField>
+                    <form.AppField name={`workAuthorization[${i}].authorized`}>
+                      {(f) => (
+                        <YesNoUnknown
+                          label="Authorized to work here?"
+                          value={f.state.value}
+                          onChange={f.handleChange}
+                        />
+                      )}
+                    </form.AppField>
+                    <form.AppField name={`workAuthorization[${i}].sponsorship`}>
+                      {(f) => (
+                        <YesNoUnknown
+                          label="Need sponsorship now or in the future?"
+                          value={f.state.value}
+                          onChange={f.handleChange}
+                        />
+                      )}
+                    </form.AppField>
                   </Stack>
                   <Button
                     onClick={() => {
@@ -113,3 +102,25 @@ export const WorkAuthSection = withForm({
     );
   },
 });
+
+interface YesNoUnknownProps {
+  label: string;
+  value: boolean | null | undefined;
+  onChange: (value: boolean | null) => void;
+}
+
+function YesNoUnknown({ label, value, onChange }: YesNoUnknownProps): ReactElement {
+  return (
+    <TextField
+      fullWidth
+      select
+      label={label}
+      value={value == null ? "" : String(value)}
+      onChange={(e) => onChange(e.target.value === "" ? null : e.target.value === "true")}
+    >
+      <MenuItem value="">Unknown / not answered</MenuItem>
+      <MenuItem value="true">Yes</MenuItem>
+      <MenuItem value="false">No</MenuItem>
+    </TextField>
+  );
+}

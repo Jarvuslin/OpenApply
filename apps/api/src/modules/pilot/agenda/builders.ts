@@ -21,7 +21,6 @@ export const base = (over: Partial<AgendaInput> = {}): AgendaInput => ({
   config: cfg(),
   cycleCount: 0,
   openQuestions: 0,
-  activeClaims: 0,
   appliedToday: 0,
 
   awaitingSetup: true,

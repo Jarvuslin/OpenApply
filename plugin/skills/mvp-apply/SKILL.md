@@ -1,22 +1,25 @@
 ---
 name: mvp-apply
-description: Drain the standing campaign's approved jobs one worker at a time, parking questions and verification without stopping the queue.
-argument-hint: "<campaign-id>"
+description: Enqueue the selected approved application jobs in the common queue.
+argument-hint: "<campaign-id> [--job <key>]... [--original-resume]"
 ---
 
-# Apply selected jobs
+# Queue selected applications
 
 Start with `openapply-api GET /api/health`. Stop clearly if the API is unavailable.
-Read `../_shared/setup.md`, `../_shared/blocked-sites.md` and `../_shared/campaign-flow.md`.
-The user has approved these selected jobs. Do not add a count cap or request routine confirmation again.
+Read `../_shared/queue-workspace.md`, `../_shared/setup.md` and `../_shared/submission-recovery.md`.
 
-1. Fetch `GET /api/campaigns/<id>`. Stop if it is not an in-progress apply campaign. Load its resume and minimum score.
-2. Fetch approved jobs with `GET /api/campaigns/<id>/jobs --query status=approved --query limit=100`. Always reread page 1 after processing a batch, since removing approved rows shifts later pages.
-3. For each row, recheck campaign status and stop if paused. Dedupe as described in campaign-flow. PATCH that job to applying. A 409 means inspect its current state and move on, never submit twice.
-4. Delegate exactly one job-worker in apply mode with campaignId, jobKey, canonical URL, resumeId and minMatchScore. Wait for its compact result before the next job. Never reuse another job's browser or reasoning context.
-5. Record applied, failed or skipped through the result endpoint. On needs_user, save a Pilot question with the job subject, issues and document links, PATCH needs_user, leave the tab open and continue. Resume that job only after a relevant answer arrives. Record signup, verification and submission outcomes separately when the worker reports them.
-6. Repeat until no approved rows remain. Leave the standing campaign in progress. Report counts and link to its campaign page. Never mark an application submitted without visible employer confirmation.
+Fetch the owned campaign and resolve only the user's selected saved job keys to owned job IDs.
+Preserve explicit original-document selection in campaign policy before admission. Enqueue
+those exact IDs through `POST /api/work-queue/enqueue` with a stable request UUID. Report the
+Queue link and admission result. A rejected or uncertain admission is inspected with the
+same request identity, never replaced with a broader selection.
 
-Use the configured Playwright MCP and persistent VM browser. Before uploading a local resume, run `openapply-stage "<local-resume-path>"` and use its returned guest path. Do not translate drive letters or guess Mac paths. API and document work run on the host.
+Do not launch job workers, drain a campaign, claim Pilot work, open a browser or submit from
+this skill. The companion owns concurrent application workers, finite model allocations,
+per-job browser processes and API leases. An application item executes exactly one job.
 
-Use `../_shared/auth.md` for signup and `../_shared/mailbox.md` for email. Missing mailbox access parks the job. A blocking CAPTCHA follows the entitlement check in campaign-flow. Solving disabled or unsuccessful means needs_user with category verification, never a silent skip.
+Never restart a begun, unknown or legacy ambiguous submission. Recover actual receipt/result
+storage only. Missing facts remain named questions; a later answer does not authorize replay.
+The queue applies account/company caps and domain pacing. Do not raise caps or enqueue a new
+batch automatically when the current one ends.

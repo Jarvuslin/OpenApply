@@ -4,35 +4,26 @@ import { z } from "zod/v4";
 export const SERVICE_PROVIDERS = ["2captcha", "capsolver"] as const;
 export type ServiceProvider = (typeof SERVICE_PROVIDERS)[number];
 
-/**
- * A credential is one of two shapes, discriminated by which fields are filled:
- * - login: `scope` (domain or "default") + `email` + `password`.
- * - service: `scope` (a provider name, e.g. "2captcha") + `apiKey`.
- */
-export const credentialSchema = z
-  .object({
-    scope: z.string().min(1),
-    email: z.string().optional(),
-    password: z.string().optional(),
-    apiKey: z.string().optional(),
-  })
-  .refine(
-    (c) => {
-      const present = (v: string | undefined): boolean => (v ?? "").trim().length > 0;
-      const login = present(c.email) && present(c.password);
-      const service = present(c.apiKey);
-      // Exactly one shape, and a service credential carries no login fields.
-      return service ? !present(c.email) && !present(c.password) : login;
-    },
-    { message: "Provide an email + password, or an API key - not both." },
-  );
+/** The single login row's scope. Captcha keys live beside it under their provider name. */
+export const LOGIN_SCOPE = "default";
 
-export const credentialPatchSchema = z.object({
-  scope: z.string().min(1).optional(),
-  email: z.string().optional(),
-  password: z.string().optional(),
-  apiKey: z.string().optional(),
+/** The one login an account uses on every employer site, plus an optional captcha key. */
+export const jobLoginSchema = z.strictObject({
+  email: z.string().nullable(),
+  hasPassword: z.boolean(),
+  captchaProvider: z.enum(SERVICE_PROVIDERS).nullable(),
+  hasCaptchaKey: z.boolean(),
 });
 
-export type CredentialInput = z.infer<typeof credentialSchema>;
-export type CredentialPatch = z.infer<typeof credentialPatchSchema>;
+/** Omitted password or captcha key keeps the saved secret; a null provider clears the captcha key. */
+export const saveJobLoginSchema = z.strictObject({
+  email: z.email().max(320),
+  password: z.string().min(1).max(1024).optional(),
+  captchaProvider: z.enum(SERVICE_PROVIDERS).nullable(),
+  captchaApiKey: z.string().min(1).max(1024).optional(),
+});
+
+export const revealedPasswordSchema = z.strictObject({ password: z.string().nullable() });
+
+export type JobLogin = z.infer<typeof jobLoginSchema>;
+export type SaveJobLogin = z.infer<typeof saveJobLoginSchema>;

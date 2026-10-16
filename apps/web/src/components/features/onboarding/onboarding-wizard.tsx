@@ -36,14 +36,12 @@ import { SalarySection } from "@/components/features/settings/sections/salary-se
 import { WorkAuthSection } from "@/components/features/settings/sections/work-auth-section";
 import { useAppForm, withForm } from "@/components/ui/form/tanstack";
 import { SectionCard } from "@/components/ui/layout";
-import { patchAgentStorage } from "@/lib/agent-storage";
 import { useToast } from "@/providers/notification-provider";
 import { migrateOpenApplyStorage } from "@/utils/storage-migration";
-import { AgentConnectionStatus, type ProviderConnection } from "./agent-connection-status";
-import { AgentSetupStep } from "./agent-setup-step";
 import { normalizeProfileDraft } from "./normalize-profile-draft";
 import {
   clearOnboardingDraft,
+  migrateOnboardingDraft,
   readOnboardingDraft,
   writeOnboardingDraft,
 } from "./onboarding-draft";
@@ -51,7 +49,6 @@ import { ResumeUploadStep } from "./resume-upload-step";
 import { describeIssues, firstStepWithIssue } from "./validation-issues";
 
 const STEPS = [
-  { key: "agent", label: "Connect agent" },
   { key: "resume", label: "Resume" },
   { key: "personal", label: "Personal" },
   { key: "eligibility", label: "Eligibility" },
@@ -91,6 +88,7 @@ function RestoreOnboarding({ userId, initialData }: OnboardingProps): ReactEleme
   useEffect(() => {
     try {
       migrateOpenApplyStorage(window.localStorage);
+      migrateOnboardingDraft(window.localStorage, userId);
       const draft = readOnboardingDraft(window.localStorage, userId);
       setRestored({
         values: draft?.values ?? serverValues,
@@ -98,7 +96,7 @@ function RestoreOnboarding({ userId, initialData }: OnboardingProps): ReactEleme
         error: false,
       });
     } catch {
-      setRestored({ values: serverValues, step: 2, error: true });
+      setRestored({ values: serverValues, step: 1, error: true });
     }
     // Restore once per account, before mounting the form. Refetches must not
     // replace the user's edits with the last server-validated profile.
@@ -127,7 +125,6 @@ function OnboardingForm({
   const [draftError, setDraftError] = useState(false);
   const [showValidationErrors, setShowValidationErrors] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
-  const [connection, setConnection] = useState<ProviderConnection | null>(null);
   const saved = useRef(false);
 
   // Local drafts may be incomplete. Only explicitly reviewed, validated values
@@ -176,13 +173,10 @@ function OnboardingForm({
       subscription.unsubscribe();
     };
   }, [form, userId, step]);
-  const isProfileStep = step > 0;
   const isLastProfileStep = step === REVIEW_STEP;
 
   const finish = (): void => {
-    // Land on the workspace with the dock open so the agent is the obvious next step.
-    patchAgentStorage({ dockExpanded: true });
-    router.replace("/mvp");
+    router.replace("/dashboard");
   };
 
   const submitForm = async (e: SubmitEvent<HTMLFormElement>) => {
@@ -228,94 +222,77 @@ function OnboardingForm({
         ))}
       </Stepper>
       <SectionCard>
-        {isProfileStep ? (
-          <form onSubmit={submitForm}>
-            <Stack spacing={3}>
-              {step === 1 && <ResumeUploadStep form={form} onContinue={() => setStep(2)} />}
-              {step === 2 && (
-                <>
-                  <PersonalSection form={form} />
-                  <AddressSection form={form} />
-                </>
-              )}
-              {step === 3 && (
-                <>
-                  <Alert severity="info">
-                    Review these answers explicitly. Work authorization and sponsorship are never
-                    inferred from your resume. Add an explicit answer for each country where you
-                    want to work.
-                  </Alert>
-                  <WorkAuthSection form={form} />
-                </>
-              )}
-              {step === 4 && (
-                <>
-                  <SalarySection form={form} />
-                  <JobPreferencesSection form={form} />
-                  <AutoApplySection form={form} />
-                  <ReferencesSection form={form} />
-                </>
-              )}
-              {step === 5 && (
-                <>
-                  <EeoSection form={form} />
-                  <Alert severity="info">
-                    Demographic answers are optional. You can choose not to disclose.
-                    Employer-specific questions that are not covered here will pause that
-                    application for your answer.
-                  </Alert>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={confirmed}
-                        onChange={(_, checked) => setConfirmed(checked)}
-                      />
-                    }
-                    label="I reviewed my identity, work authorization, sponsorship, availability and preferences. Use only these confirmed answers."
-                  />
-                </>
-              )}
-              {showValidationErrors && <ValidationSummary form={form} />}
-              {step !== 1 && (
-                <Stack direction="row" sx={{ justifyContent: "space-between", pt: 1 }}>
-                  <Button variant="outlined" onClick={() => setStep((s) => Math.max(0, s - 1))}>
-                    Back
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    disabled={save.isPending || (isLastProfileStep && !confirmed)}
-                  >
-                    {isLastProfileStep ? (save.isPending ? "Saving…" : "Save & finish") : "Next"}
-                  </Button>
-                </Stack>
-              )}
-            </Stack>
-          </form>
-        ) : (
+        <form onSubmit={submitForm}>
           <Stack spacing={3}>
-            <Alert severity="info">
-              Connect first to import your resume automatically, or continue with manual entry.
-            </Alert>
-            <AgentSetupStep connection={connection} onConnectionChange={setConnection} />
-            <Stack direction="row" sx={{ justifyContent: "space-between", pt: 1 }}>
-              <Button variant="outlined" onClick={() => setStep(2)}>
-                Fill manually
-              </Button>
-              <Button variant="contained" onClick={() => setStep(1)}>
-                Continue to resume
-              </Button>
-            </Stack>
+            {step === 0 && <ResumeUploadStep form={form} onContinue={() => setStep(1)} />}
+            {step === 1 && (
+              <>
+                <PersonalSection form={form} />
+                <AddressSection form={form} />
+              </>
+            )}
+            {step === 2 && (
+              <>
+                <Alert severity="info">
+                  Review these answers explicitly. Work authorization and sponsorship are never
+                  inferred from your resume. Answer for each country where you want to work, or
+                  leave Unknown to answer when an application needs it.
+                </Alert>
+                <WorkAuthSection form={form} />
+              </>
+            )}
+            {step === 3 && (
+              <>
+                <SalarySection form={form} />
+                <JobPreferencesSection form={form} />
+                <AutoApplySection form={form} />
+                <ReferencesSection form={form} />
+              </>
+            )}
+            {step === 4 && (
+              <>
+                <form.Subscribe selector={(s) => s.values.jobPreferences?.roles ?? []}>
+                  {(roles) => (
+                    <Typography variant="body2">
+                      Desired roles: {roles.length ? roles.join(", ") : "Any role (no filter)"}
+                    </Typography>
+                  )}
+                </form.Subscribe>
+                <EeoSection form={form} />
+                <Alert severity="info">
+                  Demographic answers are optional. You can choose not to disclose.
+                  Employer-specific questions that are not covered here will pause that application
+                  for your answer.
+                </Alert>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={confirmed}
+                      onChange={(_, checked) => setConfirmed(checked)}
+                    />
+                  }
+                  label="I reviewed my identity, work authorization, sponsorship, availability and preferences. Use my saved answers and ask me about anything left unknown."
+                />
+              </>
+            )}
+            {showValidationErrors && <ValidationSummary form={form} />}
+            {step !== 0 && (
+              <Stack direction="row" sx={{ justifyContent: "space-between", pt: 1 }}>
+                <Button variant="outlined" onClick={() => setStep((s) => Math.max(0, s - 1))}>
+                  Back
+                </Button>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={save.isPending || (isLastProfileStep && !confirmed)}
+                >
+                  {isLastProfileStep ? (save.isPending ? "Saving…" : "Save & finish") : "Next"}
+                </Button>
+              </Stack>
+            )}
           </Stack>
-        )}
+        </form>
       </SectionCard>
-      <AgentConnectionStatus
-        connection={connection}
-        onManage={() => {
-          setStep(0);
-          setConfirmed(false);
-        }}
-      />
     </Stack>
   );
 }

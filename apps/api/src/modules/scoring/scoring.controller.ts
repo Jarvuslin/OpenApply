@@ -1,7 +1,13 @@
+import {
+  fitAssessmentSchema,
+  fitContextSchema,
+  scoreAssessmentInputSchema,
+  scoreContextInputSchema,
+} from "@openapply/contracts/scoring";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { authGuard } from "@/common/middleware";
-import { fitResultSchema, scoreFitSchema } from "./scoring.schema";
+import { RATE_LIMITS, rateLimit } from "@/common/rate-limit";
 import { ScoringService } from "./scoring.service";
 
 const scoringService = container.resolve(ScoringService);
@@ -11,12 +17,21 @@ export const scoringController = new Elysia({
   detail: { tags: ["Scoring"] },
 })
   .use(authGuard)
+  .post("/context", ({ user, body }) => scoringService.context(user.id, body), {
+    body: scoreContextInputSchema,
+    response: fitContextSchema,
+    beforeHandle: rateLimit(RATE_LIMITS.applyQueue),
+    detail: {
+      summary: "Read original resume and complete job description for local-agent assessment",
+    },
+  })
   .post("/", ({ user, body }) => scoringService.scoreJobFit(user.id, body), {
-    body: scoreFitSchema,
-    response: fitResultSchema,
+    body: scoreAssessmentInputSchema,
+    response: fitAssessmentSchema,
+    beforeHandle: rateLimit(RATE_LIMITS.applyQueue),
     detail: {
       summary: "Score job fit",
       description:
-        "Deterministically scores a job digest against the profile's resume-derived inputs plus any overrides. The verdict says whether to trust the score as-is or deliberate over the match evidence.",
+        "Validates every local-agent assessment against original source spans, computes fixed score components, and persists the assessment and job score together. Existing assessments with the same input basis are immutable.",
     },
   });

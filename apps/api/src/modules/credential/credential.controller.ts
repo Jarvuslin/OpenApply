@@ -1,15 +1,13 @@
-import { credentialPatchSchema, credentialSchema } from "@openapply/contracts/credential";
-import { idParam } from "@openapply/contracts/shared";
+import {
+  jobLoginSchema,
+  revealedPasswordSchema,
+  saveJobLoginSchema,
+} from "@openapply/contracts/credential";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { authGuard } from "@/common/middleware";
-import { deletedResponseSchema } from "@/types/response";
-import {
-  credentialListSchema,
-  credentialRecordSchema,
-  domainResolveQuery,
-  resolvedCredentialSchema,
-} from "./credential.schema";
+import { RATE_LIMITS, rateLimit } from "@/common/rate-limit";
+import { resolvedCredentialSchema } from "./credential.schema";
 import { CredentialService } from "./credential.service";
 
 const svc = container.resolve(CredentialService);
@@ -19,48 +17,27 @@ export const credentialController = new Elysia({
   detail: { tags: ["Credentials"] },
 })
   .use(authGuard)
-  .get("/", ({ user }) => svc.list(user.id), {
-    response: credentialListSchema,
-    detail: {
-      summary: "List credentials",
-      description:
-        "Returns all stored login/service credentials for the active profile, ordered by scope.",
-    },
+  .get("/login", ({ user, authKind }) => svc.login(user.id, authKind), {
+    response: jobLoginSchema,
+    beforeHandle: rateLimit(RATE_LIMITS.workQueueRead),
+    detail: { summary: "Read the job login without its password or captcha key" },
   })
-  .post("/", ({ user, body }) => svc.create(user.id, body), {
-    body: credentialSchema,
-    response: credentialRecordSchema,
-    detail: {
-      summary: "Create credential",
-      description:
-        "Creates a new login/service credential for the active profile and returns the created record.",
-    },
+  .put("/login", ({ user, authKind, body }) => svc.saveLogin(user.id, authKind, body), {
+    body: saveJobLoginSchema,
+    response: jobLoginSchema,
+    beforeHandle: rateLimit(RATE_LIMITS.workQueueMutation),
+    detail: { summary: "Replace the job login used on every employer site" },
   })
-  .get("/resolve", ({ user, query }) => svc.resolveCredential(user.id, query.domain), {
-    query: domainResolveQuery,
+  .post("/login/reveal", ({ user, authKind }) => svc.revealPassword(user.id, authKind), {
+    response: revealedPasswordSchema,
+    beforeHandle: rateLimit(RATE_LIMITS.workQueueMutation),
+    detail: { summary: "Show the saved job-login password to its signed-in owner" },
+  })
+  .get("/resolve", ({ user }) => svc.resolveCredential(user.id), {
     response: resolvedCredentialSchema,
     detail: {
-      summary: "Resolve login for domain",
+      summary: "Resolve the job login",
       description:
-        "Resolves the effective login for a board domain: the credential scoped to the domain, else the one scoped to `default`. Returns the email/password with the credential id (the target for a password update) and matched scope, or null when no complete pair is found.",
-    },
-  })
-  .patch("/:id", ({ user, params, body }) => svc.update(user.id, params.id, body), {
-    params: idParam,
-    body: credentialPatchSchema,
-    response: credentialRecordSchema,
-    detail: {
-      summary: "Update credential",
-      description:
-        "Updates the specified credential owned by the active profile and returns the updated record.",
-    },
-  })
-  .delete("/:id", ({ user, params }) => svc.remove(user.id, params.id), {
-    params: idParam,
-    response: deletedResponseSchema,
-    detail: {
-      summary: "Delete credential",
-      description:
-        "Deletes the specified credential owned by the active profile and returns the deleted id.",
+        "Returns the one email/password used on every employer site with its credential id, or null when none is saved.",
     },
   });

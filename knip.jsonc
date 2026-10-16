@@ -13,9 +13,9 @@
       "ignoreExportsUsedInFile": false,
       // prisma.config.ts reads DATABASE_URL at load, which crashes knip's plugin loader.
       "prisma": false,
-      // pg is reached through @prisma/adapter-pg, pino-pretty by transport name only,
-      // @prisma/client only from the gitignored generated client knip cannot read.
-      "ignoreDependencies": ["pg", "pino-pretty", "@types/pg", "@prisma/client"]
+      // pino-pretty is reached by transport name only, @prisma/client only from the
+      // gitignored generated client knip cannot read.
+      "ignoreDependencies": ["pino-pretty", "@prisma/client"]
     },
     "apps/web": {
       "entry": ["src/**/*.test.ts"],

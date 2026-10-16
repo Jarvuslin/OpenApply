@@ -5,8 +5,14 @@ import type {
 } from "@openapply/contracts/application";
 import { APPLICATION_STATUSES, SINGLE_APPLY_CAMPAIGN } from "@openapply/contracts/application";
 import { type PaginationQuery, pageSlice, paginate } from "@openapply/contracts/pagination";
+import { workspaceChannel } from "@openapply/contracts/sse";
+import {
+  type ApplicationSubmission,
+  applicationSubmissionRecordSchema,
+} from "@openapply/contracts/submission";
 import { singleton } from "tsyringe";
 import { findOwned } from "@/common/errors";
+import { publish } from "@/common/sse";
 import { type Prisma, PrismaClient } from "@/generated/prisma/client";
 import { type DuplicateLookup, findAppliedDuplicate } from "./duplicate";
 import { statusChangeOps } from "./status-change";
@@ -126,28 +132,34 @@ export class ApplicationService {
       "Application",
     );
 
-    return { ...row, job: await this.findCampaignJob(row.campaignId, row.url) };
+    const submission =
+      row.submission === null ? null : applicationSubmissionRecordSchema.parse(row.submission);
+    return {
+      ...row,
+      submission: submission && {
+        ...submissionDates(submission),
+        previous: submission.previous.map(submissionDates),
+      },
+      job: await this.findCampaignJob(userId, row.id, row.campaignId, row.url),
+    };
   }
 
-  /** No FK exists: the job is matched by url within the campaign, so a single-apply row has none. */
-  private async findCampaignJob(campaignId: string | null, url: string) {
+  private async findCampaignJob(
+    userId: string,
+    applicationId: string,
+    campaignId: string | null,
+    url: string,
+  ) {
     if (!campaignId) return null;
     return this.prisma.job.findFirst({
-      where: { campaignId, url },
+      where: {
+        campaignId,
+        campaign: { userId },
+        // Receipts link the original posting even when its stored URL contains tracking parameters.
+        OR: [{ submissionAttempt: { is: { applicationId, userId } } }, { url }],
+      },
       select: { description: true, salary: true, type: true },
     });
-  }
-
-  async addEvent(userId: string, id: string, input: { kind: "note"; notes: string }) {
-    await findOwned(
-      (where) => this.prisma.application.findFirst({ where, select: { id: true } }),
-      { id, userId },
-      "Application",
-    );
-    const event = await this.prisma.applicationEvent.create({
-      data: { applicationId: id, kind: input.kind, note: input.notes },
-    });
-    return event;
   }
 
   async remove(userId: string, id: string) {
@@ -157,6 +169,7 @@ export class ApplicationService {
       "Application",
     );
     await this.prisma.application.delete({ where: { id } });
+    publish(workspaceChannel, { userId }, { type: "application.updated", id });
     return { deleted: id };
   }
 
@@ -183,7 +196,7 @@ export class ApplicationService {
         note: input.note,
       }),
     );
-
+    publish(workspaceChannel, { userId }, { type: "application.updated", id });
     return { id, status: toStatus };
   }
 
@@ -194,4 +207,14 @@ export class ApplicationService {
     }
     return { applied: true as const, match: duplicate };
   }
+}
+
+function submissionDates(submission: ApplicationSubmission) {
+  return {
+    ...submission,
+    confirmation: {
+      ...submission.confirmation,
+      observedAt: new Date(submission.confirmation.observedAt),
+    },
+  };
 }

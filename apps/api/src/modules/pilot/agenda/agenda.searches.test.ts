@@ -39,14 +39,6 @@ describe("AgendaService search.discover", () => {
     expect(discoverOf(spent)).toBeUndefined();
   });
 
-  it("holds a search back while its last run is still open", async () => {
-    const agenda = await service({
-      pilotSearches: [dueRow({ id: "s-react" })],
-      searchClaims: [{ subjectId: "s-react", grantedAt: new Date(), releasedAt: null }],
-    }).refresh("p1");
-    expect(discoverOf(agenda)).toBeUndefined();
-  });
-
   it("reuses the newest campaign the search spawned, whatever its query is now", async () => {
     const agenda = await service({
       pilotSearches: [dueRow({ id: "s1", query: "senior react" })],
@@ -75,14 +67,13 @@ describe("AgendaService strategy.bootstrap", () => {
     expect(bootstrapOf(agenda)?.payload).toEqual({ goals, minScore: 70 });
   });
 
-  it("stays out when goals are blank, a search exists, a try is recent, or work is queued", async () => {
+  it("stays out when goals are blank, a search exists, or work is queued", async () => {
     const blank = await service({ instructionsGoals: "   " }).refresh("p1");
     expect(bootstrapOf(blank)).toBeUndefined();
     expect(blank.emptyReason).toBe("awaitingSetup");
 
     const cases = [
       { pilotSearches: [futureRow({ lastRunAt: new Date() })] },
-      { bootstrapClaim: { releasedAt: null } },
       { approvedJobs: [approvedJob()] },
     ];
     for (const over of cases) {

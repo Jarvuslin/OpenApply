@@ -1,8 +1,12 @@
 import {
+  additionalLinksSchema,
+  applicationAnswersSchema,
+  educationEntrySchema,
   jobPreferencesSchema,
   SALARY_CURRENCIES,
   SALARY_PERIODS,
   workAuthorizationSchema,
+  workEntrySchema,
 } from "@openapply/contracts/user";
 import { z } from "zod/v4";
 
@@ -32,11 +36,17 @@ const userViewSchema = z.object({
   id: z.uuid(),
   firstName: z.string(),
   lastName: z.string(),
+  preferredName: z.string().nullable(),
+  namePronunciation: z.string().nullable(),
+  pronouns: z.string().nullable(),
+  currentCompany: z.string().nullable(),
   contactEmail: z.string(),
   phone: z.string().nullable(),
   website: z.string().nullable(),
   linkedin: z.string().nullable(),
   github: z.string().nullable(),
+  portfolio: z.string().nullable(),
+  additionalLinks: additionalLinksSchema,
   street: z.string().nullable(),
   aptUnit: z.string().nullable(),
   city: z.string().nullable(),
@@ -44,6 +54,12 @@ const userViewSchema = z.object({
   zipCode: z.string().nullable(),
   country: z.string().nullable(),
   countryCode: z.string().nullable(),
+  gpa: z.number().nullable(),
+  gpaScale: z.number(),
+  transcriptOriginalName: z.string().nullable(),
+  applicationAnswers: applicationAnswersSchema,
+  educationHistory: z.array(educationEntrySchema),
+  workHistory: z.array(workEntrySchema),
   jobPreferences: jobPreferencesSchema,
   workAuthorization: workAuthorizationSchema,
   usAuthorized: z.boolean(),
@@ -98,3 +114,5 @@ export const primaryResumeSetSchema = z.object({
 });
 
 /** Whether a candidate username is free to claim. */
+
+export const transcriptSavedSchema = z.object({ transcriptOriginalName: z.string() });

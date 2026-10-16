@@ -2,31 +2,17 @@ import { cursorPage } from "@openapply/contracts/pagination";
 import type { CreatePilotJournalInput, PilotJournalKind } from "@openapply/contracts/pilot";
 import { singleton } from "tsyringe";
 import { publishActivity, toActivityEntry, writeActivity } from "@/common/activity-log";
-import { PushService } from "@/common/push/push.service";
 import { PrismaClient } from "@/generated/prisma/client";
 
 const EXPORT_BATCH = 500;
 
 @singleton()
 export class PilotJournalService {
-  constructor(
-    private readonly prisma: PrismaClient,
-    private readonly push: PushService,
-  ) {}
+  constructor(private readonly prisma: PrismaClient) {}
 
   async appendJournal(userId: string, body: CreatePilotJournalInput) {
     const rows = await this.prisma.$transaction((tx) => writeActivity(tx, userId, body));
-    const items = publishActivity(userId, rows);
-    // The host journals orchestrator failures as system entries; push them so they reach the phone.
-    for (const entry of items.filter((item) => item.kind === "system")) {
-      void this.push.sendToUser(userId, {
-        title: "Pilot alert",
-        body: entry.summary,
-        url: "/pilot",
-        tag: "pilot-system",
-      });
-    }
-    return { items };
+    return { items: publishActivity(userId, rows) };
   }
 
   async listJournal(

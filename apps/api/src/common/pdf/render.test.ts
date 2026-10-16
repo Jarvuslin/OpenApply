@@ -1,139 +1,114 @@
-import { EMPTY_RESUME_DATA, type ResumeData } from "@openapply/contracts/resume";
+import { readFile } from "node:fs/promises";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
-import { dateRange } from "./jake/parts";
-import { renderResumePdf } from "./render";
+import { dateRange } from "./canonical-template";
+import { syntheticResume } from "./fakes";
+import { renderResumeArtifact } from "./render";
+import { validateResumePdf } from "./resume-validation";
 import { describe, expect, it } from "bun:test";
 
-async function readPdf(data: ResumeData) {
-  const task = getDocument({
-    data: new Uint8Array(await renderResumePdf(data)),
-    useSystemFonts: true,
+it.each([
+  [undefined, undefined, ""],
+  [" 2020 ", undefined, "2020"],
+  [undefined, "2024", "2024"],
+  ["2020", "2024", "2020 – 2024"],
+])("prints only known dates (%s, %s)", (start, end, expected) => {
+  expect(dateRange(start, end)).toBe(expected);
+});
+
+describe("compiled PDF validation", () => {
+  it("verifies actual page dimensions, embedded fonts and full text", async () => {
+    const pdf = await readFile(new URL("./fixtures/canonical.pdf", import.meta.url));
+    const validation = await validateResumePdf(pdf, [
+      "Synthetic Applicant",
+      "Structured outputs",
+      "15%",
+      "C#",
+    ]);
+    expect(validation.pageCount).toBe(1);
+    expect(validation.fontFamilies).toContain("CMR10");
+    expect(validation.textVerified).toBe(true);
   });
-  const document = await task.promise;
-  try {
-    return await Promise.all(
-      Array.from({ length: document.numPages }, async (_, index) => {
-        const page = await document.getPage(index + 1);
-        const content = await page.getTextContent();
-        const items = content.items.flatMap((item) =>
-          "str" in item && item.str.trim()
-            ? [{ text: item.str, y: item.transform[5], height: item.height }]
-            : [],
-        );
-        const annotations = await page.getAnnotations();
-        return {
-          items,
-          text: items.map((item) => item.text).join(" "),
-          urls: annotations.map((annotation) => annotation.url),
-        };
-      }),
+
+  it("rejects missing content rather than accepting a successful compiler exit", async () => {
+    const pdf = await readFile(new URL("./fixtures/canonical.pdf", import.meta.url));
+    await expect(validateResumePdf(pdf, ["A fact that is not in this document"])).rejects.toThrow(
+      "lost or changed text",
     );
-  } finally {
-    await task.destroy();
-  }
-}
-
-function withBullets(bullets: string[], summary = ""): ResumeData {
-  return {
-    ...EMPTY_RESUME_DATA,
-    basics: { name: "Synthetic Applicant" },
-    summary,
-    experience: [
-      {
-        company: "Synthetic Employer",
-        title: "Synthetic Role",
-        start: "2020",
-        end: "2021",
-        bullets,
-      },
-    ],
-  };
-}
-
-describe("resume PDF dates", () => {
-  it.each([
-    [undefined, undefined, ""],
-    [" 2020 ", undefined, "2020"],
-    ["2020", " ", "2020"],
-    [undefined, "2024", "2024"],
-    ["2020", "Present", "2020 – Present"],
-    ["2020", "2024", "2020 – 2024"],
-  ])("prints only known dates (%s, %s)", (start, end, expected) => {
-    expect(dateRange(start, end)).toBe(expected);
-  });
-
-  it("does not add ongoing status to a dated certification and preserves its verification link", async () => {
-    const pages = await readPdf({
-      ...EMPTY_RESUME_DATA,
-      basics: { name: "Synthetic Applicant" },
-      certifications: [
-        {
-          name: "Example Certification",
-          issued: "2020",
-          url: "https://example.com/credentials/123",
-        },
-      ],
-    });
-    const text = pages.map((page) => page.text).join(" ");
-    expect(text).toContain("2020");
-    expect(text).not.toContain("Present");
-    expect(text).toContain("example.com/credentials/123");
-    expect(pages.flatMap((page) => page.urls)).toContain("https://example.com/credentials/123");
   });
 });
 
-describe("resume PDF pagination", () => {
-  it("flows a long experience entry across pages without squeezing or losing bullets", async () => {
-    const bullets = Array.from(
-      { length: 70 },
-      (_, index) => `PROBEBULLET${index} ${"sample content ".repeat(10)}`,
-    );
-    const pages = await readPdf(withBullets(bullets));
-    expect(pages.length).toBeGreaterThan(1);
-    const text = pages.map((page) => page.text).join(" ");
-    expect([...text.matchAll(/PROBEBULLET\d+/g)].map((match) => match[0])).toEqual(
-      bullets.map((_, index) => `PROBEBULLET${index}`),
-    );
-    for (const page of pages) {
-      const starts = page.items.filter((item) => item.text.includes("PROBEBULLET"));
-      for (let index = 1; index < starts.length; index++) {
-        expect(starts[index - 1].y - starts[index].y).toBeGreaterThan(20);
-      }
-      for (const item of page.items) {
-        expect(item.y).toBeGreaterThanOrEqual(36);
-        expect(item.y).toBeLessThanOrEqual(756);
-      }
-    }
-  });
-
-  it("can split a single oversized bullet instead of overflowing the page", async () => {
-    const pages = await readPdf(
-      withBullets([`LONGSTART ${"sample content ".repeat(500)} LONGEND`]),
-    );
-    expect(pages.length).toBeGreaterThan(1);
-    expect(pages[0].text).toContain("LONGSTART");
-    expect(pages.at(-1)?.text).toContain("LONGEND");
-    for (const page of pages) {
-      for (const item of page.items) {
-        expect(item.y).toBeGreaterThanOrEqual(36);
-        expect(item.y).toBeLessThanOrEqual(756);
-      }
-    }
-  });
-
-  it.each([40, 42, 44, 46])(
-    "keeps section and entry headings with their first content after %i lines",
-    async (lines) => {
-      const summary = Array.from({ length: lines }, (_, index) => `Summary line ${index}`).join(
-        "\n",
+const executable = process.env.OPENAPPLY_TEST_TECTONIC_PATH || Bun.which("tectonic");
+const integration = executable ? describe : describe.skip;
+integration("existing Tectonic integration (no compiler installation)", () => {
+  it("renders the canonical one-page document and preserves dates, extras and safe links", async () => {
+    const artifact = await renderResumeArtifact(syntheticResume(), {
+      executable: executable ?? undefined,
+      onlyCached: true,
+    });
+    expect(artifact.validation.pageCount).toBe(1);
+    expect(artifact.compiler.version).toStartWith("Tectonic ");
+    expect(artifact.template.sha256).toMatch(/^[a-f0-9]{64}$/);
+    const task = getDocument({ data: new Uint8Array(artifact.pdf), useSystemFonts: false });
+    try {
+      const doc = await task.promise;
+      const page = await doc.getPage(1);
+      const text = await page.getTextContent();
+      expect(text.items.map((item) => ("str" in item ? item.str : "")).join(" ")).not.toContain(
+        "Present",
       );
-      const pages = await readPdf(withBullets(["FIRSTBULLET demonstrates the work."], summary));
-      const section = pages.findIndex((page) => page.text.includes("EXPERIENCE"));
-      const entry = pages.findIndex((page) => page.text.includes("Synthetic Employer"));
-      const bullet = pages.findIndex((page) => page.text.includes("FIRSTBULLET"));
-      expect(section).toBeGreaterThanOrEqual(0);
-      expect(entry).toBe(section);
-      expect(bullet).toBe(entry);
-    },
-  );
+      expect((await page.getAnnotations()).map((item) => item.url)).toContain(
+        "https://example.com/certification",
+      );
+    } finally {
+      await task.destroy();
+    }
+  }, 30_000);
+
+  it("rejects multi-page content without dropping history or shrinking typography", async () => {
+    const data = syntheticResume();
+    data.experience[0].bullets = Array.from(
+      { length: 50 },
+      (_, i) => `Probe ${i}: ${"supported experience ".repeat(15)}`,
+    );
+    await expect(
+      renderResumeArtifact(data, { executable: executable ?? undefined, onlyCached: true }),
+    ).rejects.toThrow(/pages|overflow/i);
+  }, 30_000);
+
+  it("rejects overlapping long heading columns", async () => {
+    const data = syntheticResume();
+    data.experience[0].company = "Long employer heading ".repeat(15);
+    await expect(
+      renderResumeArtifact(data, { executable: executable ?? undefined, onlyCached: true }),
+    ).rejects.toThrow(/overflow|bounds|overlap/i);
+  }, 30_000);
+
+  it("retains literal code symbols as extractable text", async () => {
+    const data = syntheticResume();
+    data.summary = String.raw`C# costs $5 at 15% & supports path_data {braces} ~ ^ C:\docs.`;
+    const result = await renderResumeArtifact(data, {
+      executable: executable ?? undefined,
+      onlyCached: true,
+    });
+    expect(result.validation.textVerified).toBe(true);
+    expect(result.validation.fontFamilies).toContain("SFRM1000");
+  }, 30_000);
+
+  it("reports unsupported name glyphs instead of losing accents silently", async () => {
+    const data = syntheticResume();
+    data.basics.name = "Zoë García";
+    await expect(
+      renderResumeArtifact(data, { executable: executable ?? undefined, onlyCached: true }),
+    ).rejects.toMatchObject({
+      details: {
+        issues: expect.arrayContaining([expect.objectContaining({ kind: "missing_glyph" })]),
+      },
+    });
+  }, 30_000);
+});
+
+it("fails closed when the configured compiler is missing", async () => {
+  await expect(
+    renderResumeArtifact(syntheticResume(), { executable: "/does-not-exist/tectonic" }),
+  ).rejects.toThrow("unavailable");
 });

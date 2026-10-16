@@ -2,7 +2,6 @@
 
 import type { LoginInput, RegisterInput } from "@openapply/contracts/auth";
 import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 import { api } from "@/api/client";
 import { ApiError } from "@/api/error";
 import {
@@ -13,6 +12,7 @@ import {
 } from "@/api/hooks";
 import { authQueries } from "@/api/queries";
 import type { AuthSessionResponse, AuthUserDto, LogoutResponse, MeResponse } from "@/api/types";
+import { announceSessionChange } from "@/lib/sse/session-boundary";
 import { loginDestination } from "@/utils/login-destination";
 
 export interface UseSessionResult {
@@ -54,13 +54,13 @@ export function useSession(options?: { fresh?: boolean }): UseSessionResult {
  * The proxy routes on to `/onboarding` when the profile is empty.
  */
 export function useAuthActions(): UseAuthActionsResult {
-  const router = useRouter();
   const queryClient = useQueryClient();
 
   const onSession = () => {
+    announceSessionChange();
     queryClient.clear();
     const next = new URLSearchParams(window.location.search).get("next");
-    router.replace(loginDestination(next));
+    window.location.replace(loginDestination(next));
   };
 
   // The forms render these errors inline - no toast on top.
@@ -76,8 +76,9 @@ export function useAuthActions(): UseAuthActionsResult {
 
   const logout = useApiMutation<LogoutResponse, void>(() => api.auth.logout.post(), {
     onSuccess: () => {
+      announceSessionChange();
       queryClient.clear();
-      router.push("/login");
+      window.location.assign("/login");
     },
   });
 

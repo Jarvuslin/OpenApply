@@ -9,8 +9,8 @@ export const metadata = buildDocsMetadata("campaigns-and-skills", {
 
 A campaign is one run of the agent against a goal: find jobs, apply to them,
 and track your applications. Skills are the units of work the agent performs.
-[The Pilot](/docs/pilot) runs all of this for you; everything below is the
-same work driven by hand.
+A pilot finds matching jobs on a schedule and can add them to your queue;
+everything below is the same work driven by hand.
 
 You don't type skill names. After `setup`, every skill is dispatched by an
 action in the dashboard (creating a campaign, applying to a job, scanning your
@@ -45,7 +45,7 @@ your resume, and applies to each one in turn. No board or base resume needed.
 | **Inbox → Scan pending** (`scan-inbox`) | Classifies new mail, matches it to applications, proposes status moves. |
 | Uploading a resume, or **Extract from PDF** (`extract-resume`) | Parses the PDF into the structured editor. |
 | **Resume → Tailor** (`tailor-resume`) | Rewrites a resume variant against one job description. |
-| **Pilot → Start** (`pilot`) | Runs [Pilot](/docs/pilot) cycles on a loop until you stop it. |
+| **Pilots → Run now** | Finds jobs that match the pilot's rules, scores them against your resume and lists them for review. |
 
 Uploading a PDF during onboarding or from the resumes list starts extraction on
 its own. Uploading a new PDF onto an existing resume doesn't, so that page has
@@ -54,7 +54,7 @@ an **Extract from PDF** button (**Re-extract from PDF** once there's content).
 The rest run on their own, mid-job. `tailor-resume` picks or creates the right
 resume variant per application, and `cover-letter` drafts a letter when a form
 asks for one. `get-code` pulls verification codes from your mailbox during
-logins. The worker checks solver entitlement for a blocking CAPTCHA and parks the job if solving is disabled or fails. The Pilot drafts availability replies for review.
+logins. The worker checks solver entitlement for a blocking CAPTCHA and parks the job if solving is disabled or fails.
 `review-resume` leaves a [suggested rewrite](/docs/getting-started) on the
 resume page after an upload, and `humanizer` keeps generated text reading
 naturally.

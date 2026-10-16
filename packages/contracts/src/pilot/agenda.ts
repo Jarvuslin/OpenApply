@@ -208,7 +208,6 @@ const agendaContentSchema = z.object({
   items: z.array(agendaItemSchema),
   counts: z.object({
     openQuestions: z.number().int(),
-    activeClaims: z.number().int(),
     approvedJobs: z.number().int(),
     appliedToday: z.number().int(),
   }),

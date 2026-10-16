@@ -17,9 +17,36 @@ enum JobLevel {
   @@map("job_level")
 }
 
+enum JobWorkMode {
+  remote
+  hybrid
+  onsite
+
+  @@map("job_work_mode")
+}
+
+enum JobEmploymentType {
+  full_time
+  part_time
+  contract
+  internship
+  temporary
+
+  @@map("job_employment_type")
+}
+
+enum JobSalaryPeriod {
+  year
+  hour
+  month
+
+  @@map("job_salary_period")
+}
+
 // The public job index: one row per posting, deduped across every user's campaigns. Digest fields
 // only - it must never carry who discovered or applied. Grows into the fleet-wide shared job index.
 model JobListing {
+  isPublic Boolean @default(true) @map("is_public")
   id        String @id @default(uuid())
   slug      String @unique
   // sha256(normTitle|normCompany|normLocation). Not to be confused with `Job.digest`, which is the
@@ -29,8 +56,18 @@ model JobListing {
   title              String
   company            String
   location           String?
+  countries          String[] @default([])
   remote             Boolean  @default(false)
   salary             String?
+  salaryMin          Float? @map("salary_min")
+  salaryMax          Float? @map("salary_max")
+  salaryCurrency     String? @map("salary_currency")
+  salaryPeriod       JobSalaryPeriod? @map("salary_period")
+  workMode           JobWorkMode? @map("work_mode")
+  employmentKind     JobEmploymentType? @map("employment_kind")
+  companyLogoUrl     String? @map("company_logo_url")
+  postedAt           DateTime? @map("posted_at")
+  listedAt           DateTime @default(now()) @map("listed_at")
   employmentType     String?  @map("employment_type")
   skills             String[] @map("skills")
   descriptionExcerpt String?  @map("description_excerpt")
@@ -48,9 +85,18 @@ model JobListing {
   updatedAt   DateTime         @updatedAt @map("updated_at")
 
   sources JobListingSource[]
+  personalDiscoveries PersonalJobListing[]
+  savedBy SavedJobListing[]
+  applications Application[]
+  pilotResults PilotResult[]
 
   // Serves the default list and the sitemap: `where status ORDER BY last_seen_at DESC`.
   @@index([status, lastSeenAt])
+  @@index([status, listedAt])
+  @@index([salaryCurrency, salaryPeriod, salaryMin])
+  @@index([countries], type: Gin)
+  @@index([status, postedAt])
+  @@index([status, firstSeenAt])
   // `?tech=` is a `skills @> ARRAY[..]` containment test - btree cannot serve it.
   @@index([skills], type: Gin)
   // Trigram indexes serve the `?q=` ILIKE '%term%' search.
@@ -60,9 +106,23 @@ model JobListing {
   @@map("job_listings")
 }
 
+model SavedJobListing {
+  userId String @map("user_id")
+  listingId String @map("listing_id")
+  savedAt DateTime @default(now()) @map("saved_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing JobListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@id([userId, listingId])
+  @@index([userId, savedAt])
+  @@index([listingId])
+  @@map("saved_job_listings")
+}
+
 // Where one posting was seen. A repost across boards collapses into one JobListing with several
 // sources; `url @unique` is what keeps the ingest upsert atomic under concurrent agents.
 model JobListingSource {
+  isPublic Boolean @default(true) @map("is_public")
   id         String   @id @default(uuid())
   listingId  String   @map("listing_id")
   // Stored lowercase, so `?board=` is an equality hit rather than an ILIKE scan.
@@ -86,8 +146,11 @@ enum AtsProvider {
  ashby
  greenhouse
  lever
+ phenom
  smartrecruiters
+ successfactors
  workable
+ workday
  @@map("ats_provider")
 }
 enum DiscoveryProvider {

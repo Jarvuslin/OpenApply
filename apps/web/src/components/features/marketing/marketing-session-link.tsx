@@ -26,9 +26,20 @@ export function MarketingSessionLink(): ReactElement {
     );
   }
 
+  if (isAuthenticated)
+    return (
+      <LinkButton href="/dashboard" variant="contained" size="small">
+        Dashboard
+      </LinkButton>
+    );
   return (
-    <LinkButton href={isAuthenticated ? "/workspace" : "/login"} variant="text" size="small">
-      {isAuthenticated ? "Dashboard" : "Sign in"}
-    </LinkButton>
+    <>
+      <LinkButton href="/login" variant="text" size="small">
+        Sign in
+      </LinkButton>
+      <LinkButton href="/install" variant="contained" size="small">
+        Get started
+      </LinkButton>
+    </>
   );
 }

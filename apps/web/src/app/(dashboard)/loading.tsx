@@ -4,7 +4,7 @@ import { PageShell } from "@/components/ui/layout";
 
 export default function DashboardLoading(): ReactElement {
   return (
-    <PageShell maxWidth="xl">
+    <PageShell>
       <DetailSkeleton />
     </PageShell>
   );

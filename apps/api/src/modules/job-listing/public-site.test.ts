@@ -24,7 +24,19 @@ describe("public job site gate", () => {
     }
   });
   it("requires authentication for Discover", async () => {
-    const response = await app.handle(new Request("http://localhost/api/jobs/"));
-    expect(response.status).toBe(401);
+    for (const [method, path] of [
+      ["GET", "/"],
+      ["GET", "/saved"],
+      ["GET", "/saved/count"],
+      ["GET", "/saved/slugs"],
+      ["PUT", "/example/saved"],
+      ["PUT", "/example/applied"],
+      ["DELETE", "/example/saved"],
+    ]) {
+      const response = await app.handle(
+        new Request(`http://localhost/api/jobs${path}`, { method }),
+      );
+      expect(response.status).toBe(401);
+    }
   });
 });

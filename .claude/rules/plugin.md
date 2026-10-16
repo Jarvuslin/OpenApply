@@ -15,7 +15,6 @@ archives as `OPENAPPLY_SKILLS_ROOT`. No generation step. Edit here directly.
 | `.mcp.json` | Playwright MCP wiring for both providers. |
 | `skills/<name>/SKILL.md` | One skill per directory. |
 | `skills/_shared/*.md` | Reference docs. No `SKILL.md`, so not listed as a skill. Link as `../_shared/<doc>.md`. |
-| `skills/pilot/kinds/<kind>.md` | One file per agenda kind. `pilot/SKILL.md` is re-read every cycle, so it holds only the loop. |
 | `agents/*.md` | `job-worker` subagent. Source of truth. Codex `.codex/agents/*.toml` files point back at it. |
 
 Resume skills: `extract-resume` parses the PDF and chains `review-resume` on a first extraction.
@@ -38,8 +37,8 @@ owns per-job variants, guarded in `apps/api/src/modules/resume/tailoring/structu
 
   The host injects `OPENAPPLY_API`, `OPENAPPLY_API_TOKEN`, and `OPENAPPLY_WEB` (for user-facing
   links).
-- Load profile, resume, and credentials per `skills/_shared/setup.md`. Credential order: board
-  override, `scope === <domain>`, `scope === "default"`. Log in before searching.
+- Load profile, resume, and the one job login per `skills/_shared/setup.md`. The same login is
+  used on every employer site. Log in before searching.
 - Dedupe with `GET /api/applied/check` before applying.
 - Campaigns: `PATCH /api/campaigns/[id]/jobs/[jobKey]` for non-terminal transitions.
   `POST .../jobs/[jobKey]/result` for applied / failed / skipped. It updates the job and creates

@@ -1,12 +1,20 @@
-import { setPrimaryResumeSchema, userWithAutoApplySchema } from "@openapply/contracts/user";
+import {
+  autoApplySettingsSchema,
+  setPrimaryResumeSchema,
+  userWithAutoApplySchema,
+} from "@openapply/contracts/user";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
+import { badRequest } from "@/common/errors";
 import { authGuard } from "@/common/middleware";
-import { idResponseSchema } from "@/types/response";
-import { primaryResumeSetSchema, userAggregateSchema } from "./user.schema";
+import { RATE_LIMITS, rateLimit } from "@/common/rate-limit";
+import { idResponseSchema, okResponseSchema } from "@/types/response";
+import { TranscriptService } from "./transcript.service";
+import { primaryResumeSetSchema, transcriptSavedSchema, userAggregateSchema } from "./user.schema";
 import { UserService } from "./user.service";
 
 const svc = container.resolve(UserService);
+const transcripts = container.resolve(TranscriptService);
 
 export const userController = new Elysia({
   prefix: "/user",
@@ -29,6 +37,36 @@ export const userController = new Elysia({
       description:
         "Performs a full replace of the current user's applicant data and auto-apply settings, returning the updated user id.",
     },
+  })
+  .put("/auto-apply", ({ user, body }) => svc.setAutoApply(user.id, body), {
+    body: autoApplySettingsSchema,
+    response: okResponseSchema,
+    detail: {
+      summary: "Save the queue's apply defaults: minimum score, per-search cap, availability",
+    },
+  })
+  .post(
+    "/transcript",
+    async ({ user, request }) => {
+      const form = await request.formData();
+      const file = form.get("file");
+      if (!(file instanceof File)) throw badRequest("file field is required");
+      return transcripts.upload(user.id, file);
+    },
+    {
+      response: transcriptSavedSchema,
+      // The handler reads FormData; the rate-limit hook otherwise makes Elysia parse it first.
+      parse: "none",
+      beforeHandle: rateLimit(RATE_LIMITS.submissionUpload),
+      detail: { summary: "Save the profile's unofficial transcript PDF" },
+    },
+  )
+  .get("/transcript", ({ user }) => transcripts.download(user.id), {
+    detail: { summary: "Download the profile's transcript PDF" },
+  })
+  .delete("/transcript", ({ user }) => transcripts.remove(user.id), {
+    response: okResponseSchema,
+    detail: { summary: "Remove the profile's transcript" },
   })
   .put("/primary-resume", ({ user, body }) => svc.setPrimaryResume(user.id, body.resumeId), {
     body: setPrimaryResumeSchema,

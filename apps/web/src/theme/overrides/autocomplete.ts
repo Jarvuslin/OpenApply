@@ -1,4 +1,4 @@
-import { alpha, type Components, type Theme } from "@mui/material/styles";
+import type { Components, Theme } from "@mui/material/styles";
 
 /** The popup is an MuiAutocomplete slot, not MuiMenu, so it needs its own border/shadow to lift off the page. */
 export const autocompleteOverrides: Components<Theme>["MuiAutocomplete"] = {
@@ -16,8 +16,8 @@ export const autocompleteOverrides: Components<Theme>["MuiAutocomplete"] = {
       paddingBlock: 6,
       "&:hover": { backgroundColor: theme.palette.surfaces.hover },
       '&[aria-selected="true"]': {
-        backgroundColor: alpha(theme.palette.accent.primary, 0.16),
-        "&:hover": { backgroundColor: alpha(theme.palette.accent.primary, 0.24) },
+        backgroundColor: theme.palette.surfaces.elevated,
+        "&:hover": { backgroundColor: theme.palette.surfaces.hover },
       },
     }),
   },

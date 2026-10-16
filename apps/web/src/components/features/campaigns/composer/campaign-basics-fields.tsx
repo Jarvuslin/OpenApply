@@ -1,7 +1,8 @@
 "use client";
 
-import { Chip, Stack, Typography } from "@mui/material";
+import { Chip, Link, Stack, Typography } from "@mui/material";
 import { useSelector } from "@tanstack/react-form";
+import NextLink from "next/link";
 import type { UserAggregateResponse } from "@/api/types";
 import { withForm } from "@/components/ui/form/tanstack";
 import { type BoardOption, COMPOSER_DEFAULT_VALUES, MODE_DESCRIPTIONS } from "./form-config";
@@ -84,7 +85,11 @@ export const CampaignBasicsFields = withForm({
 
             {boards.length === 0 && (
               <Typography variant="body2Muted">
-                No boards configured. Add one on the Boards page first.
+                Add a{" "}
+                <Link component={NextLink} href="/boards">
+                  job board
+                </Link>{" "}
+                to start a search.
               </Typography>
             )}
 
@@ -108,7 +113,10 @@ export const CampaignBasicsFields = withForm({
               </Stack>
             ) : (
               <Typography variant="body2Muted">
-                No resumes yet. Upload one on the Resumes page first.
+                <Link component={NextLink} href="/profile">
+                  Upload a resume
+                </Link>{" "}
+                to start a search.
               </Typography>
             )}
           </>

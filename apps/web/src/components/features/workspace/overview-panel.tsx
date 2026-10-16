@@ -2,22 +2,15 @@
 
 import type { ReactElement } from "react";
 import { Stack } from "@mui/material";
-import { CampaignGroups } from "./dashboard/campaign-groups";
+import { AnalyticsView } from "@/components/features/analytics/analytics-view";
 import { NowRunning } from "./dashboard/now-running";
-import { PilotStatusCard } from "./dashboard/pilot-card";
 import { ProfileChecklistCard } from "./dashboard/profile-checklist-card";
-import { StatTiles } from "./dashboard/stat-tiles";
 
-/** Overview tab - activity-first: what's running, what needs me, campaigns. */
 export function OverviewPanel(): ReactElement {
   return (
     <Stack spacing={2}>
       <ProfileChecklistCard />
-      <PilotStatusCard />
-      <NowRunning />
-
-      <StatTiles />
-      <CampaignGroups />
+      <AnalyticsView searches={<NowRunning />} />
     </Stack>
   );
 }

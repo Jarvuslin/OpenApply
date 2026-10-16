@@ -1,19 +1,6 @@
-import type { ReactElement } from "react";
-import type { Metadata } from "next";
-import { AnalyticsView } from "@/components/features/analytics/analytics-view";
-import { PageHeader, PageShell } from "@/components/ui/layout";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Analytics" };
-
-export default function AnalyticsPage(): ReactElement {
-  return (
-    <PageShell maxWidth="xl">
-      <PageHeader
-        eyebrow="Workspace"
-        title="Analytics"
-        description="Roll-up stats across your applications and campaigns."
-      />
-      <AnalyticsView />
-    </PageShell>
-  );
+/** Analytics live on the Dashboard; scoring evaluations keep their own pages below this route. */
+export default function AnalyticsPage(): never {
+  redirect("/dashboard");
 }

@@ -45,7 +45,7 @@ test("drafts belong to a single account", () => {
 
 test("completing onboarding clears only the saved account's draft", () => {
   const disk = storage();
-  writeOnboardingDraft(disk, "a", USER_DEFAULT_VALUES, 5);
+  writeOnboardingDraft(disk, "a", USER_DEFAULT_VALUES, 4);
   writeOnboardingDraft(disk, "b", { ...USER_DEFAULT_VALUES, firstName: "B" }, 2);
   clearOnboardingDraft(disk, "a");
   expect(readOnboardingDraft(disk, "a")).toBeNull();
@@ -55,7 +55,7 @@ test("completing onboarding clears only the saved account's draft", () => {
 
 test("clearing a required numeric field does not discard the rest of the draft", () => {
   const raw = JSON.stringify({
-    version: 1,
+    version: 4,
     userId: "a",
     step: 3,
     values: {
@@ -70,10 +70,10 @@ test("clearing a required numeric field does not discard the rest of the draft",
   expect(userWithAutoApplySchema.safeParse(draft?.values).success).toBe(false);
 });
 
-test("continuing to agent setup keeps unfinished values", () => {
+test("continuing to review keeps unfinished values", () => {
   const disk = storage();
-  writeOnboardingDraft(disk, "a", USER_DEFAULT_VALUES, 5);
-  expect(readOnboardingDraft(disk, "a")?.step).toBe(5);
+  writeOnboardingDraft(disk, "a", USER_DEFAULT_VALUES, 4);
+  expect(readOnboardingDraft(disk, "a")?.step).toBe(4);
   expect(readOnboardingDraft(disk, "a")?.values.firstName).toBe("");
 });
 
@@ -114,24 +114,6 @@ test("wrong-owner payload and unavailable storage report failure", () => {
   ).toThrow("quota");
 });
 
-test("legacy drafts move to the matching step without discarding filled fields", () => {
-  const legacy = {
-    version: 1,
-    userId: "a",
-    step: 1,
-    values: {
-      ...USER_DEFAULT_VALUES,
-      country: "Canada",
-      phone: "(416) 555-2671",
-      autoApply: { ...USER_DEFAULT_VALUES.autoApply, maxApplicationsPerCampaign: 0 },
-    },
-  };
-  const draft = readOnboardingDraft({ getItem: () => JSON.stringify(legacy) }, "a");
-  expect(draft?.step).toBe(2);
-  expect(draft?.values.phone).toBe("+14165552671");
-  expect(draft?.values.autoApply?.maxApplicationsPerCampaign).toBeNull();
-});
-
 test("unanswered country authorization survives a draft restore", () => {
   const disk = storage();
   writeOnboardingDraft(
@@ -153,9 +135,96 @@ test("invalid experience values remain editable after reload", () => {
     "a",
     {
       ...USER_DEFAULT_VALUES,
-      jobPreferences: { levels: [], yearsExperience: -1, workModes: [], employmentTypes: [] },
+      jobPreferences: {
+        roles: [],
+        levels: [],
+        yearsExperience: -1,
+        workModes: [],
+        employmentTypes: [],
+      },
     },
     4,
   );
   expect(readOnboardingDraft(disk, "a")?.values.jobPreferences?.yearsExperience).toBe(-1);
+});
+
+test("optional applicant facts and unfinished links survive draft restore without inferring eligibility", () => {
+  const disk = storage();
+  const values = {
+    ...USER_DEFAULT_VALUES,
+    preferredName: "T",
+    namePronunciation: "tee",
+    pronouns: "they/them",
+    currentCompany: "",
+    portfolio: "https://",
+    additionalLinks: ["unfinished-link"],
+    workAuthorization: [
+      { country: "Canada", authorized: true, sponsorship: true },
+      { country: "United States", authorized: null, sponsorship: null },
+    ],
+  };
+  writeOnboardingDraft(disk, "a", values, 2);
+  expect(readOnboardingDraft(disk, "a")?.values).toEqual(values);
+});
+
+test("old drafts gain only empty optional fields and preserve confirmed Canadian answers", () => {
+  const values = {
+    ...USER_DEFAULT_VALUES,
+    preferredName: undefined,
+    namePronunciation: undefined,
+    pronouns: undefined,
+    currentCompany: undefined,
+    portfolio: undefined,
+    additionalLinks: undefined,
+    workAuthorization: [{ country: "Canada", authorized: true, sponsorship: true }],
+  };
+  const disk = storage();
+  writeOnboardingDraft(disk, "a", values, 2);
+  const result = readOnboardingDraft(disk, "a")?.values;
+  expect(result?.preferredName).toBe("");
+  expect(result?.namePronunciation).toBe("");
+  expect(result?.pronouns).toBe("");
+  expect(result?.currentCompany).toBe("");
+  expect(result?.portfolio).toBe("");
+  expect(result?.additionalLinks).toEqual([]);
+  expect(result?.workAuthorization).toEqual(values.workAuthorization);
+});
+
+test("current drafts preserve selected role families and explicitly clearing them", () => {
+  const disk = storage();
+  writeOnboardingDraft(
+    disk,
+    "a",
+    {
+      ...USER_DEFAULT_VALUES,
+      jobPreferences: { ...USER_DEFAULT_VALUES.jobPreferences!, roles: ["Frontend", "Full stack"] },
+    },
+    4,
+  );
+  const draft = readOnboardingDraft(disk, "a");
+  expect(draft?.version).toBe(4);
+  expect(draft?.values.jobPreferences?.roles).toEqual(["Frontend", "Full stack"]);
+  writeOnboardingDraft(
+    disk,
+    "a",
+    {
+      ...draft!.values,
+      jobPreferences: { ...draft!.values.jobPreferences!, roles: [] },
+    },
+    4,
+  );
+  expect(readOnboardingDraft(disk, "a")?.values.jobPreferences?.roles).toEqual([]);
+});
+
+test("a malformed current role selection fails restore instead of silently widening preferences", () => {
+  const raw = JSON.stringify({
+    version: 4,
+    userId: "a",
+    step: 4,
+    values: {
+      ...USER_DEFAULT_VALUES,
+      jobPreferences: { ...USER_DEFAULT_VALUES.jobPreferences, roles: ["Unknown role"] },
+    },
+  });
+  expect(() => readOnboardingDraft({ getItem: () => raw }, "a")).toThrow();
 });

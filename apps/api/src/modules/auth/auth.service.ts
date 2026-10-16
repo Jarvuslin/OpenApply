@@ -85,6 +85,8 @@ export class AuthService {
           emailVerified: input.emailVerified,
           username: await this.uniqueUsername(),
           contactEmail: email,
+          queuePolicy: { create: {} },
+          telegramSettings: { create: {} },
           jobBoards: {
             createMany: { data: defaults.map((board) => ({ jobBoardId: board.id })) },
           },

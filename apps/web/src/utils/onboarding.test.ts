@@ -6,7 +6,7 @@ describe("onboarding navigation", () => {
   const unfinished = { firstName: " ", lastName: "" };
 
   test("a saved profile returning to onboarding goes directly to the dashboard", () => {
-    expect(onboardingRedirect("/onboarding", saved)).toBe("/mvp");
+    expect(onboardingRedirect("/onboarding", saved)).toBe("/dashboard");
   });
   test("an unfinished profile stays in onboarding without a redirect loop", () => {
     expect(onboardingRedirect("/onboarding", unfinished)).toBeNull();

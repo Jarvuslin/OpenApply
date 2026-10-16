@@ -14,12 +14,6 @@ export const DOCS_NAV: DocsNavEntry[] = [
     description: "Install the plugin, run setup, and launch your first campaign.",
   },
   {
-    title: "The Pilot",
-    href: "/docs/pilot",
-    description:
-      "Autonomous mode: write your instructions once and read the journal in the morning.",
-  },
-  {
     title: "Campaigns & skills",
     href: "/docs/campaigns-and-skills",
     description:

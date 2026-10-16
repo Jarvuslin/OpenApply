@@ -22,6 +22,11 @@ describe("job discovery experience filters", () => {
     expect(listedExperience("5 years of experience preferred.")).toBeUndefined();
     expect(listedExperience("2+ years of experience. 4 years of engineering experience.")).toBe(4);
   });
+  it("reads a stated lack of required experience as zero years", () => {
+    expect(listedExperience("No prior experience required; we will train you.")).toBe(0);
+    expect(listedExperience("No experience needed.")).toBe(0);
+    expect(listedExperience("No experience with Rust? That's fine.")).toBeUndefined();
+  });
   it("validates filter inputs including entry-level zero", () => {
     expect(jobListingQuerySchema.parse({ maxYears: "0", level: "entry" }).maxYears).toBe(0);
     expect(jobListingQuerySchema.safeParse({ maxYears: -1 }).success).toBe(false);

@@ -7,6 +7,8 @@ interface SessionFetchOptions {
   fetcher: Fetch;
   locks?: Pick<LockManager, "request">;
   timeoutMs?: number;
+  readTimeoutMs?: number;
+  channelMutationTimeoutMs?: number;
 }
 
 interface RestoredSession {
@@ -21,9 +23,56 @@ const ACCOUNT_CHANGES = new Set([
   "/api/auth/email/resend",
 ]);
 
+function channelMutation(method: string, pathname: string) {
+  const path = pathname.replace(/\/$/, "");
+  if (method === "DELETE")
+    return path === "/api/telegram" || /^\/api\/telegram\/pairing\/[^/]+$/.test(path);
+  if (method === "PATCH")
+    return path === "/api/telegram/settings" || /^\/api\/credentials\/[^/]+$/.test(path);
+  if (method === "PUT") return path === "/api/work-queue/limits";
+  if (method !== "POST") return false;
+  return (
+    path === "/api/telegram/pairing" ||
+    path === "/api/credentials" ||
+    path === "/api/auth/tokens/terminal" ||
+    path === "/api/account-setup" ||
+    /^\/api\/account-setup\/[^/]+\/(credentials|continue)$/.test(path) ||
+    /^\/api\/work-queue\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\/control$/i.test(
+      path,
+    ) ||
+    path === "/api/job-intakes" ||
+    /^\/api\/job-intakes\/[^/]+\/(prepare|decision)$/.test(path) ||
+    /^\/api\/pilot\/questions\/[^/]+\/decision$/.test(path)
+  );
+}
+
+function withinSignal<T>(pending: Promise<T>, signal: AbortSignal): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const abort = () => reject(signal.reason);
+    if (signal.aborted) abort();
+    else signal.addEventListener("abort", abort, { once: true });
+    pending.then(
+      (value) => {
+        signal.removeEventListener("abort", abort);
+        resolve(value);
+      },
+      (error) => {
+        signal.removeEventListener("abort", abort);
+        reject(error);
+      },
+    );
+  });
+}
+
 /** Each browser tab owns this state; server requests must never share a session refresh. */
 export function createSessionFetch(options: SessionFetchOptions): Fetch {
-  const { fetcher, locks, timeoutMs = 10_000 } = options;
+  const {
+    fetcher,
+    locks,
+    timeoutMs = 10_000,
+    readTimeoutMs = 30_000,
+    channelMutationTimeoutMs = 15_000,
+  } = options;
   const origin = new URL(options.origin).origin;
   const lockName = `openapply-session:${origin}`;
   let refresh: Promise<RestoredSession> | undefined;
@@ -100,9 +149,22 @@ export function createSessionFetch(options: SessionFetchOptions): Fetch {
   }
 
   return async (input, init) => {
-    const request = new Request(input, init);
-    const url = new URL(request.url);
-    if (url.origin !== origin) return fetcher(request);
+    const original = new Request(input, init);
+    const url = new URL(original.url);
+    if (url.origin !== origin) return fetcher(original);
+    const isApiRead =
+      url.pathname.startsWith("/api/") && (original.method === "GET" || original.method === "HEAD");
+    const isChannelMutation = channelMutation(original.method, url.pathname);
+    let deadline: number | undefined;
+    if (isApiRead) deadline = readTimeoutMs;
+    if (isChannelMutation) deadline = channelMutationTimeoutMs;
+    // Keep the signal alive through response-body reads, including after session recovery.
+    const request =
+      deadline !== undefined
+        ? new Request(original, {
+            signal: AbortSignal.any([original.signal, AbortSignal.timeout(deadline)]),
+          })
+        : original;
 
     if (SESSION_CHANGES.has(url.pathname)) {
       sessionChange += 1;
@@ -133,7 +195,14 @@ export function createSessionFetch(options: SessionFetchOptions): Fetch {
     if (response.status !== 401 || startedSession !== sessionChange) return response;
     request.signal.throwIfAborted();
 
-    const restored = startedGeneration !== generation ? lastSession : await restore(startedSession);
+    let restored = lastSession;
+    if (startedGeneration === generation) {
+      const pending = restore(startedSession);
+      restored = isChannelMutation ? await withinSignal(pending, request.signal) : await pending;
+    }
+    request.signal.throwIfAborted();
+    // A channel action may have committed already; recovery never resends its mutation.
+    if (isChannelMutation) return response;
     // A healthy session may mean a password-checking endpoint rejected the supplied credentials.
     if (
       !restored.active ||

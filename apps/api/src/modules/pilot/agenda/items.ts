@@ -1,6 +1,13 @@
 import type { AgendaItem, AgendaPayload } from "@openapply/contracts/pilot";
-import { jobSubjectId } from "./claims";
 import type { AgendaJob } from "./gather-jobs";
+
+/** Row cap for the unbounded gather and expiry scans. */
+export const GATHER_CAP = 200;
+
+/** A job's agenda subject, shared by the item id and its subject id. */
+function jobSubjectId(job: Pick<AgendaJob, "campaignId" | "key">): string {
+  return `${job.campaignId}:${job.key}`;
+}
 
 // job.apply adds its matchScore to jobBase, so a perfect match reaches 900.
 const PRIORITY = {

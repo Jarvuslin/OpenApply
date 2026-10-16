@@ -1,49 +1,117 @@
 "use client";
 import { useEffect, useState } from "react";
+import { ExpandMore } from "@mui/icons-material";
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
   Alert,
   Button,
   FormControlLabel,
+  LinearProgress,
   MenuItem,
   Stack,
   Switch,
   TextField,
   Typography,
 } from "@mui/material";
-import type { discoveryConnectionSchema } from "@openapply/contracts/job-sources";
+import { discoveryConnectionSchema } from "@openapply/contracts/job-sources";
+import { useForm } from "@tanstack/react-form";
 import type { z } from "zod/v4";
 import { api } from "@/api/client";
 import { apiErrorMessage } from "@/api/error";
 
+const ACTORS = [
+  { key: "indeedActor", label: "Indeed" },
+  { key: "linkedinActor", label: "LinkedIn" },
+  { key: "glassdoorActor", label: "Glassdoor" },
+  { key: "hiringcafeActor", label: "HiringCafe" },
+  { key: "ycombinatorActor", label: "Y Combinator" },
+] as const;
+const INPUT_FIELDS = [
+  { key: "queryField", label: "Search input field" },
+  { key: "locationField", label: "Location input field" },
+  { key: "limitField", label: "Result limit input field" },
+] as const;
+type Connection = z.infer<typeof discoveryConnectionSchema>;
+type ActorKey = (typeof ACTORS)[number]["key"];
+type ActorDrafts = Record<ActorKey, NonNullable<Connection["indeedActor"]>>;
+
+function actorDrafts(saved?: Partial<Connection>): ActorDrafts {
+  return Object.fromEntries(
+    ACTORS.map(({ key }) => [
+      key,
+      {
+        id: "",
+        queryField: "query",
+        locationField: "location",
+        limitField: "maxItems",
+        ...saved?.[key],
+      },
+    ]),
+  ) as ActorDrafts;
+}
+
 export function DiscoveryConnections() {
   const [provider, setProvider] = useState<"apify" | "serpapi">("serpapi");
-  const [key, setKey] = useState("");
-  const [enabled, setEnabled] = useState(false);
-  const [indeed, setIndeed] = useState("");
-  const [linkedin, setLinkedin] = useState("");
-  const [board, setBoard] = useState<"indeed" | "linkedin">("indeed");
-  const [query, setQuery] = useState("");
-  const [location, setLocation] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loaded, setLoaded] = useState(false);
-  const [actors, setActors] = useState<
-    Pick<z.infer<typeof discoveryConnectionSchema>, "indeedActor" | "linkedinActor">
-  >({});
+  const [reload, setReload] = useState(0);
+  const form = useForm({
+    defaultValues: { apiKey: "", enabled: false, actors: actorDrafts() },
+    onSubmit: async ({ value }) => {
+      setError("");
+      setMessage("");
+      const actors = Object.fromEntries(
+        ACTORS.filter(({ key }) => value.actors[key].id.trim()).map(({ key }) => [
+          key,
+          {
+            id: value.actors[key].id.trim(),
+            queryField: value.actors[key].queryField.trim(),
+            locationField: value.actors[key].locationField.trim(),
+            limitField: value.actors[key].limitField.trim(),
+          },
+        ]),
+      );
+      const input = discoveryConnectionSchema.safeParse({
+        enabled: value.enabled,
+        apiKey: value.apiKey.trim() || undefined,
+        ...(provider === "apify" ? actors : {}),
+      });
+      if (!input.success) {
+        setError(
+          input.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join(" "),
+        );
+        return;
+      }
+      setBusy(true);
+      try {
+        const result = await api["job-sources"].connections({ provider }).put(input.data);
+        if (result.error) throw new Error(apiErrorMessage(result.error));
+        form.setFieldValue("apiKey", "");
+        setMessage("Discovery connection saved. Keys stay encrypted on the server.");
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Could not save connection.");
+      } finally {
+        setBusy(false);
+      }
+    },
+  });
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Retry repeats the load without changing providers.
   useEffect(() => {
     let cancelled = false;
     setLoaded(false);
+    setError("");
     void api["job-sources"].connections
       .get()
       .then((result) => {
         if (cancelled) return;
         if (result.error) throw new Error(apiErrorMessage(result.error));
         const saved = result.data.find((row) => row.provider === provider);
-        setEnabled(saved?.enabled ?? false);
-        setIndeed(saved?.indeedActor?.id ?? "");
-        setLinkedin(saved?.linkedinActor?.id ?? "");
-        setActors({ indeedActor: saved?.indeedActor, linkedinActor: saved?.linkedinActor });
+        form.reset({ apiKey: "", enabled: saved?.enabled ?? false, actors: actorDrafts(saved) });
         setLoaded(true);
       })
       .catch((e) => {
@@ -52,143 +120,140 @@ export function DiscoveryConnections() {
     return () => {
       cancelled = true;
     };
-  }, [provider]);
-  async function save() {
-    setBusy(true);
-    setError("");
-    setMessage("");
-    try {
-      const result = await api["job-sources"].connections({ provider }).put({
-        enabled,
-        apiKey: key || undefined,
-        ...(provider === "apify"
-          ? {
-              indeedActor: indeed
-                ? {
-                    queryField: "query",
-                    locationField: "location",
-                    limitField: "maxItems",
-                    ...actors.indeedActor,
-                    id: indeed,
-                  }
-                : undefined,
-              linkedinActor: linkedin
-                ? {
-                    queryField: "query",
-                    locationField: "location",
-                    limitField: "maxItems",
-                    ...actors.linkedinActor,
-                    id: linkedin,
-                  }
-                : undefined,
-            }
-          : {}),
-      });
-      if (result.error) throw new Error(apiErrorMessage(result.error));
-      setKey("");
-      setMessage("Discovery connection saved. Keys stay encrypted on the server.");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not save connection.");
-    } finally {
-      setBusy(false);
-    }
-  }
-  async function search() {
-    setBusy(true);
-    setError("");
-    setMessage("");
-    try {
-      const result = await api["job-sources"].discover.post({
-        provider,
-        query,
-        location,
-        board: provider === "apify" ? board : undefined,
-        limit: 20,
-      });
-      if (result.error) throw new Error(apiErrorMessage(result.error));
-      setMessage(
-        `Imported ${result.data.imported} listings. ${result.data.resolved} have an employer apply page. Open Discover to review them.`,
-      );
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Discovery failed.");
-    } finally {
-      setBusy(false);
-    }
-  }
+  }, [form, provider, reload]);
+
   return (
-    <Stack spacing={2}>
-      <Typography variant="h4">Optional job discovery</Typography>
+    <Stack
+      component="form"
+      spacing={2}
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!busy && loaded) void form.handleSubmit();
+      }}
+    >
+      <Typography variant="h4">Job search providers</Typography>
       <Typography variant="body2Muted">
-        Use your own SerpApi or Apify account. Searches use HTTP and may consume your provider
-        credits. No board login or browser cookies are used.
+        Use your own SerpApi or Apify account for additional coverage. Searches may consume provider
+        credits. API keys are encrypted on the server; board passwords and browser cookies are not
+        used.
       </Typography>
       <TextField
         select
         label="Provider"
         value={provider}
+        disabled={busy}
         onChange={(e) => {
           setProvider(e.target.value as typeof provider);
-          setKey("");
-          setEnabled(false);
+          form.reset({ apiKey: "", enabled: false, actors: actorDrafts() });
           setMessage("");
         }}
       >
         <MenuItem value="serpapi">Google Jobs through SerpApi</MenuItem>
-        <MenuItem value="apify">LinkedIn / Indeed through Apify</MenuItem>
+        <MenuItem value="apify">Job boards through Apify</MenuItem>
       </TextField>
-      <TextField
-        label="API key"
-        type="password"
-        value={key}
-        onChange={(e) => setKey(e.target.value)}
-        helperText="Leave blank to retain an existing key."
-      />
+      {!loaded && !error && <LinearProgress aria-label="Loading provider settings" />}
+      <form.Field name="apiKey">
+        {(field) => (
+          <TextField
+            label="API key"
+            type="password"
+            autoComplete="off"
+            value={field.state.value}
+            onChange={(e) => field.handleChange(e.target.value)}
+            disabled={busy || !loaded}
+            helperText="Leave blank to retain an existing key."
+          />
+        )}
+      </form.Field>
       {provider === "apify" && (
-        <>
-          <TextField
-            label="Indeed actor (owner/name)"
-            value={indeed}
-            onChange={(e) => setIndeed(e.target.value)}
-          />
-          <TextField
-            label="LinkedIn actor (owner/name)"
-            value={linkedin}
-            onChange={(e) => setLinkedin(e.target.value)}
-          />
-          <Typography variant="captionMuted">
-            Choose actors that accept query, location and maxItems. Other input field names can be
-            configured through the API. Actor availability and output formats must be tested with
-            your account.
+        <Stack spacing={2}>
+          <Typography variant="body2Muted">
+            Add an actor only for the boards you want to use. Check its input names and output
+            format against the actor's documentation; saving these settings does not verify the
+            actor.
           </Typography>
-        </>
+          {ACTORS.map(({ key, label }) => (
+            <Stack key={key} spacing={1}>
+              <form.Field name={`actors.${key}.id`}>
+                {(field) => (
+                  <TextField
+                    label={`${label} actor (owner/name)`}
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    disabled={busy || !loaded}
+                    helperText={
+                      key === "hiringcafeActor"
+                        ? "Optional saved configuration. HiringCafe results are available in private search previews, not the shared index."
+                        : "Optional. Leave blank to disable this board's actor."
+                    }
+                  />
+                )}
+              </form.Field>
+              <Accordion disableGutters disabled={busy || !loaded}>
+                <AccordionSummary
+                  expandIcon={<ExpandMore />}
+                  aria-controls={`${key}-mapping-content`}
+                  id={`${key}-mapping-header`}
+                >
+                  <Typography variant="body2">{label} input mapping</Typography>
+                </AccordionSummary>
+                <AccordionDetails id={`${key}-mapping-content`}>
+                  <Stack spacing={1.5}>
+                    <Typography variant="captionMuted">
+                      Use the exact field names from this actor's input schema. These defaults may
+                      need changing.
+                    </Typography>
+                    {INPUT_FIELDS.map(({ key: fieldKey, label: fieldLabel }) => (
+                      <form.Field key={fieldKey} name={`actors.${key}.${fieldKey}`}>
+                        {(field) => (
+                          <TextField
+                            label={`${label} ${fieldLabel.toLowerCase()}`}
+                            size="small"
+                            value={field.state.value}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            disabled={busy || !loaded}
+                          />
+                        )}
+                      </form.Field>
+                    ))}
+                  </Stack>
+                </AccordionDetails>
+              </Accordion>
+            </Stack>
+          ))}
+        </Stack>
       )}
-      <FormControlLabel
-        control={<Switch checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />}
-        label="Enable this discovery connector"
-      />
-      <Button onClick={() => void save()} disabled={busy || !loaded} variant="outlined">
-        Save connection
+      <form.Field name="enabled">
+        {(field) => (
+          <FormControlLabel
+            control={
+              <Switch
+                checked={field.state.value}
+                onChange={(e) => field.handleChange(e.target.checked)}
+                disabled={busy || !loaded}
+              />
+            }
+            label="Enable this discovery connector"
+          />
+        )}
+      </form.Field>
+      <Button type="submit" disabled={busy || !loaded} variant="outlined">
+        {busy ? "Saving…" : "Save connection"}
       </Button>
-      <TextField label="Role to find" value={query} onChange={(e) => setQuery(e.target.value)} />
-      <TextField label="Location" value={location} onChange={(e) => setLocation(e.target.value)} />
-      {provider === "apify" && (
-        <TextField
-          select
-          label="Board"
-          value={board}
-          onChange={(e) => setBoard(e.target.value as typeof board)}
+      {error && (
+        <Alert
+          severity="error"
+          action={
+            !loaded && (
+              <Button color="inherit" size="small" onClick={() => setReload((value) => value + 1)}>
+                Retry
+              </Button>
+            )
+          }
         >
-          <MenuItem value="indeed">Indeed</MenuItem>
-          <MenuItem value="linkedin">LinkedIn</MenuItem>
-        </TextField>
+          {error}
+        </Alert>
       )}
-      <Button
-        onClick={() => void search()}
-        disabled={busy || !loaded || !enabled || query.trim().length < 2}
-      >
-        Find jobs
-      </Button>
-      {error && <Alert severity="error">{error}</Alert>}
       {message && <Alert severity="info">{message}</Alert>}
     </Stack>
   );
