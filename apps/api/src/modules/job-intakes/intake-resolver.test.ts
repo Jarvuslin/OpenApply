@@ -71,12 +71,14 @@ describe("bounded intake resolution", () => {
         return {
           jobs: [
             {
+              id: 41,
               title: "Other role",
               absolute_url: "https://boards.greenhouse.io/acme/jobs/41",
               location: { name: "Remote" },
               content: "Not the requested role",
             },
             {
+              id: 42,
               title: "Engineer",
               absolute_url: "https://boards.greenhouse.io/acme/jobs/42",
               location: { name: "Toronto" },
@@ -107,10 +109,19 @@ describe("bounded intake resolution", () => {
       const result = await resolveIntake(prisma, "user-a", applyUrl, async (url) => {
         urls.push(url);
         return board === "lever"
-          ? [{ text: "Engineer", hostedUrl: jobUrl, applyUrl, descriptionPlain: "Build products." }]
+          ? [
+              {
+                id: "42",
+                text: "Engineer",
+                hostedUrl: jobUrl,
+                applyUrl,
+                descriptionPlain: "Build products.",
+              },
+            ]
           : {
               jobs: [
                 {
+                  id: "42",
                   title: "Engineer",
                   location: "Toronto",
                   jobUrl,
@@ -122,7 +133,7 @@ describe("bounded intake resolution", () => {
       });
       expect(urls).toEqual([
         board === "lever"
-          ? "https://api.lever.co/v0/postings/acme?mode=json"
+          ? "https://api.lever.co/v0/postings/acme?mode=json&skip=0&limit=100"
           : "https://api.ashbyhq.com/posting-api/job-board/acme?includeCompensation=true",
       ]);
       expect(result).toMatchObject({
@@ -148,6 +159,7 @@ describe("bounded intake resolution", () => {
           return {
             jobs: [
               {
+                id: 41,
                 title: "Other",
                 absolute_url: "https://boards.greenhouse.io/acme/jobs/41",
                 location: { name: "Remote" },

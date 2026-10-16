@@ -10,6 +10,7 @@ const feed = z.object({
   jobs_results: z
     .array(
       z.object({
+        job_id: z.string().optional(),
         title: z.string(),
         company_name: z.string(),
         location: z.string().default(""),
@@ -56,6 +57,7 @@ export async function serpapiPage(
         location: j.location,
         url: direct ?? "",
         attributionUrl,
+        externalId: j.job_id,
         description: j.description,
         postedAt: null,
       },

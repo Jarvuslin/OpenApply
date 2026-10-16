@@ -64,6 +64,7 @@ function hiringPost(item: Item): SourceJob | null {
     location: location.slice(0, 500) || "Location not specified — see posting",
     url,
     attributionUrl: url,
+    externalId: String(item.id),
     description: plainText(item.text),
     postedAt: postedAt(item.time == null ? null : item.time * 1000),
     workMode,
@@ -107,6 +108,7 @@ export async function hackerNewsJobs(fetch: FetchJson): Promise<SourceJob[]> {
         location: "Location not specified — see posting",
         url: attributionUrl,
         attributionUrl,
+        externalId: String(item.id),
         description: plainText(item.text) || title,
         postedAt: postedAt(item.time == null ? null : item.time * 1000),
       };

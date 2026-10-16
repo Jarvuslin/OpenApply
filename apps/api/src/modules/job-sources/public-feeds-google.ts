@@ -171,6 +171,7 @@ async function detailJob(html: string, url: string): Promise<SourceJob | null> {
       .join("\n\n"),
     url,
     attributionUrl: url,
+    externalId: id,
     postedAt: null,
     level: early ? "entry" : undefined,
     companyLogoUrl: company === "Google" ? logo : null,

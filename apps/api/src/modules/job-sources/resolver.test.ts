@@ -83,6 +83,7 @@ it("uses a known employer catalog slug before guessed boards and returns full AT
     return {
       jobs: [
         {
+          id: 123,
           title: employer.title,
           absolute_url: "https://job-boards.greenhouse.io/doordashusa/jobs/123",
           location: { name: employer.location },
@@ -110,6 +111,7 @@ it("uses ATS sources already stored for the company before guessed names", async
     urls.push(url);
     return [
       {
+        id: "123",
         text: job.title,
         hostedUrl: "https://jobs.lever.co/acme-official/123",
         categories: { location: job.location },

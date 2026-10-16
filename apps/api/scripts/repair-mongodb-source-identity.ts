@@ -14,7 +14,9 @@ try {
     select: { id: true, url: true, listing: { select: { id: true, dedupeKey: true, slug: true } } },
   });
   if (sources.length > 1) throw new Error("Unexpected duplicate source identity.");
-  const jobs = sources.length ? await greenhouse(fetchSourceJson, "mongodb", "MongoDB") : [];
+  const jobs = sources.length
+    ? (await greenhouse(fetchSourceJson, "mongodb", "MongoDB", { detailBudget: 0 })).jobs
+    : [];
   for (const source of sources) {
     const matches = jobs
       .map((job) =>

@@ -8,7 +8,7 @@ import {
   JOB_FEED_CATALOG,
   PUBLIC_FEED_CATALOG,
 } from "./catalog";
-import { fetchSourceJson } from "./http";
+import { fetchSourceJson, SourceResponseError } from "./http";
 import { JobSourcesService } from "./job-sources.service";
 import { type FoundBoard, simplifyBoards } from "./public-feeds-simplify";
 import type { FetchJson } from "./types";
@@ -23,6 +23,9 @@ const FEED_REFRESH_MS = 30 * 60 * 1000;
 const DISCOVERED_REFRESH_MS = 3 * HOUR;
 // A board leaves rotation once no source has vouched for it for this long.
 const DISCOVERED_RETENTION_MS = 30 * DAY;
+const GONE_RECHECK_MS = 30 * DAY;
+// SpaceX and Anduril each list about 2,700 jobs; the adapters' page limits stop at the same 5,000.
+const BOARD_MAX_JOBS = 5000;
 const BOARD_DISCOVERY_KEY = "discovery/simplify-boards";
 const YC_DISCOVERY_KEY = "discovery/yc-boards";
 const DISCOVERY_KEYS = [BOARD_DISCOVERY_KEY, YC_DISCOVERY_KEY];
@@ -67,7 +70,9 @@ export class CatalogRefreshService {
       for (const provider of PROBE_PROVIDERS) {
         for (const slug of boardSlugs(company)) {
           // A missing board is an HTTP 404, which is the common case and not a failure.
-          const jobs = await fetchAts(fetch, provider, slug, company.name).catch(() => []);
+          const jobs = await fetchAts(fetch, provider, slug, company.name, { detailBudget: 0 })
+            .then((board) => board.jobs)
+            .catch(() => []);
           const postings = jobs.slice(0, 10).map(
             (job) => `${job.title}
 ${job.description}`,
@@ -117,7 +122,10 @@ ${job.description}`,
       skipDuplicates: true,
     });
     const discovered = await this.prisma.discoveredJobBoard.findMany({
-      where: { lastSeenAt: { gte: new Date(Date.now() - DISCOVERED_RETENTION_MS) } },
+      where: {
+        lastSeenAt: { gte: new Date(Date.now() - DISCOVERED_RETENTION_MS) },
+        OR: [{ goneAt: null }, { goneAt: { lt: new Date(Date.now() - GONE_RECHECK_MS) } }],
+      },
       select: { key: true, provider: true, slug: true, company: true },
     });
     const discoveredByKey = new Map(discovered.map((board) => [board.key, board]));
@@ -175,7 +183,7 @@ ${job.description}`,
               board.slug,
               undefined,
               board.company,
-              2000,
+              BOARD_MAX_JOBS,
             );
           else result = await this.sources.publicFeed(feed!.id);
           await this.prisma.jobFeedRefresh.updateMany({
@@ -191,17 +199,34 @@ ${job.description}`,
               truncated: result.truncated,
             },
           });
+          if (board && !catalogBoard)
+            await this.prisma.discoveredJobBoard.updateMany({
+              where: { key: row.key, goneAt: { not: null } },
+              data: { goneAt: null },
+            });
           counts.refreshed++;
           counts.imported += result.imported;
           logger.info({ source: row.key, ...result }, "Job feed refreshed");
         } catch (error) {
+          // A discovered board whose API says 404 no longer exists; stop refreshing it.
+          if (
+            board &&
+            !catalogBoard &&
+            error instanceof SourceResponseError &&
+            error.upstreamStatus === 404
+          )
+            await this.prisma.discoveredJobBoard.update({
+              where: { key: row.key },
+              data: { goneAt: new Date() },
+            });
+          const retryAfter = error instanceof SourceResponseError ? error.retryAfterMs : 0;
           await this.prisma.jobFeedRefresh.updateMany({
             where: { key: row.key, leaseToken },
             data: {
               leaseToken: null,
               leaseUntil: null,
               // A board that fails waits a full cycle so a dead slug does not retry every hour.
-              nextRefreshAt: new Date(Date.now() + Math.max(HOUR, interval)),
+              nextRefreshAt: new Date(Date.now() + Math.max(HOUR, interval, retryAfter)),
               lastError: (error instanceof Error ? error.message : "Feed refresh failed").slice(
                 0,
                 500,

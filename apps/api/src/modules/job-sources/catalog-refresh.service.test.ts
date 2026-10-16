@@ -45,6 +45,8 @@ function fixture(
     },
     discoveredJobBoard: {
       findMany: async () => discovered,
+      update: async () => ({}),
+      updateMany: async () => ({ count: 0 }),
       upsert: async ({ create }: { create: Discovered }) => {
         discovered.push(create);
         return create;

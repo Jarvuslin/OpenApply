@@ -12,6 +12,7 @@ const LISTINGS = "/dev/.github/scripts/listings.json";
 // About 3,000 new-grad and 5,000 internship roles are active at once; the cap guards a runaway list.
 const MAX_JOBS = 6000;
 const listing = z.object({
+  id: z.string().max(100).optional(),
   company_name: z.string().min(1).max(500),
   title: z.string().min(1).max(1000),
   url: z.string().max(4000),
@@ -88,6 +89,7 @@ async function simplifyList(
         url,
         identityUrl: identity(url),
         attributionUrl: `https://github.com/${repository}`,
+        externalId: item.id,
         description: "",
         // When Simplify listed the role, usually within a day of the employer; its "Age" column.
         postedAt: new Date(item.date_posted * 1000),

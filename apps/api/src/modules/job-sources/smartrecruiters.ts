@@ -1,11 +1,23 @@
 import { z } from "zod/v4";
-import { type FetchJson, postedAt, type SourceJob } from "./types";
+import {
+  type BoardResult,
+  boardResult,
+  type FetchJson,
+  postedAt,
+  requisition,
+  type SourceJob,
+} from "./types";
+
+const PAGE = 100;
+const MAX_PAGES = 50;
 
 const feed = z.object({
+  totalFound: z.number().nullish(),
   content: z.array(
     z.object({
       id: z.union([z.string(), z.number()]),
       name: z.string(),
+      refNumber: z.string().nullish(),
       releasedDate: z.string().nullish(),
       location: z
         .object({
@@ -22,14 +34,23 @@ export async function smartrecruiters(
   fetch: FetchJson,
   slug: string,
   company = slug,
-): Promise<SourceJob[]> {
+): Promise<BoardResult> {
   const jobs: SourceJob[] = [];
-  for (let page = 0; page < 50; page++) {
+  let reported: number | null = null;
+  let seen = 0;
+  let limited = false;
+  for (let page = 0; ; page++) {
+    if (page === MAX_PAGES) {
+      limited = true;
+      break;
+    }
     const data = feed.parse(
       await fetch(
-        `https://api.smartrecruiters.com/v1/companies/${encodeURIComponent(slug)}/postings?limit=100&offset=${page * 100}&status=PUBLIC`,
+        `https://api.smartrecruiters.com/v1/companies/${encodeURIComponent(slug)}/postings?limit=${PAGE}&offset=${page * PAGE}&status=PUBLIC`,
       ),
     );
+    if (page === 0) reported = data.totalFound ?? null;
+    seen += data.content.length;
     for (const j of data.content) {
       const url = `https://jobs.smartrecruiters.com/${encodeURIComponent(slug)}/${encodeURIComponent(j.id)}`;
       jobs.push({
@@ -45,11 +66,13 @@ export async function smartrecruiters(
           .join(", "),
         url,
         attributionUrl: url,
+        externalId: String(j.id),
+        requisitionId: requisition(j.refNumber),
         description: "",
         postedAt: postedAt(j.releasedDate),
       });
     }
-    if (data.content.length < 100) break;
+    if (data.content.length < PAGE) break;
   }
-  return jobs;
+  return boardResult(jobs, reported, seen, limited);
 }

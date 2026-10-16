@@ -8,8 +8,11 @@ import { singleton } from "tsyringe";
 import type { z } from "zod/v4";
 import { CryptoService, SECRET_CONTEXTS } from "@/common/crypto";
 import { conflict, findOwned, unprocessable } from "@/common/errors";
+import { logger } from "@/common/logger";
+import { env } from "@/env";
 import { PrismaClient } from "@/generated/prisma/client";
 import { publishCampaignStatus } from "@/modules/campaign/campaign.utils";
+import { canonicalizeUrl } from "@/modules/job-listing/dedupe";
 import { JobListingPublisher } from "@/modules/job-listing/job-listing.publisher";
 import { listedExperience } from "@/modules/mvp/experience";
 import { apify } from "./apify";
@@ -19,6 +22,7 @@ import { fetchSourceJson, fetchSourceText } from "./http";
 import { type PublicFeedId, publicFeed } from "./public-feeds";
 import { EmployerResolver } from "./resolver";
 import { serpapi, serpapiPage } from "./serpapi";
+import { CLASSIFIER_VERSION, droppedJobId, splitByTech } from "./tech-filter";
 import type { SourceJob } from "./types";
 
 type Provider = z.infer<typeof discoveryProviderSchema>;
@@ -71,7 +75,7 @@ export class JobSourcesService {
   ) {
     if (list) await this.checkList(list.userId, list.campaignId);
     let requests = 0;
-    const jobs = await fetchAts(
+    const board = await fetchAts(
       (url, init) => {
         requests++;
         return fetchSourceJson(url, init);
@@ -79,12 +83,42 @@ export class JobSourcesService {
       provider,
       slug,
       company,
+      {
+        describedUrls: (urls) => this.describedUrls(urls),
+        techOnly: env.JOB_TECH_FILTER_ENABLED,
+      },
       (url) => {
         requests++;
         return fetchSourceText(url);
       },
     );
-    return this.store(jobs, provider, `${provider}/${slug}`, requests, list, false, maxJobs);
+    return this.store(
+      board.jobs,
+      provider,
+      `${provider}/${slug}`,
+      requests,
+      list,
+      !board.complete,
+      maxJobs,
+      `${provider}/${slug}`,
+    );
+  }
+  /** The job URLs whose listing already has a description, so their detail pages are skipped. */
+  private async describedUrls(urls: string[]): Promise<Set<string>> {
+    const byCanonical = new Map(urls.map((url) => [canonicalizeUrl(url), url]));
+    const described = new Set<string>();
+    const keys = [...byCanonical.keys()];
+    for (let start = 0; start < keys.length; start += 1000) {
+      const rows = await this.prisma.jobListingSource.findMany({
+        where: {
+          url: { in: keys.slice(start, start + 1000) },
+          listing: { descriptionExcerpt: { not: null } },
+        },
+        select: { url: true },
+      });
+      for (const row of rows) described.add(byCanonical.get(row.url) ?? row.url);
+    }
+    return described;
   }
   async publicFeed(source: PublicFeedId) {
     let requests = 0;
@@ -100,7 +134,16 @@ export class JobSourcesService {
       },
     );
     // Simplify's internship list alone has about 5,000 active roles; the other feeds stay well under.
-    return this.store(jobs, source, `public/${source}`, requests, undefined, false, 6000);
+    return this.store(
+      jobs,
+      source,
+      `public/${source}`,
+      requests,
+      undefined,
+      false,
+      6000,
+      `public/${source}`,
+    );
   }
   async discover(userId: string, input: z.infer<typeof discoverInputSchema>) {
     if (input.board === "hiringcafe")
@@ -199,7 +242,17 @@ export class JobSourcesService {
     list?: { userId: string; campaignId: string },
     limited = false,
     maxJobs = 500,
+    /** Set for a board or feed refreshed again later, so its dropped job ids are remembered. */
+    boardKey?: string,
   ) {
+    const fetched = jobs.length;
+    let dropped = 0;
+    if (env.JOB_TECH_FILTER_ENABLED) {
+      const split = await this.techJobs(jobs, boardKey);
+      jobs = split.kept;
+      dropped = split.dropped;
+      logger.info({ source, kept: jobs.length, dropped }, "Tech filter applied");
+    }
     const boards = new Map<string, Promise<unknown>>();
     const fetchBoard = (url: string) => {
       let response = boards.get(url);
@@ -285,6 +338,29 @@ export class JobSourcesService {
       );
       publishCampaignStatus(list.userId, campaign, campaign.status);
     }
-    return { imported, fetched: jobs.length, resolved, saved, requests, truncated };
+    return { imported, fetched, dropped, resolved, saved, requests, truncated };
+  }
+  /** Keep tech jobs; remember the board's dropped ids so the next refresh skips them unclassified. */
+  private async techJobs(jobs: SourceJob[], boardKey?: string) {
+    const rows = boardKey
+      ? await this.prisma.droppedJob.findMany({
+          where: { boardKey, jobId: { in: jobs.map(droppedJobId) } },
+          select: { jobId: true, classifierVersion: true },
+        })
+      : [];
+    const split = splitByTech(jobs, new Map(rows.map((row) => [row.jobId, row.classifierVersion])));
+    if (boardKey) {
+      if (split.clear.length)
+        await this.prisma.droppedJob.deleteMany({
+          where: { boardKey, jobId: { in: split.clear } },
+        });
+      for (const jobId of split.drop)
+        await this.prisma.droppedJob.upsert({
+          where: { boardKey_jobId: { boardKey, jobId } },
+          create: { boardKey, jobId, classifierVersion: CLASSIFIER_VERSION },
+          update: { classifierVersion: CLASSIFIER_VERSION, droppedAt: new Date() },
+        });
+    }
+    return split;
   }
 }

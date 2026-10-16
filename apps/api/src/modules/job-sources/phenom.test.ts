@@ -17,13 +17,14 @@ it("pages the site's search widget and keeps every listed city", async () => {
   const bodies: { from: number; refNum: string; lang: string }[] = [];
   const job = (n: number) => ({
     jobId: String(400000 + n),
+    reqId: `R-${400000 + n}`,
     title: `Software Developer Intern &amp; Co-op ${n}`,
     location: "Montreal, Quebec",
     multi_location: n === 0 ? ["Toronto, Ontario", "Montreal, Quebec"] : [],
     description: "<p>Build things.</p>",
     postedDate: "2026-09-23T00:00:00.000+0000",
   });
-  const jobs = await phenom(
+  const { jobs, complete } = await phenom(
     async (url, init) => {
       expect(url).toBe("https://jobs.bell.ca/widgets");
       const body = JSON.parse(String(init?.body));
@@ -51,8 +52,11 @@ it("pages the site's search widget and keeps every listed city", async () => {
     location: "Toronto, Ontario; Montreal, Quebec",
     url: "https://jobs.bell.ca/ca/en/job/400000",
     attributionUrl: "https://jobs.bell.ca/ca/en/job/400000",
+    externalId: "400000",
+    requisitionId: "R-400000",
     description: "Build things.",
     postedAt: new Date("2026-09-23T00:00:00.000Z"),
   });
   expect(jobs[1]?.location).toBe("Montreal, Quebec");
+  expect(complete).toBe(true);
 });

@@ -48,6 +48,8 @@ export async function weWorkRemotely(fetch: FetchText): Promise<SourceJob[]> {
       location: plainText(field(item, "region")) || "Remote — location not specified",
       url: url.href,
       attributionUrl: url.href,
+      // Each job's link ends in its own slug, which is how the feed itself tells jobs apart.
+      externalId: url.pathname.split("/").filter(Boolean).pop(),
       description: plainText(field(item, "description")),
       postedAt: postedAt(field(item, "pubDate")),
       type: plainText(field(item, "type")) || null,

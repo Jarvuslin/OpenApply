@@ -1,6 +1,15 @@
 import { z } from "zod/v4";
 import { unprocessable } from "@/common/errors";
-import { type FetchJson, plainText, postedAt, type SourceJob } from "./types";
+import {
+  type BoardResult,
+  boardResult,
+  type FetchJson,
+  plainText,
+  postedAt,
+  requisition,
+  requisitionFrom,
+  type SourceJob,
+} from "./types";
 
 // "jobs.bell.ca/ca/en_CA/BECACA": host, site country, locale, and Phenom's tenant code.
 const SITE_SLUG =
@@ -16,6 +25,7 @@ const page = z.object({
       jobs: z.array(
         z.object({
           jobId: z.string().regex(/^[\w-]+$/),
+          reqId: z.string().nullish(),
           title: z.string(),
           location: z.string().nullish(),
           multi_location: z.array(z.string()).nullish(),
@@ -41,12 +51,18 @@ export function phenomSite(slug: string) {
   };
 }
 
-export async function phenom(fetch: FetchJson, slug: string, company = slug): Promise<SourceJob[]> {
+export async function phenom(fetch: FetchJson, slug: string, company = slug): Promise<BoardResult> {
   const site = phenomSite(slug);
   if (!site) throw unprocessable("Invalid Phenom career site.");
   const jobs = new Map<string, SourceJob>();
   let total = 0;
-  for (let index = 0; index < MAX_PAGES; index++) {
+  let seen = 0;
+  let limited = false;
+  for (let index = 0; ; index++) {
+    if (index === MAX_PAGES) {
+      limited = true;
+      break;
+    }
     // The site's own search widget; robots.txt disallows /px-widgets and /apply, not /widgets.
     const data = page.parse(
       await fetch(`${site.origin}/widgets`, {
@@ -72,8 +88,10 @@ export async function phenom(fetch: FetchJson, slug: string, company = slug): Pr
       }),
     ).refineSearch;
     if (index === 0) total = data.totalHits;
+    seen += data.data.jobs.length;
     for (const job of data.data.jobs) {
       const url = `${site.origin}/${site.path}/job/${job.jobId}`;
+      const description = plainText(job.description ?? job.descriptionTeaser ?? "");
       jobs.set(job.jobId, {
         title: plainText(job.title),
         company,
@@ -81,11 +99,13 @@ export async function phenom(fetch: FetchJson, slug: string, company = slug): Pr
         location: job.multi_location?.length ? job.multi_location.join("; ") : (job.location ?? ""),
         url,
         attributionUrl: url,
-        description: plainText(job.description ?? job.descriptionTeaser ?? ""),
+        externalId: job.jobId,
+        requisitionId: requisition(job.reqId) ?? requisitionFrom(description),
+        description,
         postedAt: postedAt(job.postedDate),
       });
     }
     if (data.data.jobs.length < PAGE || (index + 1) * PAGE >= total) break;
   }
-  return [...jobs.values()];
+  return boardResult([...jobs.values()], total, seen, limited);
 }

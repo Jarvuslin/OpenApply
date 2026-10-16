@@ -67,6 +67,7 @@ export const JOB_FEED_CATALOG: CatalogBoard[] = [
   { provider: "ashby", slug: "modal", company: "Modal" },
   { provider: "ashby", slug: "cursor", company: "Cursor" },
   // Canadian banks, insurers, telecom, and enterprise employers hire through Workday, plus big tech with Canadian offices.
+  // RBC's robots.txt disallows its main site (rbcglobal1); its host is exempt for personal use.
   { provider: "workday", slug: "rbc.wd3.rbcglobal1", company: "RBC" },
   { provider: "workday", slug: "rbc.wd3.rbcearlytalent1", company: "RBC" },
   { provider: "workday", slug: "td.wd3.td_bank_careers", company: "TD" },

@@ -33,7 +33,7 @@ flowchart LR
    the same feed. Set `JOB_FEED_REFRESH_ENABLED=false` to turn the schedule off.
 2. **Fetch.** An adapter reads one board or feed and returns `SourceJob`s: title, company,
    location, URL, description, posting date and sometimes level or countries.
-3. **Store.** `JobSourcesService.store` caps the batch (2,000 jobs per board, 6,000 per feed).
+3. **Store.** `JobSourcesService.store` caps the batch (5,000 jobs per board, 6,000 per feed).
    For each job it finds a direct employer apply link and adds a digest with `remote` and
    `yearsExperience` (read from the description), then publishes it.
 4. **Publish.** `JobListingPublisher` builds a draft (`listing-draft.ts`), works out whether the

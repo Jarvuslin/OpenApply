@@ -3,10 +3,11 @@ import { ashby } from "./ashby";
 import { expect, it } from "bun:test";
 
 it("keeps explicit work mode, secondary countries, salary units and publication date", async () => {
-  const jobs = await ashby(
+  const { jobs } = await ashby(
     async () => ({
       jobs: [
         {
+          id: "one",
           title: "Software Engineer",
           location: "Toronto",
           jobUrl: "https://jobs.ashbyhq.com/acme/one",
@@ -49,16 +50,18 @@ it("keeps explicit work mode, secondary countries, salary units and publication 
 });
 
 it("omits unlisted jobs and never assumes a salary currency or period", async () => {
-  const jobs = await ashby(
+  const { jobs } = await ashby(
     async () => ({
       jobs: [
         {
+          id: "private",
           title: "Private job",
           location: "US",
           jobUrl: "https://jobs.ashbyhq.com/acme/private",
           isListed: false,
         },
         {
+          id: "public",
           title: "Engineer",
           location: "Remote",
           jobUrl: "https://jobs.ashbyhq.com/acme/public",

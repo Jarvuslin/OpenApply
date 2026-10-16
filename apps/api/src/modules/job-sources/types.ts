@@ -8,6 +8,10 @@ export interface SourceJob {
   attributionUrl: string;
   /** A stable per-posting URL when attribution points to a curated collection. */
   identityUrl?: string;
+  /** The source's own id for this posting, unique within its board. */
+  externalId?: string;
+  /** The employer's requisition number, which can tie one opening together across sources. */
+  requisitionId?: string;
   description: string;
   postedAt: Date | null;
   countries?: string[];
@@ -20,6 +24,33 @@ export interface SourceJob {
 }
 
 export type FetchJson = (url: string, init?: RequestInit) => Promise<unknown>;
+
+/** One employer board read. `complete` is false when a page limit cut it short or fewer jobs
+ *  came back than the board reports. */
+export interface BoardResult {
+  jobs: SourceJob[];
+  reported: number | null;
+  complete: boolean;
+}
+
+export interface BoardOptions {
+  /** Of these job URLs, the ones whose description is already indexed, so detail pages are skipped. */
+  describedUrls?: (urls: string[]) => Promise<Set<string>>;
+  /** Most job detail pages one refresh may fetch; the rest wait for a later refresh. */
+  detailBudget?: number;
+  /** Skip clearly non-tech job families where a board exposes them (Workday). */
+  techOnly?: boolean;
+}
+
+/** Board read that stopped early: `seen` rows out of `reported`, with `limited` when a page cap hit. */
+export function boardResult(
+  jobs: SourceJob[],
+  reported: number | null,
+  seen: number,
+  limited: boolean,
+): BoardResult {
+  return { jobs, reported, complete: !limited && (reported === null || seen >= reported) };
+}
 
 export function plainText(value: string): string {
   const entities: Record<string, string> = {
@@ -68,4 +99,22 @@ export function monthDayYear(text: string): Date | null {
   const month = match ? MONTHS.indexOf(match[1]?.toLowerCase() ?? "") : -1;
   if (!match || month < 0) return null;
   return new Date(Date.UTC(Number(match[3]), month, Number(match[2])));
+}
+
+const REQUISITION = /^[A-Za-z]{0,6}[-_]?\d[\w.-]{1,28}$/;
+
+/** A structured requisition field, or null when it holds a placeholder like "See Opening ID". */
+export function requisition(value: string | null | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed && REQUISITION.test(trimmed) ? trimmed : undefined;
+}
+
+/** A requisition number named in posting text: "Req ID: 432857", "R-0000183912", "JR123456". */
+export function requisitionFrom(text: string): string | undefined {
+  const labelled =
+    /\b(?:req(?:uisition)?\.?\s*(?:id|#|no\.?|number)|job\s*(?:id|#|number)|identifiant de r[ée]quisition)\s*[:#]?\s*([A-Za-z]{0,6}[-_]?\d[\w-]{1,28})/i.exec(
+      text,
+    )?.[1];
+  const coded = /\b((?:JR|REQ|R)-?\d{4,12}(?:-\d{1,3})?)\b/.exec(text)?.[1];
+  return requisition(labelled ?? coded);
 }

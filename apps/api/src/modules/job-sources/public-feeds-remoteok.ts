@@ -2,6 +2,7 @@ import { z } from "zod/v4";
 import { type FetchJson, plainText, postedAt, type SourceJob } from "./types";
 
 const job = z.object({
+  id: z.union([z.string(), z.number()]).nullish(),
   position: z.string().min(1),
   company: z.string().min(1),
   url: z.url(),
@@ -31,6 +32,7 @@ export async function remoteOk(fetch: FetchJson): Promise<SourceJob[]> {
       location: plainText(item.location) || "Remote — location not specified",
       url: url.href,
       attributionUrl: url.href,
+      ...(item.id != null && { externalId: String(item.id) }),
       description: plainText(item.description),
       postedAt: postedAt(item.date) ?? postedAt(item.epoch == null ? null : item.epoch * 1000),
       workMode: "remote",

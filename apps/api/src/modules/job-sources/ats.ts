@@ -7,7 +7,7 @@ import { phenom } from "./phenom";
 import type { FetchText } from "./public-feeds-wwr";
 import { smartrecruiters } from "./smartrecruiters";
 import { successfactors } from "./successfactors";
-import type { FetchJson } from "./types";
+import type { BoardOptions, BoardResult, FetchJson } from "./types";
 import { workable } from "./workable";
 import { workday } from "./workday";
 
@@ -21,12 +21,13 @@ export async function fetchAts(
   provider: AtsProvider,
   slug: string,
   company = slug,
+  options: BoardOptions = {},
   fetchText: FetchText = fetchSourceText,
-) {
+): Promise<BoardResult> {
   // SuccessFactors career sites serve HTML search pages, not a JSON API.
-  if (provider === "successfactors") return successfactors(fetchText, slug, company);
+  if (provider === "successfactors") return successfactors(fetchText, slug, company, options);
   // Site slugs contain dots and slashes and are checked by each adapter.
   if (!SITE_PROVIDERS.includes(provider) && !/^[a-zA-Z0-9_-][a-zA-Z0-9 _-]{0,79}$/.test(slug))
     throw unprocessable("Invalid employer board slug.");
-  return JSON_ATS[provider](fetch, slug, company);
+  return JSON_ATS[provider](fetch, slug, company, options);
 }

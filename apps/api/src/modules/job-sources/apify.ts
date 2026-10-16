@@ -7,6 +7,7 @@ import { unprocessable } from "@/common/errors";
 import { type FetchJson, plainText, postedAt, type SourceJob } from "./types";
 
 const row = z.object({
+  id: z.union([z.string(), z.number()]).optional(),
   title: z.string().optional(),
   jobTitle: z.string().optional(),
   companyName: z.string().optional(),
@@ -69,6 +70,7 @@ export async function apify(
           location,
           url: j.applyUrl ?? attributionUrl,
           attributionUrl,
+          ...(j.id !== undefined && { externalId: String(j.id) }),
           description: plainText(j.descriptionText ?? j.description ?? ""),
           postedAt: postedAt(j.postedAt),
         },

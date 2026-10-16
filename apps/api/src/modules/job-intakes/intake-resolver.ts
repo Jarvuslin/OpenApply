@@ -93,9 +93,11 @@ export async function resolveIntake(
   let resolved: SourceJob | null = null;
   if (provider && /^[A-Za-z0-9_-]{1,80}$/.test(slug ?? "")) {
     try {
-      const jobs = await fetchAts(fetchJson, provider, slug, source?.listing.company ?? slug);
+      const board = await fetchAts(fetchJson, provider, slug, source?.listing.company ?? slug, {
+        detailBudget: 0,
+      });
       resolved =
-        jobs.find((job) =>
+        board.jobs.find((job) =>
           [job.url, job.attributionUrl].some(
             (candidate) => canonicalizeIntakeUrl(candidate) === target,
           ),

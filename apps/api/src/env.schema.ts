@@ -30,6 +30,8 @@ export const EnvSchema = z
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
     PORT: z.coerce.number().default(4101),
     JOB_FEED_REFRESH_ENABLED: z.stringbool().default(true),
+    /** Store only tech-related jobs from boards and feeds. */
+    JOB_TECH_FILTER_ENABLED: z.stringbool().default(true),
     CAPTCHA_SOLVER_ENABLED: z.stringbool().default(false),
     PUBLIC_SITE_ENABLED: z.stringbool().default(false),
     MVP_LOCAL_RUNNER: z.stringbool().default(false),

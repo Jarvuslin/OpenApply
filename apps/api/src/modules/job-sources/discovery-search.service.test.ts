@@ -159,7 +159,9 @@ it("keeps HiringCafe previews private, short-lived and coalesced without any dat
   let calls = 0;
   const fetch = spyOn(globalThis, "fetch").mockImplementation(
     Object.assign(
-      async () => {
+      async (input: string | URL | Request) => {
+        // The robots.txt check is a separate request; only searches count here.
+        if (String(input).endsWith("/robots.txt")) return new Response("", { status: 404 });
         calls++;
         return Response.json({ result: { structuredContent: { jobs: [], total_matches: 0 } } });
       },

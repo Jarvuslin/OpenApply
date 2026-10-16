@@ -24,7 +24,7 @@ it("reads month-day-year dates as UTC midnight", () => {
 
 it("pages the newest-first search and reads each row", async () => {
   const urls: string[] = [];
-  const jobs = await successfactors(
+  const { jobs, complete } = await successfactors(
     async (url) => {
       urls.push(url);
       const start = Number(new URL(url).searchParams.get("startrow"));
@@ -34,7 +34,9 @@ it("pages the newest-first search and reads each row", async () => {
     },
     "jobs.rogers.com",
     "Rogers",
+    { detailBudget: 0 },
   );
+  expect(complete).toBe(true);
   expect(urls).toEqual([
     "https://jobs.rogers.com/search/?q=&sortColumn=referencedate&sortDirection=desc&startrow=0",
     "https://jobs.rogers.com/search/?q=&sortColumn=referencedate&sortDirection=desc&startrow=25",
@@ -49,9 +51,40 @@ it("pages the newest-first search and reads each row", async () => {
     location: "Toronto, ON, CA",
     url: "https://jobs.rogers.com/job/Toronto-Developer-1-ON/143066451/",
     attributionUrl: "https://jobs.rogers.com/job/Toronto-Developer-1-ON/143066451/",
+    externalId: "143066451",
     description: "",
     postedAt: new Date("2026-10-15T00:00:00.000Z"),
   });
+});
+
+it("fills new jobs from their pages: full description, exact date and requisition", async () => {
+  const page = `<span itemprop="datePosted" content="Thu Oct 15 07:00:00 UTC 2026"></span>
+    <span itemprop="description" data-careersite-propertyid="description"><span class="jobdescription">
+    <p>Build payment systems.</p><p>Requisition ID: 335014</p></span></span>
+    <span data-careersite-propertyid="customfield1">Footer</span>`;
+  const fetched: string[] = [];
+  const { jobs } = await successfactors(
+    async (url) => {
+      fetched.push(url);
+      if (url.includes("/job/")) return page;
+      return `Results <b>1 – 2</b> of <b>2</b>${row(0)}${row(1)}`;
+    },
+    "jobs.rogers.com",
+    "Rogers",
+    {
+      describedUrls: async () =>
+        new Set(["https://jobs.rogers.com/job/Toronto-Developer-1-ON/143066451/"]),
+    },
+  );
+  expect(fetched.filter((url) => url.includes("/job/"))).toEqual([
+    "https://jobs.rogers.com/job/Toronto-Developer-0-ON/143066450/",
+  ]);
+  expect(jobs[0]).toMatchObject({
+    description: "Build payment systems. Requisition ID: 335014",
+    postedAt: new Date("2026-10-15T07:00:00.000Z"),
+    requisitionId: "335014",
+  });
+  expect(jobs[1]?.description).toBe("");
 });
 
 it("rejects a slug that is not a hostname", async () => {

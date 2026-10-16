@@ -1,5 +1,12 @@
 import { z } from "zod/v4";
-import { type FetchJson, postedAt, type SourceJob } from "./types";
+import {
+  type BoardResult,
+  boardResult,
+  type FetchJson,
+  postedAt,
+  requisitionFrom,
+  type SourceJob,
+} from "./types";
 
 const address = z.object({ addressCountry: z.string().nullish() });
 const compensation = z.object({
@@ -20,6 +27,7 @@ const compensation = z.object({
 const feed = z.object({
   jobs: z.array(
     z.object({
+      id: z.string(),
       title: z.string(),
       location: z.string(),
       jobUrl: z.url(),
@@ -38,40 +46,46 @@ const feed = z.object({
     }),
   ),
 });
-export async function ashby(fetch: FetchJson, slug: string, company = slug): Promise<SourceJob[]> {
+export async function ashby(fetch: FetchJson, slug: string, company = slug): Promise<BoardResult> {
   const data = feed.parse(
     await fetch(
       `https://api.ashbyhq.com/posting-api/job-board/${encodeURIComponent(slug)}?includeCompensation=true`,
     ),
   );
-  return data.jobs
+  const jobs = data.jobs
     .filter((j) => j.isListed !== false)
-    .map((j) => ({
-      title: j.title,
-      company,
-      location: [
-        ...new Set([
-          j.location,
-          ...j.secondaryLocations.map((entry) => entry.location),
-          ...(j.isRemote && j.workplaceType !== "Hybrid" ? ["Remote"] : []),
-        ]),
-      ].join("; "),
-      countries: [
-        ...new Set(
-          [
-            j.address?.postalAddress?.addressCountry,
-            ...j.secondaryLocations.map((entry) => entry.address?.addressCountry),
-          ].filter((value): value is string => !!value),
-        ),
-      ],
-      workMode: workMode(j.workplaceType, j.isRemote),
-      type: j.employmentType,
-      salary: salary(j.compensation),
-      url: j.applyUrl ?? j.jobUrl,
-      attributionUrl: j.jobUrl,
-      description: j.descriptionPlain,
-      postedAt: postedAt(j.publishedAt),
-    }));
+    .map(
+      (j): SourceJob => ({
+        title: j.title,
+        company,
+        location: [
+          ...new Set([
+            j.location,
+            ...j.secondaryLocations.map((entry) => entry.location),
+            ...(j.isRemote && j.workplaceType !== "Hybrid" ? ["Remote"] : []),
+          ]),
+        ].join("; "),
+        countries: [
+          ...new Set(
+            [
+              j.address?.postalAddress?.addressCountry,
+              ...j.secondaryLocations.map((entry) => entry.address?.addressCountry),
+            ].filter((value): value is string => !!value),
+          ),
+        ],
+        workMode: workMode(j.workplaceType, j.isRemote),
+        type: j.employmentType,
+        salary: salary(j.compensation),
+        url: j.applyUrl ?? j.jobUrl,
+        attributionUrl: j.jobUrl,
+        externalId: j.id,
+        requisitionId: requisitionFrom(j.descriptionPlain),
+        description: j.descriptionPlain,
+        postedAt: postedAt(j.publishedAt),
+      }),
+    );
+  // The job-board API returns every posting in one response, so a parsed board is complete.
+  return boardResult(jobs, null, jobs.length, false);
 }
 
 function workMode(

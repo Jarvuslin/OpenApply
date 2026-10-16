@@ -38,6 +38,8 @@ model DiscoveredJobBoard {
   company     String
   firstSeenAt DateTime         @default(now()) @map("first_seen_at")
   lastSeenAt  DateTime         @default(now()) @map("last_seen_at")
+  /// When the board's API answered 404; it is skipped until a recheck 30 days later.
+  goneAt      DateTime?        @map("gone_at")
 
   @@index([lastSeenAt])
   @@map("discovered_job_boards")
@@ -52,4 +54,16 @@ model JobBoardProbe {
 
   @@index([checkedAt])
   @@map("job_board_probes")
+}
+
+/// A job the tech filter dropped, by its board and the source's own id, so later refreshes skip it
+/// without classifying it again. Nothing else about the job is kept.
+model DroppedJob {
+  boardKey          String   @map("board_key")
+  jobId             String   @map("job_id")
+  classifierVersion Int      @map("classifier_version")
+  droppedAt         DateTime @default(now()) @map("dropped_at")
+
+  @@id([boardKey, jobId])
+  @@map("dropped_jobs")
 }

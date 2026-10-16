@@ -109,7 +109,10 @@ export class EmployerResolver {
     for (const probe of probes) {
       let candidates: SourceJob[];
       try {
-        candidates = await fetchAts(fetch, probe.provider, probe.slug, job.company);
+        // Matching only needs the job list, so no detail pages are fetched.
+        candidates = (
+          await fetchAts(fetch, probe.provider, probe.slug, job.company, { detailBudget: 0 })
+        ).jobs;
       } catch {
         continue;
       }
