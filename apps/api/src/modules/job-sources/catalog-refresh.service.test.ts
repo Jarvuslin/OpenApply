@@ -38,6 +38,15 @@ function fixture(
   const prisma = {
     jobBoardProbe: {
       findMany: async () => probes,
+      findUnique: async ({ where }: { where: { key: string } }) =>
+        probes.find((probe) => probe.key === where.key) ?? null,
+      update: async ({
+        where,
+        data,
+      }: {
+        where: { key: string };
+        data: Partial<(typeof probes)[number]>;
+      }) => Object.assign(probes.find((probe) => probe.key === where.key)!, data),
       upsert: async ({ create }: { create: (typeof probes)[number] }) => {
         probes.push(create);
         return create;
@@ -152,29 +161,59 @@ it("refreshes boards found in Simplify on a slower three-hour cadence", async ()
 
 it("records new Simplify boards for refresh and skips ones the catalog already covers", async () => {
   const state = fixture(false, []);
-  const found = await state.service.discoverBoards(async () => [
-    {
-      company_name: "Tiny Co",
-      title: "Software Engineer",
-      url: "https://jobs.lever.co/tinyco/1",
-      locations: [],
-      active: true,
-      is_visible: true,
-      date_posted: 1,
-    },
-    {
-      company_name: "OpenAI",
-      title: "Engineer",
-      url: "https://jobs.ashbyhq.com/OpenAI/2",
-      locations: [],
-      active: true,
-      is_visible: true,
-      date_posted: 1,
-    },
-  ]);
+  const found = await state.service.discoverBoards(
+    async () => [
+      {
+        company_name: "Tiny Co",
+        title: "Software Engineer",
+        url: "https://jobs.lever.co/tinyco/1",
+        locations: [],
+        active: true,
+        is_visible: true,
+        date_posted: 1,
+      },
+      {
+        company_name: "OpenAI",
+        title: "Engineer",
+        url: "https://jobs.ashbyhq.com/OpenAI/2",
+        locations: [],
+        active: true,
+        is_visible: true,
+        date_posted: 1,
+      },
+    ],
+    async () => "",
+  );
   expect(found).toBe(1);
   expect(state.discovered.map((board) => board.key)).toEqual(["lever/tinyco"]);
   expect(state.created).toEqual(["lever/tinyco"]);
+});
+
+it("keeps a Workday board from a list link only once one request shows it lists jobs", async () => {
+  const state = fixture(false, []);
+  const badge = "[![Apply](https://img.shields.io/badge/-Apply-blue)]";
+  const readme = [
+    "| Company | Role | Location | Apply | Date Posted |",
+    `| Acme | Developer Intern | Toronto, ON | ${badge}(https://acme.wd3.myworkdayjobs.com/en-US/Campus/job/Toronto/Dev_R1) | Oct 1, 2026 |`,
+    `| Empty Co | Analyst Intern | Toronto, ON | ${badge}(https://empty.wd5.myworkdayjobs.com/External/job/Toronto/A_R2) | Oct 1, 2026 |`,
+  ].join("\n");
+  const probed: string[] = [];
+  const found = await state.service.discoverBoards(
+    async (url) => {
+      if (url.includes("myworkdayjobs.com")) {
+        probed.push(url);
+        return { total: url.includes("acme") ? 12 : 0, jobPostings: [] };
+      }
+      return [];
+    },
+    async () => readme,
+  );
+  expect(probed).toEqual([
+    "https://acme.wd3.myworkdayjobs.com/wday/cxs/acme/Campus/jobs",
+    "https://empty.wd5.myworkdayjobs.com/wday/cxs/empty/External/jobs",
+  ]);
+  expect(found).toBe(1);
+  expect(state.discovered.map((board) => board.key)).toEqual(["workday/acme.wd3.Campus"]);
 });
 
 it("probes YC companies for a board that names them and remembers every result", async () => {
@@ -212,4 +251,21 @@ it("probes YC companies for a board that names them and remembers every result",
   ]);
   // Nobody was looked for on every provider before giving up.
   expect(requested.filter((url) => url.includes("nobody")).length).toBe(4);
+});
+
+it("checks queued Common Crawl boards once and keeps those that list jobs", async () => {
+  const state = fixture(false, []);
+  state.probes.push(
+    { key: "cc/greenhouse/acmerobotics", checkedAt: new Date(0), boardKey: null },
+    { key: "cc/ashby/quiet", checkedAt: new Date(0), boardKey: null },
+  );
+  const result = await state.service.checkCommonCrawl(async (url) =>
+    url.includes("greenhouse") ? { jobs: [{ company_name: "Acme Robotics" }] } : { jobs: [] },
+  );
+  expect(result).toEqual({ checked: 2, kept: 1 });
+  expect(state.discovered.map((board) => board.key)).toEqual(["greenhouse/acmerobotics"]);
+  expect(state.probes.map((probe) => [probe.key, probe.boardKey])).toEqual([
+    ["cc/greenhouse/acmerobotics", "greenhouse/acmerobotics"],
+    ["cc/ashby/quiet", null],
+  ]);
 });

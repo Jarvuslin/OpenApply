@@ -37,6 +37,8 @@
     "dotenv": "^18.0.4",
     "elysia": "^1.4.30",
     "googleapis": "^182.0.0",
+    "hyparquet": "1.17.1",
+    "hyparquet-compressors": "1.1.1",
     "jose": "^6.2.12",
     "mammoth": "^1.13.0",
     "pdfjs-dist": "^6.4.299",

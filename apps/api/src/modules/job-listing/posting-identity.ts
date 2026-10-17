@@ -32,7 +32,7 @@ export function postingIdentity(rawUrl: string): PostingIdentity | null {
   if (host === "apply.workable.com")
     return parts[1] === "j" ? identity("workable", parts[0], parts[2]) : null;
   if (host === "jobs.smartrecruiters.com") return identity("smartrecruiters", parts[0], parts[1]);
-  const workday = /^([a-z0-9-]+)\.(wd\d{1,2})\.myworkdayjobs\.com$/.exec(host);
+  const workday = /^([a-z0-9-]+)\.(wd\d{1,3})\.myworkdayjobs\.com$/.exec(host);
   if (workday) {
     const path = LOCALE.test(parts[0] ?? "") ? parts.slice(1) : parts;
     const [site, marker] = path;

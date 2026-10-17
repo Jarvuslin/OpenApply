@@ -14,7 +14,7 @@ import {
 } from "./types";
 
 // Workday boards live at {tenant}.wd{N}.myworkdayjobs.com/{site}, so a slug is "tenant.wdN.site".
-const WORKDAY_SLUG = /^([a-z0-9-]{1,40})\.(wd\d{1,2})\.([a-zA-Z0-9_-]{1,60})$/;
+const WORKDAY_SLUG = /^([a-z0-9-]{1,40})\.(wd\d{1,3})\.([a-zA-Z0-9_-]{1,60})$/;
 const PAGE = 20;
 const MAX_PAGES = 250;
 const DAY = 86400_000;
@@ -149,4 +149,18 @@ export async function workday(
     };
   });
   return boardResult(jobs, total, seen, limited);
+}
+
+/** One request: how many jobs a Workday board lists, so a found board is checked before it is kept. */
+export async function workdayJobCount(fetch: FetchJson, slug: string): Promise<number> {
+  const board = workdayBoard(slug);
+  if (!board) return 0;
+  const data = page.parse(
+    await fetch(`${board.origin}/wday/cxs/${board.tenant}/${board.site}/jobs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ appliedFacets: {}, limit: 1, offset: 0, searchText: "" }),
+    }),
+  );
+  return data.total;
 }

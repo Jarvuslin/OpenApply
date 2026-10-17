@@ -177,3 +177,14 @@ it("reads the internship list and treats an unlabelled title as an internship", 
     ["entry", "https://github.com/SimplifyJobs/Summer2027-Internships"],
   ]);
 });
+
+it("reads a Workday board from a job link, with or without a locale", () => {
+  expect(
+    boardOf("https://manulife.wd3.myworkdayjobs.com/en-US/MFCJH_adminJobs/job/Waterloo/Co-op_JR1"),
+  ).toEqual({ provider: "workday", slug: "manulife.wd3.MFCJH_adminJobs" });
+  expect(boardOf("https://expedia.wd108.myworkdayjobs.com/private/job/Seattle/Eng_R1")).toEqual({
+    provider: "workday",
+    slug: "expedia.wd108.private",
+  });
+  expect(boardOf("https://acme.wd5.myworkdayjobs.com/")).toBeNull();
+});

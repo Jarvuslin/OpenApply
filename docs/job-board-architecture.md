@@ -40,8 +40,18 @@ flowchart LR
    job is new or already known, and writes the listing and its source row.
 
 All network access goes through `job-sources/http.ts`. It allows only listed hosts and paths,
-requires HTTPS, refuses redirects, waits 500 ms between requests to the same host, times out
-after 30 seconds, retries 429s up to three times and stops reading at 20 MB.
+requires HTTPS, refuses redirects, waits 500 ms between requests to the same host (longer when
+robots.txt sets a crawl-delay), times out after 30 seconds, and stops reading at 20 MB. A 429
+pauses the whole host; Common Crawl's 503s are retried slowly, up to six times.
+
+Every request is checked against the host's robots.txt, including the career-site path of a
+Workday board. The exceptions:
+
+- **Calls made with the user's own API key** (an `Authorization` header or `api_key` parameter),
+  such as Apify and SerpApi: robots.txt governs crawling, not paid APIs we're a customer of.
+- **`api.smartrecruiters.com` and `rbc.wd3.myworkdayjobs.com`**, exempt for personal use.
+- **`data.commoncrawl.org`**, Common Crawl's documented public download endpoint: robots.txt there
+  blocks crawling, not downloads.
 
 ## Working job boards
 
@@ -81,13 +91,20 @@ allowlist.
 
 ### Discovered boards
 
-About 1,190 more employer boards are found automatically and stored in `discovered_job_boards`:
-Ashby 582, Greenhouse 322, Lever 121, SmartRecruiters 95, Workable 70. They refresh every three
-hours and are dropped after 30 days without being seen again.
+More employer boards are found automatically and stored in `discovered_job_boards`. They refresh
+every three hours (Workday boards daily) and are dropped after 30 days without being seen again;
+a board whose API answers 404 is marked gone and rechecked after 30 days.
 
-- **From Simplify** (`discovery/simplify-boards`, daily). `simplifyBoards` reads every apply link
-  in the Simplify new-grad and Summer2027 internship lists. Each link that points at a board an
-  adapter can read (`boardOf`) is added.
+- **From the Simplify and Canadian lists** (`discovery/simplify-boards`, daily). `simplifyBoards`
+  and `canadianBoards` read every apply link in the Simplify new-grad and Summer2027 internship
+  lists and the Canadian Tech Internships list. Each link that points at a board an adapter can
+  read (`boardOf`, Workday included) is added. A new Workday board is kept only after one request
+  shows it lists jobs; robots.txt disallows about one in eight of them.
+- **From Common Crawl** (`discovery/common-crawl`, monthly; `discovery/common-crawl-check`, every
+  30 minutes). `commonCrawlBoards` reads the newest crawl's columnar index with range requests:
+  every file's footer, then only the `url` column of the row groups whose SURT range covers
+  Greenhouse, Lever, Ashby or Workday hosts, about 335 MB in all. New boards wait as pending
+  probes, and the check validates 300 at a time with one request each (`checkBoard`).
 - **From Y Combinator** (`discovery/yc-boards`, 100 companies every 30 minutes, each one
   rechecked after 14 days). `discoverYcBoards` reads the yc-oss list of hiring YC companies and
   tries likely slugs on Ashby, Greenhouse, Lever and Workable. A board is kept only if its first

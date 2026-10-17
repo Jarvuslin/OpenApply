@@ -8,10 +8,14 @@ import {
   JOB_FEED_CATALOG,
   PUBLIC_FEED_CATALOG,
 } from "./catalog";
-import { fetchSourceJson, SourceResponseError } from "./http";
+import { checkBoard, commonCrawlBoards, type RangeReader } from "./common-crawl";
+import { fetchSourceJson, fetchSourceRange, fetchSourceText, SourceResponseError } from "./http";
 import { JobSourcesService } from "./job-sources.service";
+import { canadianBoards } from "./public-feeds-canada";
 import { type FoundBoard, simplifyBoards } from "./public-feeds-simplify";
+import type { FetchText } from "./public-feeds-wwr";
 import type { FetchJson } from "./types";
+import { workdayJobCount } from "./workday";
 import { boardBelongsTo, boardSlugs, PROBE_PROVIDERS, ycHiringCompanies } from "./yc-companies";
 
 const HOUR = 60 * 60 * 1000;
@@ -28,7 +32,13 @@ const GONE_RECHECK_MS = 30 * DAY;
 const BOARD_MAX_JOBS = 5000;
 const BOARD_DISCOVERY_KEY = "discovery/simplify-boards";
 const YC_DISCOVERY_KEY = "discovery/yc-boards";
-const DISCOVERY_KEYS = [BOARD_DISCOVERY_KEY, YC_DISCOVERY_KEY];
+const CC_SCAN_KEY = "discovery/common-crawl";
+const CC_CHECK_KEY = "discovery/common-crawl-check";
+const DISCOVERY_KEYS = [BOARD_DISCOVERY_KEY, YC_DISCOVERY_KEY, CC_SCAN_KEY, CC_CHECK_KEY];
+// Common Crawl publishes about one crawl a month; each found board waits as a pending probe.
+const CC_SCAN_MS = 30 * DAY;
+const CC_CHECK_BATCH = 300;
+const PENDING = new Date(0);
 // YC companies are checked a batch at a time, then again once their result is two weeks old.
 const YC_BATCH = 100;
 const YC_RECHECK_MS = 14 * DAY;
@@ -43,9 +53,106 @@ export class CatalogRefreshService {
     private readonly sources: JobSourcesService,
   ) {}
 
-  /** Records the employer boards behind Simplify's active roles and schedules them for refresh. */
-  async discoverBoards(fetch: FetchJson = fetchSourceJson) {
-    return this.recordBoards(await simplifyBoards(fetch));
+  /**
+   * Records the employer boards behind the Simplify and Canadian lists' roles and schedules them
+   * for refresh. A Workday board is kept only after one request shows it answers and lists jobs.
+   */
+  async discoverBoards(fetch: FetchJson = fetchSourceJson, fetchText: FetchText = fetchSourceText) {
+    const boards = [...(await simplifyBoards(fetch)), ...(await canadianBoards(fetchText))];
+    const known = new Set(
+      (await this.prisma.discoveredJobBoard.findMany({ select: { key: true } })).map((board) =>
+        board.key.toLowerCase(),
+      ),
+    );
+    const checked: FoundBoard[] = [];
+    for (const board of boards) {
+      if (board.provider !== "workday" || known.has(boardKey(board).toLowerCase())) {
+        checked.push(board);
+        continue;
+      }
+      if (await this.workdayListsJobs(fetch, board)) checked.push(board);
+    }
+    return this.recordBoards(checked);
+  }
+
+  /** Queues every board in the newest crawl that OpenApply has not seen, as a pending probe. */
+  async scanCommonCrawl(
+    read: RangeReader = fetchSourceRange,
+    fetchText: FetchText = fetchSourceText,
+  ) {
+    const { crawl, boards, rowGroups } = await commonCrawlBoards(read, fetchText);
+    const catalog = new Set(JOB_FEED_CATALOG.map((board) => boardKey(board).toLowerCase()));
+    const known = new Set(
+      (await this.prisma.discoveredJobBoard.findMany({ select: { key: true } })).map((board) =>
+        board.key.toLowerCase(),
+      ),
+    );
+    const fresh = boards.filter((board) => {
+      const key = boardKey(board).toLowerCase();
+      return !catalog.has(key) && !known.has(key);
+    });
+    const { count } = await this.prisma.jobBoardProbe.createMany({
+      data: fresh.map((board) => ({ key: `cc/${boardKey(board)}`, checkedAt: PENDING })),
+      skipDuplicates: true,
+    });
+    logger.info(
+      { crawl, rowGroups, found: byProvider(boards), queued: count, new: byProvider(fresh) },
+      "Common Crawl scanned",
+    );
+    return { found: boards.length, queued: count };
+  }
+
+  /** Checks a batch of queued Common Crawl boards with one request each, providers in parallel. */
+  async checkCommonCrawl(fetch: FetchJson = fetchSourceJson, batch = CC_CHECK_BATCH) {
+    const pending = await this.prisma.jobBoardProbe.findMany({
+      where: { key: { startsWith: "cc/" }, checkedAt: PENDING },
+      select: { key: true },
+      take: batch,
+    });
+    // One lane per API host; Workday boards sit on separate tenant hosts, so they get eight lanes.
+    const groups = new Map<string, FoundBoard[]>();
+    pending.forEach(({ key }, index) => {
+      const [provider, ...slug] = key.slice(3).split("/");
+      const board = { provider, slug: slug.join("/"), company: "" } as FoundBoard;
+      const lane = board.provider === "workday" ? `workday/${index % 8}` : board.provider;
+      groups.set(lane, [...(groups.get(lane) ?? []), board]);
+    });
+    const kept: FoundBoard[] = [];
+    await Promise.all(
+      [...groups.values()].map(async (boards) => {
+        for (const board of boards) {
+          // A board that fails, or robots.txt disallows, is checked and not kept.
+          const found = await checkBoard(fetch, board).catch(() => null);
+          // Recorded at once, so a stopped run never leaves a kept probe without its board.
+          if (found) {
+            kept.push(found);
+            await this.recordBoards([found]);
+          }
+          await this.prisma.jobBoardProbe.update({
+            where: { key: `cc/${boardKey(board)}` },
+            data: { checkedAt: new Date(), boardKey: found ? boardKey(found) : null },
+          });
+        }
+      }),
+    );
+    logger.info({ checked: pending.length, kept: byProvider(kept) }, "Common Crawl boards checked");
+    return { checked: pending.length, kept: kept.length };
+  }
+
+  /** One probe per new Workday board, remembered for two weeks so daily discovery stays cheap. */
+  private async workdayListsJobs(fetch: FetchJson, board: FoundBoard) {
+    const key = `probe/${boardKey(board).toLowerCase()}`;
+    const probe = await this.prisma.jobBoardProbe.findUnique({ where: { key } });
+    if (probe && probe.checkedAt.getTime() > Date.now() - YC_RECHECK_MS) return !!probe.boardKey;
+    // A board robots.txt disallows, or one that fails, counts as having no jobs.
+    const jobs = await workdayJobCount(fetch, board.slug).catch(() => 0);
+    const result = { checkedAt: new Date(), boardKey: jobs > 0 ? boardKey(board) : null };
+    await this.prisma.jobBoardProbe.upsert({
+      where: { key },
+      create: { key, ...result },
+      update: result,
+    });
+    return jobs > 0;
   }
 
   /**
@@ -99,7 +206,22 @@ ${job.description}`,
 
   private async recordBoards(boards: FoundBoard[]) {
     const catalog = new Set(JOB_FEED_CATALOG.map((board) => boardKey(board).toLowerCase()));
-    const found = boards.filter((board) => !catalog.has(boardKey(board).toLowerCase()));
+    // Links spell one board in different cases ("Campus", "campus"); the first spelling stays.
+    const existing = new Map(
+      (await this.prisma.discoveredJobBoard.findMany({ select: { key: true } })).map((board) => [
+        board.key.toLowerCase(),
+        board.key,
+      ]),
+    );
+    const unique = new Map<string, FoundBoard>();
+    for (const board of boards) {
+      const lower = boardKey(board).toLowerCase();
+      if (!catalog.has(lower) && !unique.has(lower)) unique.set(lower, board);
+    }
+    const found = [...unique].map(([lower, board]) => {
+      const key = existing.get(lower);
+      return key ? { ...board, slug: key.slice(board.provider.length + 1) } : board;
+    });
     const now = new Date();
     for (const board of found) {
       const key = boardKey(board);
@@ -167,8 +289,11 @@ ${job.description}`,
         if (board) interval = catalogBoard ? BOARD_REFRESH_MS : DISCOVERED_REFRESH_MS;
         if (catalogBoard && SITE_PROVIDERS.includes(catalogBoard.provider))
           interval = DISCOVERED_REFRESH_MS;
+        // A discovered Workday board can take 100 requests, and new grads rarely need it hourly.
+        if (!catalogBoard && board?.provider === "workday") interval = DAY;
         if (row.key === BOARD_DISCOVERY_KEY) interval = DAY;
-        if (row.key === YC_DISCOVERY_KEY) interval = FEED_REFRESH_MS;
+        if (row.key === YC_DISCOVERY_KEY || row.key === CC_CHECK_KEY) interval = FEED_REFRESH_MS;
+        if (row.key === CC_SCAN_KEY) interval = CC_SCAN_MS;
         try {
           let result = { fetched: 0, imported: 0, truncated: false };
           if (row.key === BOARD_DISCOVERY_KEY) {
@@ -177,6 +302,12 @@ ${job.description}`,
           } else if (row.key === YC_DISCOVERY_KEY) {
             const { checked, found } = await this.discoverYcBoards();
             result = { fetched: checked, imported: found, truncated: false };
+          } else if (row.key === CC_SCAN_KEY) {
+            const { found, queued } = await this.scanCommonCrawl();
+            result = { fetched: found, imported: queued, truncated: false };
+          } else if (row.key === CC_CHECK_KEY) {
+            const { checked, kept } = await this.checkCommonCrawl();
+            result = { fetched: checked, imported: kept, truncated: false };
           } else if (board)
             result = await this.sources.publicBoard(
               board.provider,
@@ -241,4 +372,10 @@ ${job.description}`,
     await Promise.all([worker(), worker(), worker()]);
     return counts;
   }
+}
+
+function byProvider(boards: Pick<FoundBoard, "provider">[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const board of boards) counts[board.provider] = (counts[board.provider] ?? 0) + 1;
+  return counts;
 }

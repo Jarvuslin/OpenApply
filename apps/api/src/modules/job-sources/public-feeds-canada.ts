@@ -1,5 +1,5 @@
 import { jobLevelFromTitle } from "@openapply/contracts/job-listing";
-import { applyLink, identity } from "./public-feeds-simplify";
+import { applyLink, boardOf, type FoundBoard, identity } from "./public-feeds-simplify";
 import type { FetchText } from "./public-feeds-wwr";
 import { monthDayYear, plainText, type SourceJob } from "./types";
 
@@ -37,4 +37,18 @@ export async function canadianInternships(fetch: FetchText): Promise<SourceJob[]
     });
   }
   return [...jobs.values()];
+}
+
+/** Employer boards behind the list's open roles, keyed like Simplify's. */
+export async function canadianBoards(fetch: FetchText): Promise<FoundBoard[]> {
+  const boards = new Map<string, FoundBoard>();
+  for (const job of await canadianInternships(fetch)) {
+    const board = boardOf(job.url);
+    if (board)
+      boards.set(`${board.provider}/${board.slug.toLowerCase()}`, {
+        ...board,
+        company: job.company,
+      });
+  }
+  return [...boards.values()];
 }

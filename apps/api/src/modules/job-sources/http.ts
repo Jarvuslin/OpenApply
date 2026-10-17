@@ -25,10 +25,19 @@ const PHENOM_SITES = new Set(["jobs.bell.ca", "careers.opentext.com"]);
 // OpenApply runs as a personal-use tool, so these hosts are exempt from robots.txt for personal
 // use; every other host is checked. SmartRecruiters' robots.txt admits only LinkedInBot to its
 // public posting API, and RBC's disallows its main Workday career site (RBCGLOBAL1).
-const ROBOTS_EXEMPT = new Set(["api.smartrecruiters.com", "rbc.wd3.myworkdayjobs.com"]);
+// Also exempt because data.commoncrawl.org is Common Crawl's documented public download endpoint:
+// robots.txt there blocks crawling, not downloads.
+const COMMON_CRAWL = "data.commoncrawl.org";
+const ROBOTS_EXEMPT = new Set([
+  "api.smartrecruiters.com",
+  "rbc.wd3.myworkdayjobs.com",
+  COMMON_CRAWL,
+]);
 const WORKDAY_API = /^\/wday\/cxs\/[a-z0-9-]+\/([\w-]+)\/(jobs$|job\/)/;
 const DAY = 86_400_000;
 const MAX_BYTES = 20_000_000;
+// One column chunk of a Common Crawl index row group.
+const MAX_RANGE_BYTES = 80_000_000;
 const nextRequest = new Map<string, number>();
 const robotsCache = new Map<string, { rules: RobotsRules; until: number }>();
 
@@ -50,7 +59,7 @@ function knownHost(host: string): boolean {
     SUCCESSFACTORS_SITES.has(host) ||
     PHENOM_SITES.has(host) ||
     host.endsWith(".myworkdayjobs.com") ||
-    ["raw.githubusercontent.com", "yc-oss.github.io", "www.google.com"].includes(host)
+    ["raw.githubusercontent.com", "yc-oss.github.io", "www.google.com", COMMON_CRAWL].includes(host)
   );
 }
 
@@ -67,6 +76,15 @@ function supportedEndpoint(url: URL): boolean {
       ].includes(url.pathname)
     );
   }
+  if (url.hostname === COMMON_CRAWL)
+    return (
+      !url.search &&
+      (url.pathname === "/crawl-data/index.html" ||
+        /^\/crawl-data\/CC-MAIN-\d{4}-\d{2}\/cc-index-table\.paths\.gz$/.test(url.pathname) ||
+        /^\/cc-index\/table\/cc-main\/warc\/crawl=CC-MAIN-\d{4}-\d{2}\/subset=warc\/[\w.-]+\.parquet$/.test(
+          url.pathname,
+        ))
+    );
   if (url.hostname === "yc-oss.github.io")
     return !url.search && url.pathname === "/api/companies/hiring.json";
   if (url.hostname === "www.google.com") {
@@ -133,11 +151,11 @@ async function robotsPermit(url: URL, init: RequestInit): Promise<RobotsRules | 
 export const fetchSourceJson: FetchJson = async (url, init = {}) =>
   JSON.parse(await fetchSourceText(url, init, "application/json")) as unknown;
 
-export async function fetchSourceText(
-  url: string,
-  init: RequestInit = {},
-  accept = "application/rss+xml, application/xml, text/xml",
-): Promise<string> {
+/**
+ * One checked request: allowed endpoint, robots.txt, per-host pacing, and backoff. A 429 pauses
+ * the whole host; Common Crawl's 503s are retried slowly, since that server gets overloaded.
+ */
+async function request(url: string, init: RequestInit, accept: string): Promise<Response> {
   const parsed = new URL(url);
   if (
     parsed.protocol !== "https:" ||
@@ -153,8 +171,9 @@ export async function fetchSourceText(
     host === "hacker-news.firebaseio.com" ? 50 : 500,
     (rules?.crawlDelay ?? 0) * 1000,
   );
+  const overloadRetries = host === COMMON_CRAWL ? 6 : 0;
   let retryAfterMs = 0;
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 3 + overloadRetries; attempt++) {
     const slot = Math.max(Date.now(), nextRequest.get(host) ?? 0);
     nextRequest.set(host, slot + gap);
     await Bun.sleep(Math.max(0, slot - Date.now()));
@@ -169,16 +188,21 @@ export async function fetchSourceText(
       ...init,
       headers,
       redirect: "error",
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(host === COMMON_CRAWL ? 120_000 : 30_000),
     });
-    if (response.status === 429) {
+    const overloaded = response.status === 503 && attempt < overloadRetries;
+    if (response.status === 429 || overloaded) {
       const seconds = Number(response.headers.get("retry-after"));
       await response.body?.cancel();
-      retryAfterMs = Math.max(1000 * 4 ** attempt, Number.isFinite(seconds) ? seconds * 1000 : 0);
+      const base = overloaded ? 15_000 * 2 ** attempt : 1000 * 4 ** attempt;
+      retryAfterMs = Math.max(base, Number.isFinite(seconds) ? seconds * 1000 : 0);
       // Every request to this host waits, not only this one, so other boards on it back off too.
       nextRequest.set(
         host,
-        Math.max(nextRequest.get(host) ?? 0, Date.now() + Math.min(retryAfterMs, 60_000)),
+        Math.max(
+          nextRequest.get(host) ?? 0,
+          Date.now() + Math.min(retryAfterMs, overloaded ? 600_000 : 60_000),
+        ),
       );
       continue;
     }
@@ -189,42 +213,76 @@ export async function fetchSourceText(
         response.status,
       );
     }
-    if (Number(response.headers.get("content-length")) > MAX_BYTES) {
-      await response.body?.cancel();
-      throw new SourceResponseError("Discovery response is too large.", response.status, 0, true);
-    }
-    const reader = response.body?.getReader();
-    if (!reader) return "";
-    const decoder = new TextDecoder();
-    const chunks: string[] = [];
-    let bytes = 0;
-    try {
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        bytes += value.byteLength;
-        if (bytes > MAX_BYTES) {
-          await reader.cancel();
-          throw new SourceResponseError(
-            "Discovery response is too large.",
-            response.status,
-            0,
-            true,
-          );
-        }
-        chunks.push(decoder.decode(value, { stream: true }));
-      }
-      chunks.push(decoder.decode());
-      return chunks.join("");
-    } finally {
-      reader.releaseLock();
-    }
+    return response;
   }
   throw new SourceResponseError(
     "Discovery source rate limit reached. Try again later.",
     429,
     retryAfterMs,
   );
+}
+
+/** The body, refusing anything over `limit` bytes as it streams. */
+async function readBody(response: Response, limit: number): Promise<Uint8Array[]> {
+  if (Number(response.headers.get("content-length")) > limit) {
+    await response.body?.cancel();
+    throw new SourceResponseError("Discovery response is too large.", response.status, 0, true);
+  }
+  const reader = response.body?.getReader();
+  if (!reader) return [];
+  const chunks: Uint8Array[] = [];
+  let bytes = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > limit) {
+        await reader.cancel();
+        throw new SourceResponseError("Discovery response is too large.", response.status, 0, true);
+      }
+      chunks.push(value);
+    }
+    return chunks;
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+export async function fetchSourceText(
+  url: string,
+  init: RequestInit = {},
+  accept = "application/rss+xml, application/xml, text/xml",
+): Promise<string> {
+  const chunks = await readBody(await request(url, init, accept), MAX_BYTES);
+  const decoder = new TextDecoder();
+  return chunks.map((chunk) => decoder.decode(chunk, { stream: true })).join("") + decoder.decode();
+}
+
+/** Bytes `start` to `end` (exclusive) of a file, and the file's full size, by an HTTP range request. */
+export async function fetchSourceRange(
+  url: string,
+  start: number,
+  end: number,
+): Promise<{ bytes: ArrayBuffer; size: number }> {
+  const response = await request(
+    url,
+    { headers: { Range: `bytes=${start}-${end - 1}` } },
+    "application/octet-stream",
+  );
+  const size = Number(/\/(\d+)$/.exec(response.headers.get("content-range") ?? "")?.[1]);
+  if (response.status !== 206 || !Number.isFinite(size)) {
+    await response.body?.cancel();
+    throw new SourceResponseError("Discovery source ignored the byte range.", response.status);
+  }
+  const chunks = await readBody(response, MAX_RANGE_BYTES);
+  const bytes = new Uint8Array(chunks.reduce((total, chunk) => total + chunk.byteLength, 0));
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return { bytes: bytes.buffer, size };
 }
 
 /** True when a response was over the size cap, so a smaller request may still work. */

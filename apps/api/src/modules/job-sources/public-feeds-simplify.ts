@@ -130,6 +130,14 @@ export function boardOf(address: string): Omit<FoundBoard, "company"> | null {
     found = { provider: "workable", slug: first };
   if (["jobs.smartrecruiters.com", "careers.smartrecruiters.com"].includes(url.hostname) && first)
     found = { provider: "smartrecruiters", slug: first };
+  // "{tenant}.wd5.myworkdayjobs.com/en-US/{site}/job/..." is the Workday board "tenant.wd5.site".
+  const workday = /^([a-z0-9-]{1,40})\.(wd\d{1,3})\.myworkdayjobs\.com$/.exec(url.hostname);
+  if (workday) {
+    const parts = url.pathname.split("/").filter(Boolean);
+    const site = /^[a-z]{2}(?:-[a-z]{2})?$/i.test(parts[0] ?? "") ? parts[1] : parts[0];
+    if (site && /^[A-Za-z0-9_-]{1,60}$/.test(site))
+      return { provider: "workday", slug: `${workday[1]}.${workday[2]}.${site}` };
+  }
   return found && BOARD_SLUG.test(found.slug) ? found : null;
 }
 
