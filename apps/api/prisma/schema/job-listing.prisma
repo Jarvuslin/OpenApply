@@ -162,6 +162,7 @@ model JobListingSource {
 enum AtsProvider {
  ashby
  greenhouse
+ icims
  lever
  oracle
  phenom

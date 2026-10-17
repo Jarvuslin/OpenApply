@@ -4,6 +4,7 @@ import { discoveryCoverageSchema, discoverySearchSchema } from "./campaign";
 export const ATS_PROVIDERS = [
   "ashby",
   "greenhouse",
+  "icims",
   "lever",
   "oracle",
   "phenom",

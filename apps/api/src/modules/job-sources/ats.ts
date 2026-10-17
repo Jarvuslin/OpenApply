@@ -2,6 +2,7 @@ import { unprocessable } from "@/common/errors";
 import { ashby } from "./ashby";
 import { greenhouse } from "./greenhouse";
 import { fetchSourceText } from "./http";
+import { icims } from "./icims";
 import { lever } from "./lever";
 import { oracle } from "./oracle";
 import { phenom } from "./phenom";
@@ -14,10 +15,11 @@ import { workable } from "./workable";
 import { workday } from "./workday";
 
 const JSON_ATS = { ashby, greenhouse, lever, oracle, phenom, smartrecruiters, workable, workday };
-export const ATS = { ...JSON_ATS, successfactors, taleo };
+export const ATS = { ...JSON_ATS, icims, successfactors, taleo };
 export type AtsProvider = keyof typeof ATS;
 /** Slugs that name a career site rather than a company; their boards page through many requests. */
 export const SITE_PROVIDERS: AtsProvider[] = [
+  "icims",
   "oracle",
   "phenom",
   "successfactors",
@@ -34,6 +36,8 @@ export async function fetchAts(
 ): Promise<BoardResult> {
   // SuccessFactors career sites serve HTML search pages, not a JSON API.
   if (provider === "successfactors") return successfactors(fetchText, slug, company, options);
+  // So do iCIMS portals.
+  if (provider === "icims") return icims(fetchText, slug, company, options);
   // Taleo names its job board API on the section's search page.
   if (provider === "taleo") return taleo(fetch, fetchText, slug, company, options);
   // Site slugs contain dots and slashes and are checked by each adapter.

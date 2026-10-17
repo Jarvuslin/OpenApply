@@ -192,6 +192,27 @@ it("allows only a section's search page, job pages and job board API on Taleo ho
   }
 });
 
+it("allows only the search and job pages on iCIMS portals", async () => {
+  const server = serve(() => new Response("<html></html>"));
+  try {
+    for (const url of [
+      "https://careers-peraton.icims.com/jobs/search?ss=1&in_iframe=1&pr=3",
+      "https://careers-sas.icims.com/jobs/44619/software-developer---back-end-%283-5-years%29/job?in_iframe=1",
+    ])
+      expect(await fetchSourceText(url)).toBe("<html></html>");
+    for (const url of [
+      "https://careers-peraton.icims.com/jobs/172471/engineer/login?in_iframe=1",
+      "https://careers-peraton.icims.com/jobs/search?ss=1&searchKeyword=x",
+      "https://careers-peraton.icims.com/jobs/172471/engineer/job",
+      "https://icims.com.evil.example/jobs/search?ss=1&in_iframe=1&pr=0",
+    ])
+      await expect(fetchSourceText(url)).rejects.toThrow("Unsupported discovery endpoint.");
+    expect(server.calls).toHaveLength(2);
+  } finally {
+    server.restore();
+  }
+});
+
 it("refuses a Workday site its tenant's robots.txt disallows, whatever its case", async () => {
   const server = serve(() => new Response("{}"), {
     "acme.wd3.myworkdayjobs.com": "User-agent: *\nDisallow: /ACMEGLOBAL/\nDisallow: /refreshFacet/",

@@ -57,8 +57,8 @@ Workday board. The exceptions:
 
 ### Employer boards (catalog)
 
-These live in `JOB_FEED_CATALOG` in `job-sources/catalog.ts`: 121 boards. Small
-JSON boards refresh every 10 minutes. Workday, SuccessFactors, Phenom, Oracle and Taleo boards refresh every
+These live in `JOB_FEED_CATALOG` in `job-sources/catalog.ts`: 142 boards. Small
+JSON boards refresh every 10 minutes. Workday, SuccessFactors, Phenom, Oracle, Taleo and iCIMS boards refresh every
 three hours, because one board can take up to 100 requests.
 
 | System | Adapter | Employers | Posting date |
@@ -73,6 +73,7 @@ three hours, because one board can take up to 100 requests.
 | Phenom | `phenom.ts` | Bell, OpenText | ISO `postedDate` |
 | Oracle Recruiting | `oracle.ts` | **Tech and enterprise:** Oracle, Uber, Nokia, DTCC, Ford, onsemi, Emerson, Chubb. **Hotels:** Marriott, Hilton, IHG. **Hospitals:** Lifepoint Health, UC Health, TriHealth, Community Health Systems. **Retail and services:** Federated Co-operatives, WM | `PostedDate` from the list; the exact `ExternalPostedStartDate` time once the detail is read |
 | Taleo | `taleo.ts` | HDR, Textron, Valero, Bayshore HealthCare, Humber College, University of Alabama at Birmingham, University of Pittsburgh, West Virginia University, Commonwealth of Massachusetts | The section's own date column, "Oct 16, 2026" or "10/16/26"; Bayshore shows none, so its jobs have no date |
+| iCIMS | `icims.ts` | **Tech:** Peraton, Steampunk, SAS, HERE, Rambus, Applied Systems, HealthEdge, Cotiviti, RealPage, Riverside Research, Joby Aviation. **Finance:** Stifel, Western & Southern, Wipfli. **Other:** Snap-on, The Container Store, CAPREIT. **Hospitals:** Vancouver Coastal Health, Covenant Health, Kettering Health, Cooper University Health Care | The list's posted time where the portal shows it, else the job page's `datePosted`; portals that hide it (Joby, Western & Southern, Vancouver Coastal Health) have none |
 
 How the career-site adapters read a board:
 
@@ -92,6 +93,11 @@ How the career-site adapters read a board:
   or the reported total ends a board. Jobs with a thin list description are read from
   `recruitingCEJobRequisitionDetails`, within the usual detail budget. Any `*.oraclecloud.com`
   host is allowed, but only on those two endpoints.
+- **iCIMS.** Slug is the portal subdomain, for example `careers-peraton`. The adapter reads
+  `/jobs/search?ss=1&in_iframe=1&pr={page}`, 20 to 100 cards a page, then each job page's JobPosting
+  data for the full description, within the detail budget. A portal that hides posting dates still
+  fills `datePosted`, with the request time moved back exactly two years; that value is ignored.
+  Portals report pages, not a job total.
 - **Taleo.** Slug `tenant/section`, for example `uab/ext`. The adapter reads the section's search
   page once for its job board portal, then POSTs `/careersection/rest/jobboard/searchjobs`, 25 jobs
   a page. Each section picks its own columns; the posting date is the column that parses as a date

@@ -107,13 +107,9 @@ export function logoFromHtml(html: string, pageUrl: string): string | null {
   return logoCandidatesFromHtml(html, pageUrl)[0] ?? null;
 }
 
-export function logoCandidatesFromHtml(html: string, pageUrl: string): string[] {
-  if (!companyLogoPage(pageUrl)) return [];
-  const page = new URL(pageUrl);
-  const ats = ATS_HOSTS.has(page.hostname);
-  const structured: string[] = [];
-  const branded: string[] = [];
-  const icons: string[] = [];
+/** Every schema.org block a page declares in `<script type="application/ld+json">`, parsed. */
+export function jsonLd(html: string): unknown[] {
+  const blocks: unknown[] = [];
   let script = "";
   new HTMLRewriter()
     .on('script[type="application/ld+json"]', {
@@ -124,12 +120,24 @@ export function logoCandidatesFromHtml(html: string, pageUrl: string): string[] 
         script += chunk.text;
         if (!chunk.lastInTextNode) return;
         try {
-          structured.push(...organizationLogos(JSON.parse(script)));
+          blocks.push(JSON.parse(script));
         } catch {
           /* Invalid source metadata. */
         }
       },
     })
+    .transform(html);
+  return blocks;
+}
+
+export function logoCandidatesFromHtml(html: string, pageUrl: string): string[] {
+  if (!companyLogoPage(pageUrl)) return [];
+  const page = new URL(pageUrl);
+  const ats = ATS_HOSTS.has(page.hostname);
+  const structured = jsonLd(html).flatMap((data) => organizationLogos(data));
+  const branded: string[] = [];
+  const icons: string[] = [];
+  new HTMLRewriter()
     .on("img", {
       element(element) {
         if (!ats) return;

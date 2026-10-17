@@ -43,6 +43,8 @@ const ORACLE_API: Record<string, RegExp> = {
 const TALEO_PAGE = /^\/careersection\/[\w.-]{1,60}\/(jobsearch|jobdetail)\.ftl$/;
 const TALEO_QUERY = { jobsearch: /^lang=en$/, jobdetail: /^job=\d{1,20}&lang=en$/ };
 const TALEO_API = "/careersection/rest/jobboard/searchjobs";
+const ICIMS_SEARCH = /^ss=1&in_iframe=1&pr=\d{1,3}$/;
+const ICIMS_JOB = /^\/jobs\/\d{1,12}\/[^/]{1,200}\/job$/;
 const WORKDAY_API = /^\/wday\/cxs\/[a-z0-9-]+\/([\w-]+)\/(jobs$|job\/)/;
 const DAY = 86_400_000;
 const MAX_BYTES = 20_000_000;
@@ -71,6 +73,7 @@ function knownHost(host: string): boolean {
     host.endsWith(".myworkdayjobs.com") ||
     host.endsWith(".oraclecloud.com") ||
     host.endsWith(".taleo.net") ||
+    host.endsWith(".icims.com") ||
     [
       "raw.githubusercontent.com",
       "yc-oss.github.io",
@@ -121,6 +124,10 @@ function supportedEndpoint(url: URL): boolean {
     return !url.search && WORKDAY_API.test(url.pathname);
   if (url.hostname.endsWith(".oraclecloud.com"))
     return ORACLE_API[url.pathname]?.test(url.search.slice(1)) ?? false;
+  if (url.hostname.endsWith(".icims.com"))
+    return url.pathname === "/jobs/search"
+      ? ICIMS_SEARCH.test(url.search.slice(1))
+      : ICIMS_JOB.test(url.pathname) && url.search === "?in_iframe=1";
   if (url.hostname.endsWith(".taleo.net")) {
     if (url.pathname === TALEO_API) return /^lang=en&portal=\d{1,20}$/.test(url.search.slice(1));
     const page = TALEO_PAGE.exec(url.pathname)?.[1] as keyof typeof TALEO_QUERY | undefined;

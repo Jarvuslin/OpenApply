@@ -11,6 +11,7 @@ const SOURCE_NAMES: Record<string, string> = {
   hackernews: "Hacker News",
   "hackernews-jobs": "Hacker News",
   greenhouse: "Greenhouse",
+  icims: "iCIMS",
   ashby: "Ashby",
   lever: "Lever",
   oracle: "Oracle Recruiting",
