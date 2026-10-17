@@ -158,6 +158,16 @@ export const JOB_FEED_CATALOG: CatalogBoard[] = [
     company: "Community Health Systems",
   },
   { provider: "oracle", slug: "emcm.fa.us2.oraclecloud.com/WMCareers", company: "WM" },
+  // Taleo career sections on its job board API; the slug is tenant/section.
+  { provider: "taleo", slug: "hdr/ex", company: "HDR" },
+  { provider: "taleo", slug: "textron/textron", company: "Textron" },
+  { provider: "taleo", slug: "valero/2", company: "Valero" },
+  { provider: "taleo", slug: "uab/ext", company: "University of Alabama at Birmingham" },
+  { provider: "taleo", slug: "cfopitt/pitt_staff_external", company: "University of Pittsburgh" },
+  { provider: "taleo", slug: "wvu/staff", company: "West Virginia University" },
+  { provider: "taleo", slug: "massanf/ex", company: "Commonwealth of Massachusetts" },
+  { provider: "taleo", slug: "bayshore/bs_ex", company: "Bayshore HealthCare" },
+  { provider: "taleo", slug: "humber/hbr_ex", company: "Humber College" },
 ];
 
 export const PUBLIC_FEED_CATALOG: {

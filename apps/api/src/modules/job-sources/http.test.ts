@@ -165,6 +165,33 @@ it("allows only the requisition search on Oracle Recruiting hosts", async () => 
   }
 });
 
+it("allows only a section's search page, job pages and job board API on Taleo hosts", async () => {
+  const server = serve(() => new Response("{}"));
+  try {
+    for (const url of [
+      "https://uab.taleo.net/careersection/ext/jobsearch.ftl?lang=en",
+      "https://uab.taleo.net/careersection/ext/jobdetail.ftl?job=328178&lang=en",
+    ])
+      expect(await fetchSourceText(url)).toBe("{}");
+    expect(
+      await fetchSourceJson(
+        "https://uab.taleo.net/careersection/rest/jobboard/searchjobs?lang=en&portal=8100108034",
+        { method: "POST" },
+      ),
+    ).toEqual({});
+    for (const url of [
+      "https://uab.taleo.net/careersection/ext/jobapply.ftl?job=328178&lang=en",
+      "https://uab.taleo.net/careersection/ext/jobsearch.ajax",
+      "https://uab.taleo.net/careersection/rest/jobboard/searchjobs?lang=en&portal=x",
+      "https://taleo.net.evil.example/careersection/ext/jobsearch.ftl?lang=en",
+    ])
+      await expect(fetchSourceText(url)).rejects.toThrow("Unsupported discovery endpoint.");
+    expect(server.calls).toHaveLength(3);
+  } finally {
+    server.restore();
+  }
+});
+
 it("refuses a Workday site its tenant's robots.txt disallows, whatever its case", async () => {
   const server = serve(() => new Response("{}"), {
     "acme.wd3.myworkdayjobs.com": "User-agent: *\nDisallow: /ACMEGLOBAL/\nDisallow: /refreshFacet/",

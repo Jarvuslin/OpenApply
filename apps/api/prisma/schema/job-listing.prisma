@@ -167,6 +167,7 @@ enum AtsProvider {
  phenom
  smartrecruiters
  successfactors
+ taleo
  workable
  workday
  @@map("ats_provider")

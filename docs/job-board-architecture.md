@@ -57,8 +57,8 @@ Workday board. The exceptions:
 
 ### Employer boards (catalog)
 
-These live in `JOB_FEED_CATALOG` in `job-sources/catalog.ts`: 112 boards. Small
-JSON boards refresh every 10 minutes. Workday, SuccessFactors, Phenom and Oracle boards refresh every
+These live in `JOB_FEED_CATALOG` in `job-sources/catalog.ts`: 121 boards. Small
+JSON boards refresh every 10 minutes. Workday, SuccessFactors, Phenom, Oracle and Taleo boards refresh every
 three hours, because one board can take up to 100 requests.
 
 | System | Adapter | Employers | Posting date |
@@ -72,6 +72,7 @@ three hours, because one board can take up to 100 requests.
 | SuccessFactors | `successfactors.ts` | Scotiabank (with Tangerine), Rogers, TELUS | "Oct 15, 2026" from the search page |
 | Phenom | `phenom.ts` | Bell, OpenText | ISO `postedDate` |
 | Oracle Recruiting | `oracle.ts` | **Tech and enterprise:** Oracle, Uber, Nokia, DTCC, Ford, onsemi, Emerson, Chubb. **Hotels:** Marriott, Hilton, IHG. **Hospitals:** Lifepoint Health, UC Health, TriHealth, Community Health Systems. **Retail and services:** Federated Co-operatives, WM | `PostedDate` from the list; the exact `ExternalPostedStartDate` time once the detail is read |
+| Taleo | `taleo.ts` | HDR, Textron, Valero, Bayshore HealthCare, Humber College, University of Alabama at Birmingham, University of Pittsburgh, West Virginia University, Commonwealth of Massachusetts | The section's own date column, "Oct 16, 2026" or "10/16/26"; Bayshore shows none, so its jobs have no date |
 
 How the career-site adapters read a board:
 
@@ -91,6 +92,14 @@ How the career-site adapters read a board:
   or the reported total ends a board. Jobs with a thin list description are read from
   `recruitingCEJobRequisitionDetails`, within the usual detail budget. Any `*.oraclecloud.com`
   host is allowed, but only on those two endpoints.
+- **Taleo.** Slug `tenant/section`, for example `uab/ext`. The adapter reads the section's search
+  page once for its job board portal, then POSTs `/careersection/rest/jobboard/searchjobs`, 25 jobs
+  a page. Each section picks its own columns; the posting date is the column that parses as a date
+  on or before today, since a future one is a closing date. Descriptions come from the job pages.
+  Sections still on the older search page have no portal and are refused: their list is
+  positional data whose layout changes per section. Baptist Health, Encompass Health and
+  Weyerhaeuser are in that group. UnitedHealth, Cognizant and Lockton left Taleo for their own
+  sites.
 
 Each Workday, SuccessFactors and Phenom host is named in `http.ts`. Adding an employer on one of
 these systems means adding it to the catalog and, for SuccessFactors and Phenom, to that file's

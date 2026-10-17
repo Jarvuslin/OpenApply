@@ -39,6 +39,10 @@ const ORACLE_API: Record<string, RegExp> = {
   "/hcmRestApi/resources/latest/recruitingCEJobRequisitionDetails":
     /^expand=all&onlyData=true&finder=ById;Id=%22\d{1,20}%22,siteNumber=\w{1,40}$/,
 };
+// A section's search page names the job board API's portal; job pages hold the descriptions.
+const TALEO_PAGE = /^\/careersection\/[\w.-]{1,60}\/(jobsearch|jobdetail)\.ftl$/;
+const TALEO_QUERY = { jobsearch: /^lang=en$/, jobdetail: /^job=\d{1,20}&lang=en$/ };
+const TALEO_API = "/careersection/rest/jobboard/searchjobs";
 const WORKDAY_API = /^\/wday\/cxs\/[a-z0-9-]+\/([\w-]+)\/(jobs$|job\/)/;
 const DAY = 86_400_000;
 const MAX_BYTES = 20_000_000;
@@ -66,6 +70,7 @@ function knownHost(host: string): boolean {
     PHENOM_SITES.has(host) ||
     host.endsWith(".myworkdayjobs.com") ||
     host.endsWith(".oraclecloud.com") ||
+    host.endsWith(".taleo.net") ||
     [
       "raw.githubusercontent.com",
       "yc-oss.github.io",
@@ -116,6 +121,11 @@ function supportedEndpoint(url: URL): boolean {
     return !url.search && WORKDAY_API.test(url.pathname);
   if (url.hostname.endsWith(".oraclecloud.com"))
     return ORACLE_API[url.pathname]?.test(url.search.slice(1)) ?? false;
+  if (url.hostname.endsWith(".taleo.net")) {
+    if (url.pathname === TALEO_API) return /^lang=en&portal=\d{1,20}$/.test(url.search.slice(1));
+    const page = TALEO_PAGE.exec(url.pathname)?.[1] as keyof typeof TALEO_QUERY | undefined;
+    return !!page && TALEO_QUERY[page].test(url.search.slice(1));
+  }
   return HOSTS.has(url.hostname);
 }
 

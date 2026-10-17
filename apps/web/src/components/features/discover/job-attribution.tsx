@@ -17,6 +17,7 @@ const SOURCE_NAMES: Record<string, string> = {
   phenom: "Phenom",
   smartrecruiters: "SmartRecruiters",
   successfactors: "SuccessFactors",
+  taleo: "Taleo",
   workable: "Workable",
   workday: "Workday",
   linkedin: "LinkedIn",
