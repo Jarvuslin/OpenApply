@@ -95,6 +95,27 @@ export async function commonCrawlBoards(
   return { crawl, boards: [...boards.values()], rowGroups };
 }
 
+/**
+ * The company name from an Ashby or Lever board's own page title ("Humata Health, Inc Jobs").
+ * Workday career pages have no title, so Workday boards keep their tenant name.
+ */
+export async function boardCompanyName(
+  fetchText: FetchText,
+  board: Omit<FoundBoard, "company">,
+): Promise<string | null> {
+  const host = { ashby: "jobs.ashbyhq.com", lever: "jobs.lever.co" }[board.provider as string];
+  if (!host) return null;
+  const html = await fetchText(`https://${host}/${encodeURIComponent(board.slug)}`);
+  const title =
+    /<meta property="og:title" content="([^"]+)"/i.exec(html)?.[1] ??
+    /<title[^>]*>([^<]+)</i.exec(html)?.[1];
+  const name = title
+    ?.replace(/&amp;/g, "&")
+    .replace(/\s+jobs$/i, "")
+    .trim();
+  return name && name.length <= 120 ? name : null;
+}
+
 const titleCase = (slug: string) =>
   slug.replace(/[-_.]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 

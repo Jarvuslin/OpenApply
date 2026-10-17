@@ -270,3 +270,26 @@ it("exempts RBC's Workday host, whose robots.txt disallows its main career site"
     server.restore();
   }
 });
+
+it("keeps at most four Workday requests in flight across every tenant host", async () => {
+  let active = 0;
+  let peak = 0;
+  const server = serve(async () => {
+    active++;
+    peak = Math.max(peak, active);
+    await Bun.sleep(30);
+    active--;
+    return Response.json({ total: 0, jobPostings: [] });
+  });
+  try {
+    await Promise.all(
+      Array.from({ length: 10 }, (_, i) =>
+        fetchSourceJson(`https://tenant${i}.wd5.myworkdayjobs.com/wday/cxs/tenant${i}/site/jobs`),
+      ),
+    );
+    expect(peak).toBeLessThanOrEqual(4);
+    expect(server.calls).toHaveLength(10);
+  } finally {
+    server.restore();
+  }
+}, 15_000);

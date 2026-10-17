@@ -150,17 +150,21 @@ export class JobListingPublisher {
     };
 
     try {
-      const seen = await this.prisma.jobListingSource.findFirst({
-        where: {
-          OR: [{ url }, ...(boardKey && externalId ? [{ boardKey, externalId }] : [])],
-        },
-        select: {
-          id: true,
-          listingId: true,
-          rank: true,
-          listing: { select: { isPublic: true, postedAt: true, sourceRank: true } },
-        },
-      });
+      const select = {
+        id: true,
+        listingId: true,
+        rank: true,
+        listing: { select: { isPublic: true, postedAt: true, sourceRank: true } },
+      } as const;
+      // The board id wins over the URL: one posting reached by two URLs is the row holding its id,
+      // and giving that id to the URL's row would collide with it.
+      const seen =
+        (boardKey && externalId
+          ? await this.prisma.jobListingSource.findFirst({
+              where: { boardKey, externalId },
+              select,
+            })
+          : null) ?? (await this.prisma.jobListingSource.findFirst({ where: { url }, select }));
 
       if (seen) {
         // A lower-ranked sighting of a known source, such as a list linking to an ATS job, keeps

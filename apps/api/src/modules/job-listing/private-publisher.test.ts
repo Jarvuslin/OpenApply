@@ -31,9 +31,10 @@ function database() {
         const source = sources.get(where.url);
         return source ? { ...source, listing: listings.get(source.listingId) } : null;
       },
-      findFirst: async ({ where }: { where: { OR: Row[] } }) => {
+      findFirst: async ({ where }: { where: Row & { OR?: Row[] } }) => {
+        const clauses = where.OR ?? [where];
         const source = [...sources.values()].find((row) =>
-          where.OR.some((clause: Row) =>
+          clauses.some((clause: Row) =>
             Object.entries(clause).every(([key, value]) => row[key] === value),
           ),
         );
@@ -174,5 +175,29 @@ describe("personal discovery publication", () => {
     });
     expect(state.listings.size).toBe(1);
     expect(state.sources.get(employer)).toMatchObject({ board: "ashby", attributionUrl: employer });
+  });
+});
+
+describe("one posting reached by two urls", () => {
+  it("refreshes the source holding the board id instead of giving that id to the url's source", async () => {
+    const { publisher, sources, listings } = database();
+    const ats = (url: string): ListingSourceJob => ({
+      ...job(url),
+      board: "workable",
+      boardKey: "workable/genetec-inc",
+      externalId: "ABC123",
+    });
+    expect(await publisher.publish(ats("https://apply.workable.com/genetec-inc/j/ABC123"))).toBe(
+      "created",
+    );
+    // A list linked the same job by its short link first, so that URL has a row with no id.
+    sources.set("https://apply.workable.com/j/ABC123", {
+      url: "https://apply.workable.com/j/ABC123",
+      id: "https://apply.workable.com/j/ABC123",
+      listingId: "listing-1",
+      applyUrl: null,
+    } as unknown as typeof sources extends Map<string, infer S> ? S : never);
+    expect(await publisher.publish(ats("https://apply.workable.com/j/ABC123"))).toBe("refreshed");
+    expect(listings.size).toBe(1);
   });
 });

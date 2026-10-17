@@ -8,7 +8,7 @@ import {
   JOB_FEED_CATALOG,
   PUBLIC_FEED_CATALOG,
 } from "./catalog";
-import { checkBoard, commonCrawlBoards, type RangeReader } from "./common-crawl";
+import { boardCompanyName, checkBoard, commonCrawlBoards, type RangeReader } from "./common-crawl";
 import { fetchSourceJson, fetchSourceRange, fetchSourceText, SourceResponseError } from "./http";
 import { JobSourcesService } from "./job-sources.service";
 import { canadianBoards } from "./public-feeds-canada";
@@ -103,7 +103,11 @@ export class CatalogRefreshService {
   }
 
   /** Checks a batch of queued Common Crawl boards with one request each, providers in parallel. */
-  async checkCommonCrawl(fetch: FetchJson = fetchSourceJson, batch = CC_CHECK_BATCH) {
+  async checkCommonCrawl(
+    fetch: FetchJson = fetchSourceJson,
+    batch = CC_CHECK_BATCH,
+    fetchText: FetchText = fetchSourceText,
+  ) {
     const pending = await this.prisma.jobBoardProbe.findMany({
       where: { key: { startsWith: "cc/" }, checkedAt: PENDING },
       select: { key: true },
@@ -123,6 +127,9 @@ export class CatalogRefreshService {
         for (const board of boards) {
           // A board that fails, or robots.txt disallows, is checked and not kept.
           const found = await checkBoard(fetch, board).catch(() => null);
+          // Ashby and Lever APIs carry no company name; the board page's title does.
+          const name = found ? await boardCompanyName(fetchText, found).catch(() => null) : null;
+          if (found && name) found.company = name;
           // Recorded at once, so a stopped run never leaves a kept probe without its board.
           if (found) {
             kept.push(found);

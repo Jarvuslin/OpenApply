@@ -59,7 +59,14 @@ function knownHost(host: string): boolean {
     SUCCESSFACTORS_SITES.has(host) ||
     PHENOM_SITES.has(host) ||
     host.endsWith(".myworkdayjobs.com") ||
-    ["raw.githubusercontent.com", "yc-oss.github.io", "www.google.com", COMMON_CRAWL].includes(host)
+    [
+      "raw.githubusercontent.com",
+      "yc-oss.github.io",
+      "www.google.com",
+      "jobs.ashbyhq.com",
+      "jobs.lever.co",
+      COMMON_CRAWL,
+    ].includes(host)
   );
 }
 
@@ -85,6 +92,9 @@ function supportedEndpoint(url: URL): boolean {
           url.pathname,
         ))
     );
+  // A board's own page, read once for the company name in its title.
+  if (url.hostname === "jobs.ashbyhq.com" || url.hostname === "jobs.lever.co")
+    return !url.search && /^\/[\w.-]{1,80}$/.test(url.pathname);
   if (url.hostname === "yc-oss.github.io")
     return !url.search && url.pathname === "/api/companies/hiring.json";
   if (url.hostname === "www.google.com") {
@@ -182,7 +192,12 @@ async function request(url: string, init: RequestInit, accept: string): Promise<
     if (!headers.has("Accept"))
       headers.set(
         "Accept",
-        host === "www.google.com" || SUCCESSFACTORS_SITES.has(host) ? "text/html" : accept,
+        host === "www.google.com" ||
+          SUCCESSFACTORS_SITES.has(host) ||
+          host === "jobs.ashbyhq.com" ||
+          host === "jobs.lever.co"
+          ? "text/html"
+          : accept,
       );
     const response = await fetch(url, {
       ...init,
@@ -249,14 +264,43 @@ async function readBody(response: Response, limit: number): Promise<Uint8Array[]
   }
 }
 
+// Every Workday tenant is its own host, so per-host pacing alone would let thousands run at once.
+// Across all of them: at most 4 requests in flight, started at least 250 ms apart (about 4 a second).
+const WORKDAY_IN_FLIGHT = 4;
+const WORKDAY_GAP_MS = 250;
+let workdayActive = 0;
+let workdayNext = 0;
+const workdayWaiting: (() => void)[] = [];
+
+async function workdaySlot(host: string): Promise<() => void> {
+  if (!host.endsWith(".myworkdayjobs.com")) return () => {};
+  while (workdayActive >= WORKDAY_IN_FLIGHT)
+    await new Promise<void>((resolve) => workdayWaiting.push(resolve));
+  workdayActive++;
+  const slot = Math.max(Date.now(), workdayNext);
+  workdayNext = slot + WORKDAY_GAP_MS;
+  await Bun.sleep(Math.max(0, slot - Date.now()));
+  return () => {
+    workdayActive--;
+    workdayWaiting.shift()?.();
+  };
+}
+
 export async function fetchSourceText(
   url: string,
   init: RequestInit = {},
   accept = "application/rss+xml, application/xml, text/xml",
 ): Promise<string> {
-  const chunks = await readBody(await request(url, init, accept), MAX_BYTES);
-  const decoder = new TextDecoder();
-  return chunks.map((chunk) => decoder.decode(chunk, { stream: true })).join("") + decoder.decode();
+  const release = await workdaySlot(URL.parse(url)?.hostname ?? "");
+  try {
+    const chunks = await readBody(await request(url, init, accept), MAX_BYTES);
+    const decoder = new TextDecoder();
+    return (
+      chunks.map((chunk) => decoder.decode(chunk, { stream: true })).join("") + decoder.decode()
+    );
+  } finally {
+    release();
+  }
 }
 
 /** Bytes `start` to `end` (exclusive) of a file, and the file's full size, by an HTTP range request. */

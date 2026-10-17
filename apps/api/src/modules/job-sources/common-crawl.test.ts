@@ -1,4 +1,4 @@
-import { checkBoard, latestCrawl } from "./common-crawl";
+import { boardCompanyName, checkBoard, latestCrawl } from "./common-crawl";
 import { expect, it } from "bun:test";
 
 it("picks the newest crawl the download host lists", async () => {
@@ -37,4 +37,20 @@ it("checks a found board with one request and keeps it only when it lists jobs",
     "https://api.lever.co/v0/postings/tiny-co?mode=json&limit=1",
     "https://acme.wd5.myworkdayjobs.com/wday/cxs/acme/External/jobs",
   ]);
+});
+
+it("reads the company name from an Ashby or Lever board page title", async () => {
+  const page = (title: string) => async () => `<html><head><title>${title}</title></head></html>`;
+  expect(
+    await boardCompanyName(page("Humata Health, Inc Jobs"), { provider: "ashby", slug: "x" }),
+  ).toBe("Humata Health, Inc");
+  expect(
+    await boardCompanyName(
+      async () => '<meta property="og:title" content="Palantir Technologies jobs" />',
+      { provider: "lever", slug: "palantir" },
+    ),
+  ).toBe("Palantir Technologies");
+  expect(
+    await boardCompanyName(page("Ignored"), { provider: "workday", slug: "a.wd3.b" }),
+  ).toBeNull();
 });
