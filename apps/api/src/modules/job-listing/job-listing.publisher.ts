@@ -6,6 +6,7 @@ import { CompanyLogoService } from "./company-logo.service";
 import { canonicalizeUrl } from "./dedupe";
 import { linkListingApplications } from "./listing-applications";
 import { buildListingDraft, type ListingDraft, type ListingSourceJob } from "./listing-draft";
+import { boardConflict, fuzzyMatch } from "./listing-match";
 
 /** What a publish did. The seed reports on these; the write-through callers ignore them. */
 export type PublishOutcome = "created" | "merged" | "refreshed" | "skipped";
@@ -17,12 +18,25 @@ const MAX_CONCURRENT = 4;
 /** Past this the producer is hopelessly ahead; drop rather than grow the queue without bound. */
 const MAX_QUEUED = 500;
 
-/** Community lists that point at employer boards; the employer board keeps the attribution. */
-const CURATED_LISTS = new Set([
-  "simplify-new-grad",
-  "simplify-internships",
-  "canadian-internships",
-]);
+const MATCH_SELECT = {
+  id: true,
+  isPublic: true,
+  postedAt: true,
+  sourceRank: true,
+  companyId: true,
+  descriptionExcerpt: true,
+  sources: { select: { boardKey: true, externalId: true } },
+} as const;
+
+interface MatchedListing {
+  id: string;
+  isPublic: boolean;
+  postedAt: Date | null;
+  sourceRank: number;
+  companyId: string | null;
+  descriptionExcerpt: string | null;
+  sources: { boardKey: string | null; externalId: string | null }[];
+}
 
 /** Publishes a campaign `Job` to the public job index, deduped across every user's campaigns. */
 @singleton()
@@ -95,12 +109,11 @@ export class JobListingPublisher {
   }
 
   /**
-   * Identity is URL-first, then dedupe key: a known url is the stronger signal, and going by the key
-   * first would fork an orphan listing whenever a re-scrape reworded the title.
-   *
-   * No interactive transaction: at READ COMMITTED it never made the read-then-write atomic anyway,
-   * and it held a pooled connection across every round-trip. The unique constraints are what make
-   * concurrent agents converge - so let them, and retry the insert that loses the race.
+   * The first rule that finds the posting wins: (1) same URL, or same board and board id,
+   * (2) same canonical apply link, (3) same company and requisition, (4) a fuzzy match every signal
+   * agrees on. Two ids on one board are never one listing, so a rule that would join them is
+   * skipped. No interactive transaction: the unique constraints make concurrent writers converge,
+   * and the insert that loses the race retries into the merge branch.
    */
   private async upsert(
     draft: ListingDraft,
@@ -108,8 +121,19 @@ export class JobListingPublisher {
     userId?: string,
   ): Promise<PublishOutcome> {
     const now = new Date();
-    const { board, url, applyUrl, attributionUrl, resolutionConfidence, postedAt, ...listing } =
-      draft;
+    const {
+      board,
+      url,
+      applyUrl,
+      attributionUrl,
+      resolutionConfidence,
+      postedAt,
+      boardKey,
+      externalId,
+      requisitionId,
+      rank,
+      ...listing
+    } = draft;
     const source = {
       board,
       url,
@@ -117,32 +141,41 @@ export class JobListingPublisher {
       attributionUrl,
       resolutionConfidence,
       postedAt,
+      rank,
+      boardKey,
+      externalId,
+      requisitionId,
       lastSeenAt: now,
       isPublic: !userId,
     };
 
     try {
-      const seen = await this.prisma.jobListingSource.findUnique({
-        where: { url },
+      const seen = await this.prisma.jobListingSource.findFirst({
+        where: {
+          OR: [{ url }, ...(boardKey && externalId ? [{ boardKey, externalId }] : [])],
+        },
         select: {
+          id: true,
           listingId: true,
-          board: true,
-          listing: { select: { isPublic: true, postedAt: true } },
+          rank: true,
+          listing: { select: { isPublic: true, postedAt: true, sourceRank: true } },
         },
       });
 
       if (seen) {
-        const preserveAttribution =
-          !!board && CURATED_LISTS.has(board) && seen.board && seen.board !== board;
+        // A lower-ranked sighting of a known source, such as a list linking to an ATS job, keeps
+        // that source's board and attribution.
+        const outranked = rank < seen.rank;
         await this.prisma.jobListingSource.update({
-          where: { url },
+          where: { id: seen.id },
           data: {
             lastSeenAt: now,
             applyUrl,
-            ...(!preserveAttribution && { attributionUrl }),
             resolutionConfidence,
             postedAt,
-            ...(board && !preserveAttribution && { board }),
+            ...(!outranked && { attributionUrl, rank, ...(board && { board }) }),
+            ...(boardKey && externalId && { boardKey, externalId }),
+            ...(requisitionId && { requisitionId }),
             ...(!userId && { isPublic: true }),
           },
         });
@@ -150,7 +183,8 @@ export class JobListingPublisher {
           where: { id: seen.listingId },
           data: {
             lastSeenAt: now,
-            ...((!userId || !seen.listing.isPublic) && enrich(draft, seen.listing.postedAt)),
+            ...((!userId || !seen.listing.isPublic) &&
+              enrich(draft, seen.listing.postedAt, rank >= seen.listing.sourceRank)),
             ...(!userId && { isPublic: true }),
           },
         });
@@ -162,33 +196,17 @@ export class JobListingPublisher {
         return "refreshed";
       }
 
-      const resolved =
-        userId && applyUrl
-          ? await this.prisma.jobListingSource.findFirst({
-              where: {
-                OR: [{ url: canonicalizeUrl(applyUrl) }, { applyUrl: canonicalizeUrl(applyUrl) }],
-              },
-              select: { listingId: true, listing: { select: { isPublic: true, postedAt: true } } },
-            })
-          : null;
-      const existing = resolved
-        ? {
-            id: resolved.listingId,
-            isPublic: resolved.listing.isPublic,
-            postedAt: resolved.listing.postedAt,
-          }
-        : await this.prisma.jobListing.findUnique({
-            where: { dedupeKey: draft.dedupeKey },
-            select: { id: true, isPublic: true, postedAt: true },
-          });
-
+      const existing = await this.findMatch(draft);
       // One statement each, so Prisma commits the listing and its source together.
       if (existing) {
         await this.prisma.jobListing.update({
           where: { id: existing.id },
           data: {
             lastSeenAt: now,
-            ...((!userId || !existing.isPublic) && enrich(draft, existing.postedAt)),
+            ...((!userId || !existing.isPublic) &&
+              enrich(draft, existing.postedAt, rank >= existing.sourceRank)),
+            ...(rank > existing.sourceRank && { sourceRank: rank }),
+            ...(!existing.companyId && draft.companyId && { companyId: draft.companyId }),
             ...(!userId && { isPublic: true }),
             sources: { create: source },
           },
@@ -204,6 +222,7 @@ export class JobListingPublisher {
           isPublic: !userId,
           postedAt,
           listedAt: postedAt ?? now,
+          sourceRank: rank,
           firstSeenAt: now,
           lastSeenAt: now,
           sources: { create: source },
@@ -222,6 +241,50 @@ export class JobListingPublisher {
     }
   }
 
+  /** Rules 2 to 4: the listing a new source belongs to, or null to create one. */
+  private async findMatch(draft: ListingDraft): Promise<MatchedListing | null> {
+    const own = [{ boardKey: draft.boardKey, externalId: draft.externalId }];
+    const fits = (candidate: MatchedListing) => !boardConflict(own, candidate.sources);
+    const apply = draft.applyUrl ? canonicalizeUrl(draft.applyUrl) : null;
+    if (apply) {
+      const byApply = await this.prisma.jobListing.findMany({
+        where: { sources: { some: { OR: [{ url: apply }, { applyUrl: apply }] } } },
+        select: MATCH_SELECT,
+        take: 5,
+      });
+      const hit = byApply.find(fits);
+      if (hit) return hit;
+    }
+    if (draft.companyId && draft.requisitionId) {
+      const byRequisition = await this.prisma.jobListing.findMany({
+        where: {
+          companyId: draft.companyId,
+          sources: { some: { requisitionId: draft.requisitionId } },
+        },
+        select: MATCH_SELECT,
+        take: 5,
+      });
+      const hit = byRequisition.find(fits);
+      if (hit) return hit;
+    }
+    if (!draft.companyId) return null;
+    const similar = await this.prisma.jobListing.findMany({
+      where: { companyId: draft.companyId, matchKey: draft.matchKey },
+      select: MATCH_SELECT,
+      take: 20,
+    });
+    const candidate = {
+      postedAt: draft.postedAt,
+      description: draft.descriptionExcerpt,
+      sources: own,
+    };
+    const matches = similar.filter((listing) =>
+      fuzzyMatch(candidate, { ...listing, description: listing.descriptionExcerpt }),
+    );
+    // Only an unambiguous fuzzy match merges; two candidates means not sure.
+    return matches.length === 1 ? (matches[0] ?? null) : null;
+  }
+
   private async linkPrivate(userId: string | undefined, listingId: string) {
     if (!userId) return;
     await this.prisma.personalJobListing.createMany({
@@ -231,9 +294,18 @@ export class JobListingPublisher {
   }
 }
 
-/** Only non-empty values, so a later thinner scrape can enrich a listing but never blank it out. */
-/** Fields a newer sighting can fill in; `postedAt` is the listing's current posting date. */
-function enrich(draft: ListingDraft, postedAt: Date | null) {
+/**
+ * Fields a newer sighting fills in, only non-empty ones so a thinner scrape never blanks a field.
+ * A source ranked below the listing's best contributes only an earlier posting date.
+ */
+function enrich(draft: ListingDraft, postedAt: Date | null, ranksHighest: boolean) {
+  // Sources date the same posting differently; the earliest is closest to when it went live.
+  const earlier = draft.postedAt &&
+    (!postedAt || draft.postedAt < postedAt) && {
+      postedAt: draft.postedAt,
+      listedAt: draft.postedAt,
+    };
+  if (!ranksHighest) return { ...earlier };
   return {
     ...(draft.level !== "unknown" && { level: draft.level }),
     ...(draft.location && { location: draft.location, countries: draft.countries }),
@@ -250,17 +322,13 @@ function enrich(draft: ListingDraft, postedAt: Date | null) {
     }),
     ...(draft.workMode && { workMode: draft.workMode }),
     ...(draft.companyLogoUrl && { companyLogoUrl: draft.companyLogoUrl }),
-    // Sources date the same posting differently; the earliest is closest to when it went live.
-    ...(draft.postedAt &&
-      (!postedAt || draft.postedAt < postedAt) && {
-        postedAt: draft.postedAt,
-        listedAt: draft.postedAt,
-      }),
+    ...earlier,
     ...(draft.descriptionExcerpt && { descriptionExcerpt: draft.descriptionExcerpt }),
     ...(draft.skills.length > 0 && { skills: draft.skills }),
     ...(draft.requirements.length > 0 && { requirements: draft.requirements }),
     ...(draft.responsibilities.length > 0 && { responsibilities: draft.responsibilities }),
     ...(draft.yearsExperience !== null && { yearsExperience: draft.yearsExperience }),
     ...(draft.remote && { remote: true }),
+    ...(draft.companyId && { companyId: draft.companyId }),
   };
 }

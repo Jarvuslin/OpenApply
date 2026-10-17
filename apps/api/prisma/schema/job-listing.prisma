@@ -49,9 +49,15 @@ model JobListing {
   isPublic Boolean @default(true) @map("is_public")
   id        String @id @default(uuid())
   slug      String @unique
-  // sha256(normTitle|normCompany|normLocation). Not to be confused with `Job.digest`, which is the
-  // agent's JSON content summary, not a hash.
-  dedupeKey String @unique @map("dedupe_key")
+  // sha256(normTitle|normCompany|normLocation). Not unique: two openings with one title at one
+  // company and city are separate listings. Not to be confused with `Job.digest`.
+  dedupeKey String @map("dedupe_key")
+  companyId String? @map("company_id")
+  employer  Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  /// sha256(normTitle|normLocation): with the company, finds listings a fuzzy match compares.
+  matchKey  String? @map("match_key")
+  /// The best source's rank (see source-rank.ts); a lower-ranked source never overwrites fields.
+  sourceRank Int @default(0) @map("source_rank")
 
   title              String
   company            String
@@ -91,6 +97,8 @@ model JobListing {
   pilotResults PilotResult[]
 
   // Serves the default list and the sitemap: `where status ORDER BY last_seen_at DESC`.
+  @@index([dedupeKey])
+  @@index([companyId, matchKey])
   @@index([status, lastSeenAt])
   @@index([status, listedAt])
   @@index([salaryCurrency, salaryPeriod, salaryMin])
@@ -134,11 +142,20 @@ model JobListingSource {
   resolutionConfidence Float? @map("resolution_confidence")
   postedAt DateTime? @map("posted_at")
   lastSeenAt DateTime @default(now()) @map("last_seen_at")
+  /// "provider/slug" in lowercase, for jobs read from an employer board or traced to one.
+  boardKey String? @map("board_key")
+  /// The board's own id for the posting. Two ids on one board are never the same listing.
+  externalId String? @map("external_id")
+  requisitionId String? @map("requisition_id")
+  /// Source priority: 4 employer ATS, 3 employer career site, 2 curated list, 1 aggregator.
+  rank Int @default(0)
 
   listing JobListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
   @@index([listingId])
   @@index([board, listingId])
+  @@unique([boardKey, externalId])
+  @@index([requisitionId])
   @@map("job_listing_sources")
 }
 

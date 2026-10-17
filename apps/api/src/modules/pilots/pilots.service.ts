@@ -221,7 +221,11 @@ export class PilotsService {
               postedAt: true,
               firstSeenAt: true,
               descriptionExcerpt: true,
-              sources: { select: { applyUrl: true, url: true } },
+              // The highest-ranked source's apply link is the listing's; see source-rank.ts.
+              sources: {
+                select: { applyUrl: true, url: true },
+                orderBy: [{ rank: "desc" }, { lastSeenAt: "desc" }],
+              },
             },
           }),
         ]);

@@ -53,7 +53,8 @@ const SUMMARY_SELECT = {
   sources: {
     where: sourceVisibility(),
     select: { applyUrl: true, attributionUrl: true, board: true, url: true },
-    orderBy: { lastSeenAt: "desc" },
+    // Highest-ranked first, so the first source is the one whose apply link the listing uses.
+    orderBy: [{ rank: "desc" }, { lastSeenAt: "desc" }],
   },
 } satisfies Prisma.JobListingSelect;
 
@@ -74,7 +75,7 @@ const DETAIL_SELECT = {
       resolutionConfidence: true,
       postedAt: true,
     },
-    orderBy: { lastSeenAt: "desc" },
+    orderBy: [{ rank: "desc" }, { lastSeenAt: "desc" }],
   },
 } satisfies Prisma.JobListingSelect;
 

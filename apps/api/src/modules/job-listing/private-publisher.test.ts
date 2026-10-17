@@ -39,24 +39,50 @@ function database() {
         );
         return source ? { ...source, listing: listings.get(source.listingId) } : null;
       },
-      update: async ({ where, data }: { where: { url: string }; data: Row }) =>
-        Object.assign(sources.get(where.url)!, data),
+      update: async ({ where, data }: { where: { id: string }; data: Row }) =>
+        Object.assign(sources.get(where.id)!, data),
     },
     jobListing: {
-      findUnique: async ({ where }: { where: { dedupeKey: string } }) =>
-        [...listings.values()].find((row) => row.dedupeKey === where.dedupeKey) ?? null,
+      // The match rules: a listing holding a source with this url or apply link.
+      findMany: async ({ where }: { where: { sources?: { some: { OR: Row[] } } } }) => {
+        const clauses = where.sources?.some.OR ?? [];
+        return [...listings.values()]
+          .filter((listing) =>
+            [...sources.values()].some(
+              (source) =>
+                source.listingId === listing.id &&
+                clauses.some((clause) =>
+                  Object.entries(clause).every(([key, value]) => source[key] === value),
+                ),
+            ),
+          )
+          .map((listing) => ({
+            ...listing,
+            sources: [...sources.values()]
+              .filter((source) => source.listingId === listing.id)
+              .map(({ boardKey, externalId }) => ({ boardKey, externalId })),
+          }));
+      },
       create: async ({ data }: { data: ListingData }) => {
         const id = `listing-${listings.size + 1}`;
         const { sources: nested, ...row } = data;
         listings.set(id, { ...row, id });
-        sources.set(nested!.create.url, { ...nested!.create, listingId: id } as Source);
+        sources.set(nested!.create.url, {
+          ...nested!.create,
+          id: nested!.create.url,
+          listingId: id,
+        } as unknown as Source);
         return { id };
       },
       update: async ({ where, data }: { where: { id: string }; data: ListingData }) => {
         const { sources: nested, ...row } = data;
         Object.assign(listings.get(where.id)!, row);
         if (nested)
-          sources.set(nested.create.url, { ...nested.create, listingId: where.id } as Source);
+          sources.set(nested.create.url, {
+            ...nested.create,
+            id: nested.create.url,
+            listingId: where.id,
+          } as unknown as Source);
         return { id: where.id };
       },
     },

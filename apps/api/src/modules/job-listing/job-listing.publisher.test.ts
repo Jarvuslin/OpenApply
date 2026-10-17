@@ -28,6 +28,8 @@ interface FakeOptions {
   seenUrl?: boolean;
   /** The known listing's current posting date. */
   seenPostedAt?: Date | null;
+  /** Listings the match rules find for an unseen posting. */
+  candidates?: { id: string; sources: { boardKey: string | null; externalId: string | null }[] }[];
 }
 
 /** Stand-in for Prisma: records calls and can simulate the concurrent-insert race. */
@@ -52,13 +54,15 @@ function fakePrisma(options: FakeOptions = {}) {
   const prisma = {
     application: { updateMany: async () => ({ count: 0 }) },
     jobListingSource: {
-      findUnique: async () => {
-        calls.push("source.findUnique");
+      findFirst: async () => {
+        calls.push("source.findFirst");
         return settle(
           options.seenUrl
             ? {
+                id: "s1",
                 listingId: "l1",
-                listing: { isPublic: true, postedAt: options.seenPostedAt ?? null },
+                rank: 0,
+                listing: { isPublic: true, postedAt: options.seenPostedAt ?? null, sourceRank: 0 },
               }
             : null,
         );
@@ -66,9 +70,18 @@ function fakePrisma(options: FakeOptions = {}) {
       update: async () => settle(undefined),
     },
     jobListing: {
-      findUnique: async () => {
-        calls.push("listing.findUnique");
-        return settle(null);
+      findMany: async () => {
+        calls.push("listing.findMany");
+        return settle(
+          (options.candidates ?? []).map((candidate) => ({
+            isPublic: true,
+            postedAt: null,
+            sourceRank: 0,
+            companyId: "c1",
+            descriptionExcerpt: null,
+            ...candidate,
+          })),
+        );
       },
       update: async ({ data }: { data: Record<string, unknown> }) => {
         calls.push("listing.update");
@@ -132,9 +145,9 @@ describe("publish", () => {
     const fake = fakePrisma();
     const always = {
       ...fake.prisma,
-      jobListingSource: { findUnique: async () => null },
+      jobListingSource: { findFirst: async () => null },
       jobListing: {
-        findUnique: async () => null,
+        findMany: async () => [],
         create: async () => {
           throw Object.assign(new Error("conflict"), { code: "P2002" });
         },
@@ -144,6 +157,30 @@ describe("publish", () => {
     expect(
       new JobListingPublisher(always, noLogo).publish(job("https://x.com/1")),
     ).rejects.toThrow();
+  });
+});
+
+describe("matching", () => {
+  const ats = (externalId: string): ListingSourceJob => ({
+    ...job(`https://boards.greenhouse.io/acme/jobs/${externalId}`),
+    applyUrl: "https://boards.greenhouse.io/acme/jobs/shared",
+    companyId: "c1",
+    boardKey: "greenhouse/acme",
+    externalId,
+  });
+
+  it("joins a listing found by apply link", async () => {
+    const fake = fakePrisma({
+      candidates: [{ id: "l2", sources: [{ boardKey: "simplify", externalId: null }] }],
+    });
+    expect(await new JobListingPublisher(fake.prisma, noLogo).publish(ats("1"))).toBe("merged");
+  });
+
+  it("never joins a listing holding another id from the same board", async () => {
+    const fake = fakePrisma({
+      candidates: [{ id: "l2", sources: [{ boardKey: "greenhouse/acme", externalId: "2" }] }],
+    });
+    expect(await new JobListingPublisher(fake.prisma, noLogo).publish(ats("1"))).toBe("created");
   });
 });
 

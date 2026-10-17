@@ -39,8 +39,9 @@ describe("applied listing identity", () => {
     const identities: unknown[] = [];
     const db = {
       jobListing: {
-        findFirst: async () => null,
-        findUnique: async ({ where }: { where: unknown }) => {
+        // The first lookup is by source URL; the second, by the posting's normalized key.
+        findFirst: async ({ where }: { where: { dedupeKey?: string } }) => {
+          if (!where.dedupeKey) return null;
           identities.push(where);
           return { id: "same-posting" };
         },

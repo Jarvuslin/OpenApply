@@ -186,18 +186,29 @@ but a pilot never queues it.
 Feed jobs carry no skill list. Only listings an agent published have skills, so the tech filter
 only matches those.
 
-**Dedupe.** `upsert` in `job-listing.publisher.ts` matches a job to an existing listing in two
-steps:
+**Company.** Every job belongs to a `Company`, keyed by website domain (`rbc.com`) with a list of
+aliases ("royal bank of canada"). A job read from a board takes the board's company
+(`company_boards`); a list or feed job takes the company of the ATS board its link names, else
+the company its name matches. `company-directory.ts` holds the domains and aliases of the
+employers we read directly.
 
-1. **By URL.** URLs are compared after `canonicalizeUrl` strips tracking parameters such as
-   `utm_*`, `gh_src` and `ref`. A known URL refreshes `lastSeenAt` and the apply link.
-2. **By `dedupeKey`.** Otherwise the publisher computes sha256 of the normalized title, company
-   and first location segment. A match adds a new source row to that listing; no match creates a
-   new listing.
+**Dedupe.** `upsert` in `job-listing.publisher.ts` matches a job to an existing listing, stopping
+at the first rule that finds one:
 
-Two openings with the same title at the same company and city become one listing. When a later
-source has an earlier posting date, the listing keeps the earlier one, so a job reposted on a
-second site doesn't look new.
+1. **Same board and board id**, or the same URL. Each source keeps its board key
+   (`greenhouse/stripe`) and the board's own job id; `posting-identity.ts` reads them from a list or
+   feed job's ATS link, so a Simplify job lands on the listing its Greenhouse board already made.
+2. **Same canonical apply link.** URLs are compared after `canonicalizeUrl` strips tracking
+   parameters such as `utm_*`, `gh_src` and `ref`.
+3. **Same company and requisition number.**
+4. **Fuzzy:** same company, title and place, both posted within 14 days, and descriptions at least
+   80% alike. A missing date or description, or two candidates, means no merge.
+
+Two different ids on one board are never one listing, whatever else they share. When sources
+disagree, the higher-ranked source wins (`source-rank.ts`): employer ATS, then employer career
+site, then curated lists, then aggregators. Its apply link is the listing's, and a lower-ranked
+source never overwrites the listing's fields. The posting date stays the earliest any source
+reports, so a job reposted on a second site doesn't look new.
 
 **Never expired.** Listings stay `published` after a posting disappears. Nothing expires them
 yet. `lastSeenAt` is updated on every refresh, but no search uses it.

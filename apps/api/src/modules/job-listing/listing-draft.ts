@@ -11,11 +11,15 @@ import {
   jobLevelFromTitle,
 } from "@openapply/contracts/job-listing";
 import { z } from "zod/v4";
+import { sha256 } from "@/common/crypto/hash";
 import { MAX_YEARS_EXPERIENCE } from "@/modules/scoring/scoring.schema";
 import { validatePublicLogoUrl } from "./company-logo-http";
 import { canonicalizeUrl, dedupeKey, listingSlug, normalizeListingLocation } from "./dedupe";
 import { listingCountryCodes } from "./listing-countries";
+import { matchKey } from "./listing-match";
 import { listingEmploymentKind, listingWorkMode, normalizeListingSalary } from "./listing-metadata";
+import { postingIdentity } from "./posting-identity";
+import { sourceRank } from "./source-rank";
 
 const MAX_EXCERPT = 600;
 
@@ -53,6 +57,12 @@ export interface ListingSourceJob {
   companyLogoPageUrl?: string;
   countries?: string[];
   level?: (typeof JOB_LEVELS)[number];
+  /** The job's company, already resolved from its board (see CompanyResolver). */
+  companyId?: string | null;
+  /** "provider/slug" of the board the job was read from; else traced from an ATS link. */
+  boardKey?: string | null;
+  externalId?: string | null;
+  requisitionId?: string | null;
   title: string;
   company: string;
   url: string;
@@ -73,6 +83,12 @@ export interface ListingDraft {
   postedAt: Date | null;
   level: (typeof JOB_LEVELS)[number];
   dedupeKey: string;
+  matchKey: string;
+  companyId: string | null;
+  boardKey: string | null;
+  externalId: string | null;
+  requisitionId: string | null;
+  rank: number;
   slug: string;
   title: string;
   company: string;
@@ -168,6 +184,9 @@ export function buildListingDraft(job: ListingSourceJob): ListingDraft | null {
   const employmentType = clean(job.type) ?? clean(digest.employmentType);
   const remote = digest.remote === true || normalizeListingLocation(location) === "remote";
   const titleLevel = jobLevelFromTitle(title);
+  const canonical = canonicalizeUrl(url);
+  const traced = job.boardKey ? null : postingIdentity(canonical);
+  const board = clean(job.board)?.toLowerCase() ?? null;
 
   return {
     applyUrl: job.applyUrl === undefined ? allowedApplyUrl(url) : allowedApplyUrl(job.applyUrl),
@@ -177,7 +196,14 @@ export function buildListingDraft(job: ListingSourceJob): ListingDraft | null {
     level:
       titleLevel === "unknown" && job.publicFeed === true ? (job.level ?? titleLevel) : titleLevel,
     dedupeKey: key,
-    slug: listingSlug({ title, company, location }, key),
+    matchKey: matchKey(title, location),
+    companyId: job.companyId ?? null,
+    boardKey: job.boardKey?.toLowerCase() ?? traced?.boardKey ?? null,
+    externalId: job.boardKey ? (job.externalId ?? null) : (traced?.externalId ?? null),
+    requisitionId: clean(job.requisitionId),
+    rank: sourceRank(board),
+    // Keyed by the posting's own URL: two openings can share a title, company and city.
+    slug: listingSlug({ title, company, location }, sha256(canonical)),
     title,
     company,
     location,
@@ -195,7 +221,7 @@ export function buildListingDraft(job: ListingSourceJob): ListingDraft | null {
     responsibilities: bullets(digest.responsibilities),
     yearsExperience: yearsExperience(digest.yearsExperience),
     // Lowercased so the `?board=` filter is an indexed equality hit, not an ILIKE scan.
-    board: clean(job.board)?.toLowerCase() ?? null,
-    url: canonicalizeUrl(url),
+    board,
+    url: canonical,
   };
 }

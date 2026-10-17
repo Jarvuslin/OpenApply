@@ -22,7 +22,7 @@ export async function listingApplicationData(db: ListingReader, posting: Applica
   });
   const listing =
     source ??
-    (await db.jobListing.findUnique({
+    (await db.jobListing.findFirst({
       where: { dedupeKey: identity.listingKey },
       select: { id: true },
     }));

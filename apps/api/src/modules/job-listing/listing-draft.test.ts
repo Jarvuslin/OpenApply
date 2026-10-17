@@ -118,13 +118,14 @@ describe("projection", () => {
     expect(buildListingDraft(job({ digest: raw }))?.yearsExperience).toBeNull();
   });
 
-  it("gives two reposts of one posting the same dedupe key but different source urls", () => {
+  it("gives two reposts of one posting the same dedupe key but their own urls and slugs", () => {
     const a = buildListingDraft(job({ url: "https://linkedin.com/jobs/1", board: "linkedin.com" }));
     const b = buildListingDraft(
       job({ url: "https://indeed.com/viewjob?jk=9", board: "indeed.com" }),
     );
     expect(a?.dedupeKey).toBe(b?.dedupeKey as string);
-    expect(a?.slug).toBe(b?.slug as string);
+    // The slug is keyed by the posting's own URL, since two openings can share a dedupe key.
+    expect(a?.slug).not.toBe(b?.slug as string);
     expect(a?.url).not.toBe(b?.url as string);
   });
 });

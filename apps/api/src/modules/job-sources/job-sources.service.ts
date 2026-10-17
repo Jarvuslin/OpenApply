@@ -12,8 +12,10 @@ import { logger } from "@/common/logger";
 import { env } from "@/env";
 import { PrismaClient } from "@/generated/prisma/client";
 import { publishCampaignStatus } from "@/modules/campaign/campaign.utils";
+import { CompanyResolver } from "@/modules/job-listing/companies";
 import { canonicalizeUrl } from "@/modules/job-listing/dedupe";
 import { JobListingPublisher } from "@/modules/job-listing/job-listing.publisher";
+import { postingIdentity } from "@/modules/job-listing/posting-identity";
 import { listedExperience } from "@/modules/mvp/experience";
 import { apify } from "./apify";
 import { type AtsProvider, fetchAts } from "./ats";
@@ -33,6 +35,7 @@ export class JobSourcesService {
     private readonly crypto: CryptoService,
     private readonly publisher: JobListingPublisher,
     private readonly resolver: EmployerResolver,
+    private readonly companies: CompanyResolver,
   ) {}
   async connections(userId: string) {
     const rows = await this.prisma.jobSourceConnection.findMany({ where: { userId } });
@@ -269,12 +272,24 @@ export class JobSourcesService {
       job: SourceJob;
       resolution: { applyUrl: string | null; confidence: number };
     }[] = [];
+    // A board's jobs are its own; a list or feed job belongs to the ATS board its link names.
+    const ownBoard = boardKey && !boardKey.startsWith("public/") ? boardKey : null;
     for (const job of jobs.slice(0, maxJobs)) {
       const resolution = await this.resolver.resolve(job, fetchBoard);
       candidates.push({ job, resolution });
+      const url = job.identityUrl ?? job.attributionUrl;
+      const company = await this.companies.resolve(
+        ownBoard ?? postingIdentity(canonicalizeUrl(url))?.boardKey,
+        job.company,
+      );
       const outcome = await this.publisher.publish({
         ...job,
-        url: job.identityUrl ?? job.attributionUrl,
+        url,
+        company: company.name,
+        companyId: company.id,
+        boardKey: ownBoard,
+        externalId: job.externalId,
+        requisitionId: job.requisitionId,
         board,
         publicFeed: true,
         applyUrl: resolution.applyUrl,
