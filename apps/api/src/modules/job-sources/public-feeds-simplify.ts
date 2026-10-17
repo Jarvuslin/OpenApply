@@ -113,6 +113,8 @@ export interface FoundBoard {
   company: string;
 }
 
+// Recruitee's own subdomains, not employer boards.
+const RECRUITEE_OWN = new Set(["www", "app", "api", "support", "blog", "help", "careers", "docs"]);
 const BOARD_SLUG = /^[a-zA-Z0-9_-][a-zA-Z0-9 _-]{0,79}$/;
 
 /** The employer board an apply link belongs to, when it is one the ATS adapters can read. */
@@ -130,6 +132,9 @@ export function boardOf(address: string): Omit<FoundBoard, "company"> | null {
     found = { provider: "workable", slug: first };
   if (["jobs.smartrecruiters.com", "careers.smartrecruiters.com"].includes(url.hostname) && first)
     found = { provider: "smartrecruiters", slug: first };
+  const recruitee = /^([a-z0-9][a-z0-9-]{0,62})\.recruitee\.com$/.exec(url.hostname)?.[1];
+  if (recruitee && !RECRUITEE_OWN.has(recruitee))
+    found = { provider: "recruitee", slug: recruitee };
   // "{tenant}.wd5.myworkdayjobs.com/en-US/{site}/job/..." is the Workday board "tenant.wd5.site".
   const workday = /^([a-z0-9-]{1,40})\.(wd\d{1,3})\.myworkdayjobs\.com$/.exec(url.hostname);
   if (workday) {

@@ -15,8 +15,9 @@ const BOARD_PREFIXES = [
   "co,lever,jobs)",
   "com,ashbyhq,jobs)",
   "com,myworkdayjobs,",
+  "com,recruitee,",
 ];
-const PROVIDERS = new Set(["greenhouse", "lever", "ashby", "workday"]);
+const PROVIDERS = new Set(["greenhouse", "lever", "ashby", "workday", "recruitee"]);
 
 export type RangeReader = typeof fetchSourceRange;
 
@@ -135,6 +136,14 @@ export async function checkBoard(
       .parse(await fetch(`https://boards-api.greenhouse.io/v1/boards/${slug}/jobs`));
     return data.jobs.length
       ? { ...board, company: data.jobs[0]?.company_name ?? titleCase(board.slug) }
+      : null;
+  }
+  if (board.provider === "recruitee") {
+    const data = z
+      .object({ offers: z.array(z.object({ company_name: z.string().nullish() })) })
+      .parse(await fetch(`https://${slug}.recruitee.com/api/offers/`));
+    return data.offers.length
+      ? { ...board, company: data.offers[0]?.company_name || titleCase(board.slug) }
       : null;
   }
   if (board.provider === "ashby") {

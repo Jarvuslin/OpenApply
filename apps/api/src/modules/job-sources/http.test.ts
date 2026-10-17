@@ -192,6 +192,22 @@ it("allows only a section's search page, job pages and job board API on Taleo ho
   }
 });
 
+it("allows only the offers API on Recruitee boards", async () => {
+  const server = serve(() => new Response("{}"));
+  try {
+    expect(await fetchSourceJson("https://huaweicanada.recruitee.com/api/offers/")).toEqual({});
+    for (const url of [
+      "https://huaweicanada.recruitee.com/o/researcher",
+      "https://huaweicanada.recruitee.com/api/offers/?scope=all",
+      "https://recruitee.com.evil.example/api/offers/",
+    ])
+      await expect(fetchSourceJson(url)).rejects.toThrow("Unsupported discovery endpoint.");
+    expect(server.calls).toHaveLength(1);
+  } finally {
+    server.restore();
+  }
+});
+
 it("allows only the search and job pages on iCIMS portals", async () => {
   const server = serve(() => new Response("<html></html>"));
   try {

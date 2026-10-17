@@ -16,6 +16,7 @@ const SOURCE_NAMES: Record<string, string> = {
   lever: "Lever",
   oracle: "Oracle Recruiting",
   phenom: "Phenom",
+  recruitee: "Recruitee",
   smartrecruiters: "SmartRecruiters",
   successfactors: "SuccessFactors",
   taleo: "Taleo",

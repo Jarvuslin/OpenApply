@@ -17,6 +17,7 @@ it("checks a found board with one request and keeps it only when it lists jobs",
     if (url.includes("greenhouse")) return { jobs: [{ company_name: "Acme Robotics" }] };
     if (url.includes("ashbyhq")) return { jobs: [] };
     if (url.includes("lever")) return [{ id: "1" }];
+    if (url.includes("recruitee")) return { offers: [{ company_name: "Huawei Canada" }] };
     return { total: 4, jobPostings: [] };
   };
   expect(await checkBoard(fetch, { provider: "greenhouse", slug: "acmerobotics" })).toEqual({
@@ -31,11 +32,15 @@ it("checks a found board with one request and keeps it only when it lists jobs",
   expect(await checkBoard(fetch, { provider: "workday", slug: "acme.wd5.External" })).toMatchObject(
     { company: "Acme" },
   );
+  expect(await checkBoard(fetch, { provider: "recruitee", slug: "huaweicanada" })).toMatchObject({
+    company: "Huawei Canada",
+  });
   expect(requested).toEqual([
     "https://boards-api.greenhouse.io/v1/boards/acmerobotics/jobs",
     "https://api.ashbyhq.com/posting-api/job-board/quiet",
     "https://api.lever.co/v0/postings/tiny-co?mode=json&limit=1",
     "https://acme.wd5.myworkdayjobs.com/wday/cxs/acme/External/jobs",
+    "https://huaweicanada.recruitee.com/api/offers/",
   ]);
 });
 

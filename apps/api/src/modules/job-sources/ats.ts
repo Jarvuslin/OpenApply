@@ -7,6 +7,7 @@ import { lever } from "./lever";
 import { oracle } from "./oracle";
 import { phenom } from "./phenom";
 import type { FetchText } from "./public-feeds-wwr";
+import { recruitee } from "./recruitee";
 import { smartrecruiters } from "./smartrecruiters";
 import { successfactors } from "./successfactors";
 import { taleo } from "./taleo";
@@ -14,7 +15,17 @@ import type { BoardOptions, BoardResult, FetchJson } from "./types";
 import { workable } from "./workable";
 import { workday } from "./workday";
 
-const JSON_ATS = { ashby, greenhouse, lever, oracle, phenom, smartrecruiters, workable, workday };
+const JSON_ATS = {
+  ashby,
+  greenhouse,
+  lever,
+  oracle,
+  phenom,
+  recruitee,
+  smartrecruiters,
+  workable,
+  workday,
+};
 export const ATS = { ...JSON_ATS, icims, successfactors, taleo };
 export type AtsProvider = keyof typeof ATS;
 /** Slugs that name a career site rather than a company; their boards page through many requests. */

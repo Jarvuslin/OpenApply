@@ -180,6 +180,12 @@ export const JOB_FEED_CATALOG: CatalogBoard[] = [
   { provider: "icims", slug: "careers-covenanthealth", company: "Covenant Health" },
   { provider: "icims", slug: "careers-ketteringhealth", company: "Kettering Health" },
   { provider: "icims", slug: "careers-cooperhealth", company: "Cooper University Health Care" },
+  // Recruitee boards; the slug is the company's recruitee.com subdomain.
+  { provider: "recruitee", slug: "huaweicanada", company: "Huawei Canada" },
+  { provider: "recruitee", slug: "lg2", company: "lg2" },
+  { provider: "recruitee", slug: "aikidosecurity", company: "Aikido Security" },
+  { provider: "recruitee", slug: "framestore", company: "Framestore" },
+  { provider: "recruitee", slug: "medmehealth", company: "MedMe Health" },
   // Taleo career sections on its job board API; the slug is tenant/section.
   { provider: "taleo", slug: "hdr/ex", company: "HDR" },
   { provider: "taleo", slug: "textron/textron", company: "Textron" },

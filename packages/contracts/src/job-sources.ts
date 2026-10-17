@@ -8,6 +8,7 @@ export const ATS_PROVIDERS = [
   "lever",
   "oracle",
   "phenom",
+  "recruitee",
   "smartrecruiters",
   "successfactors",
   "taleo",

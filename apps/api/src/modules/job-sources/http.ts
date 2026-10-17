@@ -74,6 +74,7 @@ function knownHost(host: string): boolean {
     host.endsWith(".oraclecloud.com") ||
     host.endsWith(".taleo.net") ||
     host.endsWith(".icims.com") ||
+    host.endsWith(".recruitee.com") ||
     [
       "raw.githubusercontent.com",
       "yc-oss.github.io",
@@ -124,6 +125,8 @@ function supportedEndpoint(url: URL): boolean {
     return !url.search && WORKDAY_API.test(url.pathname);
   if (url.hostname.endsWith(".oraclecloud.com"))
     return ORACLE_API[url.pathname]?.test(url.search.slice(1)) ?? false;
+  if (url.hostname.endsWith(".recruitee.com"))
+    return !url.search && url.pathname === "/api/offers/";
   if (url.hostname.endsWith(".icims.com"))
     return url.pathname === "/jobs/search"
       ? ICIMS_SEARCH.test(url.search.slice(1))

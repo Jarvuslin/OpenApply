@@ -135,6 +135,11 @@ it("recognizes the employer boards the ATS adapters can read", () => {
     provider: "smartrecruiters",
     slug: "Acme",
   });
+  expect(boardOf("https://huaweicanada.recruitee.com/o/researcher")).toEqual({
+    provider: "recruitee",
+    slug: "huaweicanada",
+  });
+  expect(boardOf("https://support.recruitee.com/en/articles/1")).toBeNull();
   // EU boards, bare careers pages and odd slugs are left to other sources.
   expect(boardOf("https://job-boards.eu.greenhouse.io/acme/jobs/1")).toBeNull();
   expect(boardOf("https://careers.acme.com/openings?gh_jid=789")).toBeNull();

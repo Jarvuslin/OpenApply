@@ -17,6 +17,7 @@ const RANKS: Record<string, number> = {
   oracle: SOURCE_RANK.employerAts,
   taleo: SOURCE_RANK.employerAts,
   icims: SOURCE_RANK.employerAts,
+  recruitee: SOURCE_RANK.employerAts,
   successfactors: SOURCE_RANK.careerSite,
   phenom: SOURCE_RANK.careerSite,
   "google-careers": SOURCE_RANK.careerSite,
