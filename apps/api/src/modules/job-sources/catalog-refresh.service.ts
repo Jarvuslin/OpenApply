@@ -39,6 +39,8 @@ const DISCOVERY_KEYS = [BOARD_DISCOVERY_KEY, YC_DISCOVERY_KEY, CC_SCAN_KEY, CC_C
 const CC_SCAN_MS = 30 * DAY;
 const CC_CHECK_BATCH = 300;
 const PENDING = new Date(0);
+// Two of these may be on Workday boards at once; see runDue.
+const WORKERS = 4;
 // YC companies are checked a batch at a time, then again once their result is two weeks old.
 const YC_BATCH = 100;
 const YC_RECHECK_MS = 14 * DAY;
@@ -48,6 +50,8 @@ const boardKey = (board: Pick<CatalogBoard, "provider" | "slug">) =>
 
 @singleton()
 export class CatalogRefreshService {
+  private running: ReturnType<CatalogRefreshService["runDue"]> | null = null;
+
   constructor(
     private readonly prisma: PrismaClient,
     private readonly sources: JobSourcesService,
@@ -245,7 +249,18 @@ ${job.description}`,
     return found.length;
   }
 
+  /** One run at a time: the cron fires every five minutes, and a run can last hours. */
   async refreshDue() {
+    if (this.running) return { refreshed: 0, failed: 0, skipped: 0, imported: 0 };
+    this.running = this.runDue();
+    try {
+      return await this.running;
+    } finally {
+      this.running = null;
+    }
+  }
+
+  private async runDue() {
     await this.prisma.jobFeedRefresh.createMany({
       data: [...CATALOG_FEED_KEYS, ...DISCOVERY_KEYS].map((key) => ({ key })),
       skipDuplicates: true,
@@ -269,10 +284,22 @@ ${job.description}`,
     });
     const counts = { refreshed: 0, failed: 0, skipped: 0, imported: 0 };
     const pending = [...due];
+    // Workday boards share one request cap, so two workers at most take them; the third keeps the
+    // other boards and feeds moving instead of queueing behind that cap.
+    let workdayWorkers = 0;
+    const next = () => {
+      const index =
+        workdayWorkers >= 2 ? pending.findIndex((row) => !row.key.startsWith("workday/")) : 0;
+      return index < 0 ? undefined : pending.splice(index, 1)[0];
+    };
     const worker = async () => {
+      let onWorkday = false;
       for (;;) {
-        const row = pending.shift();
+        if (onWorkday) workdayWorkers--;
+        const row = next();
+        onWorkday = !!row?.key.startsWith("workday/");
         if (!row) return;
+        if (onWorkday) workdayWorkers++;
         const catalogBoard = JOB_FEED_CATALOG.find((entry) => boardKey(entry) === row.key);
         const board = catalogBoard ?? discoveredByKey.get(row.key);
         const feed = PUBLIC_FEED_CATALOG.find((entry) => `public/${entry.id}` === row.key);
@@ -376,7 +403,7 @@ ${job.description}`,
         }
       }
     };
-    await Promise.all([worker(), worker(), worker()]);
+    await Promise.all(Array.from({ length: WORKERS }, worker));
     return counts;
   }
 }

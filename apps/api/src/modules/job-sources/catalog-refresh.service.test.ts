@@ -269,3 +269,13 @@ it("checks queued Common Crawl boards once and keeps those that list jobs", asyn
     ["cc/ashby/quiet", null],
   ]);
 });
+
+it("runs one refresh at a time, so the five-minute cron never stacks runs", async () => {
+  const state = fixture(false, []);
+  const [first, second] = await Promise.all([
+    state.service.refreshDue(),
+    state.service.refreshDue(),
+  ]);
+  expect(second).toEqual({ refreshed: 0, failed: 0, skipped: 0, imported: 0 });
+  expect(first).toBeDefined();
+});
