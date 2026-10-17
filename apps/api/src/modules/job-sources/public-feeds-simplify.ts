@@ -115,6 +115,8 @@ export interface FoundBoard {
 
 // Recruitee's own subdomains, not employer boards.
 const RECRUITEE_OWN = new Set(["www", "app", "api", "support", "blog", "help", "careers", "docs"]);
+// Teamtailor's own subdomains; its company board, "career", is a real employer board.
+const TEAMTAILOR_OWN = new Set(["www", "app", "api", "support", "integrations", "docs", "status"]);
 const BOARD_SLUG = /^[a-zA-Z0-9_-][a-zA-Z0-9 _-]{0,79}$/;
 
 /** The employer board an apply link belongs to, when it is one the ATS adapters can read. */
@@ -135,6 +137,10 @@ export function boardOf(address: string): Omit<FoundBoard, "company"> | null {
   const recruitee = /^([a-z0-9][a-z0-9-]{0,62})\.recruitee\.com$/.exec(url.hostname)?.[1];
   if (recruitee && !RECRUITEE_OWN.has(recruitee))
     found = { provider: "recruitee", slug: recruitee };
+  // "acme.teamtailor.com", or "acme.na.teamtailor.com" for a board in another region.
+  const teamtailor = /^([a-z0-9][a-z0-9-]{0,62})(\.[a-z]{2})?\.teamtailor\.com$/.exec(url.hostname);
+  if (teamtailor?.[1] && !TEAMTAILOR_OWN.has(teamtailor[1]))
+    return { provider: "teamtailor", slug: `${teamtailor[1]}${teamtailor[2] ?? ""}` };
   // "{tenant}.wd5.myworkdayjobs.com/en-US/{site}/job/..." is the Workday board "tenant.wd5.site".
   const workday = /^([a-z0-9-]{1,40})\.(wd\d{1,3})\.myworkdayjobs\.com$/.exec(url.hostname);
   if (workday) {

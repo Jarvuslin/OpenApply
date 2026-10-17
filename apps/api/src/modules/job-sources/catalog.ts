@@ -186,6 +186,11 @@ export const JOB_FEED_CATALOG: CatalogBoard[] = [
   { provider: "recruitee", slug: "aikidosecurity", company: "Aikido Security" },
   { provider: "recruitee", slug: "framestore", company: "Framestore" },
   { provider: "recruitee", slug: "medmehealth", company: "MedMe Health" },
+  // Teamtailor boards; the slug is the subdomain, with ".na" for a board hosted in North America.
+  { provider: "teamtailor", slug: "swishanalytics.na", company: "Swish Analytics" },
+  { provider: "teamtailor", slug: "minagroup.na", company: "MINA Group" },
+  { provider: "teamtailor", slug: "miniso.na", company: "MINISO" },
+  { provider: "teamtailor", slug: "virtasant", company: "Virtasant" },
   // Taleo career sections on its job board API; the slug is tenant/section.
   { provider: "taleo", slug: "hdr/ex", company: "HDR" },
   { provider: "taleo", slug: "textron/textron", company: "Textron" },

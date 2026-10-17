@@ -130,7 +130,7 @@ export class CatalogRefreshService {
       [...groups.values()].map(async (boards) => {
         for (const board of boards) {
           // A board that fails, or robots.txt disallows, is checked and not kept.
-          const found = await checkBoard(fetch, board).catch(() => null);
+          const found = await checkBoard(fetch, board, fetchText).catch(() => null);
           // Ashby and Lever APIs carry no company name; the board page's title does.
           const name = found ? await boardCompanyName(fetchText, found).catch(() => null) : null;
           if (found && name) found.company = name;

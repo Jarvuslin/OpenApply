@@ -35,12 +35,23 @@ it("checks a found board with one request and keeps it only when it lists jobs",
   expect(await checkBoard(fetch, { provider: "recruitee", slug: "huaweicanada" })).toMatchObject({
     company: "Huawei Canada",
   });
+  const rss = async (url: string) => {
+    requested.push(url);
+    return `<rss><channel><title>MINA Group</title><item><title>Chef</title>
+      <link>https://minagroup.na.teamtailor.com/jobs/1-chef</link></item></channel></rss>`;
+  };
+  expect(await checkBoard(fetch, { provider: "teamtailor", slug: "minagroup.na" }, rss)).toEqual({
+    provider: "teamtailor",
+    slug: "minagroup.na",
+    company: "MINA Group",
+  });
   expect(requested).toEqual([
     "https://boards-api.greenhouse.io/v1/boards/acmerobotics/jobs",
     "https://api.ashbyhq.com/posting-api/job-board/quiet",
     "https://api.lever.co/v0/postings/tiny-co?mode=json&limit=1",
     "https://acme.wd5.myworkdayjobs.com/wday/cxs/acme/External/jobs",
     "https://huaweicanada.recruitee.com/api/offers/",
+    "https://minagroup.na.teamtailor.com/jobs.rss",
   ]);
 });
 

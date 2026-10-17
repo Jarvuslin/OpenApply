@@ -192,6 +192,24 @@ it("allows only a section's search page, job pages and job board API on Taleo ho
   }
 });
 
+it("allows only the RSS feed on Teamtailor boards", async () => {
+  const server = serve(() => new Response("<rss></rss>"));
+  try {
+    expect(await fetchSourceText("https://minagroup.na.teamtailor.com/jobs.rss")).toBe(
+      "<rss></rss>",
+    );
+    for (const url of [
+      "https://minagroup.na.teamtailor.com/jobs/720173-manager",
+      "https://minagroup.na.teamtailor.com/jobs.rss?page=2",
+      "https://teamtailor.com.evil.example/jobs.rss",
+    ])
+      await expect(fetchSourceText(url)).rejects.toThrow("Unsupported discovery endpoint.");
+    expect(server.calls).toHaveLength(1);
+  } finally {
+    server.restore();
+  }
+});
+
 it("allows only the offers API on Recruitee boards", async () => {
   const server = serve(() => new Response("{}"));
   try {

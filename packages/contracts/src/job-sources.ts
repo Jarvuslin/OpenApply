@@ -12,6 +12,7 @@ export const ATS_PROVIDERS = [
   "smartrecruiters",
   "successfactors",
   "taleo",
+  "teamtailor",
   "workable",
   "workday",
 ] as const;

@@ -1,9 +1,10 @@
 import { type AsyncBuffer, parquetMetadataAsync, parquetReadObjects } from "hyparquet";
 import { compressors } from "hyparquet-compressors";
 import { z } from "zod/v4";
-import { fetchSourceRange } from "./http";
+import { fetchSourceRange, fetchSourceText } from "./http";
 import { boardOf, type FoundBoard } from "./public-feeds-simplify";
 import type { FetchText } from "./public-feeds-wwr";
+import { teamtailor } from "./teamtailor";
 import type { FetchJson } from "./types";
 import { workdayJobCount } from "./workday";
 
@@ -16,8 +17,9 @@ const BOARD_PREFIXES = [
   "com,ashbyhq,jobs)",
   "com,myworkdayjobs,",
   "com,recruitee,",
+  "com,teamtailor,",
 ];
-const PROVIDERS = new Set(["greenhouse", "lever", "ashby", "workday", "recruitee"]);
+const PROVIDERS = new Set(["greenhouse", "lever", "ashby", "workday", "recruitee", "teamtailor"]);
 
 export type RangeReader = typeof fetchSourceRange;
 
@@ -124,6 +126,7 @@ const titleCase = (slug: string) =>
 export async function checkBoard(
   fetch: FetchJson,
   board: Omit<FoundBoard, "company">,
+  fetchText: FetchText = fetchSourceText,
 ): Promise<FoundBoard | null> {
   const slug = encodeURIComponent(board.slug);
   if (board.provider === "workday")
@@ -137,6 +140,10 @@ export async function checkBoard(
     return data.jobs.length
       ? { ...board, company: data.jobs[0]?.company_name ?? titleCase(board.slug) }
       : null;
+  }
+  if (board.provider === "teamtailor") {
+    const { jobs } = await teamtailor(fetchText, board.slug);
+    return jobs.length ? { ...board, company: jobs[0]?.company ?? titleCase(board.slug) } : null;
   }
   if (board.provider === "recruitee") {
     const data = z

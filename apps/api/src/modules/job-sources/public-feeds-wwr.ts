@@ -2,7 +2,8 @@ import { plainText, postedAt, type SourceJob } from "./types";
 
 export type FetchText = (url: string) => Promise<string>;
 
-function field(item: string, name: string): string {
+/** The text of an RSS element, with any CDATA wrapper removed. */
+export function xmlField(item: string, name: string): string {
   const value =
     new RegExp(`<${name}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${name}\\s*>`, "i").exec(item)?.[1] ?? "";
   return value.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1").trim();
@@ -18,12 +19,12 @@ export async function weWorkRemotely(fetch: FetchText): Promise<SourceJob[]> {
   for (const match of xml.matchAll(/<item(?:\s[^>]*)?>([\s\S]*?)<\/item\s*>/gi)) {
     if (jobs.length >= 1000) break;
     const item = match[1]!;
-    const header = plainText(field(item, "title"));
+    const header = plainText(xmlField(item, "title"));
     const separator = header.indexOf(":");
     if (separator < 1) continue;
     const title = header.slice(separator + 1).trim();
     const company = header.slice(0, separator).trim();
-    const href = plainText(field(item, "link") || field(item, "guid"));
+    const href = plainText(xmlField(item, "link") || xmlField(item, "guid"));
     let url: URL;
     try {
       url = new URL(href);
@@ -37,7 +38,7 @@ export async function weWorkRemotely(fetch: FetchText): Promise<SourceJob[]> {
       seen.has(url.href)
     )
       continue;
-    const expires = postedAt(field(item, "expires_at"));
+    const expires = postedAt(xmlField(item, "expires_at"));
     if (expires && expires.getTime() < Date.now()) continue;
     seen.add(url.href);
     jobs.push({
@@ -45,14 +46,14 @@ export async function weWorkRemotely(fetch: FetchText): Promise<SourceJob[]> {
       company,
       companyLogoUrl:
         plainText(/<media:content\b[^>]*\burl=["']([^"']+)["']/i.exec(item)?.[1] ?? "") || null,
-      location: plainText(field(item, "region")) || "Remote — location not specified",
+      location: plainText(xmlField(item, "region")) || "Remote — location not specified",
       url: url.href,
       attributionUrl: url.href,
       // Each job's link ends in its own slug, which is how the feed itself tells jobs apart.
       externalId: url.pathname.split("/").filter(Boolean).pop(),
-      description: plainText(field(item, "description")),
-      postedAt: postedAt(field(item, "pubDate")),
-      type: plainText(field(item, "type")) || null,
+      description: plainText(xmlField(item, "description")),
+      postedAt: postedAt(xmlField(item, "pubDate")),
+      type: plainText(xmlField(item, "type")) || null,
       workMode: "remote",
     });
   }

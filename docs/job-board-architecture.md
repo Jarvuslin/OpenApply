@@ -57,7 +57,7 @@ Workday board. The exceptions:
 
 ### Employer boards (catalog)
 
-These live in `JOB_FEED_CATALOG` in `job-sources/catalog.ts`: 147 boards. Small
+These live in `JOB_FEED_CATALOG` in `job-sources/catalog.ts`: 151 boards. Small
 JSON boards refresh every 10 minutes. Workday, SuccessFactors, Phenom, Oracle, Taleo and iCIMS boards refresh every
 three hours, because one board can take up to 100 requests.
 
@@ -69,6 +69,7 @@ three hours, because one board can take up to 100 requests.
 | SmartRecruiters | `smartrecruiters.ts` | ServiceNow, Canva | `releasedDate` |
 | Workable | `workable.ts` | Hugging Face | `published_on` |
 | Recruitee | `recruitee.ts` | Huawei Canada, lg2, Aikido Security, Framestore, MedMe Health, and boards Common Crawl finds | `published_at`, "2026-10-15 17:57:27 UTC" |
+| Teamtailor | `teamtailor.ts` | Swish Analytics, MINA Group, MINISO, Virtasant, and boards Common Crawl finds | RSS `pubDate` |
 | Workday | `workday.ts` | **Banks and insurers:** RBC (+ early talent), TD, BMO (+ campus), CIBC (+ campus), Manulife, Sun Life (+ campus), Desjardins, Intact, Ontario Teachers' Pension Plan. **Canadian enterprise:** Thomson Reuters, BlackBerry, Ciena, Mitel, CAE, Canadian Tire, Magna, Enbridge, TC Energy, Suncor. **Big tech with Canadian offices:** NVIDIA, Salesforce, Adobe, Autodesk, Intel, PayPal, Mastercard, Visa, Cisco, Workday | Relative text such as "Posted 3 Days Ago"; "30+ Days Ago" is dated 31 days back so it never looks new |
 | SuccessFactors | `successfactors.ts` | Scotiabank (with Tangerine), Rogers, TELUS | "Oct 15, 2026" from the search page |
 | Phenom | `phenom.ts` | Bell, OpenText | ISO `postedDate` |
@@ -126,7 +127,7 @@ a board whose API answers 404 is marked gone and rechecked after 30 days.
 - **From Common Crawl** (`discovery/common-crawl`, monthly; `discovery/common-crawl-check`, every
   30 minutes). `commonCrawlBoards` reads the newest crawl's columnar index with range requests:
   every file's footer, then only the `url` column of the row groups whose SURT range covers
-  Greenhouse, Lever, Ashby, Workday or Recruitee hosts. New boards wait as pending
+  Greenhouse, Lever, Ashby, Workday, Recruitee or Teamtailor hosts. New boards wait as pending
   probes, and the check validates 300 at a time with one request each (`checkBoard`).
 - **From Y Combinator** (`discovery/yc-boards`, 100 companies every 30 minutes, each one
   rechecked after 14 days). `discoverYcBoards` reads the yc-oss list of hiring YC companies and

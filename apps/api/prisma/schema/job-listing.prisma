@@ -170,6 +170,7 @@ enum AtsProvider {
  smartrecruiters
  successfactors
  taleo
+ teamtailor
  workable
  workday
  @@map("ats_provider")

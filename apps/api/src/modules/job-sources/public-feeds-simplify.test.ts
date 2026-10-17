@@ -140,6 +140,11 @@ it("recognizes the employer boards the ATS adapters can read", () => {
     slug: "huaweicanada",
   });
   expect(boardOf("https://support.recruitee.com/en/articles/1")).toBeNull();
+  expect(boardOf("https://minagroup.na.teamtailor.com/jobs/720173-manager")).toEqual({
+    provider: "teamtailor",
+    slug: "minagroup.na",
+  });
+  expect(boardOf("https://app.teamtailor.com/companies/1")).toBeNull();
   // EU boards, bare careers pages and odd slugs are left to other sources.
   expect(boardOf("https://job-boards.eu.greenhouse.io/acme/jobs/1")).toBeNull();
   expect(boardOf("https://careers.acme.com/openings?gh_jid=789")).toBeNull();

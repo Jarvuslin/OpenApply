@@ -20,6 +20,7 @@ const SOURCE_NAMES: Record<string, string> = {
   smartrecruiters: "SmartRecruiters",
   successfactors: "SuccessFactors",
   taleo: "Taleo",
+  teamtailor: "Teamtailor",
   workable: "Workable",
   workday: "Workday",
   linkedin: "LinkedIn",
