@@ -142,6 +142,29 @@ it("allows only the Workday job search and job detail endpoints on Workday hosts
   }
 });
 
+it("allows only the requisition search on Oracle Recruiting hosts", async () => {
+  const server = serve(() => new Response("{}"));
+  const search =
+    "/hcmRestApi/resources/latest/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder=findReqs;siteNumber=CX_1,limit=200,offset=400,sortBy=POSTING_DATES_DESC";
+  try {
+    expect(await fetchSourceJson(`https://eeho.fa.us2.oraclecloud.com${search}`)).toEqual({});
+    expect(
+      await fetchSourceJson(
+        "https://eeho.fa.us2.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitionDetails?expand=all&onlyData=true&finder=ById;Id=%22302443%22,siteNumber=CX_1",
+      ),
+    ).toEqual({});
+    for (const url of [
+      "https://eeho.fa.us2.oraclecloud.com/hcmRestApi/resources/latest/workers",
+      `https://eeho.fa.us2.oraclecloud.com${search}&q=1`,
+      `https://oraclecloud.com.evil.example${search}`,
+    ])
+      await expect(fetchSourceJson(url)).rejects.toThrow("Unsupported discovery endpoint.");
+    expect(server.calls).toHaveLength(2);
+  } finally {
+    server.restore();
+  }
+});
+
 it("refuses a Workday site its tenant's robots.txt disallows, whatever its case", async () => {
   const server = serve(() => new Response("{}"), {
     "acme.wd3.myworkdayjobs.com": "User-agent: *\nDisallow: /ACMEGLOBAL/\nDisallow: /refreshFacet/",

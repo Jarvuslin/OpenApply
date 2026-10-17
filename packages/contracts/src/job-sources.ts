@@ -5,6 +5,7 @@ export const ATS_PROVIDERS = [
   "ashby",
   "greenhouse",
   "lever",
+  "oracle",
   "phenom",
   "smartrecruiters",
   "successfactors",

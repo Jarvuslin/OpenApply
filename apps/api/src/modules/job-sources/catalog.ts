@@ -120,6 +120,44 @@ export const JOB_FEED_CATALOG: CatalogBoard[] = [
   // Bell and OpenText run Phenom career sites; the slug is host/country/locale/tenant code.
   { provider: "phenom", slug: "jobs.bell.ca/ca/en_CA/BECACA", company: "Bell" },
   { provider: "phenom", slug: "careers.opentext.com/us/en_US/OPJOPEUS", company: "OpenText" },
+  // Oracle Recruiting Cloud career sites; the slug is the tenant host and site number.
+  { provider: "oracle", slug: "eeho.fa.us2.oraclecloud.com/CX_45001", company: "Oracle" },
+  { provider: "oracle", slug: "iaziqy.fa.ocs.oraclecloud.com/UberCareers", company: "Uber" },
+  { provider: "oracle", slug: "fa-evmr-saasfaprod1.fa.ocs.oraclecloud.com/CX_1", company: "Nokia" },
+  { provider: "oracle", slug: "ebxr.fa.us2.oraclecloud.com/CX_1", company: "DTCC" },
+  { provider: "oracle", slug: "efds.fa.em5.oraclecloud.com/CX_1", company: "Ford" },
+  { provider: "oracle", slug: "hctz.fa.us2.oraclecloud.com/CX_1001", company: "onsemi" },
+  { provider: "oracle", slug: "hdjq.fa.us2.oraclecloud.com/CX_1", company: "Emerson" },
+  {
+    provider: "oracle",
+    slug: "fa-ewgu-saasfaprod1.fa.ocs.oraclecloud.com/CX_2001",
+    company: "Chubb",
+  },
+  {
+    provider: "oracle",
+    slug: "fa-esfc-saasfaprod1.fa.ocs.oraclecloud.com/CX_1",
+    company: "Federated Co-operatives",
+  },
+  { provider: "oracle", slug: "ejwl.fa.us2.oraclecloud.com/CX", company: "Marriott" },
+  { provider: "oracle", slug: "efet.fa.us2.oraclecloud.com/CX_1009", company: "Hilton" },
+  {
+    provider: "oracle",
+    slug: "fa-evax-saasfaprod1.fa.ocs.oraclecloud.com/CX_1001",
+    company: "IHG",
+  },
+  { provider: "oracle", slug: "ibnjjb.fa.ocs.oraclecloud.com/CX_1", company: "Lifepoint Health" },
+  { provider: "oracle", slug: "eswt.fa.us6.oraclecloud.com/CX_1001", company: "UC Health" },
+  {
+    provider: "oracle",
+    slug: "fa-evly-saasfaprod1.fa.ocs.oraclecloud.com/CX_1",
+    company: "TriHealth",
+  },
+  {
+    provider: "oracle",
+    slug: "fa-evxo-saasfaprod1.fa.ocs.oraclecloud.com/CX_1",
+    company: "Community Health Systems",
+  },
+  { provider: "oracle", slug: "emcm.fa.us2.oraclecloud.com/WMCareers", company: "WM" },
 ];
 
 export const PUBLIC_FEED_CATALOG: {

@@ -33,6 +33,12 @@ const ROBOTS_EXEMPT = new Set([
   "rbc.wd3.myworkdayjobs.com",
   COMMON_CRAWL,
 ]);
+const ORACLE_API: Record<string, RegExp> = {
+  "/hcmRestApi/resources/latest/recruitingCEJobRequisitions":
+    /^onlyData=true&expand=requisitionList\.secondaryLocations&finder=findReqs;siteNumber=\w{1,40},limit=\d{1,3},offset=\d{1,6},sortBy=POSTING_DATES_DESC$/,
+  "/hcmRestApi/resources/latest/recruitingCEJobRequisitionDetails":
+    /^expand=all&onlyData=true&finder=ById;Id=%22\d{1,20}%22,siteNumber=\w{1,40}$/,
+};
 const WORKDAY_API = /^\/wday\/cxs\/[a-z0-9-]+\/([\w-]+)\/(jobs$|job\/)/;
 const DAY = 86_400_000;
 const MAX_BYTES = 20_000_000;
@@ -59,6 +65,7 @@ function knownHost(host: string): boolean {
     SUCCESSFACTORS_SITES.has(host) ||
     PHENOM_SITES.has(host) ||
     host.endsWith(".myworkdayjobs.com") ||
+    host.endsWith(".oraclecloud.com") ||
     [
       "raw.githubusercontent.com",
       "yc-oss.github.io",
@@ -107,6 +114,8 @@ function supportedEndpoint(url: URL): boolean {
     return url.pathname === "/search/" || /^\/(?:[\w-]+\/)?job\/[^?#]+$/.test(url.pathname);
   if (url.hostname.endsWith(".myworkdayjobs.com"))
     return !url.search && WORKDAY_API.test(url.pathname);
+  if (url.hostname.endsWith(".oraclecloud.com"))
+    return ORACLE_API[url.pathname]?.test(url.search.slice(1)) ?? false;
   return HOSTS.has(url.hostname);
 }
 

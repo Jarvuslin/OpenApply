@@ -14,6 +14,7 @@ const RANKS: Record<string, number> = {
   smartrecruiters: SOURCE_RANK.employerAts,
   workable: SOURCE_RANK.employerAts,
   workday: SOURCE_RANK.employerAts,
+  oracle: SOURCE_RANK.employerAts,
   successfactors: SOURCE_RANK.careerSite,
   phenom: SOURCE_RANK.careerSite,
   "google-careers": SOURCE_RANK.careerSite,
