@@ -63,6 +63,26 @@ it("does not drop roles that only share a word with non-tech work", () => {
   expect(classifyJob("Line Cook")).toBe("non_tech");
 });
 
+it("drops store and restaurant roles but not managers with a real function", () => {
+  for (const title of [
+    "Assistant Manager(03629) - Orchard Park, NY",
+    "General Manager in Training(08008)",
+    "Delivery Expert(06460)",
+    "Domino's Pizza Maker/CSR",
+    "Shift Lead - Central Harlem",
+    "Wendy's Team Member",
+  ])
+    expect(classifyJob(title)).toBe("non_tech");
+  for (const title of [
+    "Associate Project Manager",
+    "UAT Senior Manager",
+    "General Manager, Cloud Platform",
+    "GTM Operations Process Architect",
+  ])
+    expect(keepsJob(title)).toBe(true);
+  expect(classifyJob("Senior Process Engineer")).toBe("non_tech");
+});
+
 it("decides a bare engineer title from its description, keeping it when unsure", () => {
   expect(
     classifyJob("Engineer II", "Build APIs in Python and deploy them on AWS with Docker."),

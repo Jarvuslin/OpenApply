@@ -1,7 +1,7 @@
 import type { SourceJob } from "./types";
 
 /** Bump when the rules change, so jobs dropped under older rules are classified again. */
-export const CLASSIFIER_VERSION = 1;
+export const CLASSIFIER_VERSION = 2;
 
 export type TechVerdict = "tech" | "non_tech" | "unsure";
 
@@ -106,7 +106,7 @@ const IT_TITLE = /\bI\.?T\.?\b/;
 const ENGINEERING = /\bengineer(?:ing)?\b|\barchitect\b/i;
 // Engineering that is physical, not software, data, systems or IT.
 const PHYSICAL_ENGINEERING =
-  /\b(?:mechanical|civil|structural|electrical|manufacturing|process|chemical|industrial|field service|maintenance|facilit(?:y|ies)|hvac|environmental|geotechnical|mining|petroleum|reservoir|drilling|nuclear|biomedical|packaging|automotive|plant|production|construction|building|piping|water|wastewater|transportation|traffic|highway|metallurg\w*|materials|welding|power|energy|utilit(?:y|ies)|substation|stress|thermal|propulsion|aerospace|avionics hardware|tooling|cost|estimating|project engineer|landscape|interior|naval|marine|rail|geolog\w*|survey\w*)\b/i;
+  /\b(?:mechanical|civil|structural|electrical|manufacturing|process engineer\w*|chemical|industrial|field service|maintenance|facilit(?:y|ies)|hvac|environmental|geotechnical|mining|petroleum|reservoir|drilling|nuclear|biomedical|packaging|automotive|plant|production|construction|building|piping|water|wastewater|transportation|traffic|highway|metallurg\w*|materials|welding|power|energy|utilit(?:y|ies)|substation|stress|thermal|propulsion|aerospace|avionics hardware|tooling|cost|estimating|project engineer|landscape|interior|naval|marine|rail|geolog\w*|survey\w*)\b/i;
 const NON_TECH_TITLE = new RegExp(
   [
     "nurse",
@@ -281,9 +281,14 @@ export function classifyJob(title: string, description = ""): TechVerdict {
   if (TECH_TITLE.test(title) || IT_TITLE.test(title)) return "tech";
   // Product marketing sits between product and marketing, so it is kept.
   if (/product marketing/i.test(title)) return "unsure";
-  if (NON_TECH_TITLE.test(title)) return "non_tech";
+  if (NON_TECH_TITLE.test(title) || STORE_ROLE.test(title)) return "non_tech";
   return "unsure";
 }
+
+// Store and restaurant roles. Assistant and General Manager count only when they are the whole
+// title, so "Associate Project Manager" or "General Manager, Cloud" never match.
+const STORE_ROLE =
+  /\b(?:pizza|delivery expert|shift (?:lead|leader|runner|manager|supervisor)|csr|crew member|team member|restaurant|food services?|food demo|line cook|prep cook|busser|barista|store (?:floor|lead|manager|associate))\b|^(?:[\w'’]+\s)?(?:level \d+ )?(?:assistant |general |assistant general )manager(?: in training)?(?:\s*[(\d-]|$)/i;
 
 /** Whether a job is kept: everything except clear non-tech. */
 export function keepsJob(title: string, description = ""): boolean {
