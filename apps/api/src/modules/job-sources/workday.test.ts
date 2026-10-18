@@ -15,10 +15,12 @@ it("reads a board slug as tenant, instance, and site", () => {
 });
 
 it("dates relative posting labels, keeping 30+ days old", () => {
-  expect(workdayPostedAt("Posted Today", NOW)?.getTime()).toBe(NOW);
-  expect(workdayPostedAt("Posted Yesterday", NOW)?.getTime()).toBe(NOW - DAY);
-  expect(workdayPostedAt("Posted 3 Days Ago", NOW)?.getTime()).toBe(NOW - 3 * DAY);
-  expect(workdayPostedAt("Posted 30+ Days Ago", NOW)?.getTime()).toBe(NOW - 31 * DAY);
+  // A day, never the time of the fetch.
+  const today = Date.parse("2026-10-15T00:00:00Z");
+  expect(workdayPostedAt("Posted Today", NOW)?.getTime()).toBe(today);
+  expect(workdayPostedAt("Posted Yesterday", NOW)?.getTime()).toBe(today - DAY);
+  expect(workdayPostedAt("Posted 3 Days Ago", NOW)?.getTime()).toBe(today - 3 * DAY);
+  expect(workdayPostedAt("Posted 30+ Days Ago", NOW)?.getTime()).toBe(today - 31 * DAY);
   expect(workdayPostedAt(null, NOW)).toBeNull();
 });
 

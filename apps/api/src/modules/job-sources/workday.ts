@@ -57,14 +57,19 @@ export function workdayBoard(slug: string) {
   return { tenant, origin: `https://${tenant}.${instance}.myworkdayjobs.com`, site };
 }
 
-/** Workday only says "Posted 3 Days Ago"; "30+ Days Ago" is dated just past a month so it never looks new. */
+/**
+ * Workday only says "Posted 3 Days Ago", so the date is that day at UTC midnight: the time of the
+ * fetch would pass for a posting time and move every refresh. "30+ Days Ago" is dated just past a
+ * month so it never looks new.
+ */
 export function workdayPostedAt(text: string | null | undefined, now = Date.now()): Date | null {
   const posted = text?.toLowerCase() ?? "";
-  if (posted.includes("today")) return new Date(now);
-  if (posted.includes("yesterday")) return new Date(now - DAY);
+  const today = Math.floor(now / DAY) * DAY;
+  if (posted.includes("today")) return new Date(today);
+  if (posted.includes("yesterday")) return new Date(today - DAY);
   const days = /(\d+)\+?\s*days? ago/.exec(posted);
   if (!days) return null;
-  return new Date(now - (Number(days[1]) + (posted.includes("+") ? 1 : 0)) * DAY);
+  return new Date(today - (Number(days[1]) + (posted.includes("+") ? 1 : 0)) * DAY);
 }
 
 /**
