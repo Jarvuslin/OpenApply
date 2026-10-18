@@ -17,7 +17,8 @@ const job = z.object({
   id: z.number(),
   title: z.string(),
   absolute_url: z.url(),
-  location: z.object({ name: z.string() }),
+  // Some boards leave a job's location blank, as `{ "name": null }`.
+  location: z.object({ name: z.string().nullish() }).nullish(),
   content: z.string().default(""),
   first_published: z.string().nullish(),
   requisition_id: z.string().nullish(),
@@ -32,7 +33,7 @@ function sourceJob(j: z.infer<typeof job>, company: string): SourceJob {
   return {
     title: j.title,
     company,
-    location: j.location.name,
+    location: j.location?.name ?? "",
     url: j.absolute_url,
     attributionUrl: j.absolute_url,
     externalId: String(j.id),

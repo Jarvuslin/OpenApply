@@ -29,6 +29,23 @@ it("dates a posting by when it was first published, never by its last edit", asy
   expect(jobs[1]?.postedAt).toBeNull();
 });
 
+it("keeps a job whose board left its location blank", async () => {
+  const { jobs } = await greenhouse(
+    async () => ({
+      jobs: [
+        {
+          id: 3,
+          title: "Engineer",
+          absolute_url: "https://boards.greenhouse.io/example/jobs/3",
+          location: { name: null },
+        },
+      ],
+    }),
+    "example",
+  );
+  expect(jobs[0]?.location).toBe("");
+});
+
 it("reads an oversized board as a plain list and describes new jobs one at a time", async () => {
   const urls: string[] = [];
   const listed = (id: number) => ({
