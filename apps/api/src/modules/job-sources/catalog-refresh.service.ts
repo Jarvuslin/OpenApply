@@ -9,6 +9,7 @@ import {
   PUBLIC_FEED_CATALOG,
 } from "./catalog";
 import { boardCompanyName, checkBoard, commonCrawlBoards, type RangeReader } from "./common-crawl";
+import { FAILURE_LIMIT, refreshAlert } from "./feed-health";
 import { fetchSourceJson, fetchSourceRange, fetchSourceText, SourceResponseError } from "./http";
 import { JobSourcesService } from "./job-sources.service";
 import { canadianBoards } from "./public-feeds-canada";
@@ -319,6 +320,10 @@ ${job.description}`,
           counts.skipped++;
           continue;
         }
+        const before = await this.prisma.jobFeedRefresh.findUnique({
+          where: { key: row.key },
+          select: { fetched: true, failures: true, lastSuccessAt: true },
+        });
         let interval = FEED_REFRESH_MS;
         if (board) interval = catalogBoard ? BOARD_REFRESH_MS : DISCOVERED_REFRESH_MS;
         if (catalogBoard && SITE_PROVIDERS.includes(catalogBoard.provider))
@@ -351,9 +356,21 @@ ${job.description}`,
               BOARD_MAX_JOBS,
             );
           else result = await this.sources.publicFeed(feed!.id);
+          // Discovery runs count boards checked, which swing on purpose; only job counts alert.
+          const previous = before?.lastSuccessAt ? before.fetched : null;
+          const alert = discovery ? null : refreshAlert(previous, result.fetched);
+          if (alert)
+            logger.warn(
+              { source: row.key, alert, previous, fetched: result.fetched },
+              "Feed health alert",
+            );
           await this.prisma.jobFeedRefresh.updateMany({
             where: { key: row.key, leaseToken },
             data: {
+              failures: 0,
+              previousFetched: previous,
+              alert,
+              alertedAt: alert ? new Date() : null,
               leaseToken: null,
               leaseUntil: null,
               lastSuccessAt: new Date(),
@@ -385,9 +402,17 @@ ${job.description}`,
               data: { goneAt: new Date() },
             });
           const retryAfter = error instanceof SourceResponseError ? error.retryAfterMs : 0;
+          const failures = (before?.failures ?? 0) + 1;
+          if (failures === FAILURE_LIMIT)
+            logger.warn({ source: row.key, alert: "failing", failures }, "Feed health alert");
           await this.prisma.jobFeedRefresh.updateMany({
             where: { key: row.key, leaseToken },
             data: {
+              failures,
+              ...(failures >= FAILURE_LIMIT && {
+                alert: "failing" as const,
+                ...(failures === FAILURE_LIMIT && { alertedAt: new Date() }),
+              }),
               leaseToken: null,
               leaseUntil: null,
               // A board that fails waits a full cycle so a dead slug does not retry every hour.

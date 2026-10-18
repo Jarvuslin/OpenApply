@@ -8,9 +8,23 @@ model JobFeedRefresh {
   fetched Int @default(0)
   imported Int @default(0)
   truncated Boolean @default(false)
+  /// Failed refreshes in a row; a success resets it.
+  failures Int @default(0)
+  /// The job count of the successful refresh before the last one, to spot a sudden drop.
+  previousFetched Int? @map("previous_fetched")
+  alert FeedAlert?
+  alertedAt DateTime? @map("alerted_at")
 
   @@index([nextRefreshAt])
   @@map("job_feed_refreshes")
+}
+
+/// Why a feed needs a look: 3 failures in a row, more than half its jobs gone, or none left.
+enum FeedAlert {
+ failing
+ dropped
+ empty
+ @@map("feed_alert")
 }
 
 model JobSourceSearch {

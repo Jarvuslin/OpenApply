@@ -11,6 +11,9 @@ interface Row {
   leaseUntil: Date | null;
   lastSuccessAt?: Date;
   lastError?: string | null;
+  failures?: number;
+  fetched?: number;
+  alert?: string | null;
 }
 
 interface Discovered {
@@ -73,6 +76,8 @@ function fixture(
               row.nextRefreshAt <= new Date() && (!row.leaseUntil || row.leaseUntil <= new Date()),
           )
           .map(({ key }) => ({ key })),
+      findUnique: async ({ where }: { where: { key: string } }) =>
+        rows.find((row) => row.key === where.key) ?? null,
       updateMany: async ({
         where,
         data,
@@ -137,6 +142,19 @@ it("continues other feeds after a failure and schedules a bounded retry", async 
   const successful = state.rows.find((row) => row.key === "ashby/notion")!;
   expect(successful.lastSuccessAt).toBeInstanceOf(Date);
   expect(successful.nextRefreshAt.getTime()).toBeGreaterThanOrEqual(now + 10 * 60 * 1000);
+});
+
+it("alerts on the third failed refresh in a row and clears it on success", async () => {
+  const state = fixture(true);
+  const failed = () => state.rows.find((row) => row.key === "ashby/openai")!;
+  for (const attempt of [1, 2, 3]) {
+    failed().nextRefreshAt = new Date(0);
+    await state.service.refreshDue();
+    expect(failed().failures).toBe(attempt);
+    expect(failed().alert).toBe(attempt < 3 ? undefined : "failing");
+  }
+  const notion = state.rows.find((row) => row.key === "ashby/notion")!;
+  expect(notion).toMatchObject({ failures: 0, alert: null, fetched: 12 });
 });
 
 it("dispatches public feeds separately and keeps them on a half-hour cadence", async () => {

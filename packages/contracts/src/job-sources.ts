@@ -17,6 +17,7 @@ export const ATS_PROVIDERS = [
   "workday",
 ] as const;
 export const atsProviderSchema = z.enum(ATS_PROVIDERS);
+export const FEED_ALERTS = ["failing", "dropped", "empty"] as const;
 export const DISCOVERY_PROVIDERS = ["apify", "serpapi"] as const;
 export const discoveryProviderSchema = z.enum(DISCOVERY_PROVIDERS);
 const inputField = z

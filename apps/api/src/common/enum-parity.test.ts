@@ -40,7 +40,7 @@ import {
   JOB_SALARY_PERIODS,
   JOB_WORK_MODES,
 } from "@openapply/contracts/job-listing";
-import { ATS_PROVIDERS, DISCOVERY_PROVIDERS } from "@openapply/contracts/job-sources";
+import { ATS_PROVIDERS, DISCOVERY_PROVIDERS, FEED_ALERTS } from "@openapply/contracts/job-sources";
 import {
   LEGACY_EMPLOYER_ACCOUNT_MODES,
   LEGACY_EMPLOYER_ACCOUNT_REASONS,
@@ -136,6 +136,7 @@ const PAIRS: [string, readonly string[], Record<string, string>][] = [
   ["AgentProvider", AGENT_PROVIDERS, prismaEnums.AgentProvider],
   ["AgentEventKind", AGENT_EVENT_KINDS, prismaEnums.AgentEventKind],
   ["AtsProvider", ATS_PROVIDERS, prismaEnums.AtsProvider],
+  ["FeedAlert", FEED_ALERTS, prismaEnums.FeedAlert],
   ["DiscoveryProvider", DISCOVERY_PROVIDERS, prismaEnums.DiscoveryProvider],
   ["LinkedinDiscoveryRunStatus", LINKEDIN_RUN_STATUSES, prismaEnums.LinkedinDiscoveryRunStatus],
   ["JobLevel", JOB_LEVELS, prismaEnums.JobLevel],
