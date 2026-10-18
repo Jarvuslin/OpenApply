@@ -142,6 +142,16 @@ const sources: Source[] = [
   ...(await sql`select id, listing_id as "listingId", url, apply_url as "applyUrl", board, posted_at as "postedAt", board_key as "boardKey", external_id as "externalId", requisition_id as "requisitionId", rank from job_listing_sources`),
 ] as Source[];
 let identified = 0;
+// An id another row already holds stays there: the unique (board, id) pair can't be given twice.
+const taken = new Set(
+  sources.filter((s) => s.boardKey && s.externalId).map((s) => `${s.boardKey}|${s.externalId}`),
+);
+const claim = (source: Source, identity: { boardKey: string; externalId: string }) => {
+  const key = `${identity.boardKey}|${identity.externalId}`;
+  if (taken.has(key)) return;
+  taken.add(key);
+  Object.assign(source, identity);
+};
 for (const source of sources) {
   source.rank = sourceRank(source.board);
   const host = URL.parse(source.url)?.hostname ?? "";
@@ -150,12 +160,12 @@ for (const source of sources) {
   const company = byAlias.get(normalizeCompanyName(listing.company));
   const greenhouse = greenhouseJobId(source.url);
   const ghBoards = company ? (greenhouseBoards.get(company) ?? []) : [];
-  if (!source.boardKey && traced) Object.assign(source, traced);
+  if (!source.boardKey && traced) claim(source, traced);
   else if (!source.boardKey && greenhouse && ghBoards.length === 1)
-    Object.assign(source, { boardKey: ghBoards[0], externalId: greenhouse });
+    claim(source, { boardKey: ghBoards[0]!, externalId: greenhouse });
   else if (!source.boardKey && sites.has(host)) {
     const id = /\/(?:job\/)?(\d+)\/?$/.exec(URL.parse(source.url)?.pathname ?? "")?.[1];
-    if (id) Object.assign(source, { boardKey: sites.get(host), externalId: id });
+    if (id) claim(source, { boardKey: sites.get(host)!, externalId: id });
   }
   // Workday ids end in the requisition: "..._R-0000183912-1".
   const requisition = /_((?:JR|REQ|R)[-_]?\d{4,12})(?:-\d+)?$/.exec(source.externalId ?? "")?.[1];
