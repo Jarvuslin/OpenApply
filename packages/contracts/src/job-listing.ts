@@ -1,7 +1,7 @@
 import { z } from "zod/v4";
 import { csvArray, paginationQuerySchema } from "./pagination";
 
-export const JOB_LISTING_STATUSES = ["published", "hidden"] as const;
+export const JOB_LISTING_STATUSES = ["published", "hidden", "expired"] as const;
 export const jobListingStatusSchema = z.enum(JOB_LISTING_STATUSES);
 export const JOB_WORK_MODES = ["remote", "hybrid", "onsite"] as const;
 export const JOB_EMPLOYMENT_TYPES = [

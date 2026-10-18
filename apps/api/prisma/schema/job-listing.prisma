@@ -1,6 +1,8 @@
 enum JobListingStatus {
   published
   hidden
+  /// Every public source stopped listing it. Saved and applied jobs stay reachable.
+  expired
 
   @@map("job_listing_status")
 }
@@ -87,6 +89,7 @@ model JobListing {
   status      JobListingStatus @default(published)
   firstSeenAt DateTime         @default(now()) @map("first_seen_at")
   lastSeenAt  DateTime         @default(now()) @map("last_seen_at")
+  expiredAt   DateTime?        @map("expired_at")
   createdAt   DateTime         @default(now()) @map("created_at")
   updatedAt   DateTime         @updatedAt @map("updated_at")
 
@@ -142,6 +145,10 @@ model JobListingSource {
   resolutionConfidence Float? @map("resolution_confidence")
   postedAt DateTime? @map("posted_at")
   lastSeenAt DateTime @default(now()) @map("last_seen_at")
+  /// Complete refreshes of its board or feed in a row that didn't list it; a sighting resets it.
+  missedRefreshes Int @default(0) @map("missed_refreshes")
+  /// Set after 3 missed refreshes; cleared if the posting comes back.
+  goneAt DateTime? @map("gone_at")
   /// "provider/slug" in lowercase, for jobs read from an employer board or traced to one.
   boardKey String? @map("board_key")
   /// The board's own id for the posting. Two ids on one board are never the same listing.

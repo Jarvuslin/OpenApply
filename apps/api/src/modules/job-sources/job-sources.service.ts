@@ -15,6 +15,7 @@ import { publishCampaignStatus } from "@/modules/campaign/campaign.utils";
 import { CompanyResolver } from "@/modules/job-listing/companies";
 import { canonicalizeUrl } from "@/modules/job-listing/dedupe";
 import { JobListingPublisher } from "@/modules/job-listing/job-listing.publisher";
+import { sweepMissing } from "@/modules/job-listing/listing-expiry";
 import { postingIdentity } from "@/modules/job-listing/posting-identity";
 import { listedExperience } from "@/modules/mvp/experience";
 import { apify } from "./apify";
@@ -104,6 +105,7 @@ export class JobSourcesService {
       !board.complete,
       maxJobs,
       `${provider}/${slug}`,
+      !board.narrowed,
     );
   }
   /** The job URLs whose listing already has a description, so their detail pages are skipped. */
@@ -247,7 +249,10 @@ export class JobSourcesService {
     maxJobs = 500,
     /** Set for a board or feed refreshed again later, so its dropped job ids are remembered. */
     boardKey?: string,
+    /** Whether this fetch listed every job the source has, so a missing one counts as missed. */
+    listsEverything = true,
   ) {
+    const since = new Date();
     const fetched = jobs.length;
     let dropped = 0;
     if (env.JOB_TECH_FILTER_ENABLED) {
@@ -308,6 +313,16 @@ export class JobSourcesService {
     }
     let saved = 0;
     let truncated = limited || jobs.length > maxJobs;
+    // Only a complete shared refresh says what a board or feed no longer lists.
+    if (env.JOB_EXPIRY_ENABLED && boardKey && !list && !truncated && listsEverything) {
+      const scope = boardKey.startsWith("public/")
+        ? { board, refreshKey: boardKey }
+        : { boardKey, refreshKey: boardKey };
+      logger.info(
+        { source, ...(await sweepMissing(this.prisma, scope, since)) },
+        "Missing jobs swept",
+      );
+    }
     if (list) {
       const campaign = await this.prisma.$transaction(
         async (tx) => {

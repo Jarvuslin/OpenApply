@@ -32,6 +32,8 @@ export const EnvSchema = z
     JOB_FEED_REFRESH_ENABLED: z.stringbool().default(true),
     /** Store only tech-related jobs from boards and feeds. */
     JOB_TECH_FILTER_ENABLED: z.stringbool().default(true),
+    // Off until the expiry dry run is approved: missing postings are only counted, never expired.
+    JOB_EXPIRY_ENABLED: z.stringbool().default(false),
     CAPTCHA_SOLVER_ENABLED: z.stringbool().default(false),
     PUBLIC_SITE_ENABLED: z.stringbool().default(false),
     MVP_LOCAL_RUNNER: z.stringbool().default(false),

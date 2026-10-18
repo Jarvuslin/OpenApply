@@ -1,7 +1,7 @@
 import { singleton } from "tsyringe";
 import { isPrismaError, PRISMA_ERRORS } from "@/common/errors";
 import { logger } from "@/common/logger";
-import { PrismaClient } from "@/generated/prisma/client";
+import { type JobListingStatus, PrismaClient } from "@/generated/prisma/client";
 import { CompanyLogoService } from "./company-logo.service";
 import { canonicalizeUrl } from "./dedupe";
 import { linkListingApplications } from "./listing-applications";
@@ -20,6 +20,7 @@ const MAX_QUEUED = 500;
 
 const MATCH_SELECT = {
   id: true,
+  status: true,
   isPublic: true,
   postedAt: true,
   sourceRank: true,
@@ -30,6 +31,7 @@ const MATCH_SELECT = {
 
 interface MatchedListing {
   id: string;
+  status: JobListingStatus;
   isPublic: boolean;
   postedAt: Date | null;
   sourceRank: number;
@@ -154,7 +156,7 @@ export class JobListingPublisher {
         id: true,
         listingId: true,
         rank: true,
-        listing: { select: { isPublic: true, postedAt: true, sourceRank: true } },
+        listing: { select: { status: true, isPublic: true, postedAt: true, sourceRank: true } },
       } as const;
       // The board id wins over the URL: one posting reached by two URLs is the row holding its id,
       // and giving that id to the URL's row would collide with it.
@@ -174,6 +176,8 @@ export class JobListingPublisher {
           where: { id: seen.id },
           data: {
             lastSeenAt: now,
+            missedRefreshes: 0,
+            goneAt: null,
             applyUrl,
             resolutionConfidence,
             postedAt,
@@ -187,6 +191,7 @@ export class JobListingPublisher {
           where: { id: seen.listingId },
           data: {
             lastSeenAt: now,
+            ...revived(seen.listing.status),
             ...((!userId || !seen.listing.isPublic) &&
               enrich(draft, seen.listing.postedAt, rank >= seen.listing.sourceRank)),
             ...(!userId && { isPublic: true }),
@@ -207,6 +212,7 @@ export class JobListingPublisher {
           where: { id: existing.id },
           data: {
             lastSeenAt: now,
+            ...revived(existing.status),
             ...((!userId || !existing.isPublic) &&
               enrich(draft, existing.postedAt, rank >= existing.sourceRank)),
             ...(rank > existing.sourceRank && { sourceRank: rank }),
@@ -296,6 +302,11 @@ export class JobListingPublisher {
       skipDuplicates: true,
     });
   }
+}
+
+/** A posting listed again after it expired is published again. */
+function revived(status: JobListingStatus) {
+  return status === "expired" ? { status: "published" as const, expiredAt: null } : {};
 }
 
 /**

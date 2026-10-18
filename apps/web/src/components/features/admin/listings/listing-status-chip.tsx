@@ -7,6 +7,7 @@ import { ColorChip } from "@/components/ui/display";
 const STATUS_COLOR: Record<JobListingStatus, "primary" | "default"> = {
   published: "primary",
   hidden: "default",
+  expired: "default",
 };
 
 interface ListingStatusChipProps {

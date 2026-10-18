@@ -169,6 +169,9 @@ function userApplications(userId: string) {
   };
 }
 
+// An expired job a user saved or applied to keeps opening; it only leaves Discover, pilots and the queue.
+const KEPT_FOR_USER: JobListingStatus[] = ["published", "expired"];
+
 @singleton()
 export class JobListingService {
   /** The in-flight promise, not the resolved value: N concurrent misses must share one scan. */
@@ -214,10 +217,10 @@ export class JobListingService {
     const indexedBefore = query.indexedBefore ? new Date(query.indexedBefore) : new Date();
     const where = {
       userId,
-      listing: await this.where(
-        { ...query, indexedBefore: indexedBefore.toISOString(), status: "published" },
-        userId,
-      ),
+      listing: {
+        ...(await this.where({ ...query, indexedBefore: indexedBefore.toISOString() }, userId)),
+        status: { in: KEPT_FOR_USER },
+      },
     };
     const [rows, total] = await Promise.all([
       this.prisma.savedJobListing.findMany({
@@ -268,14 +271,14 @@ export class JobListingService {
   async savedCount(userId: string) {
     return {
       count: await this.prisma.savedJobListing.count({
-        where: { userId, listing: { status: "published", ...listingVisibility(userId) } },
+        where: { userId, listing: { status: { in: KEPT_FOR_USER }, ...listingVisibility(userId) } },
       }),
     };
   }
 
   async savedSlugs(userId: string, query: PaginationQuery) {
     const where = {
-      status: "published" as const,
+      status: { in: KEPT_FOR_USER },
       savedBy: { some: { userId } },
       applications: { none: { userId } },
       ...listingVisibility(userId),
@@ -315,7 +318,7 @@ export class JobListingService {
 
   async bySlugForUser(userId: string, slug: string) {
     const row = await this.prisma.jobListing.findFirst({
-      where: { slug, status: "published", ...listingVisibility(userId) },
+      where: { slug, status: { in: KEPT_FOR_USER }, ...listingVisibility(userId) },
       select: userDetailSelect(userId),
     });
     if (!row) throw notFound("Job listing not found");

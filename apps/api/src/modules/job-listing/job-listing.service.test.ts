@@ -148,7 +148,8 @@ describe("saved job ownership", () => {
       where: {
         userId: "alice",
         listing: {
-          status: "published",
+          // A saved job that expired stays on the saved page.
+          status: { in: ["published", "expired"] },
           AND: expect.arrayContaining([
             { OR: [{ title: { contains: "Engineer", mode: "insensitive" } }] },
           ]),
@@ -160,7 +161,7 @@ describe("saved job ownership", () => {
     await service.savedSlugs("alice", page);
     expect(queries.find((query) => query.operation === "findMany")?.args).toMatchObject({
       where: {
-        status: "published",
+        status: { in: ["published", "expired"] },
         savedBy: { some: { userId: "alice" } },
         applications: { none: { userId: "alice" } },
       },

@@ -153,7 +153,7 @@ export async function workday(
       }),
     };
   });
-  return boardResult(jobs, total, seen, limited);
+  return { ...boardResult(jobs, total, seen, limited), narrowed: Object.keys(families).length > 0 };
 }
 
 /** One request: how many jobs a Workday board lists, so a found board is checked before it is kept. */

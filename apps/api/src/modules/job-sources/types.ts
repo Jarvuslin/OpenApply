@@ -31,6 +31,8 @@ export interface BoardResult {
   jobs: SourceJob[];
   reported: number | null;
   complete: boolean;
+  /** Fetched only some job families, so a job missing from it may still be on the board. */
+  narrowed?: boolean;
 }
 
 export interface BoardOptions {

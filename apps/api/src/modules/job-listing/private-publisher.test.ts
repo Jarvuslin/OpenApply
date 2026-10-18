@@ -178,6 +178,20 @@ describe("personal discovery publication", () => {
   });
 });
 
+describe("a posting that comes back", () => {
+  it("publishes an expired listing again and clears its source's missed count", async () => {
+    const { publisher, listings, sources } = database();
+    await publisher.publish({ ...job(employer), board: "ashby", applyUrl: employer });
+    Object.assign(listings.get("listing-1")!, { status: "expired", expiredAt: new Date() });
+    Object.assign(sources.get(employer)!, { missedRefreshes: 3, goneAt: new Date() });
+    expect(await publisher.publish({ ...job(employer), board: "ashby", applyUrl: employer })).toBe(
+      "refreshed",
+    );
+    expect(listings.get("listing-1")).toMatchObject({ status: "published", expiredAt: null });
+    expect(sources.get(employer)).toMatchObject({ missedRefreshes: 0, goneAt: null });
+  });
+});
+
 describe("one posting reached by two urls", () => {
   it("refreshes the source holding the board id instead of giving that id to the url's source", async () => {
     const { publisher, sources, listings } = database();
