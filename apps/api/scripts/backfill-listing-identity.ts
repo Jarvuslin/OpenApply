@@ -128,7 +128,7 @@ for (const board of await sql`select key, company from discovered_job_boards`) {
 //    one Greenhouse board; career sites map by host.
 const sites = new Map<string, string>();
 for (const board of JOB_FEED_CATALOG)
-  if (board.provider === "successfactors" || board.provider === "phenom")
+  if (["successfactors", "phenom", "jibe"].includes(board.provider))
     sites.set(board.slug.split("/")[0]!, `${board.provider}/${board.slug}`.toLowerCase());
 const greenhouseBoards = new Map<string, string[]>();
 for (const [key, company] of boards)

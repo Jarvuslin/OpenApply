@@ -120,6 +120,12 @@ export const JOB_FEED_CATALOG: CatalogBoard[] = [
   // Bell and OpenText run Phenom career sites; the slug is host/country/locale/tenant code.
   { provider: "phenom", slug: "jobs.bell.ca/ca/en_CA/BECACA", company: "Bell" },
   { provider: "phenom", slug: "careers.opentext.com/us/en_US/OPJOPEUS", company: "OpenText" },
+  // Jibe career sites; the slug is the host, which http.ts must also list.
+  { provider: "jibe", slug: "careers.amd.com", company: "AMD" },
+  { provider: "jibe", slug: "jobs.keysight.com", company: "Keysight" },
+  { provider: "jibe", slug: "careers.garmin.com", company: "Garmin" },
+  { provider: "jibe", slug: "careers.rivian.com", company: "Rivian" },
+  { provider: "jibe", slug: "careers.medpace.com", company: "Medpace" },
   // Oracle Recruiting Cloud career sites; the slug is the tenant host and site number.
   { provider: "oracle", slug: "eeho.fa.us2.oraclecloud.com/CX_45001", company: "Oracle" },
   { provider: "oracle", slug: "iaziqy.fa.ocs.oraclecloud.com/UberCareers", company: "Uber" },

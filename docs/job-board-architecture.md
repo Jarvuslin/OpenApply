@@ -57,8 +57,8 @@ Workday board. The exceptions:
 
 ### Employer boards (catalog)
 
-These live in `JOB_FEED_CATALOG` in `job-sources/catalog.ts`: 151 boards. Small
-JSON boards refresh every 10 minutes. Workday, SuccessFactors, Phenom, Oracle, Taleo and iCIMS boards refresh every
+These live in `JOB_FEED_CATALOG` in `job-sources/catalog.ts`: 156 boards. Small
+JSON boards refresh every 10 minutes. Workday, SuccessFactors, Phenom, Jibe, Oracle, Taleo and iCIMS boards refresh every
 three hours, because one board can take up to 100 requests.
 
 | System | Adapter | Employers | Posting date |
@@ -73,6 +73,7 @@ three hours, because one board can take up to 100 requests.
 | Workday | `workday.ts` | **Banks and insurers:** RBC (+ early talent), TD, BMO (+ campus), CIBC (+ campus), Manulife, Sun Life (+ campus), Desjardins, Intact, Ontario Teachers' Pension Plan. **Canadian enterprise:** Thomson Reuters, BlackBerry, Ciena, Mitel, CAE, Canadian Tire, Magna, Enbridge, TC Energy, Suncor. **Big tech with Canadian offices:** NVIDIA, Salesforce, Adobe, Autodesk, Intel, PayPal, Mastercard, Visa, Cisco, Workday | Relative text such as "Posted 3 Days Ago"; "30+ Days Ago" is dated 31 days back so it never looks new |
 | SuccessFactors | `successfactors.ts` | Scotiabank (with Tangerine), Rogers, TELUS | "Oct 15, 2026" from the search page |
 | Phenom | `phenom.ts` | Bell, OpenText | ISO `postedDate` |
+| Jibe | `jibe.ts` | AMD, Keysight, Garmin, Rivian, Medpace | `posted_date`, "2026-10-21T00:44:00+0000" |
 | Oracle Recruiting | `oracle.ts` | **Tech and enterprise:** Oracle, Uber, Nokia, DTCC, Ford, onsemi, Emerson, Chubb. **Hotels:** Marriott, Hilton, IHG. **Hospitals:** Lifepoint Health, UC Health, TriHealth, Community Health Systems. **Retail and services:** Federated Co-operatives, WM | `PostedDate` from the list; the exact `ExternalPostedStartDate` time once the detail is read |
 | Taleo | `taleo.ts` | HDR, Textron, Valero, Bayshore HealthCare, Humber College, University of Alabama at Birmingham, University of Pittsburgh, West Virginia University, Commonwealth of Massachusetts | The section's own date column, "Oct 16, 2026" or "10/16/26"; Bayshore shows none, so its jobs have no date |
 | iCIMS | `icims.ts` | **Tech:** Peraton, Steampunk, SAS, HERE, Rambus, Applied Systems, HealthEdge, Cotiviti, RealPage, Riverside Research, Joby Aviation. **Finance:** Stifel, Western & Southern, Wipfli. **Other:** Snap-on, The Container Store, CAPREIT. **Hospitals:** Vancouver Coastal Health, Covenant Health, Kettering Health, Cooper University Health Care | The list's posted time where the portal shows it, else the job page's `datePosted`; portals that hide it (Joby, Western & Southern, Vancouver Coastal Health) have none |
@@ -89,6 +90,10 @@ How the career-site adapters read a board:
   The adapter POSTs the site's own `/widgets` search with `ddoKey: refineSearch`, asking for 500
   jobs at a time. Results come in no stable order, so small pages would repeat and skip jobs.
   Every city a job lists is kept.
+- **Jibe.** Slug is the career site's host, for example `careers.amd.com`. The adapter reads the
+  site's own `/api/jobs` search 100 jobs a page until an empty page or the reported total. These
+  sites ask for `Crawl-delay: 5`, so a 1,300-job board takes about a minute. JHU APL's Jibe site
+  is left out because its robots.txt disallows it.
 - **Oracle Recruiting.** Slug `host/site`, for example `eeho.fa.us2.oraclecloud.com/CX_45001`.
   The adapter GETs the public `recruitingCEJobRequisitions` finder newest first, 200 jobs at a
   time, the most it returns. A full page sometimes comes back a row short, so only an empty page
@@ -109,8 +114,8 @@ How the career-site adapters read a board:
   Weyerhaeuser are in that group. UnitedHealth, Cognizant and Lockton left Taleo for their own
   sites.
 
-Each Workday, SuccessFactors and Phenom host is named in `http.ts`. Adding an employer on one of
-these systems means adding it to the catalog and, for SuccessFactors and Phenom, to that file's
+Each Workday, SuccessFactors, Phenom and Jibe host is named in `http.ts`. Adding an employer on one of
+these systems means adding it to the catalog and, for SuccessFactors, Phenom and Jibe, to that file's
 allowlist.
 
 ### Discovered boards
@@ -358,8 +363,8 @@ index. A repeated search within a minute returns the cached result, and each sea
 
 ## Adding a source
 
-1. **New employer on an existing system.** Add a row to `JOB_FEED_CATALOG`. For SuccessFactors
-   or Phenom, also add its host to `http.ts`. Then check it live; a bad slug fails on the first
+1. **New employer on an existing system.** Add a row to `JOB_FEED_CATALOG`. For SuccessFactors,
+   Phenom or Jibe, also add its host to `http.ts`. Then check it live; a bad slug fails on the first
    refresh and shows in `job_feed_refreshes.last_error`.
 2. **New system.** Write an adapter that returns `SourceJob[]` with a posting date wherever the
    source has one, and register it in `ats.ts`.

@@ -22,6 +22,13 @@ const SUCCESSFACTORS_SITES = new Set([
   "careers.telus.com",
 ]);
 const PHENOM_SITES = new Set(["jobs.bell.ca", "careers.opentext.com"]);
+const JIBE_SITES = new Set([
+  "careers.amd.com",
+  "jobs.keysight.com",
+  "careers.garmin.com",
+  "careers.rivian.com",
+  "careers.medpace.com",
+]);
 // OpenApply runs as a personal-use tool, so these hosts are exempt from robots.txt for personal
 // use; every other host is checked. SmartRecruiters' robots.txt admits only LinkedInBot to its
 // public posting API, and RBC's disallows its main Workday career site (RBCGLOBAL1).
@@ -70,6 +77,7 @@ function knownHost(host: string): boolean {
     HOSTS.has(host) ||
     SUCCESSFACTORS_SITES.has(host) ||
     PHENOM_SITES.has(host) ||
+    JIBE_SITES.has(host) ||
     host.endsWith(".myworkdayjobs.com") ||
     host.endsWith(".oraclecloud.com") ||
     host.endsWith(".taleo.net") ||
@@ -120,6 +128,8 @@ function supportedEndpoint(url: URL): boolean {
     );
   }
   if (PHENOM_SITES.has(url.hostname)) return !url.search && url.pathname === "/widgets";
+  if (JIBE_SITES.has(url.hostname))
+    return url.pathname === "/api/jobs" && /^page=\d{1,3}&limit=100$/.test(url.search.slice(1));
   if (SUCCESSFACTORS_SITES.has(url.hostname))
     return url.pathname === "/search/" || /^\/(?:[\w-]+\/)?job\/[^?#]+$/.test(url.pathname);
   if (url.hostname.endsWith(".myworkdayjobs.com"))

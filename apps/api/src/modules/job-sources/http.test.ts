@@ -332,6 +332,22 @@ it("allows only the search widget on listed Phenom career sites", async () => {
   }
 });
 
+it("allows only the job search API on listed Jibe career sites", async () => {
+  const server = serve(() => new Response("{}"));
+  try {
+    expect(await fetchSourceJson("https://careers.amd.com/api/jobs?page=2&limit=100")).toEqual({});
+    for (const url of [
+      "https://careers.amd.com/api/jobs?page=2&limit=1000",
+      "https://careers.amd.com/jobs/84338",
+      "https://careers.example.com/api/jobs?page=1&limit=100",
+    ])
+      await expect(fetchSourceJson(url)).rejects.toThrow("Unsupported discovery endpoint.");
+    expect(server.calls).toHaveLength(1);
+  } finally {
+    server.restore();
+  }
+});
+
 it("backs off the whole host on 429 and reports how long to wait", async () => {
   const server = serve(() => new Response("", { status: 429, headers: { "retry-after": "0" } }));
   try {

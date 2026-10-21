@@ -3,6 +3,7 @@ import { ashby } from "./ashby";
 import { greenhouse } from "./greenhouse";
 import { fetchSourceText } from "./http";
 import { icims } from "./icims";
+import { jibe } from "./jibe";
 import { lever } from "./lever";
 import { oracle } from "./oracle";
 import { phenom } from "./phenom";
@@ -19,6 +20,7 @@ import { workday } from "./workday";
 const JSON_ATS = {
   ashby,
   greenhouse,
+  jibe,
   lever,
   oracle,
   phenom,
@@ -32,6 +34,7 @@ export type AtsProvider = keyof typeof ATS;
 /** Slugs that name a career site rather than a company; their boards page through many requests. */
 export const SITE_PROVIDERS: AtsProvider[] = [
   "icims",
+  "jibe",
   "oracle",
   "phenom",
   "successfactors",

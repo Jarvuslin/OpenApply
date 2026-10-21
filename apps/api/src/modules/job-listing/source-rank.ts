@@ -21,6 +21,7 @@ const RANKS: Record<string, number> = {
   teamtailor: SOURCE_RANK.employerAts,
   successfactors: SOURCE_RANK.careerSite,
   phenom: SOURCE_RANK.careerSite,
+  jibe: SOURCE_RANK.careerSite,
   "google-careers": SOURCE_RANK.careerSite,
   "simplify-new-grad": SOURCE_RANK.curatedList,
   "simplify-internships": SOURCE_RANK.curatedList,
