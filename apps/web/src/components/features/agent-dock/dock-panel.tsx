@@ -133,7 +133,7 @@ export function DockPanel(): ReactElement {
               sx={{ minWidth: 120, fontSize: "0.75rem" }}
             >
               <MenuItem value="claude">Claude Code</MenuItem>
-              <MenuItem value="codex">Codex</MenuItem>
+              <MenuItem value="codex">Codex (untested)</MenuItem>
             </Select>
             <TooltipIconButton
               title={`Restart ${providerLabel}`}

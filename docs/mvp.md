@@ -31,7 +31,7 @@ An earlier operator-assisted employer account test is not proof of autonomous si
 - A chosen Apify Indeed actor and LinkedIn actor, their accepted input fields and output records. None is selected by default. Live paid Apify and SerpApi requests need the user's credentials and provider credits.
 - Live imports for every employer and every new ATS adapter. Fixture coverage does not prove provider availability.
 - Real CAPTCHA solving with an entitled account and funded solver key. Solving remains disabled by default.
-- Mac ARM64 and Intel acceptance on actual machines, and Windows Codex CLI startup across installations.
+- Mac ARM64 and Intel acceptance on actual machines with Claude Code. Codex is labelled untested and is out of scope for the Windows and Mac checks.
 - A production hosted deployment, durable multi-instance event delivery, billing or a published installer.
 
 ## Workflow

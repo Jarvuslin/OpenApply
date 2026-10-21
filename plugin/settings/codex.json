@@ -1,6 +1,6 @@
 {
   "configOverrides": [
-    "model=\"gpt-6-luna\"",
+    "model=\"gpt-6.1-sol\"",
     "sandbox_workspace_write.network_access=true",
     "windows.sandbox=\"unelevated\""
   ]

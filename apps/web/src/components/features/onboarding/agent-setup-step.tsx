@@ -88,7 +88,8 @@ export function AgentSetupStep({ connection, onConnectionChange }: AgentSetupSte
         </Typography>
         <Typography variant="body2" color="text.secondary">
           Install the OpenApply companion and the CLI for your chosen provider on this computer. You
-          only need one provider. Signing in to their website does not install the CLI.
+          only need one provider; Claude Code is the tested one. Signing in to their website does
+          not install the CLI.
         </Typography>
       </Stack>
       <ToggleButtonGroup
@@ -105,7 +106,7 @@ export function AgentSetupStep({ connection, onConnectionChange }: AgentSetupSte
         }}
       >
         <ToggleButton value="claude">Claude Code</ToggleButton>
-        <ToggleButton value="codex">Codex</ToggleButton>
+        <ToggleButton value="codex">Codex (untested)</ToggleButton>
       </ToggleButtonGroup>
       <Button
         component="a"
