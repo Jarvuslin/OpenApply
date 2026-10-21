@@ -49,9 +49,7 @@ internal sealed partial class QueueRuntime
                     logger.LogWarning("Skipped account setup {WorkItemId}: its snapshot could not be read.", accountId);
                 }
             }
-            // A scoring run already working beside applications keeps the next one waiting.
-            if (approval is null && !ScoreLaneBusy() && runnable.PilotIds.FirstOrDefault() is { } pilotId)
-                approval = Approval("queue-pilot-score", 1, PilotRun, [new(Guid.NewGuid().ToString(), pilotId, PilotRun)]);
+            // Ready applications go first; scoring then runs beside them in the score lane.
             if (approval is null && runnable.ApplicationIds.Length > 0)
             {
                 var workers = Math.Clamp(runnable.MaxConcurrentWorkers, 1, 3);
@@ -69,6 +67,9 @@ internal sealed partial class QueueRuntime
                 }, allocations);
                 if (n == 0) approval = null;
             }
+            // A scoring run already working beside applications keeps the next one waiting.
+            if (approval is null && !ScoreLaneBusy() && runnable.PilotIds.FirstOrDefault() is { } pilotId)
+                approval = Approval("queue-pilot-score", 1, PilotRun, [new(Guid.NewGuid().ToString(), pilotId, PilotRun)]);
         }
         catch (Exception ex) when (ex is HttpRequestException or InvalidDataException or JsonException or OperationCanceledException or NotSupportedException)
         {

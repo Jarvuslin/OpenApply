@@ -1,3 +1,5 @@
+import { campaignConfigSchema } from "@openapply/contracts/campaign";
+import { DEFAULT_MIN_MATCH_SCORE } from "@openapply/contracts/user";
 import type { Prisma, WorkState } from "@/generated/prisma/client";
 import { LIVE_WORK_STATES } from "./work-queue.policy";
 
@@ -16,37 +18,99 @@ function scoreBatchOf(payload: Prisma.JsonValue): string | null {
   return typeof id === "string" ? id : null;
 }
 
-/** Whether this application waits for a scoring batch that hasn't finished yet. */
-export async function waitingForScore(tx: Prisma.TransactionClient, payload: Prisma.JsonValue) {
-  const id = scoreBatchOf(payload);
-  if (!id) return false;
+type BatchJob = { fitAssessment: Prisma.JsonValue; url: string; campaign: { status: string } };
+
+/** A job a queue batch can score: still unscored, in an active search, on a page it may open. */
+function batchable(job: BatchJob) {
+  return (
+    job.fitAssessment == null &&
+    job.campaign.status === "in_progress" &&
+    job.url.startsWith("https://")
+  );
+}
+
+/**
+ * Whether this application waits for a scoring batch: its own, or the next one while queue
+ * scoring is under way. Without a queue batch (e.g. a manual approval) nothing is held.
+ */
+export async function waitingForScore(
+  tx: Prisma.TransactionClient,
+  item: { userId: string; payload: Prisma.JsonValue },
+  job: BatchJob,
+) {
+  const id = scoreBatchOf(item.payload);
+  if (!id && !batchable(job)) return false;
   const batch = await tx.workItem.findFirst({
-    where: { id, state: { in: OPEN_BATCH_STATES } },
+    where: id
+      ? { id, state: { in: OPEN_BATCH_STATES } }
+      : {
+          userId: item.userId,
+          intent: "pilot_score",
+          identity: { startsWith: "queue-score:" },
+          state: { in: OPEN_BATCH_STATES },
+        },
     select: { id: true },
   });
   return !!batch;
 }
 
-/** A job the batch scored below the minimum is skipped here, so no application run starts. */
+/**
+ * Skips queued applications that can't pass, so no application run starts for them: a job the
+ * worker already skipped, or one a queue batch scored below the campaign minimum.
+ */
 export async function skipScoredOut(tx: Prisma.TransactionClient, userId: string) {
   const queued = await tx.workItem.findMany({
     where: { userId, kind: "application", state: "queued", jobId: { not: null } },
-    select: { id: true, jobId: true },
+    select: { id: true, jobId: true, payload: true },
   });
   if (!queued.length) return;
-  const skipped = await tx.job.findMany({
-    where: { id: { in: queued.map((item) => item.jobId!) }, status: "skipped" },
-    select: { id: true, skipReason: true },
+  const jobs = await tx.job.findMany({
+    where: { id: { in: queued.map((item) => item.jobId!) } },
+    select: {
+      id: true,
+      status: true,
+      skipReason: true,
+      matchScore: true,
+      fitAssessment: true,
+      url: true,
+      campaign: { select: { config: true, status: true } },
+    },
   });
-  for (const job of skipped) {
-    const item = queued.find((row) => row.jobId === job.id)!;
+  let profileMinimum: number | undefined;
+  for (const item of queued) {
+    const job = jobs.find((row) => row.id === item.jobId);
+    if (!job) continue;
+    let reason = job.status === "skipped" ? (job.skipReason ?? "Scored below your minimum.") : null;
+    // The worker may leave a low score for the queue to settle, so the batch result decides here.
+    if (
+      !reason &&
+      scoreBatchOf(item.payload) &&
+      !(await waitingForScore(tx, { userId, payload: item.payload }, job))
+    ) {
+      profileMinimum ??=
+        (
+          await tx.user.findUnique({
+            where: { id: userId },
+            select: { autoApply: { select: { minMatchScore: true } } },
+          })
+        )?.autoApply?.minMatchScore ?? DEFAULT_MIN_MATCH_SCORE;
+      const minimum = campaignConfigSchema.parse(job.campaign.config).minScore ?? profileMinimum;
+      if (job.fitAssessment != null && job.matchScore != null && job.matchScore < minimum)
+        reason = `Scored ${job.matchScore}, below your minimum of ${minimum}.`;
+    }
+    if (!reason) continue;
+    if (job.status !== "skipped")
+      await tx.job.updateMany({
+        where: {
+          id: job.id,
+          status: { in: ["queued", "pending", "approved"] },
+          submissionAttempt: null,
+        },
+        data: { status: "skipped", skipReason: reason },
+      });
     await tx.workItem.update({
       where: { id: item.id },
-      data: {
-        state: "skipped",
-        reason: job.skipReason ?? "Scored below your minimum.",
-        finishedAt: new Date(),
-      },
+      data: { state: "skipped", reason, finishedAt: new Date() },
     });
   }
 }
@@ -82,13 +146,7 @@ export async function queueScoreBatch(tx: Prisma.TransactionClient, userId: stri
   const unscored = queued.filter((item) => {
     const job = byId.get(item.jobId!);
     // A job a batch already tried and couldn't score is scored inside its own application run.
-    return (
-      job &&
-      job.fitAssessment == null &&
-      job.campaign.status === "in_progress" &&
-      job.url.startsWith("https://") &&
-      !scoreBatchOf(item.payload)
-    );
+    return job && batchable(job) && !scoreBatchOf(item.payload);
   });
   const campaignId = unscored[0]?.campaignId;
   if (!campaignId) return null;

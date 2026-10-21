@@ -25,7 +25,7 @@ function setup(count: number) {
       id: crypto.randomUUID(),
       key: `job-${index}`,
       campaignId,
-      campaign: { userId, status: "in_progress" },
+      campaign: { userId, status: "in_progress", config: {} },
       status: "approved",
       title: "Engineer",
       company: `Example ${index}`,
@@ -47,6 +47,8 @@ function setup(count: number) {
     });
   const batches = () => f.workItems.filter((row) => row.intent === "pilot_score");
   const applications = () => f.workItems.filter((row) => row.kind === "application");
+  // The fixture has no users table; only the profile minimum is read from it.
+  Object.assign(f.db, { user: { findUnique: async () => ({ autoApply: { minMatchScore: 40 } }) } });
   const read = new WorkQueueReadService(f.db, {} as ScoringService);
   const blocked = async (items: Record<string, unknown>[]) =>
     (await read.ordered(userId, { workItemIds: items.map((row) => String(row.id)) })).items.map(
@@ -70,7 +72,8 @@ describe("queue score batches", () => {
     const inBatch = f.applications().filter((row) => batched.includes(String(row.jobId)));
     const rest = f.applications().filter((row) => !batched.includes(String(row.jobId)));
     expect(await f.blocked(inBatch)).toEqual(Array(5).fill("scoring"));
-    expect(await f.blocked(rest)).not.toContain("scoring");
+    // The rest wait for the next batch instead of scoring inside their own runs.
+    expect(await f.blocked(rest)).toEqual(["scoring", "scoring"]);
   });
 
   it("makes one batch at a time and none while a pilot is scoring", async () => {
@@ -109,13 +112,29 @@ describe("queue score batches", () => {
     f.jobs[1]!.fitAssessment = { score: 80 };
     batch.state = "completed";
     await f.queue.runnable(userId);
-    const [low, high, unread] = f.applications();
+    const [low, high, unread] = f.jobs.map((job) =>
+      f.applications().find((row) => row.jobId === job.id),
+    );
     expect(low).toMatchObject({ state: "skipped", reason: "Scored 12, below your minimum of 60." });
     expect(high!.state).toBe("queued");
     // A posting the batch couldn't read is scored inside its own run instead of looping.
     expect(unread!.state).toBe("queued");
     expect(f.batches()).toHaveLength(1);
     expect(await f.blocked([high!, unread!])).not.toContain("scoring");
+  });
+
+  it("skips a batch low scorer the worker left for the queue", async () => {
+    const f = setup(2);
+    await f.enqueue();
+    await f.queue.runnable(userId);
+    Object.assign(f.jobs[0]!, { fitAssessment: { score: 12 }, matchScore: 12 });
+    Object.assign(f.jobs[1]!, { fitAssessment: { score: 45 }, matchScore: 45 });
+    f.batches()[0]!.state = "completed";
+    await f.queue.runnable(userId);
+    const [low, high] = f.jobs.map((job) => f.applications().find((row) => row.jobId === job.id));
+    expect(low).toMatchObject({ state: "skipped", reason: "Scored 12, below your minimum of 40." });
+    expect(f.jobs[0]).toMatchObject({ status: "skipped" });
+    expect(high!.state).toBe("queued");
   });
 
   it("waits while five scored jobs are ready to apply", async () => {

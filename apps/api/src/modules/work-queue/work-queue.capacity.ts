@@ -85,7 +85,7 @@ export async function candidateCapacity(
     include: { campaign: true },
   });
   if (job?.campaign.status !== "in_progress") return blocked("campaign_paused");
-  if (await waitingForScore(tx, item.payload)) return blocked("scoring");
+  if (await waitingForScore(tx, item, job)) return blocked("scoring");
   if (blockedSiteFor(job.url)) return blocked("blocked_site");
   if (job.intakeDecisionRequired || (await intakeDecisionPending(tx, userId, job.url)))
     return blocked("user_decision");
