@@ -6,12 +6,7 @@ import {
 } from "./preparation-fill.mjs";
 import { collectionTarget, collectionUrlAllowed, sameJobUrl } from "./question-collector.mjs";
 import { extractQuestions } from "./question-dom.mjs";
-import {
-  scorePageAllowed,
-  scorePagesValid,
-  scorePageUrl,
-  scoreRedirectAllowed,
-} from "./score-pages.mjs";
+import { scorePagesValid, scorePageUrl, scoreSiteAllowed } from "./score-pages.mjs";
 
 async function workerBrowserMain(lines) {
   const fs = await import("node:fs/promises");
@@ -135,13 +130,8 @@ async function workerBrowserMain(lines) {
     for (let hop = 0; hop < 4; hop++) {
       if (++requests > 3000 || !scorePageUrl(address, loopback))
         return route.abort("blockedbyclient");
-      if (topLevel) {
-        const allowed =
-          hop === 0
-            ? scorePageAllowed(owner.urls, address, loopback)
-            : scoreRedirectAllowed(owner.urls, address, loopback);
-        if (!allowed) return route.abort("blockedbyclient");
-      }
+      if (topLevel && !scoreSiteAllowed(owner.urls, address, loopback))
+        return route.abort("blockedbyclient");
       const headers = { ...request.headers() };
       delete headers.cookie;
       delete headers.authorization;
@@ -556,5 +546,5 @@ async function workerBrowserMain(lines) {
 }
 
 export function workerBrowserProgram() {
-  return `const scorePageUrl=${scorePageUrl.toString()};const scorePagesValid=${scorePagesValid.toString()};const scorePageAllowed=${scorePageAllowed.toString()};const scoreRedirectAllowed=${scoreRedirectAllowed.toString()};const collectionUrlAllowed=${collectionUrlAllowed.toString()};const collectionTarget=${collectionTarget.toString()};const sameJobUrl=${sameJobUrl.toString()};const extractQuestions=${extractQuestions.toString()};const preparationFieldProblem=${preparationFieldProblem.toString()};const preparationValueValid=${preparationValueValid.toString()};const readNativePreparationValue=${readNativePreparationValue.toString()};const fillOwnedPage=${fillOwnedPage.toString()};export default ${workerBrowserMain.toString()};`;
+  return `const scorePageUrl=${scorePageUrl.toString()};const scorePagesValid=${scorePagesValid.toString()};const scoreSiteAllowed=${scoreSiteAllowed.toString()};const collectionUrlAllowed=${collectionUrlAllowed.toString()};const collectionTarget=${collectionTarget.toString()};const sameJobUrl=${sameJobUrl.toString()};const extractQuestions=${extractQuestions.toString()};const preparationFieldProblem=${preparationFieldProblem.toString()};const preparationValueValid=${preparationValueValid.toString()};const readNativePreparationValue=${readNativePreparationValue.toString()};const fillOwnedPage=${fillOwnedPage.toString()};export default ${workerBrowserMain.toString()};`;
 }

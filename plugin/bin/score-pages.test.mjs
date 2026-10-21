@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { scorePageAllowed, scorePagesValid, scoreRedirectAllowed } from "./score-pages.mjs";
+import { scorePagesValid, scoreSiteAllowed } from "./score-pages.mjs";
 
 const pages = ["https://jobs.lever.co/acme/123", "https://careers.example.com/jobs/9?src=feed"];
 
@@ -17,23 +17,19 @@ test("a scoring run lists one to fifty distinct https job pages", () => {
   );
 });
 
-test("only the listed postings open as pages, whatever their query or trailing slash", () => {
-  assert.equal(scorePageAllowed(pages, "https://jobs.lever.co/acme/123/"), true);
-  assert.equal(scorePageAllowed(pages, "https://careers.example.com/jobs/9?utm=x#top"), true);
-  assert.equal(scorePageAllowed(pages, "https://jobs.lever.co/acme/124"), false);
-  assert.equal(scorePageAllowed(pages, "https://careers.example.com/apply/9"), false);
-  assert.equal(scorePageAllowed(pages, "https://evil.example/jobs/9"), false);
-  assert.equal(scorePageAllowed(pages, "http://jobs.lever.co/acme/123"), false);
-});
-
-test("redirects may move within a listed posting's site but never leave it", () => {
-  assert.equal(scoreRedirectAllowed(pages, "https://careers.example.com/jobs/9/moved"), true);
-  assert.equal(scoreRedirectAllowed(pages, "https://login.example.com/sso"), false);
+test("pages and redirects stay on a listed posting's site", () => {
+  assert.equal(scoreSiteAllowed(pages, "https://jobs.lever.co/acme/123/"), true);
+  assert.equal(scoreSiteAllowed(pages, "https://careers.example.com/jobs/9?utm=x#top"), true);
+  assert.equal(scoreSiteAllowed(pages, "https://careers.example.com/apply/9"), true);
+  assert.equal(scoreSiteAllowed(pages, "https://careers.example.com/jobs/9/moved"), true);
+  assert.equal(scoreSiteAllowed(pages, "https://login.example.com/sso"), false);
+  assert.equal(scoreSiteAllowed(pages, "https://evil.example/jobs/9"), false);
+  assert.equal(scoreSiteAllowed(pages, "http://jobs.lever.co/acme/123"), false);
 });
 
 test("loopback pages are allowed only for local test fixtures", () => {
   const local = ["http://127.0.0.1:4555/job"];
   assert.equal(scorePagesValid(local), false);
   assert.equal(scorePagesValid(local, true), true);
-  assert.equal(scorePageAllowed(local, "http://127.0.0.1:4555/job", true), true);
+  assert.equal(scoreSiteAllowed(local, "http://127.0.0.1:4555/job", true), true);
 });

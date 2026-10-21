@@ -10,6 +10,7 @@ export const NODE_TEST_GROUPS = {
       "plugin/bin/api.test.mjs",
       "plugin/bin/browser-options.test.mjs",
       "plugin/bin/intake-preparation.test.mjs",
+      "plugin/bin/score-pages.test.mjs",
       "plugin/bin/screenshot.test.mjs",
       "plugin/bin/stage.test.mjs",
       "plugin/bin/worker-control.test.mjs",
