@@ -98,6 +98,7 @@ export const QUEUE_WAIT_LABELS: Record<(typeof QUEUE_BLOCK_REASONS)[number], str
   blocked_site: "This site can't be automated",
   unknown_scope: "Unknown company or site",
   run_limit: "No runs left",
+  scoring: "Being scored with other queued jobs",
   user_decision: "Waiting for your decision",
   company_excluded: "Excluded company",
 };

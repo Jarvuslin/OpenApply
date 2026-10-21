@@ -90,8 +90,9 @@ Read and save the posting, then return fit data for a user-facing review. Requir
 
 Read one or more postings and persist scored Job rows. No application. `jobs` absent → a one-row batch from the top-level `jobKey`/`url`.
 
-One tab for the whole batch: open it once, reuse it per row, close it at the end. Per row (`jobKey`, `url`, optional `title`/`company`):
+One tab for the whole batch: open it when the first row needs the browser, reuse it per row, close it at the end. Per row (`jobKey`, `url`, optional `title`/`company`):
 
+0. Read the saved row first. If `save:"patch"` and its saved `description` is already the complete posting (its responsibilities and qualifications are all there, not a summary or excerpt), skip the browser for this row: keep that description, build the digest from it, and go to step 3. Pasted ATS links and most board feeds save the full posting. When unsure, open the page.
 1. Navigate to `url`; log in if needed (auth.md), once per board, not per row.
 2. Read the full posting, including all qualifications and responsibilities, using narrowed snapshots. A result card or excerpt is not enough. Build a digest for display/tailoring only.
 3. Save before scoring:

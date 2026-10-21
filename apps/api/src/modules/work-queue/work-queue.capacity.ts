@@ -14,6 +14,7 @@ import { type ReservationFact, reservationLimit, workScope } from "./work-queue.
 import { LIVE_WORK_STATES } from "./work-queue.policy";
 import { canonicalWorkOutcome } from "./work-queue.recovery";
 import { campaignReservationFull } from "./work-queue.reservations";
+import { waitingForScore } from "./work-queue.score-batch";
 
 type BlockReason = (typeof QUEUE_BLOCK_REASONS)[number];
 export async function candidateCapacity(
@@ -84,6 +85,7 @@ export async function candidateCapacity(
     include: { campaign: true },
   });
   if (job?.campaign.status !== "in_progress") return blocked("campaign_paused");
+  if (await waitingForScore(tx, item.payload)) return blocked("scoring");
   if (blockedSiteFor(job.url)) return blocked("blocked_site");
   if (job.intakeDecisionRequired || (await intakeDecisionPending(tx, userId, job.url)))
     return blocked("user_decision");

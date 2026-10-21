@@ -37,6 +37,7 @@ export const QUEUE_BLOCK_REASONS = [
   "blocked_site",
   "unknown_scope",
   "run_limit",
+  "scoring",
 ] as const;
 export const queueEstimateQuerySchema = z.object({ campaignId: z.uuid().optional() });
 export const queueEstimateSchema = z.object({

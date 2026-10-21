@@ -40,6 +40,7 @@ import {
   releaseSettledExecutions,
   settleWorkExecution,
 } from "./work-queue.reservations";
+import { queueScoreBatch, skipScoredOut } from "./work-queue.score-batch";
 import { workItemView } from "./work-queue.view";
 
 function changed(userId: string, itemId?: string) {
@@ -100,6 +101,7 @@ export class WorkQueueService {
           await tx.workItem.update({ where: { id: item.id }, data: { state } });
       }
       await releaseSettledExecutions(tx, userId);
+      await skipScoredOut(tx, userId);
       // Receipt recording remains valid after lease loss; reflect that durable evidence without replay.
       const pending = await tx.workItem.findMany({
         where: {
@@ -157,8 +159,8 @@ export class WorkQueueService {
   }
 
   /**
-   * What a connected computer may start now: one account setup first, then one pilot run to score,
-   * else a wave of applications.
+   * What a connected computer may start now: one account setup first, then one scoring run (a
+   * pilot's or a batch of queued jobs), else a wave of applications.
    */
   async runnable(userId: string) {
     await this.refresh(userId);
@@ -167,6 +169,11 @@ export class WorkQueueService {
     const runsRemaining = policy.runsRemaining ?? null;
     const empty = { maxConcurrentWorkers: policy.maxConcurrentWorkers, runsRemaining };
     if (runsRemaining === 0) return { ...empty, applicationIds: [], accountIds: [], pilotIds: [] };
+    const batch = await this.prisma.$transaction(async (tx) => {
+      await lockWorkUser(tx, userId);
+      return queueScoreBatch(tx, userId);
+    });
+    if (batch) changed(userId, batch.id);
     const orderBy: Prisma.WorkItemOrderByWithRelationInput[] = [
       { priorityRequestedAt: { sort: "asc", nulls: "last" } },
       { createdAt: "asc" },
