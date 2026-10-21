@@ -129,4 +129,33 @@ describe("queue score batches", () => {
     await f.queue.runnable(userId);
     expect((f.batches()[0]!.payload as { jobIds: string[] }).jobIds).toEqual([f.jobs[5]!.id]);
   });
+
+  it("lets one scoring run share the computer with applications", async () => {
+    const f = setup(7);
+    await f.enqueue();
+    await f.queue.runnable(userId);
+    const batch = f.batches()[0]!;
+    const [applying] = f
+      .applications()
+      .filter((row) => !(row.payload as { scoreBatchId?: string }).scoreBatchId);
+    Object.assign(applying!, { state: "filling", workerSlot: 1 });
+    expect(await f.blocked([batch])).toEqual([null]);
+
+    Object.assign(applying!, { state: "queued", workerSlot: null });
+    Object.assign(batch, { state: "preparing", workerSlot: 1 });
+    // Later checks (the fixture campaign cap) may still hold it; the lanes no longer do.
+    expect(["exclusive_work", "capacity"]).not.toContain((await f.blocked([applying!]))[0]);
+
+    f.workItems.push({
+      id: crypto.randomUUID(),
+      userId,
+      kind: "pilot_task",
+      intent: "account_setup",
+      state: "filling",
+      workerSlot: 2,
+      identity: "account:1",
+      payload: {},
+    });
+    expect(await f.blocked([applying!])).toEqual(["exclusive_work"]);
+  });
 });

@@ -45,13 +45,13 @@ export async function candidateCapacity(
   const live = await tx.workItem.findMany({ where: { userId, state: { in: LIVE_WORK_STATES } } });
   const occupied = new Set(live.map((item) => item.workerSlot));
   result.slot = [1, 2, 3].find((slot) => !occupied.has(slot)) ?? 0;
+  // One scoring run may share the computer with applications: it only reads postings.
+  const scoring = (row: WorkItem) => row.kind === "pilot_task" && row.intent === "pilot_score";
+  const exclusive = (row: WorkItem) => row.kind !== "application" && !scoring(row);
+  if (live.some(exclusive) || (exclusive(item) && live.length)) return blocked("exclusive_work");
+  const lane = live.filter((row) => scoring(row) === scoring(item));
   if (
-    live.some((item) => item.kind !== "application") ||
-    (item.kind !== "application" && live.length)
-  )
-    return blocked("exclusive_work");
-  if (
-    live.length >= (item.kind === "application" ? policy.maxConcurrentWorkers : 1) ||
+    lane.length >= (item.kind === "application" ? policy.maxConcurrentWorkers : 1) ||
     !result.slot
   )
     return blocked("capacity");

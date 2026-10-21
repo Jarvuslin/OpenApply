@@ -63,7 +63,7 @@ internal sealed partial class QueueRuntime
         }
         catch
         {
-            grant!.Cancel("An owned browser control failed; all approved workers stopped for review.");
+            worker.Grant.Cancel("An owned browser control failed; all approved workers stopped for review.");
             throw;
         }
         finally { session.Operation.Release(); }

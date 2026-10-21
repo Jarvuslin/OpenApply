@@ -27,7 +27,7 @@ internal sealed partial class QueueRuntime
         lock (sync)
         {
             settings = connection;
-            if (settings is null || ApprovalConfigured() || now < nextAutoCheck || workers.Count != 0 || accountHandoffs.Count != 0) return;
+            if (settings is null || ApprovalConfigured() || now < nextAutoCheck || LaneCount(grant) != 0 || accountHandoffs.Count != 0) return;
             // A wave whose remaining work is all deferred is rebuilt so other queued work can run.
             if (grant is not null && !(autoGrant && (grant.Remaining == 0 || grant.BlockingReason(now) is not null || pollingReason is not null))) return;
             nextAutoCheck = now.AddSeconds(10);
@@ -49,7 +49,8 @@ internal sealed partial class QueueRuntime
                     logger.LogWarning("Skipped account setup {WorkItemId}: its snapshot could not be read.", accountId);
                 }
             }
-            if (approval is null && runnable.PilotIds.FirstOrDefault() is { } pilotId)
+            // A scoring run already working beside applications keeps the next one waiting.
+            if (approval is null && !ScoreLaneBusy() && runnable.PilotIds.FirstOrDefault() is { } pilotId)
                 approval = Approval("queue-pilot-score", 1, PilotRun, [new(Guid.NewGuid().ToString(), pilotId, PilotRun)]);
             if (approval is null && runnable.ApplicationIds.Length > 0)
             {
@@ -76,30 +77,43 @@ internal sealed partial class QueueRuntime
         }
         lock (sync)
         {
-            if (connection != settings || workers.Count != 0) return;
+            if (connection != settings || LaneCount(grant) != 0) return;
             if (approval is null)
             {
                 if (autoGrant) grant = null;
                 return;
             }
-            var bytes = JsonSerializer.SerializeToUtf8Bytes(approval, AppJsonContext.Default.QueueGrantFile);
-            var paths = install.RequirePaths();
-            var directory = Path.Combine(paths.ScratchDir, "auto-approvals");
-            Directory.CreateDirectory(directory);
-            var filename = Path.Combine(directory, approval.RunId + ".json");
-            QueueModelGrant.WriteNew(filename, bytes);
-            var key = approval.Purpose switch
-            {
-                "queue-account-setup" => QueueModelGrant.AccountEnvironmentKey,
-                "queue-pilot-score" => QueueModelGrant.PilotEnvironmentKey,
-                _ => QueueModelGrant.EnvironmentKey,
-            };
-            grant = QueueModelGrant.Read(name => name == key ? filename : null, Path.Combine(paths.WorkingDir, "queue-model-evidence"), DateTimeOffset.UtcNow);
+            grant = InstallAutoApproval(approval);
             autoGrant = true;
             denied.Clear();
-            plugins.Clear();
+            ClearIdlePlugins();
             lastError = null;
         }
+    }
+
+    /// <summary>Writes an automatic approval to disk and reads it back through the same checks as a manual one.</summary>
+    private QueueModelGrant? InstallAutoApproval(QueueGrantFile approval)
+    {
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(approval, AppJsonContext.Default.QueueGrantFile);
+        var paths = install.RequirePaths();
+        var directory = Path.Combine(paths.ScratchDir, "auto-approvals");
+        Directory.CreateDirectory(directory);
+        var filename = Path.Combine(directory, approval.RunId + ".json");
+        QueueModelGrant.WriteNew(filename, bytes);
+        var key = approval.Purpose switch
+        {
+            "queue-account-setup" => QueueModelGrant.AccountEnvironmentKey,
+            "queue-pilot-score" => QueueModelGrant.PilotEnvironmentKey,
+            _ => QueueModelGrant.EnvironmentKey,
+        };
+        return QueueModelGrant.Read(name => name == key ? filename : null, Path.Combine(paths.WorkingDir, "queue-model-evidence"), DateTimeOffset.UtcNow);
+    }
+
+    /// <summary>Drops staged plugins, keeping those a running worker still uses.</summary>
+    private void ClearIdlePlugins()
+    {
+        var live = workers.Values.Select(worker => worker.Allocation.AllocationId).ToHashSet();
+        foreach (var id in plugins.Keys.Where(id => !live.Contains(id)).ToArray()) plugins.Remove(id);
     }
 
     private static QueueGrantFile Approval(string purpose, int workers, QueueGrantBudget budget, QueueGrantAllocation[] allocations)

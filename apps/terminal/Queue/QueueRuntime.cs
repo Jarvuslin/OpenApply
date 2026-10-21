@@ -10,9 +10,10 @@ internal sealed partial class QueueRuntime(IQueueApi api, IAgentProcess process,
     TerminalSession terminal, ILogger<QueueRuntime> logger, IQueueBrowser browser, HostInstall install,
     Func<string, string?>? environment = null, IAccountBrokerApi? accountApi = null) : BackgroundService, IRuntimePresenceSource
 {
-    private sealed class Worker(QueueClaim claim, QueueGrantAllocation allocation, CancellationTokenSource stop)
+    private sealed class Worker(QueueClaim claim, QueueGrantAllocation allocation, CancellationTokenSource stop, QueueModelGrant grant)
     {
         internal readonly QueueClaim Claim = claim;
+        internal readonly QueueModelGrant Grant = grant;
         internal readonly QueueGrantAllocation Allocation = allocation;
         internal readonly CancellationTokenSource Stop = stop;
         internal QueueBrowserSession? Browser;
@@ -99,6 +100,7 @@ internal sealed partial class QueueRuntime(IQueueApi api, IAgentProcess process,
             ownerId = null;
             connectionId = null;
             grant?.Cancel("The approved queue run was disconnected; no allocation may be retried.");
+            scoreGrant?.Cancel("The approved queue run was disconnected; no allocation may be retried.");
             foreach (var worker in workers.Values.Where(worker => worker.State != "quarantined")) worker.Stop.Cancel();
             foreach (var handoff in accountHandoffs.Values) handoff.Stop.Cancel();
         }
@@ -137,7 +139,7 @@ internal sealed partial class QueueRuntime(IQueueApi api, IAgentProcess process,
                 lock (sync)
                 {
                     settings = connection;
-                    if (settings is not null && BlockingReason() is null && workers.Count < grant!.Approval.MaxConcurrentWorkers)
+                    if (settings is not null && BlockingReason() is null && LaneCount(grant) < grant!.Approval.MaxConcurrentWorkers)
                         candidates = grant.PendingIds.Where(id => !denied.TryGetValue(id, out var delay) || delay.Next <= DateTimeOffset.UtcNow).ToArray();
                 }
                 if (candidates.Length > 0)
@@ -158,19 +160,7 @@ internal sealed partial class QueueRuntime(IQueueApi api, IAgentProcess process,
                                 if (!ownsGate) ownsGate = gate.TryAcquireQueue();
                                 if (ownsGate)
                                 {
-                                    // Validate every finite allocation before consuming the approval or claiming any work.
-                                    foreach (var approved in grant.Approval.Allocations)
-                                    {
-                                        var budget = grant.BudgetFor(approved);
-                                        if (!plugins.TryGetValue(approved.AllocationId, out var plugin))
-                                        {
-                                            var paths = install.RequirePaths();
-                                            plugin = QueuePluginStage.Create(paths.PluginDir, Path.Combine(paths.ScratchDir, "queue-plugin-staging"), budget);
-                                            plugins.Add(approved.AllocationId, plugin);
-                                        }
-                                        plugin.Verify(budget);
-                                    }
-                                    grant.Activate(DateTimeOffset.UtcNow); allocation = grant.Reserve(selected.WorkItemId);
+                                    PrepareGrant(grant); allocation = grant.Reserve(selected.WorkItemId);
                                 }
                             }
                         }
@@ -178,47 +168,8 @@ internal sealed partial class QueueRuntime(IQueueApi api, IAgentProcess process,
                     catch (Exception ex) when (ex is IOException or InvalidDataException or System.Text.Json.JsonException or UnauthorizedAccessException or ModelBudgetException or HttpRequestException or InvalidOperationException or OperationCanceledException)
                     { grant!.Cancel("The approved queue order or approval latch could not be verified; no worker may start."); lock (sync) lastError = "The exact approved work order could not be verified. Review the retained approval before another run."; }
                 }
-                if (allocation is not null)
-                {
-                    try
-                    {
-                        using var claimStop = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, grant!.Stop.Token);
-                        var input = new QueueClaimRequest(Guid.NewGuid().ToString(), runtimeId, Guid.NewGuid().ToString(), allocation.WorkItemId,
-                            new(AccountSetup: allocation.AccountSetup is null ? null : true), allocation.Preparation?.SnapshotHash, allocation.AccountSetup?.SnapshotHash);
-                        var response = await api.ClaimAsync(settings!, input, claimStop.Token);
-                        lock (sync) pollingReason = response.BlockedReason;
-                        if (response.Claim is not { } claim)
-                        {
-                            var attempts = denied.GetValueOrDefault(allocation.WorkItemId).Attempts + 1;
-                            denied[allocation.WorkItemId] = (attempts, response.NextEligibleAt ?? DateTimeOffset.UtcNow.AddSeconds(10));
-                            if (attempts >= 5) grant.Finish(allocation); else grant.NoClaim(allocation);
-                        }
-                        else
-                        {
-                            QueueApi.ValidateClaim(claim);
-                            if (claim.Item.Id != allocation.WorkItemId || claim.Execution.Provider != grant.Approval.Provider
-                                || claim.Ownership!.RuntimeId != runtimeId || claim.Ownership.WorkerId != input.WorkerId)
-                                throw new InvalidDataException("The queue claim does not match its exact approved allocation.");
-                            ValidateAllocation(claim, allocation, grant);
-                            var stop = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, grant.Stop.Token);
-                            var worker = new Worker(claim, allocation, stop);
-                            lock (sync)
-                            {
-                                if (workers.Values.Any(other => other.Claim.Ownership!.Slot == claim.Ownership.Slot || other.Claim.Ownership.BrowserSessionId == claim.Ownership.BrowserSessionId)) throw new InvalidDataException("The API reused active browser ownership.");
-                                workers.Add(claim.Ownership.BrowserSessionId, worker);
-                                if (connection != settings) stop.Cancel();
-                            }
-                            worker.Task = RunAsync(settings!, worker);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        grant!.Finish(allocation);
-                        grant.Cancel("Queue claiming stopped with an uncertain outcome; review the work item before a new approval.");
-                        lock (sync) lastError = "The exact claim could not be confirmed. No model retry or different work claim was started.";
-                        logger.LogWarning("Queue claim stopped ({FailureType}).", ex.GetType().Name);
-                    }
-                }
+                if (allocation is not null) await ClaimAndStartAsync(settings!, grant!, allocation, stoppingToken);
+                await RunScoreLaneAsync(stoppingToken);
                 lock (sync) { if (ownsGate && workers.Count == 0 && accountHandoffs.Count == 0) { gate.ReleaseQueue(); ownsGate = false; } }
                 await Task.Delay(TimeSpan.FromMilliseconds(250), stoppingToken);
             }
@@ -231,6 +182,67 @@ internal sealed partial class QueueRuntime(IQueueApi api, IAgentProcess process,
             await Task.WhenAll(active.Select(worker => worker.Task));
             await CloseAllAccountHandoffsAsync();
             lock (sync) { if (ownsGate && workers.Count == 0) { gate.ReleaseQueue(); ownsGate = false; } }
+        }
+    }
+
+    /// <summary>Validates every finite allocation before consuming the approval or claiming any work.</summary>
+    private void PrepareGrant(QueueModelGrant owner)
+    {
+        foreach (var approved in owner.Approval.Allocations)
+        {
+            var budget = owner.BudgetFor(approved);
+            if (!plugins.TryGetValue(approved.AllocationId, out var plugin))
+            {
+                var paths = install.RequirePaths();
+                plugin = QueuePluginStage.Create(paths.PluginDir, Path.Combine(paths.ScratchDir, "queue-plugin-staging"), budget);
+                plugins.Add(approved.AllocationId, plugin);
+            }
+            plugin.Verify(budget);
+        }
+        owner.Activate(DateTimeOffset.UtcNow);
+    }
+
+    private int LaneCount(QueueModelGrant? owner) => workers.Values.Count(worker => worker.Grant == owner);
+
+    private async Task ClaimAndStartAsync(ApiConnection settings, QueueModelGrant owner, QueueGrantAllocation allocation, CancellationToken stoppingToken)
+    {
+        try
+        {
+            using var claimStop = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, owner.Stop.Token);
+            var input = new QueueClaimRequest(Guid.NewGuid().ToString(), runtimeId, Guid.NewGuid().ToString(), allocation.WorkItemId,
+                new(AccountSetup: allocation.AccountSetup is null ? null : true), allocation.Preparation?.SnapshotHash, allocation.AccountSetup?.SnapshotHash);
+            var response = await api.ClaimAsync(settings, input, claimStop.Token);
+            lock (sync) pollingReason = response.BlockedReason;
+            if (response.Claim is not { } claim)
+            {
+                var attempts = denied.GetValueOrDefault(allocation.WorkItemId).Attempts + 1;
+                denied[allocation.WorkItemId] = (attempts, response.NextEligibleAt ?? DateTimeOffset.UtcNow.AddSeconds(10));
+                if (attempts >= 5) owner.Finish(allocation); else owner.NoClaim(allocation);
+            }
+            else
+            {
+                QueueApi.ValidateClaim(claim);
+                if (claim.Item.Id != allocation.WorkItemId || claim.Execution.Provider != owner.Approval.Provider
+                    || claim.Ownership!.RuntimeId != runtimeId || claim.Ownership.WorkerId != input.WorkerId)
+                    throw new InvalidDataException("The queue claim does not match its exact approved allocation.");
+                ValidateAllocation(claim, allocation, owner);
+                var stop = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, owner.Stop.Token);
+                var worker = new Worker(claim, allocation, stop, owner);
+                lock (sync)
+                {
+                    if (workers.Values.Any(other => other.Claim.Ownership!.Slot == claim.Ownership.Slot || other.Claim.Ownership.BrowserSessionId == claim.Ownership.BrowserSessionId)) throw new InvalidDataException("The API reused active browser ownership.");
+                    workers.Add(claim.Ownership.BrowserSessionId, worker);
+                    if (connection != settings) stop.Cancel();
+                }
+                worker.Task = RunAsync(settings, worker);
+            }
+        }
+        catch (Exception ex)
+        {
+            owner.Finish(allocation);
+            owner.Cancel("Queue claiming stopped with an uncertain outcome; review the work item before a new approval.");
+            lock (sync) lastError = "The exact claim could not be confirmed. No model retry or different work claim was started.";
+            logger.LogWarning("Queue claim stopped ({FailureType}).", ex.GetType().Name);
         }
     }
 
@@ -249,7 +261,7 @@ internal sealed partial class QueueRuntime(IQueueApi api, IAgentProcess process,
         {
             run.Token.ThrowIfCancellationRequested();
             var plugin = plugins[worker.Allocation.AllocationId];
-            plugin.Verify(grant!.BudgetFor(worker.Allocation));
+            plugin.Verify(worker.Grant.BudgetFor(worker.Allocation));
             await CloseAccountHandoffAsync(claim.Item.Id);
             worker.Browser = await browser.StartAsync(claim, run.Token);
             lock (sync)
@@ -260,7 +272,7 @@ internal sealed partial class QueueRuntime(IQueueApi api, IAgentProcess process,
             }
             var agentSettings = claim.Execution.Preparation is { } preparation ? settings with { ApiToken = preparation.ApiToken } : settings;
             if (claim.Execution.AccountSetup is { } account) agentSettings = settings with { ApiToken = account.ApiToken };
-            var budget = grant!.Launch(worker.Allocation);
+            var budget = worker.Grant.Launch(worker.Allocation);
             budget = budget with { UsageContext = budget.UsageContext! with { ExecutionId = claim.Ownership!.ExecutionId, PluginSourceHash = plugin.SourceHash } };
             result = await process.RunAsync(agentSettings, claim.Request with { Budget = budget, Browser = worker.Browser, PluginStage = plugin }, async entry =>
             {
@@ -268,11 +280,11 @@ internal sealed partial class QueueRuntime(IQueueApi api, IAgentProcess process,
                 if (!string.IsNullOrWhiteSpace(message.Content)) await PublishWorkerEventAsync(settings, worker, message, run.Token);
             }, run.Token);
             if (claim.Execution.AccountSetup is not null) result = await AccountCompletionAsync(agentSettings, worker, result, run.Token);
-            if (!result.UsageKnown || result.Status is not ("completed" or "waiting")) grant.Cancel("A worker stopped or returned unknown usage; the shared approved run stopped without retries.");
+            if (!result.UsageKnown || result.Status is not ("completed" or "waiting")) worker.Grant.Cancel("A worker stopped or returned unknown usage; the shared approved run stopped without retries.");
         }
         catch (OperationCanceledException)
         {
-            grant!.Cancel("A worker stopped with unknown final usage; the shared approved run stopped without retries.");
+            worker.Grant.Cancel("A worker stopped with unknown final usage; the shared approved run stopped without retries.");
             result = new(cancelled ? "cancelled" : "interrupted", "The worker stopped. Inspect saved application state before continuing; no automatic retry was started.");
         }
         catch (Exception ex)
@@ -280,7 +292,7 @@ internal sealed partial class QueueRuntime(IQueueApi api, IAgentProcess process,
             quarantine = ex is QuestionBrowserCleanupException;
             logger.LogWarning("Queue worker stopped ({FailureType}: {Message}).", ex.GetType().Name, ex.Message);
             result = new("interrupted", "The worker stopped unexpectedly. Inspect its saved application state before continuing.");
-            grant!.Cancel("A worker failed; the shared approved run stopped without retries.");
+            worker.Grant.Cancel("A worker failed; the shared approved run stopped without retries.");
         }
         finally
         {
@@ -290,7 +302,7 @@ internal sealed partial class QueueRuntime(IQueueApi api, IAgentProcess process,
             if (worker.Browser is not null && !(claim.Execution.AccountSetup is not null && !lost && !cancelled && !paused && result?.Status == "waiting" && result.UsageKnown))
             {
                 try { await CloseWorkerBrowserAsync(worker); }
-                catch { quarantine = true; grant!.Cancel("Browser cleanup is uncertain. Restart and review retained evidence before another approval."); }
+                catch { quarantine = true; worker.Grant.Cancel("Browser cleanup is uncertain. Restart and review retained evidence before another approval."); }
             }
         }
         try
@@ -310,11 +322,11 @@ internal sealed partial class QueueRuntime(IQueueApi api, IAgentProcess process,
         catch
         {
             if (worker.Browser is not null) { try { await CloseWorkerBrowserAsync(worker); } catch { quarantine = true; } }
-            grant!.Cancel("Saving a worker outcome failed; inspect the retained application before another approval."); lock (sync) lastError = "The outcome could not be saved. The expired item will not be replayed.";
+            worker.Grant.Cancel("Saving a worker outcome failed; inspect the retained application before another approval."); lock (sync) lastError = "The outcome could not be saved. The expired item will not be replayed.";
         }
         finally
         {
-            grant!.Finish(worker.Allocation);
+            worker.Grant.Finish(worker.Allocation);
             lock (sync) { if (quarantine) worker.State = "quarantined"; else workers.Remove(claim.Ownership!.BrowserSessionId); }
             run.Dispose();
         }
@@ -353,8 +365,8 @@ internal sealed partial class QueueRuntime(IQueueApi api, IAgentProcess process,
         {
             try { if (await BeginSubmittedFinalizationAsync(settings, worker, ct)) return; }
             catch { }
-            lost(); grant!.Cancel("A worker lease or browser deadline was lost; all approved workers stopped."); await worker.Stop.CancelAsync();
+            lost(); worker.Grant.Cancel("A worker lease or browser deadline was lost; all approved workers stopped."); await worker.Stop.CancelAsync();
         }
-        catch { lost(); grant!.Cancel("A worker lease or browser deadline was lost; all approved workers stopped."); await worker.Stop.CancelAsync(); }
+        catch { lost(); worker.Grant.Cancel("A worker lease or browser deadline was lost; all approved workers stopped."); await worker.Stop.CancelAsync(); }
     }
 }
