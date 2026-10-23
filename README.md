@@ -5,8 +5,31 @@
 
 A workspace for finding employer roles, tailoring your resume and applying through your own local agent. Accounts, profiles and application history live in Postgres.
 
-[Setup](#setup) · [Mac beta](#clone-and-setup-mac-beta) · [Current capabilities](#current-capabilities) · [MIT license](LICENSE)
+[Quick start](#quick-start) · [Setup](#setup) · [Mac beta](#clone-and-setup-mac-beta) · [Current capabilities](#current-capabilities) · [MIT license](LICENSE)
 </div>
+
+## Quick start
+
+Clone the repository, then run the installer from its root. It installs missing tools, creates
+the browser/database VM, runs setup and the doctor, then starts OpenApply. Run it again after
+any step where it stops for you (a reboot or a Claude sign-in).
+
+```powershell
+# Windows x64 (PowerShell)
+git clone https://github.com/Jarvuslin/OpenApply.git
+cd OpenApply
+powershell -ExecutionPolicy Bypass -File scripts\install.ps1
+```
+
+```sh
+# macOS 14+ (Mac beta)
+git clone https://github.com/Jarvuslin/OpenApply.git
+cd OpenApply
+bash scripts/install.sh
+```
+
+Open **http://localhost:4100/setup** to see every check live. `bun run doctor` prints the same
+checks in the terminal, with a fix for each one that fails. The manual steps below still work.
 
 ## Current capabilities
 
