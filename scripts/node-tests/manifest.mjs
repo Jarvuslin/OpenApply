@@ -32,6 +32,8 @@ export const NODE_TEST_GROUPS = {
       "scripts/concurrency-regression/evidence.test.mjs",
       "scripts/concurrency-regression/integrity.test.mjs",
       "scripts/concurrency-regression/observe-ui.test.mjs",
+      "scripts/doctor.test.mjs",
+      "scripts/dotnet.test.mjs",
       "scripts/node-tests/inventory.test.mjs",
       "scripts/preparation-regression/observe-ui.test.mjs",
       "scripts/preparation-regression/pdf-viewer.test.mjs",
