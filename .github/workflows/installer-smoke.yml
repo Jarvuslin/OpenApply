@@ -76,7 +76,6 @@ jobs:
   windows-one-liner:
     runs-on: windows-latest
     env:
-      OPENAPPLY_DIR: ${{ runner.temp }}\OpenApply
       OPENAPPLY_REPO: https://github.com/${{ github.repository }}.git
       OPENAPPLY_BRANCH: ${{ github.head_ref || github.ref_name }}
       OPENAPPLY_SKIP_VM: "1"
@@ -91,13 +90,15 @@ jobs:
         run: .\harness\.github\scripts\hide-tools.ps1
       - name: Run the README one-liner from an empty folder
         shell: powershell
+        env:
+          OPENAPPLY_DIR: ${{ runner.temp }}\OpenApply
         run: |
           Set-Location (New-Item -ItemType Directory (Join-Path $env:RUNNER_TEMP 'empty'))
           irm https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/scripts/install.ps1 | iex
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Tools after install
         shell: powershell
-        run: .\harness\.github\scripts\report-tools.ps1 -Title 'After one-liner' -Repo $env:OPENAPPLY_DIR -ExpectWinget
+        run: .\harness\.github\scripts\report-tools.ps1 -Title 'After one-liner' -Repo (Join-Path $env:RUNNER_TEMP 'OpenApply') -ExpectWinget
       - name: Doctor
         shell: powershell
         working-directory: ${{ runner.temp }}\OpenApply
@@ -151,7 +152,6 @@ jobs:
     runs-on: macos-latest
     env:
       DOTNET_EnableWriteXorExecute: "0"
-      OPENAPPLY_DIR: ${{ runner.temp }}/OpenApply
       OPENAPPLY_REPO: https://github.com/${{ github.repository }}.git
       OPENAPPLY_BRANCH: ${{ github.head_ref || github.ref_name }}
     steps:
@@ -162,11 +162,13 @@ jobs:
       - name: Hide preinstalled Node and .NET
         run: bash harness/.github/scripts/hide-tools.sh
       - name: Run the README one-liner from an empty folder
+        env:
+          OPENAPPLY_DIR: ${{ runner.temp }}/OpenApply
         run: |
           mkdir -p "$RUNNER_TEMP/empty" && cd "$RUNNER_TEMP/empty"
           curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/scripts/install.sh | bash -s -- --no-start --skip-vm
       - name: Tools after install
-        run: bash harness/.github/scripts/report-tools.sh 'After one-liner' "$OPENAPPLY_DIR" --expect-brew
+        run: bash harness/.github/scripts/report-tools.sh 'After one-liner' "$RUNNER_TEMP/OpenApply" --expect-brew
       - name: Doctor
         working-directory: ${{ runner.temp }}/OpenApply
         run: |
