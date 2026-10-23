@@ -3,16 +3,37 @@
 $ErrorActionPreference = 'Stop'
 # Step logs need a GitHub sign-in; ::error:: and ::notice:: lines show as public annotations.
 trap { Write-Host "::error::hide-tools.ps1 line $($_.InvocationInfo.ScriptLineNumber): $($_.Exception.Message)"; exit 1 }
-$binaries = 'git.exe', 'node.exe', 'dotnet.exe'
 $removed = @()
+$uninstallKeys = @(
+  'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*',
+  'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*',
+  'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*'
+)
+
+# A .NET 10 SDK registered by Visual Studio cannot be unregistered, and winget's install of the
+# same version is then a no-op that leaves no files. On such an image .NET stays in place and is
+# reported as found; Git, Node and Bun are still removed and must be installed fresh. The fresh
+# winget install of .NET on Windows passed in run 39904121796, on an image without that SDK:
+# https://github.com/Jarvuslin/OpenApply/actions/runs/39904121796
+$visualStudioSdk = Get-ItemProperty $uninstallKeys -ErrorAction SilentlyContinue |
+  Where-Object { $_.DisplayName -match '\.NET SDK 10\..*from Visual Studio' } | Select-Object -First 1
+$keepDotnet = [bool]$visualStudioSdk
+$binaries = @('git.exe', 'node.exe')
+$hidden = @('git', 'node')
+$ids = @('Git.Git', 'OpenJS.NodeJS.LTS')
+$folders = @("$env:ProgramFiles\Git", "$env:ProgramFiles\nodejs")
+if ($keepDotnet) {
+  Write-Host "::warning title=.NET kept::$($visualStudioSdk.DisplayName) cannot be unregistered on this runner, so .NET stays in place and counts as found."
+  Add-Content $env:GITHUB_ENV 'OPENAPPLY_DOTNET_KEPT=1'
+} else {
+  $binaries += 'dotnet.exe'
+  $hidden += 'dotnet'
+  $ids += 'Microsoft.DotNet.SDK.10'
+  $folders += "$env:ProgramFiles\dotnet", "$env:USERPROFILE\.dotnet", "$env:LOCALAPPDATA\Microsoft\dotnet"
+}
 
 function Remove-Installed([string]$Pattern) {
-  $keys = @(
-    'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*',
-    'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*',
-    'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*'
-  )
-  foreach ($entry in Get-ItemProperty $keys -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -match $Pattern }) {
+  foreach ($entry in Get-ItemProperty $uninstallKeys -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -match $Pattern }) {
     Write-Host "Uninstalling $($entry.DisplayName)"
     $script:removed += $entry.DisplayName
     # Bundles (the .NET SDK) also have a GUID key, but only their own uninstaller removes them.
@@ -28,25 +49,8 @@ function Remove-Installed([string]$Pattern) {
 
 Remove-Installed '^Git( version [0-9.]+)?$'
 Remove-Installed '^Node\.js'
-Remove-Installed '^Microsoft \.NET SDK 10\.'
+if (!$keepDotnet) { Remove-Installed '^Microsoft \.NET SDK 10\.' }
 
-# Visual Studio registers the SDK's MSI packages too. While any stay registered, a winget
-# install of the same version is a no-op and leaves no files, so remove each one directly.
-$msiKeys = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*', 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
-function Get-SdkPackages {
-  Get-ItemProperty $msiKeys -ErrorAction SilentlyContinue |
-    Where-Object { $_.WindowsInstaller -eq 1 -and $_.DisplayName -match '\.NET.*SDK.*10\.0' }
-}
-foreach ($package in Get-SdkPackages) {
-  Write-Host "msiexec /x $($package.DisplayName)"
-  $removed += "msi $($package.DisplayName)"
-  Start-Process msiexec.exe -ArgumentList '/x', $package.PSChildName, '/qn', '/norestart', 'IGNOREDEPENDENCIES=ALL' -Wait
-}
-$stuck = @(Get-SdkPackages)
-if ($stuck) { throw "Still registered: $(($stuck | ForEach-Object DisplayName) -join ', ')" }
-
-$folders = @("$env:ProgramFiles\Git", "$env:ProgramFiles\nodejs", "$env:ProgramFiles\dotnet",
-  "$env:USERPROFILE\.dotnet", "$env:LOCALAPPDATA\Microsoft\dotnet")
 foreach ($folder in $folders) {
   if (Test-Path $folder) {
     Write-Host "Moving aside $folder"
@@ -72,9 +76,9 @@ foreach ($scope in 'Machine', 'User') {
 }
 
 $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
-$left = foreach ($name in 'git', 'node', 'dotnet') { Get-Command $name -ErrorAction SilentlyContinue }
+$left = foreach ($name in $hidden) { Get-Command $name -ErrorAction SilentlyContinue }
 if ($left) { throw "Still on PATH: $(($left | ForEach-Object Source) -join ', ')" }
-foreach ($id in 'Git.Git', 'OpenJS.NodeJS.LTS', 'Microsoft.DotNet.SDK.10') {
+foreach ($id in $ids) {
   & winget list --id $id --exact --accept-source-agreements --disable-interactivity *> $null
   if ($LASTEXITCODE -ne 0) { continue }
   Write-Host "winget uninstall $id"

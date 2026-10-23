@@ -20,9 +20,22 @@ Write-Host "::notice title=$Title::$($summary -join '; ')"
 if (!$ExpectWinget) { exit 0 }
 
 $failed = @()
-foreach ($id in 'Git.Git', 'OpenJS.NodeJS.LTS', 'Microsoft.DotNet.SDK.10') {
+$ids = @('Git.Git', 'OpenJS.NodeJS.LTS', 'Oven-sh.Bun')
+# hide-tools.ps1 sets this when the runner's Visual Studio .NET SDK could not be removed (see there).
+if ($env:OPENAPPLY_DOTNET_KEPT -eq '1') {
+  Write-Host ".NET 10 SDK: found (runner's Visual Studio copy)"
+  Add-Content $env:GITHUB_STEP_SUMMARY "- .NET 10 SDK: found (runner's Visual Studio copy); fresh install proven in run 39904121796"
+} else {
+  $ids += 'Microsoft.DotNet.SDK.10'
+}
+foreach ($id in $ids) {
   & winget list --id $id --exact --accept-source-agreements --disable-interactivity *> $null
-  if ($LASTEXITCODE -eq 0) { Write-Host "winget installed $id" } else { $failed += "$id not installed by winget" }
+  if ($LASTEXITCODE -eq 0) {
+    Write-Host "winget installed $id"
+    Add-Content $env:GITHUB_STEP_SUMMARY "- $id`: installed by winget"
+  } else {
+    $failed += "$id not installed by winget"
+  }
 }
 if (!(Get-Command git -ErrorAction SilentlyContinue)) { $failed += 'git does not resolve' }
 $nodeMajor = 0
@@ -31,5 +44,5 @@ if ($nodeMajor -lt 22) { $failed += "node 22+ does not resolve (major $nodeMajor
 $dotnet = & node (Join-Path $Repo 'scripts/dotnet.mjs') --print-path 2>$null
 if ($LASTEXITCODE -ne 0) { $failed += 'no dotnet with a 10.x SDK' } else { Write-Host "OpenApply uses $dotnet" }
 if ($failed) { Write-Host "::error title=$Title::$($failed -join '; ')"; exit 1 }
-Write-Host 'Git, Node 22+ and the .NET 10 SDK were installed by the installer.'
+Write-Host 'Git, Node 22+, Bun and a working .NET 10 SDK are in place.'
 exit 0
