@@ -2,7 +2,7 @@ import type {
   CreatePilotSearchInput,
   ReportPilotSearchRunInput,
   UpdatePilotSearchInput,
-} from "@jobpilot/contracts/pilot";
+} from "@openapply/contracts/pilot";
 import { singleton } from "tsyringe";
 import { HOUR_MS } from "@/common/date/buckets";
 import { conflict, findOwned } from "@/common/errors";

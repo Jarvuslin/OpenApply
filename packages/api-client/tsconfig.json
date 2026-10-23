@@ -18,7 +18,7 @@
     "jsxImportSource": "react",
     "paths": {
       "@/*": ["../../apps/api/src/*"],
-      "@jobpilot/api": ["../../apps/api/src/app.ts"]
+      "@openapply/api": ["../../apps/api/src/app.ts"]
     }
   },
   "include": ["src/**/*.ts"],

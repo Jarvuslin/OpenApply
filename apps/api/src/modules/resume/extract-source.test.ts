@@ -6,7 +6,7 @@ import { afterAll, beforeAll, expect, it } from "bun:test";
 
 let folder: string;
 beforeAll(async () => {
-  folder = await mkdtemp(path.join(tmpdir(), "jobpilot-resume-test-"));
+  folder = await mkdtemp(path.join(tmpdir(), "openapply-resume-test-"));
 });
 afterAll(async () => {
   await rm(folder, { recursive: true, force: true });
@@ -16,6 +16,12 @@ it("reads original Unicode resume text", async () => {
   const filename = path.join(folder, "resume.txt");
   await writeFile(filename, "Zoë Example\nToronto · TypeScript");
   expect(await extractSourceText(filename)).toBe("Zoë Example\nToronto · TypeScript");
+});
+
+it("rejects oversized original text instead of silently truncating it", async () => {
+  const filename = path.join(folder, "oversized.txt");
+  await writeFile(filename, "x".repeat(80_001));
+  await expect(extractSourceText(filename)).rejects.toThrow("not truncated");
 });
 
 it("extracts text from an actual PDF document", async () => {

@@ -1,20 +1,23 @@
-using JobPilot.Terminal.Hosting;
-using JobPilot.Terminal.Providers;
+using OpenApply.Terminal.Hosting;
+using OpenApply.Terminal.Agent;
+using OpenApply.Terminal.Providers;
 using Microsoft.AspNetCore.Http.HttpResults;
 
-namespace JobPilot.Terminal.Pilot;
+namespace OpenApply.Terminal.Pilot;
 
 public sealed record PilotStartRequest(string? Provider, string? ApiToken, string? ApiUrl, string? WebUrl);
 
 /// <summary>The pilot part of /healthz.</summary>
 public sealed record PilotStatus
 {
+    public string Mode { get; init; } = "queue_scheduler";
+
     public required bool Running { get; init; }
 
     /// <summary>Whether pilot settings are saved.</summary>
     public required bool Paired { get; init; }
 
-    /// <summary>Whether the loop is driving a session right now.</summary>
+    /// <summary>Always false: Pilot schedules work and never drives a provider session.</summary>
     public required bool Conducting { get; init; }
 
     public DateTimeOffset? LastCycleAt { get; init; }
@@ -22,7 +25,7 @@ public sealed record PilotStatus
     /// <summary><c>ok</c>, <c>empty</c>, or <c>error</c>.</summary>
     public string? LastCycleStatus { get; init; }
 
-    /// <summary>Restarts of a stuck session in a row; reset by a finished cycle.</summary>
+    /// <summary>Always zero: the scheduler never restarts an agent.</summary>
     public required int ConsecutiveTimeouts { get; init; }
 }
 
@@ -62,7 +65,7 @@ public static class PilotEndpoints
 
         app.MapPost("/pilot/stop", (PilotStore store, HostStatus status) =>
         {
-            // Keeps the settings and the session; the loop interrupts the agent's turn and stops starting cycles.
+            // Stop future admission; already queued work remains visible for explicit pause or cancellation.
             store.SetRunning(false);
             return TypedResults.Ok(status.Get());
         });

@@ -1,20 +1,33 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
-namespace JobPilot.Terminal.Pilot;
+namespace OpenApply.Terminal.Pilot;
 
 /// <summary>GET /api/pilot/activity.</summary>
 public sealed record PilotActivity(bool Running, DateTimeOffset? LastActivityAt, CompletedCycle? LastCycle);
 
 public sealed record CompletedCycle(string? CycleId, DateTimeOffset CompletedAt, string? Status, int? SleepSeconds);
 
+internal sealed record PilotScheduleRequest(string Provider);
+
 internal sealed record JournalRequest(JournalEntry[] Entries);
 
 internal sealed record JournalEntry(string Kind, string Summary);
 
 /// <summary>Probes and reports throw only on the caller's cancellation, so a briefly unreachable API cannot take the loop down.</summary>
-public sealed class PilotApi(HttpClient http, ILogger<PilotApi> logger)
+public sealed class PilotApi(HttpClient http, ILogger<PilotApi> logger) : IPilotScheduler
 {
+    public async Task<int> ScheduleAsync(PilotSettings settings, CancellationToken ct)
+    {
+        using var timeout = TimeoutAfter(ct);
+        using var request = Request(settings, HttpMethod.Post, "/api/work-queue/schedule");
+        request.Content = JsonContent.Create(new PilotScheduleRequest(settings.Provider.Id), AppJsonContext.Default.PilotScheduleRequest);
+        using var response = await http.SendAsync(request, timeout.Token);
+        if (!response.IsSuccessStatusCode) throw new HttpRequestException($"Queue scheduling failed ({(int)response.StatusCode}).");
+        var result = await response.Content.ReadFromJsonAsync(AppJsonContext.Default.PilotScheduleResult, timeout.Token);
+        return result?.Enqueued ?? throw new InvalidDataException("The queue scheduler returned no result.");
+    }
+
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(10);
 
     public async Task<PilotActivity?> GetActivityAsync(PilotSettings settings, CancellationToken ct)
@@ -34,7 +47,7 @@ public sealed class PilotApi(HttpClient http, ILogger<PilotApi> logger)
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {
-            logger.LogWarning(ex, "Pilot activity probe failed.");
+            logger.LogWarning("Pilot activity probe failed ({FailureType}).", ex.GetType().Name);
             return null;
         }
     }
@@ -55,7 +68,7 @@ public sealed class PilotApi(HttpClient http, ILogger<PilotApi> logger)
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {
-            logger.LogWarning(ex, "Pilot journal report could not be delivered.");
+            logger.LogWarning("Pilot journal report could not be delivered ({FailureType}).", ex.GetType().Name);
         }
     }
 

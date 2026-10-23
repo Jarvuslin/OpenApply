@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using Pty.Net;
 
-namespace JobPilot.Terminal.Sessions;
+namespace OpenApply.Terminal.Sessions;
 
 /// <summary>Sets the pty winsize on Apple silicon, where Pty.Net's own <c>Resize</c> corrupts it.</summary>
 /// <remarks>

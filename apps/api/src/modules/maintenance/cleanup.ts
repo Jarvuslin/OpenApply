@@ -1,17 +1,14 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import { deleteUnselectedVariants } from "./retained-variants";
 import {
   applicationEventWhere,
-  claimDiscoverWhere,
-  claimReleasedWhere,
   cutoffs,
   emailBodyWhere,
   journalDigestOldWhere,
   journalOldWhere,
-  promotionPostWhere,
   questionTerminalWhere,
   type RetentionCutoffs,
   refreshTokenWhere,
-  resumeVariantWhere,
   verificationTokenWhere,
 } from "./retention";
 
@@ -30,11 +27,6 @@ const RULES = [
     key: "journalDigests",
     run: (db, c) => db.pilotJournalEntry.deleteMany({ where: journalDigestOldWhere(c) }),
   },
-  { key: "claims", run: (db, c) => db.pilotClaim.deleteMany({ where: claimReleasedWhere(c) }) },
-  {
-    key: "claimsDiscover",
-    run: (db, c) => db.pilotClaim.deleteMany({ where: claimDiscoverWhere(c) }),
-  },
   {
     key: "questions",
     run: (db, c) => db.pilotQuestion.deleteMany({ where: questionTerminalWhere(c) }),
@@ -47,10 +39,7 @@ const RULES = [
     key: "refreshTokens",
     run: (db, c) => db.refreshToken.deleteMany({ where: refreshTokenWhere(c) }),
   },
-  {
-    key: "promotions",
-    run: (db, c) => db.promotionPost.deleteMany({ where: promotionPostWhere(c) }),
-  },
+
   {
     key: "emailBodiesBlanked",
     run: (db, c) => db.emailMessage.updateMany({ where: emailBodyWhere(c), data: { rawBody: "" } }),
@@ -61,7 +50,7 @@ const RULES = [
   },
   {
     key: "resumeVariants",
-    run: (db, c) => db.resumeVariant.deleteMany({ where: resumeVariantWhere(c) }),
+    run: deleteUnselectedVariants,
   },
 ] as const satisfies readonly RetentionRule[];
 

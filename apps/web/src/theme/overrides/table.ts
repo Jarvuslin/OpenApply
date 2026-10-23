@@ -9,9 +9,8 @@ export const tableHeadOverrides: Components<Theme>["MuiTableHead"] = {
     root: ({ theme }) => ({
       backgroundColor: theme.palette.surfaces.elevated,
       "& th": {
-        textTransform: "uppercase",
-        fontSize: "0.7rem",
-        letterSpacing: "0.06em",
+        ...theme.typography.overline,
+        height: 40,
         color: (theme.vars ?? theme).palette.text.secondary,
       },
     }),
@@ -23,6 +22,8 @@ export const tableBodyOverrides: Components<Theme>["MuiTableBody"] = {};
 export const tableRowOverrides: Components<Theme>["MuiTableRow"] = {
   styleOverrides: {
     root: ({ theme }) => ({
+      height: 56,
+      "&.MuiTableRow-head": { height: 40 },
       "&:hover": { backgroundColor: theme.palette.surfaces.hover },
     }),
   },
@@ -32,8 +33,8 @@ export const tableCellOverrides: Components<Theme>["MuiTableCell"] = {
   styleOverrides: {
     root: ({ theme }) => ({
       borderBottom: `1px solid ${theme.palette.line.divider}`,
-      padding: "10px 14px",
-      fontSize: "0.875rem",
+      padding: "12px 20px",
+      ...theme.typography.body2,
     }),
   },
 };

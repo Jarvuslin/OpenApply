@@ -1,7 +1,4 @@
-# One release for host + plugin. Push a tag like `v2.1.0` (or run manually to re-sync): builds the AOT
-# host per OS, mirrors provider-specific plugin payloads into the marketplaces, then publishes the
-# terminal archives. Needs secret MARKETPLACE_PUSH_TOKEN (Contents:write on
-# suxrobGM/claude-plugins and suxrobGM/codex-plugins).
+# One release for the OpenApply host and bundled plugin.
 name: Release
 
 on:
@@ -46,17 +43,17 @@ jobs:
       # so archive the whole directory, not just the binary.
       - name: Archive (Unix)
         if: runner.os != 'Windows'
-        run: tar -czf jobpilot-terminal-${{ matrix.rid }}.tar.gz -C apps/terminal/publish .
+        run: tar -czf openapply-terminal-${{ matrix.rid }}.tar.gz -C apps/terminal/publish .
 
       - name: Archive (Windows)
         if: runner.os == 'Windows'
-        run: Compress-Archive -Path apps/terminal/publish/* -DestinationPath jobpilot-terminal-${{ matrix.rid }}.zip
+        run: Compress-Archive -Path apps/terminal/publish/* -DestinationPath openapply-terminal-${{ matrix.rid }}.zip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: jobpilot-terminal-${{ matrix.rid }}
-          path: jobpilot-terminal-${{ matrix.rid }}.*
+          name: openapply-terminal-${{ matrix.rid }}
+          path: openapply-terminal-${{ matrix.rid }}.*
 
   release:
     needs: build
@@ -73,43 +70,10 @@ jobs:
         with:
           path: artifacts
 
-      - name: Checkout Claude marketplace
-        uses: actions/checkout@v7
-        with:
-          repository: suxrobGM/claude-plugins
-          token: ${{ secrets.MARKETPLACE_PUSH_TOKEN }}
-          path: marketplace
-
-      - name: Checkout Codex marketplace
-        uses: actions/checkout@v7
-        with:
-          repository: suxrobGM/codex-plugins
-          token: ${{ secrets.MARKETPLACE_PUSH_TOKEN }}
-          path: codex-marketplace
-
-      # Both marketplaces get setup only; the terminal archives own runtime skills and MCP wiring.
-      - name: Stage and verify marketplace payloads
-        run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            test "${GITHUB_REF_NAME#v}" = "$(node -p 'require("./package.json").version')"
-          fi
-          bash .github/scripts/sync-marketplaces.sh . marketplace codex-marketplace
-
-      - name: Commit marketplace updates
-        run: |
-          for dir in marketplace codex-marketplace; do
-            git -C "$dir" config user.name "github-actions[bot]"
-            git -C "$dir" config user.email "github-actions[bot]@users.noreply.github.com"
-            git -C "$dir" add -A
-            git -C "$dir" diff --cached --quiet || git -C "$dir" commit -m "chore: sync jobpilot plugin ${GITHUB_REF_NAME}"
-            git -C "$dir" push
-          done
-
-      # Publish the host only after its matching provider bootstraps are available.
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v3
         with:
           files: |
-            artifacts/*/jobpilot-terminal-*
+            artifacts/*/openapply-terminal-*
           generate_release_notes: true

@@ -4,7 +4,7 @@ export const tabsOverrides: Components<Theme>["MuiTabs"] = {
   styleOverrides: {
     root: ({ theme }) => ({
       borderBottom: `1px solid ${theme.palette.line.divider}`,
-      minHeight: 38,
+      minHeight: 40,
     }),
     indicator: ({ theme }) => ({
       height: 2,
@@ -17,9 +17,10 @@ export const tabOverrides: Components<Theme>["MuiTab"] = {
   styleOverrides: {
     root: ({ theme }) => ({
       textTransform: "none",
-      minHeight: 38,
-      fontSize: "0.875rem",
-      fontWeight: 500,
+      minHeight: 40,
+      ...theme.typography.button,
+      padding: "10px 16px",
+      color: theme.palette.text.secondary,
       "&.Mui-selected": { color: theme.palette.accent.primary },
     }),
   },

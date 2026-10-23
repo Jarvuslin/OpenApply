@@ -5,7 +5,7 @@ import {
   PAGE_SIZE_OPTIONS,
   type Pagination as PageMeta,
   type PaginationQuery,
-} from "@jobpilot/contracts/pagination";
+} from "@openapply/contracts/pagination";
 import { useSearchParams } from "next/navigation";
 import { useSearchParamWriter } from "@/hooks/use-search-param-writer";
 import { pageParam, pageSizeParam } from "@/utils/search-params";

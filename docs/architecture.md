@@ -1,166 +1,160 @@
-# How JobPilot works
+# How OpenApply works
 
-A plain-language tour of what JobPilot is made of and what happens when you
-use it. You don't need to know how to program to follow it. For the technical
-internals, see [development.md](development.md).
+Verified against the implemented worktree on October 8, 2026. OpenApply has a
+Next.js web client, an Elysia API backed by PostgreSQL, a local .NET companion,
+and a provider plugin. The API owns durable product state; the companion owns
+local processes and leased execution. There is no accepted public production
+deployment. Completed model-free phase gates do not establish live-agent or
+hosted readiness. See the [engineering audit](post-completion-audit-2026-10-08.md)
+for findings and the [testing tiers](testing-tiers.md) for evidence boundaries.
 
-## The big picture
+## Discovery through recorded submission
 
-JobPilot is split into two halves:
-
-- **The dashboard** lives in the cloud. It's the website where you sign up,
-  fill in your profile, manage resumes, start campaigns, and track every
-  application from "applied" to "offer".
-- **The agent** lives on your computer: an AI assistant (Claude Code or Codex,
-  running on your own subscription) equipped with the JobPilot plugin. It
-  opens a real browser on your machine and does the actual work of searching
-  job boards, tailoring your resume, filling out application forms, and
-  messaging recruiters.
-
-```text
-        In the cloud                          On your computer
-  ┌──────────────────────┐             ┌───────────────────────────┐
-  │  JobPilot dashboard  │ ◄────────►  │  AI agent (Claude/Codex)  │
-  │  profile · resumes   │             │  + JobPilot plugin        │
-  │  campaigns · inbox   │             │  + a real web browser     │
-  └──────────────────────┘             └───────────────────────────┘
+```mermaid
+flowchart TD
+    FEEDS[Public ATS feeds / optional user discovery keys] --> CATALOG[Shared posting catalog and URL deduplication]
+    LINKS[Saved job links / manual selection] --> INTAKE[Owned intake and campaign jobs]
+    CATALOG --> INTAKE
+    ORIGINAL[Owned original resume and confirmed applicant facts] --> FIT[Original-source fit assessment and eligibility]
+    INTAKE --> FIT
+    FIT --> ADMIT[Idempotent common queue admission]
+    PILOT[Pilot schedule] --> ADMIT
+    MANUAL[Manual apply intent] --> ADMIT
+    ADMIT --> QUEUE[(WorkItem / lease / execution / reservations)]
+    QUEUE --> GATE[Local companion: exact finite grant and plugin preflight]
+    GATE --> WORKER[One leased job worker and private browser]
+    WORKER --> QUESTIONS[Current form questions / confirmed answers / exact PDF selection]
+    QUESTIONS --> REVIEW[Grounded tailoring and final review]
+    REVIEW --> BEGIN[API checkpoint and guarded submission-begin]
+    BEGIN --> SUBMIT[One form submission]
+    SUBMIT --> RECEIPT[Observed immutable receipt]
+    RECEIPT --> APP[(Canonical Application and exact artifacts)]
+    WORKER --> NEEDS[Needs you / blocked work]
+    BEGIN --> UNCERTAIN[Unknown outcome: recording or manual recovery only]
+    NEEDS --> QUEUE
+    APP --> UI[History / Analytics / dashboard]
+    QUEUE --> UI
 ```
 
-There are three reasons for the split:
+This is the implemented ownership model, not a claim that every arrow has a
+currently available live executor. General campaign/search/inbox preparation
+work can be admitted, but the bounded queue runtime currently accepts application
+and intake-preparation allocations only. Production intake preparation remains
+disabled by its provider-isolation gate. Such work must remain visibly pending
+or blocked; there is no authorized independent Pilot fallback.
 
-1. The AI runs on the Claude or Codex plan you already pay for, so JobPilot
-   never resells AI usage or meters tokens.
-2. Applications are submitted from a real browser on your own computer, logged
-   in as you, rather than from a data center.
-3. That browser opens right in front of you. Every search, click, and form
-   fill happens on your screen, and you can step in anytime.
+## Data, identity and persistence
 
-## The three parts
+- API guards scope account-owned records to the authenticated user. Email/password
+  and optional Google/GitHub sign-in use JWT cookies; local tools use personal
+  access tokens. Narrow preparation capabilities cannot replace ordinary account
+  authentication. Mailbox authorization is separate from sign-in.
+- PostgreSQL/Prisma owns profiles, originals, variants, campaigns, jobs, queue
+  leases, browser ownership, questions, preparation, attempts, receipts and
+  Applications. Per-user transactions and uniqueness constraints coordinate
+  admission, capacity, domain/company spacing and submission reservations.
+- Credentials and discovery keys use per-user encryption keys wrapped by a
+  master key. Resume/PDF and submission artifacts live in configured private
+  filesystem storage, with revision and byte hashes. Database backups alone
+  are not a complete artifact backup.
+- SSE delivers invalidations; clients refetch canonical API state. Each topic
+  retains at most 64 events, and a slow subscriber closes after 256 pending
+  frames. SSE and some operational state remain process-local, so horizontal
+  deployment needs additional work.
 
-### 1. The dashboard (the website)
+## Discovery, matching and documents
 
-Your data lives at [jobpilot.suxrobgm.net](https://jobpilot.suxrobgm.net):
-your profile, resumes and tailored variants, campaigns, the application
-pipeline, recruiter inbox, networking contacts, and analytics. The site also
-has a built-in terminal panel (the "agent dock") where you can see and control
-the agent running on your machine.
+`job-sources` imports public Greenhouse, Lever, Ashby, SmartRecruiters and Workable
+feeds in code. Optional Apify/SerpApi connectors use user-supplied keys. Catalog
+publication uses bounded concurrency, canonical URL identities and database
+deduplication. Attribution URLs remain separate from application URLs. Unsupported
+or unresolved targets stay unresolved rather than being guessed.
 
-### 2. The agent (the plugin)
+`job-intakes` resolves owned links; `mvp/apply-queue.service.ts` admits selected
+catalog jobs into saved campaigns and the common queue. Exact URL duplicate
+checks are authoritative. The fuzzy historical title/company fallback examines
+a limited candidate set and is not a universal semantic duplicate guarantee.
 
-The JobPilot plugin teaches Claude Code or Codex a set of **skills**: commands
-like `search`, `auto-apply`, `cover-letter`, or `networking`. When you run
-one, the agent:
+`scoring` supplies full posting, original-source text and preferences for model
+judgments, then validates evidence and computes/persists the assessment in code.
+Its cache identity binds source bytes, job context and preferences. Original
+resume extraction has a bounded process-local cache keyed by actual SHA-256 and
+file extension. Every read still reads and hashes the bytes. A cache hit never
+authorizes a changed source or bypasses account ownership.
 
-- reads your profile and resume from the dashboard,
-- drives a real browser to do the work (search, log in, fill forms),
-- writes the results back, so your pipeline updates in real time.
+The local inference endpoint supports structured resume extraction. Per-job
+tailoring and independent factual review run in plugin workers; the API does not
+invoke an LLM. API rewrite/structure guards derive dates and restrict unsupported
+facts. PDF compilation and artifact hashing are deterministic. Variant publication
+locks and rechecks the owned base version after compilation, including rewrites
+with no added evidence. Reusable artifact revisions bind exact PDF/TeX bytes.
+Compilation success alone is neither factual validation nor upload consent.
 
-Three skills handle resumes. `extract-resume` parses your PDF exactly as
-written, `review-resume` proposes an improved rewrite that waits for your
-approval, and `tailor-resume` makes a per-job copy (a **variant**) while
-leaving your base alone. None of them can add an employer, date, or metric
-that isn't already in your resume: the dashboard enforces that server-side
-instead of trusting the model, and flags whatever it can't verify.
+## Queue, browser and recovery
 
-The same plugin works in both Claude Code and Codex, so install it in
-whichever one you use.
+`work-queue` is the durable scheduling authority. Manual apply and campaign actions
+enqueue typed work; Pilot's scheduler feeds that same queue. The advanced
+interactive terminal still exists for manual skills, but guarded submission-begin
+rejects unleased manual execution.
 
-### 3. The terminal companion (the bridge)
+The companion requires a finite grant bound to exact work IDs before claims or
+browser allocation. It stages a hash-verified plugin copy per allocation and
+adds finite subagent turn limits without editing the installed source. It owns
+heartbeats, cancellation, cleanup and completion. Capacity defaults to one and is
+bounded at three; API policy and reservations apply across those workers.
 
-A small helper program that runs in the background on your computer. It keeps
-the agent session alive and connects it to the dashboard, so the terminal
-panel on the website shows the agent working on your machine, and buttons on
-the website can send it commands. It also hands the agent a secure token when
-it starts, so the agent acts as _you_ without any manual setup.
+Each application worker receives a separate browser process/profile/CDP endpoint
+and lease-bound API access. Windows uses WSL; Mac support uses Lima. Uploads stage
+exact host artifacts into the guest. The read-only browser viewer checks account,
+work, execution and browser identity; screenshots are not submission evidence.
+The current broker accepts reviewed Greenhouse/Lever/Ashby URL forms and explicitly
+authorized loopback fixtures. An unfamiliar loopback layout test does not prove
+arbitrary employer-host support.
 
-You don't interact with it directly: the `setup` skill (or the dashboard's
-agent dock) installs and starts it for you.
+Question collection can run without a model. Saved answers are owned, consented,
+human-confirmed revisions matched to exact wording/options and relevant country
+context; reuse creates a draft, not automatic new consent. Preparation readback
+uses a frozen network context and never clicks Next/Submit. Unknown/custom controls
+and incomplete coverage stay blockers. This deterministic preparation is distinct
+from the disabled model-driven intake executor.
 
-## What happens when you run a campaign
+Submission requires a reviewed checkpoint, exact artifact and answers, current
+lease, eligibility, authorization and a guarded begin transition. The worker then
+submits once, observes a receipt and persists the canonical Application. A model
+turn or process exit is not success. Begun/unknown attempts must not be resubmitted;
+retained receipts allow recording-only recovery. Expired leases and unanswered
+questions park work. Restarting does not erase submission ambiguity.
 
-Say you run `auto-apply senior typescript remote`:
+## Providers and background work
 
-1. The agent checks in with the dashboard and loads your profile,
-   preferences, and default resume.
-2. It opens a browser on your machine and searches the job board you chose,
-   logging in with your saved credentials if needed.
-3. It scores each job against your resume and skips the ones that don't fit,
-   duplicates you've already applied to, and low-quality postings.
-4. For each match it applies: picking or tailoring the right resume variant,
-   filling out the form, answering screening questions, and writing a cover
-   letter when one is requested.
-5. It reports back after every job, so the campaign page on the dashboard
-   updates live with applied, skipped, or failed, and a reason.
-6. Every submitted application lands in the tracker, and later recruiter
-   replies in your inbox get matched to it automatically.
+- Ordinary PTY sessions support Claude Code and Codex. They are separate from
+  the finite queue grant envelope; their complete token usage is not measured here.
+- Bounded queue application work currently uses the Claude subscription route
+  and Sonnet request configuration. Its stream ledger records observed usage,
+  requested/actual model, execution identity, duration and stop reason. Provider
+  token observations can arrive after spending; budget stops may overshoot by an
+  in-flight response. No token count converts directly to subscription quota.
+- Explicit `/inference` requests use the companion's bounded Claude process;
+  Haiku is its existing extraction default, not a new scoring default. A readiness
+  request can itself generate a model response. Gmail checks also contain a model
+  path. Version/hook checks and normal API health checks are deterministic.
+- Pilot cadence is code-owned. Catalog refresh, document-cache pruning, retention
+  and Telegram inbox/outbox work are API background services. Telegram delivery is
+  deterministic template processing, not a server-side LLM dispatcher.
+- The Gmail connector owns local authentication; normalized ingest and reviewed
+  reply proposals persist through the API. Legacy mailbox OAuth paths still exist.
 
-Depending on the campaign mode, the agent either asks you to review matches
-first (`search`, `apply`) or proceeds on its own up to a cap you set
-(`auto-apply`).
+## UI and operational limits
 
-## The Pilot: fully autonomous mode
+The web exposes Queue, inline activity, Needs you, application history, analytics,
+campaigns, resume studio, inbox and settings. The advanced terminal remains
+available. TanStack Query refetches on owned SSE events and clears
+account data when identity changes. Analytics queue depth counts canonical queued
+WorkItems rather than obsolete Job status values.
 
-Everything above still works by hand, but you can also hand the whole loop
-over. Write your instructions once (goals, daily caps, saved searches,
-networking autonomy, approved posting platforms) and the Pilot repeats one
-cycle for as long as it's enabled:
-
-```text
-  sense ──► decide ──► act ──► record ──► exit
-    ▲                                        │
-    └──── the orchestrator re-injects ◄───────┘
-```
-
-- **Sense.** The agent fetches its agenda, a prioritized list the server
-  compiles fresh from your data on every request (jobs to apply to, replies to
-  review, follow-ups due). There is no separate task queue or background cron.
-- **Decide.** It takes the single top item.
-- **Act.** It claims the item, with a short-lived claim that has a built-in
-  timeout, and does that one thing: apply to a job, send a follow-up, draft an
-  interview reply. The result is saved to the server before anything else
-  happens, so a crash mid-cycle loses nothing. The claim expires and the work
-  returns to the agenda.
-- **Record.** The action lands in the live journal.
-- **Exit.** The cycle prints a sentinel line (`[[JOBPILOT_CYCLE ...]]`) and
-  stops. The orchestrator on your machine reads it, confirms completion with
-  the server (garbled terminal output can't fake a finish), and schedules the
-  next run. A quiet or stuck run gets a check-in reminder, then a session
-  restart; the claim timeout returns its work to the agenda either way.
-
-Two things let this run without a browser tab open: **one-time pairing**
-stores your login token securely with the host when you first enable the
-Pilot, so it can start its own sessions after a reboot or crash; and a live
-SSE connection lets the dashboard wake the agent the moment something
-time-sensitive happens instead of waiting for the next scheduled check.
-
-Anything the Pilot isn't sure about (a salary question, an unexpected form
-field, an interview invite) is sent to your phone as a question in the form of
-a one-tap card, and the affected job is parked until you answer. The important
-limits are more than instructions to the AI. Daily apply and networking caps,
-"never send a LinkedIn message automatically," and "never publish a post
-without my approval" are enforced by the dashboard itself, so they hold even
-if a cycle goes off-script.
-
-## Where your data lives
-
-- Your profile, resumes, applications, and campaigns are stored in your
-  JobPilot account on the web.
-- Job-board passwords and tokens are encrypted with a key unique to your
-  account.
-- The cloud never logs into job boards for you. Board sessions, cookies, and
-  form submissions all stay in the browser on your computer.
-- Your prompts and the agent's work go through your own Claude or Codex
-  subscription, not through JobPilot's servers.
-
-## Live updates
-
-While the agent works, every open dashboard page keeps itself current. The
-campaign page shows per-job progress, the pipeline shows new applications, and
-the inbox shows newly matched replies, so you never have to refresh.
-
-## Further reading
-
-- [development.md](development.md): run JobPilot locally, repository layout,
-  tech stack, and the technical internals behind everything above.
-- [User docs](https://jobpilot.suxrobgm.net/docs): getting started, campaigns
-  & skills, email setup, credentials, FAQ.
+Production readiness still requires reviewed provider context/tool isolation,
+current common-queue live acceptance, a supported preparation executor, host
+coverage beyond reviewed ATS shapes, deployment/backup testing and operational
+monitoring. The historical full-acceptance launcher
+remains disabled. A phase document saying its independent gate passed does not
+clear these restrictions. See [development commands](development.md).

@@ -1,4 +1,4 @@
-import type { ResumeBasics } from "@jobpilot/contracts/resume";
+import type { ResumeBasics } from "@openapply/contracts/resume";
 import { findProfileMismatches, type ProfileContact } from "./consistency";
 import { describe, expect, it } from "bun:test";
 

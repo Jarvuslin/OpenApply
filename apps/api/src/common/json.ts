@@ -24,7 +24,7 @@ function toJsonChild(value: unknown): Prisma.InputJsonValue | null {
   throw new TypeError(`Value of type ${typeof value} cannot be stored as JSON.`);
 }
 
-/** Every key typed `z.date()` under an agenda or claim payload. `json.test.ts` fails when the
+/** Every key typed `z.date()` under an agenda payload. `json.test.ts` fails when the
  *  schemas grow one this list is missing. */
 export const DATE_KEYS = new Set([
   "generatedAt",

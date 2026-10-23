@@ -17,12 +17,8 @@ interface SecurityPageProps {
 
 export default function SecurityPage(props: SecurityPageProps): ReactElement {
   return (
-    <PageShell maxWidth="md">
-      <PageHeader
-        eyebrow="Account"
-        title="Security"
-        description="Sign-in email, password, and connected accounts."
-      />
+    <PageShell>
+      <PageHeader title="Security" description="Sign-in email, password, and connected accounts." />
       <ChangeEmailCard />
       <ChangePasswordCard />
       {/* Only this card reads the OAuth callback flags off the URL. */}

@@ -1,43 +1,46 @@
 "use client";
 
-import type { PropsWithChildren, ReactElement } from "react";
+import { type PropsWithChildren, type ReactElement, useSyncExternalStore } from "react";
 import { Box } from "@mui/material";
 import { AgentDock } from "@/components/features/agent-dock/agent-dock";
 import { VerifyEmailBanner } from "@/components/features/auth";
-import { useAgentAvailable } from "@/providers/agent-provider";
-import { MobileNav } from "./mobile-nav";
+import { getAdvancedToolsEnabled, subscribeAgentStorage } from "@/lib/agent-storage";
+import { QueueAutoReconnect } from "./queue-auto-reconnect";
 import { Rail } from "./rail";
-import { MOBILE_NAV_HEIGHT } from "./shell-config";
 
 export function AppShell(props: PropsWithChildren): ReactElement {
   const { children } = props;
-  // The local agent terminal only runs on desktop, so below md we drop the rail
-  // and dock entirely and navigate via a bottom bar - a read-only, browse-only UI.
-  const isDesktop = useAgentAvailable();
-
+  const advancedTools = useSyncExternalStore(
+    subscribeAgentStorage,
+    getAdvancedToolsEnabled,
+    () => false,
+  );
   return (
     <Box
       sx={(theme) => ({
         display: "flex",
-        height: "100vh",
+        height: "100dvh",
+        overflow: "hidden",
         backgroundColor: theme.palette.surfaces.base,
       })}
     >
-      {isDesktop && <Rail />}
+      <QueueAutoReconnect />
+      <Rail />
       <Box
         component="main"
         sx={{
           flex: 1,
           minWidth: 0,
           height: "100%",
+          display: "flex",
+          flexDirection: "column",
           overflowY: "auto",
-          pb: isDesktop ? 0 : `${MOBILE_NAV_HEIGHT}px`,
         }}
       >
         <VerifyEmailBanner />
-        {children}
+        <Box sx={{ flex: 1, display: "flex", flexDirection: "column", py: 4 }}>{children}</Box>
       </Box>
-      {isDesktop ? <AgentDock /> : <MobileNav />}
+      {advancedTools && <AgentDock />}
     </Box>
   );
 }

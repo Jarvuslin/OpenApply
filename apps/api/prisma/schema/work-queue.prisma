@@ -1,0 +1,164 @@
+enum WorkKind {
+  application
+  pilot_task
+  @@map("work_kind")
+}
+enum WorkState {
+  queued
+  preparing
+  ready
+  filling
+  needs_user
+  submitted
+  skipped
+  failed
+  paused
+  stopping
+  cancelled
+  completed
+  @@map("work_state")
+}
+enum WorkSource {
+  user
+  campaign
+  mvp
+  discovery
+  pilot
+  migration
+  @@map("work_source")
+}
+enum WorkIntent {
+  account_setup
+  intake_prepare
+  campaign_start
+  campaign_resume
+  campaign_rescan
+  campaign_retry_failed
+  search
+  inbox
+  pilot_score
+  unavailable
+  @@map("work_intent")
+}
+model WorkItem {
+  priorityRequestedAt DateTime? @map("priority_requested_at")
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind WorkKind
+  state WorkState @default(queued)
+  source WorkSource
+  provider AgentProvider @default(claude)
+  identity String
+  jobId String? @unique @map("job_id")
+  job Job? @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  jobKey String? @map("job_key")
+  campaignId String? @map("campaign_id")
+  campaign Campaign? @relation(fields: [campaignId], references: [campaignId], onDelete: Cascade)
+  applicationId String? @map("application_id")
+  intent WorkIntent?
+  payload Json @default("{}")
+  title String
+  company String?
+  reason String?
+  leaseToken String? @map("lease_token")
+  currentExecutionId String? @map("current_execution_id")
+  currentExecution WorkExecution? @relation("CurrentExecution", fields:[userId,currentExecutionId],references:[userId,id],onDelete:NoAction)
+  workerSlot Int? @map("worker_slot")
+  leaseExpiresAt DateTime? @map("lease_expires_at")
+  heartbeatAt DateTime? @map("heartbeat_at")
+  cancellationRequestedAt DateTime? @map("cancellation_requested_at")
+  pauseRequestedAt DateTime? @map("pause_requested_at")
+  attempts Int @default(0)
+  // Automatic retries of a failed run; capped so a broken posting cannot loop.
+  autoRetries Int @default(0) @map("auto_retries")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  startedAt DateTime? @map("started_at")
+  finishedAt DateTime? @map("finished_at")
+  events WorkEvent[]
+  @@unique([userId, identity])
+  @@index([userId, state, createdAt])
+  @@index([campaignId])
+  @@map("work_items")
+}
+
+model QueuePolicy {
+  userId String @id @map("user_id")
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  revision Int @default(1)
+  maxConcurrentWorkers Int @default(1) @map("max_concurrent_workers")
+  dailyApplicationCap Int @default(10) @map("daily_application_cap")
+  companyApplicationCap Int @default(3) @map("company_application_cap")
+  companyWindowDays Int @default(7) @map("company_window_days")
+  domainDelaySeconds Int @default(30) @map("domain_delay_seconds")
+  // Null means no limit; each claimed run uses one.
+  runsRemaining Int? @map("runs_remaining")
+  autoRetryFailed Boolean @default(false) @map("auto_retry_failed")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@map("queue_policies")
+}
+
+model WorkExecution {
+  currentItems WorkItem[] @relation("CurrentExecution")
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  // These source identities survive deletion of a campaign or work item.
+  workItemId String @map("work_item_id")
+  jobId String? @map("job_id")
+  kind WorkKind
+  runtimeId String @map("runtime_id")
+  workerId String @map("worker_id")
+  browserSessionId String @unique @map("browser_session_id")
+  slot Int
+  policyRevision Int @map("policy_revision")
+  canonicalUrl String? @map("canonical_url")
+  companyKey String? @map("company_key")
+  domainKey String? @map("domain_key")
+  startedAt DateTime @default(now()) @map("started_at")
+  finishedAt DateTime? @map("finished_at")
+  releasedAt DateTime? @map("released_at")
+  consumedAt DateTime? @map("consumed_at")
+  submissionAttemptId String? @map("submission_attempt_id")
+  @@index([userId,startedAt])
+  @@index([userId,companyKey])
+  @@index([workItemId])
+  @@unique([userId,id])
+  @@map("work_executions")
+}
+
+model WorkDomainGate {
+  userId String @map("user_id")
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  domainKey String @map("domain_key")
+  nextStartAt DateTime @map("next_start_at")
+  @@id([userId,domainKey])
+  @@map("work_domain_gates")
+}
+model WorkRequest {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  idempotencyKey String @map("idempotency_key")
+  payloadHash String @map("payload_hash")
+  itemIds String[] @map("item_ids")
+  response Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  @@unique([userId, idempotencyKey])
+  @@map("work_requests")
+}
+model WorkEvent {
+  id String @id @default(uuid())
+  workItemId String @map("work_item_id")
+  workItem WorkItem @relation(fields: [workItemId], references: [id], onDelete: Cascade)
+  eventId String @map("event_id")
+  payloadHash String @map("payload_hash")
+  kind AgentEventKind
+  content String
+  metadata Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  @@unique([workItemId, eventId])
+  @@index([workItemId, createdAt])
+  @@map("work_events")
+}

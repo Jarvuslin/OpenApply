@@ -1,9 +1,9 @@
-using System.Text;
-using JobPilot.Terminal.Hosting;
-using JobPilot.Terminal.Providers;
+using OpenApply.Terminal.Hosting;
+using OpenApply.Terminal.Agent;
+using OpenApply.Terminal.Providers;
 using Pty.Net;
 
-namespace JobPilot.Terminal.Sessions;
+namespace OpenApply.Terminal.Sessions;
 
 /// <summary>How a session ended. A null exit code means it was stopped on request.</summary>
 public readonly record struct SessionExit(string ProviderDisplayName, int? ExitCode)
@@ -11,32 +11,21 @@ public readonly record struct SessionExit(string ProviderDisplayName, int? ExitC
     public bool Requested => ExitCode is null;
 }
 
-public enum SendResult
-{
-    Sent,
-    NotRunning,
-    ProviderMismatch,
-}
-
 /// <summary>The one live provider session. Replacing or stopping it disposes its process, so stale exits never land.</summary>
 public sealed class TerminalSession : IDisposable
 {
-    private static readonly byte[] EnterKey = "\r"u8.ToArray();
-
-    // Sending Enter separately keeps provider TUIs from treating it as pasted text.
-    private static readonly TimeSpan SubmitKeyDelay = TimeSpan.FromMilliseconds(75);
-
     private readonly HostInstall install;
     private readonly ScratchCleaner scratch;
     private readonly Func<PtyOptions, IPtyConnection> spawn;
     private readonly ILogger<TerminalSession> logger;
     private readonly Lock sync = new();
+    private readonly AgentRuntimeGate runtimeGate;
 
     private volatile PtyProcess? current;
     private volatile Provider activeProvider = Provider.Claude;
 
-    public TerminalSession(HostInstall install, ScratchCleaner scratch, ILogger<TerminalSession> logger)
-        : this(install, scratch, logger, PtyProcess.SpawnWithPtyNet)
+    public TerminalSession(HostInstall install, ScratchCleaner scratch, ILogger<TerminalSession> logger, AgentRuntimeGate runtimeGate)
+        : this(install, scratch, logger, PtyProcess.SpawnWithPtyNet, runtimeGate)
     {
     }
 
@@ -44,12 +33,14 @@ public sealed class TerminalSession : IDisposable
         HostInstall install,
         ScratchCleaner scratch,
         ILogger<TerminalSession> logger,
-        Func<PtyOptions, IPtyConnection> spawn)
+        Func<PtyOptions, IPtyConnection> spawn,
+        AgentRuntimeGate? runtimeGate = null)
     {
         this.install = install;
         this.scratch = scratch;
         this.logger = logger;
         this.spawn = spawn;
+        this.runtimeGate = runtimeGate ?? new AgentRuntimeGate();
     }
 
     public event Action<byte[]>? Output;
@@ -83,108 +74,68 @@ public sealed class TerminalSession : IDisposable
                 return;
             }
 
-            // Before the outgoing session stops, so a failed preparation leaves it alive.
-            provider.PrepareWorkspace(paths);
-
-            if (current is not null)
-            {
-                logger.LogInformation("Switching terminal provider from {Previous} to {Next}.", activeProvider.Id, provider.Id);
-                current.Dispose();
-                current = null;
-            }
-
-            scratch.CleanSessionStart(paths);
-            var args = provider.BuildArgs(paths.PluginDir, logger);
-            logger.LogInformation(
-                "Starting {Provider}: cwd={Cwd} command={Command} args={Args} cols={Cols} rows={Rows}",
-                provider.DisplayName,
-                paths.WorkingDir,
-                provider.Command,
-                string.Join(" ", args),
-                cols,
-                rows);
-
-            // Skills write scratch files here; a shell-local TEMP would not survive between tool calls.
-            var scratchDir = Directory.CreateDirectory(paths.ScratchDir).FullName;
-            var env = new Dictionary<string, string>(StringComparer.Ordinal)
-            {
-                ["JOBPILOT_SKILLS_ROOT"] = paths.SkillsDir,
-                ["JOBPILOT_WORKSPACE_ROOT"] = paths.WorkingDir,
-                ["JOBPILOT_TEMP"] = scratchDir,
-                ["JOBPILOT_API"] = RequestOrEnv(apiUrl, "JOBPILOT_API", "http://localhost:4101"),
-                ["JOBPILOT_API_TOKEN"] = RequestOrEnv(apiToken, "JOBPILOT_API_TOKEN", ""),
-                ["JOBPILOT_WEB"] = RequestOrEnv(webUrl, "JOBPILOT_WEB", "http://localhost:4100"),
-            };
-
-            Starting?.Invoke();
-
-            var process = new PtyProcess(
-                PtyProcess.BuildOptions(provider.Command, args, paths.WorkingDir, cols, rows, paths.BinDir, env), spawn, logger);
-            process.Output += data => Output?.Invoke(data);
-            process.Exited += exitCode => OnExited(process, exitCode);
+            if (!runtimeGate.TryAcquireLegacy()) throw new InvalidOperationException("The queue is using the agent. Stop its current work before starting a terminal session.");
             try
             {
-                process.Start();
-            }
-            catch (PtyStartException ex)
-            {
-                logger.LogError(ex, "Failed to start {Provider} PTY.", provider.Id);
-                throw;
-            }
+                // Before the outgoing session stops, so a failed preparation leaves it alive.
+                provider.PrepareWorkspace(paths);
 
-            current = process;
-            activeProvider = provider;
-        }
-    }
-
-    /// <summary>Types a command into the session and submits it.</summary>
-    public async Task<SendResult> SendCommandAsync(string command, Provider? expectedProvider = null, CancellationToken ct = default)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(command);
-
-        PtyProcess process;
-        int submitKeyPresses;
-        lock (sync)
-        {
-            if (current is null)
-            {
-                return SendResult.NotRunning;
-            }
-
-            if (expectedProvider is not null && expectedProvider != activeProvider)
-            {
-                logger.LogWarning("Rejected a command for {Expected}: {Actual} is active.", expectedProvider.Id, activeProvider.Id);
-                return SendResult.ProviderMismatch;
-            }
-
-            process = current;
-            submitKeyPresses = activeProvider.SubmitKeyPresses(command);
-            // A long raw write can be split into separate key events by ConPTY/the
-            // provider's paste detector. Frame prose and multiline input as one paste;
-            // keep short skill commands raw so autocomplete still works.
-            var input = command.Length > 256 || command.Contains('\n') || command.Contains('\r')
-                ? $"\e[200~{command}\e[201~"
-                : command;
-            process.Write(Encoding.UTF8.GetBytes(input));
-        }
-
-        for (var press = 0; press < submitKeyPresses; press++)
-        {
-            await Task.Delay(SubmitKeyDelay, ct);
-            lock (sync)
-            {
-                // A session replaced during the delay must not receive Enter for a command it never saw.
-                if (current != process)
+                if (current is not null)
                 {
-                    logger.LogWarning("Dropped the submit key: the session ended or was replaced mid-command.");
-                    return SendResult.NotRunning;
+                    logger.LogInformation("Switching terminal provider from {Previous} to {Next}.", activeProvider.Id, provider.Id);
+                    current.Dispose();
+                    current = null;
                 }
 
-                process.Write(EnterKey);
+                scratch.CleanSessionStart(paths);
+                var args = provider.BuildArgs(paths.PluginDir, logger);
+                logger.LogInformation(
+                    "Starting {Provider}: cwd={Cwd} command={Command} args={Args} cols={Cols} rows={Rows}",
+                    provider.DisplayName,
+                    paths.WorkingDir,
+                    provider.Command,
+                    string.Join(" ", args),
+                    cols,
+                    rows);
+
+                // Skills write scratch files here; a shell-local TEMP would not survive between tool calls.
+                var scratchDir = Directory.CreateDirectory(paths.ScratchDir).FullName;
+                var env = new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["OPENAPPLY_SKILLS_ROOT"] = paths.SkillsDir,
+                    ["OPENAPPLY_WORKSPACE_ROOT"] = paths.WorkingDir,
+                    ["OPENAPPLY_TEMP"] = scratchDir,
+                    ["OPENAPPLY_API"] = RequestOrEnv(apiUrl, "OPENAPPLY_API", "http://localhost:4101"),
+                    ["OPENAPPLY_API_TOKEN"] = RequestOrEnv(apiToken, "OPENAPPLY_API_TOKEN", ""),
+                    ["OPENAPPLY_WEB"] = RequestOrEnv(webUrl, "OPENAPPLY_WEB", "http://localhost:4100"),
+                };
+
+                Starting?.Invoke();
+
+                var process = new PtyProcess(
+                    PtyProcess.BuildOptions(provider.Command, args, paths.WorkingDir, cols, rows, paths.BinDir, env), spawn, logger);
+                process.Output += data => Output?.Invoke(data);
+                process.Exited += exitCode => OnExited(process, exitCode);
+                try
+                {
+                    process.Start();
+                }
+                catch (PtyStartException ex)
+                {
+                    runtimeGate.ReleaseLegacy();
+                    logger.LogError(ex, "Failed to start {Provider} PTY.", provider.Id);
+                    throw;
+                }
+
+                current = process;
+                activeProvider = provider;
+            }
+            catch
+            {
+                if (current is null) runtimeGate.ReleaseLegacy();
+                throw;
             }
         }
-
-        return SendResult.Sent;
     }
 
     public void Write(byte[] data) => current?.Write(data);
@@ -204,6 +155,7 @@ public sealed class TerminalSession : IDisposable
             logger.LogInformation("Stopping {Provider} session.", activeProvider.Id);
             current.Dispose();
             current = null;
+            runtimeGate.ReleaseLegacy();
             providerName = activeProvider.DisplayName;
         }
 
@@ -224,6 +176,7 @@ public sealed class TerminalSession : IDisposable
             }
 
             current = null;
+            runtimeGate.ReleaseLegacy();
             providerName = activeProvider.DisplayName;
         }
 

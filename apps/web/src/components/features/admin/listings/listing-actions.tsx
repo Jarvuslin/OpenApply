@@ -1,9 +1,9 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { AdminJobListingPatch } from "@jobpilot/contracts/job-listing";
 import { Delete, MoreVert, Visibility, VisibilityOff } from "@mui/icons-material";
 import { IconButton } from "@mui/material";
+import type { AdminJobListingPatch } from "@openapply/contracts/job-listing";
 import { useRouter } from "next/navigation";
 import { api } from "@/api/client";
 import { useApiMutation } from "@/api/hooks";

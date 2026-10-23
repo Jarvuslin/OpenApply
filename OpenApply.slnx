@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/tests/">
+    <Project Path="tests/OpenApply.Terminal.Tests/OpenApply.Terminal.Tests.csproj" />
+  </Folder>
+  <Project Path="apps/terminal/OpenApply.Terminal.csproj" />
+</Solution>

@@ -1,26 +1,20 @@
 import {
-  portfolioSettingsPatchSchema,
+  autoApplySettingsSchema,
   setPrimaryResumeSchema,
-  usernameSchema,
   userWithAutoApplySchema,
-} from "@jobpilot/contracts/user";
+} from "@openapply/contracts/user";
 import { Elysia } from "elysia";
-import { z } from "zod/v4";
 import { container } from "@/common/di/container";
+import { badRequest } from "@/common/errors";
 import { authGuard } from "@/common/middleware";
-import { portfolioSchema } from "@/modules/portfolio/portfolio.schema";
-import { PortfolioService } from "@/modules/portfolio/portfolio.service";
-import { idResponseSchema } from "@/types/response";
-import {
-  portfolioSettingsSchema,
-  primaryResumeSetSchema,
-  userAggregateSchema,
-  usernameAvailabilitySchema,
-} from "./user.schema";
+import { RATE_LIMITS, rateLimit } from "@/common/rate-limit";
+import { idResponseSchema, okResponseSchema } from "@/types/response";
+import { TranscriptService } from "./transcript.service";
+import { primaryResumeSetSchema, transcriptSavedSchema, userAggregateSchema } from "./user.schema";
 import { UserService } from "./user.service";
 
 const svc = container.resolve(UserService);
-const portfolioSvc = container.resolve(PortfolioService);
+const transcripts = container.resolve(TranscriptService);
 
 export const userController = new Elysia({
   prefix: "/user",
@@ -44,6 +38,36 @@ export const userController = new Elysia({
         "Performs a full replace of the current user's applicant data and auto-apply settings, returning the updated user id.",
     },
   })
+  .put("/auto-apply", ({ user, body }) => svc.setAutoApply(user.id, body), {
+    body: autoApplySettingsSchema,
+    response: okResponseSchema,
+    detail: {
+      summary: "Save the queue's apply defaults: minimum score, per-search cap, availability",
+    },
+  })
+  .post(
+    "/transcript",
+    async ({ user, request }) => {
+      const form = await request.formData();
+      const file = form.get("file");
+      if (!(file instanceof File)) throw badRequest("file field is required");
+      return transcripts.upload(user.id, file);
+    },
+    {
+      response: transcriptSavedSchema,
+      // The handler reads FormData; the rate-limit hook otherwise makes Elysia parse it first.
+      parse: "none",
+      beforeHandle: rateLimit(RATE_LIMITS.submissionUpload),
+      detail: { summary: "Save the profile's unofficial transcript PDF" },
+    },
+  )
+  .get("/transcript", ({ user }) => transcripts.download(user.id), {
+    detail: { summary: "Download the profile's transcript PDF" },
+  })
+  .delete("/transcript", ({ user }) => transcripts.remove(user.id), {
+    response: okResponseSchema,
+    detail: { summary: "Remove the profile's transcript" },
+  })
   .put("/primary-resume", ({ user, body }) => svc.setPrimaryResume(user.id, body.resumeId), {
     body: setPrimaryResumeSchema,
     response: primaryResumeSetSchema,
@@ -51,39 +75,5 @@ export const userController = new Elysia({
       summary: "Set primary resume",
       description:
         "Marks one of the user's resumes as primary (or clears it with `null`), returning the new primary resume id.",
-    },
-  })
-  .get("/portfolio", ({ user }) => svc.getPortfolioSettings(user.id), {
-    response: portfolioSettingsSchema,
-    detail: {
-      summary: "Get public-portfolio settings",
-      description:
-        "Returns the user's portfolio username, availability status, and the four show/hide flags for the resume and links.",
-    },
-  })
-  .get("/portfolio/preview", ({ user }) => portfolioSvc.previewByUserId(user.id), {
-    response: portfolioSchema,
-    detail: {
-      summary: "Preview own portfolio",
-      description:
-        "Renders the owner's portfolio card exactly as visitors would see it, hidden links included - backs the settings live preview.",
-    },
-  })
-  .get("/portfolio/available", ({ user, query }) => svc.checkUsername(user.id, query.username), {
-    query: z.object({ username: usernameSchema }),
-    response: usernameAvailabilitySchema,
-    detail: {
-      summary: "Check username availability",
-      description:
-        "Whether the given username is free for this user to claim (own current one counts as free).",
-    },
-  })
-  .patch("/portfolio", ({ user, body }) => svc.updatePortfolioSettings(user.id, body), {
-    body: portfolioSettingsPatchSchema,
-    response: portfolioSettingsSchema,
-    detail: {
-      summary: "Update public-portfolio settings",
-      description:
-        "Sets/changes the portfolio username (409 if taken), the availability status, and which of the resume and links are shown publicly.",
     },
   });

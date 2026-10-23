@@ -2,12 +2,6 @@
 
 import { type ReactElement, type SubmitEvent, useRef } from "react";
 import {
-  JOB_LEVEL_LABELS,
-  JOB_LEVELS,
-  parseTechParam,
-  serializeTechParam,
-} from "@jobpilot/contracts/job-listing";
-import {
   Box,
   Button,
   Card,
@@ -17,6 +11,12 @@ import {
   ToggleButton,
   Typography,
 } from "@mui/material";
+import {
+  JOB_LEVEL_LABELS,
+  JOB_LEVELS,
+  parseTechParam,
+  serializeTechParam,
+} from "@openapply/contracts/job-listing";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MultiSelect } from "@/components/ui/form";
 import { ActiveFilters } from "./active-filters";

@@ -1,4 +1,4 @@
-import type { ApiTokenCreateInput } from "@jobpilot/contracts";
+import type { ApiTokenCreateInput } from "@openapply/contracts";
 import { singleton } from "tsyringe";
 import { type AuthUser, generateOpaqueToken, hashToken } from "@/common/auth";
 import { CryptoService, KeyUnrecoverableError, SECRET_CONTEXTS } from "@/common/crypto";

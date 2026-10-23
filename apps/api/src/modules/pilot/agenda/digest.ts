@@ -1,5 +1,4 @@
 import { DAY_MS, minutesOfDay, startOfDay } from "@/common/date/buckets";
-import type { PushService } from "@/common/push/push.service";
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { PilotJournalService } from "../journal.service";
 
@@ -8,17 +7,16 @@ const DIGEST_HOUR_UTC = 7;
 interface DigestDeps {
   prisma: PrismaClient;
   journal: PilotJournalService;
-  push: PushService;
 }
 
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
 /**
- * Writes one "digest" journal entry per UTC day, after 07:00, and pushes it. Called fire-and-forget,
+ * Writes one "digest" journal entry per UTC day, after 07:00. Called fire-and-forget,
  * so it logs its own errors instead of rejecting.
  */
 export async function writeDigestIfDue(
-  { prisma, journal, push }: DigestDeps,
+  { prisma, journal }: DigestDeps,
   userId: string,
   now: Date,
   openQuestions: number,
@@ -37,14 +35,7 @@ export async function writeDigestIfDue(
       if (written > 0) return;
 
       const since = new Date(now.getTime() - DAY_MS);
-      const [
-        applicationsCreated,
-        jobsFailed,
-        jobsSkipped,
-        networkingSent,
-        networkingReplies,
-        promotionsPosted,
-      ] = await Promise.all([
+      const [applicationsCreated, jobsFailed, jobsSkipped] = await Promise.all([
         tx.application.count({ where: { userId, appliedAt: { gte: since } } }),
         tx.job.count({
           where: { status: "failed", campaign: { userId }, createdAt: { gte: since } },
@@ -52,16 +43,12 @@ export async function writeDigestIfDue(
         tx.job.count({
           where: { status: "skipped", campaign: { userId }, createdAt: { gte: since } },
         }),
-        tx.networkingMessage.count({ where: { userId, sentAt: { gte: since } } }),
-        tx.networkingMessage.count({ where: { userId, repliedAt: { gte: since } } }),
-        tx.promotionPost.count({ where: { userId, status: "posted", postedAt: { gte: since } } }),
       ]);
 
       const summary = `Last 24h: ${[
         plural(applicationsCreated, "application", "applications"),
         `${jobsFailed + jobsSkipped} not applied`,
-        `${networkingSent} networking sent (${plural(networkingReplies, "reply", "replies")})`,
-        `${plural(promotionsPosted, "post", "posts")} published`,
+
         plural(openQuestions, "open question", "open questions"),
       ].join(", ")}.`;
       const detail = {
@@ -69,17 +56,8 @@ export async function writeDigestIfDue(
         jobsFailed,
         jobsSkipped,
         openQuestions,
-        networkingSent,
-        networkingReplies,
-        promotionsPosted,
       };
       await journal.appendJournal(userId, { entries: [{ kind: "digest", summary, detail }] });
-      void push.sendToUser(userId, {
-        title: "Your Pilot's morning digest",
-        body: summary,
-        url: "/pilot",
-        tag: "pilot-digest",
-      });
     });
   } catch (err) {
     console.error("[pilot] digest write failed", err);

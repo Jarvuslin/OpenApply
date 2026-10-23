@@ -1,0 +1,2 @@
+#!/usr/bin/env node
+import './openapply-intake-prepare.mjs';

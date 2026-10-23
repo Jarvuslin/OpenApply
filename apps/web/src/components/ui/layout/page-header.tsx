@@ -16,7 +16,7 @@ interface PageHeaderProps {
 export function PageHeader(props: PageHeaderProps): ReactElement {
   const { eyebrow, title, description, actions, backHref, backLabel = "Back" } = props;
   return (
-    <Stack sx={{ mb: 3 }}>
+    <Stack>
       {backHref && (
         <BackLink href={backHref} sx={{ mb: 0.5 }}>
           {backLabel}
@@ -45,7 +45,7 @@ export function PageHeader(props: PageHeaderProps): ReactElement {
             ))}
         </Box>
         {actions && (
-          <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 1 }}>
+          <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", flexShrink: 0 }}>
             {actions}
           </Stack>
         )}

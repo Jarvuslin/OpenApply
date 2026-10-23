@@ -4,7 +4,7 @@
 
 GitHub issue #28: the freehire.me maintainer proposes it as a job source. Its search API is
 public and key-free, returns full descriptions per hit, filters on visa sponsorship, and links
-to the employer's own ATS. JobPilot discovers jobs only through agent-driven Playwright browsing
+to the employer's own ATS. OpenApply discovers jobs only through agent-driven Playwright browsing
 today, which costs tokens and time per page.
 
 We build a thin generic seam: a `JobSourceAdapter` TypeScript interface with a code registry,
@@ -130,7 +130,7 @@ User decisions:
 
 - `apps/web/src/components/features/campaigns/constants.ts`: `isApiBoard(boards, domain)`.
 - `composer/campaign-composer.tsx`: when the board is API kind, pin mode to search/auto-apply
-  (Upwork-pin precedent), and on submit create the campaign, navigate to detail, run
+  and on submit create the campaign, navigate to detail, run
   `api["job-sources"].runs.post({campaignId})` via `useApiMutation` (errors surface as toast,
   SSE streams rows into the detail page), and skip `agent.injectSkill`. Exception: auto-apply
   mode with the agent online injects `resume-campaign` after the run to drain approved rows.

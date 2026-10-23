@@ -98,7 +98,7 @@ Repetition across texts (this letter against the user's last five) is the caller
 - No "Certainly!", "Here is a...", "I hope this helps", notes about the rewrite, or placeholders like `[Company]`.
 - No bold labels, headers, or emoji bullets in prose. A caller may allow one bold hook line.
 - Sentence case, not Title Case.
-- Straight quotes and plain hyphens. Text that gets typed into a terminal or a browser field (networking drafts, recruiter replies, form answers) must be plain ASCII: no curly quotes, em dashes, en dashes, or ellipsis characters.
+- Straight quotes and plain hyphens. Text that gets typed into a terminal or a browser field (recruiter replies, form answers) must be plain ASCII: no curly quotes, em dashes, en dashes, or ellipsis characters.
 
 ## Examples
 

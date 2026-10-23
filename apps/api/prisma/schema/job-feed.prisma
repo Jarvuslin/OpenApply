@@ -1,0 +1,83 @@
+model JobFeedRefresh {
+  key String @id
+  nextRefreshAt DateTime @default(now()) @map("next_refresh_at")
+  leaseToken String? @map("lease_token")
+  leaseUntil DateTime? @map("lease_until")
+  lastSuccessAt DateTime? @map("last_success_at")
+  lastError String? @map("last_error")
+  fetched Int @default(0)
+  imported Int @default(0)
+  truncated Boolean @default(false)
+  /// Failed refreshes in a row; a success resets it.
+  failures Int @default(0)
+  /// The job count of the successful refresh before the last one, to spot a sudden drop.
+  previousFetched Int? @map("previous_fetched")
+  alert FeedAlert?
+  alertedAt DateTime? @map("alerted_at")
+
+  @@index([nextRefreshAt])
+  @@map("job_feed_refreshes")
+}
+
+/// Why a feed needs a look: 3 failures in a row, more than half its jobs gone, or none left.
+enum FeedAlert {
+ failing
+ dropped
+ empty
+ @@map("feed_alert")
+}
+
+model JobSourceSearch {
+  key String @id
+  nextCursor String? @map("next_cursor")
+  pages Int @default(0)
+  budgetStartedAt DateTime @default(now()) @map("budget_started_at")
+  lastBatchAt DateTime? @map("last_batch_at")
+  lastResult Json? @map("last_result")
+  exhausted Boolean @default(false)
+  leaseToken String? @map("lease_token")
+  leaseUntil DateTime? @map("lease_until")
+
+  @@index([budgetStartedAt])
+  @@map("job_source_searches")
+}
+
+
+// Employer job boards found in Simplify's public lists. They refresh like catalog boards, keyed
+// the same way in job_feed_refreshes, until the lists stop mentioning them.
+model DiscoveredJobBoard {
+  key         String           @id
+  provider    AtsProvider
+  slug        String
+  company     String
+  firstSeenAt DateTime         @default(now()) @map("first_seen_at")
+  lastSeenAt  DateTime         @default(now()) @map("last_seen_at")
+  /// When the board's API answered 404; it is skipped until a recheck 30 days later.
+  goneAt      DateTime?        @map("gone_at")
+
+  @@index([lastSeenAt])
+  @@map("discovered_job_boards")
+}
+
+// One row per company checked for a public job board, so the YC directory is probed gradually
+// and a company is not re-checked until its result is stale.
+model JobBoardProbe {
+  key       String   @id
+  checkedAt DateTime @map("checked_at")
+  boardKey  String?  @map("board_key")
+
+  @@index([checkedAt])
+  @@map("job_board_probes")
+}
+
+/// A job the tech filter dropped, by its board and the source's own id, so later refreshes skip it
+/// without classifying it again. Nothing else about the job is kept.
+model DroppedJob {
+  boardKey          String   @map("board_key")
+  jobId             String   @map("job_id")
+  classifierVersion Int      @map("classifier_version")
+  droppedAt         DateTime @default(now()) @map("dropped_at")
+
+  @@id([boardKey, jobId])
+  @@map("dropped_jobs")
+}

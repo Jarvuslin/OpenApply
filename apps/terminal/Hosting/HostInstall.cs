@@ -1,4 +1,4 @@
-namespace JobPilot.Terminal.Hosting;
+namespace OpenApply.Terminal.Hosting;
 
 /// <summary>The host's install layout, resolved once. A missing plugin tree degrades the host instead of stopping it.</summary>
 public sealed class HostInstall
@@ -41,7 +41,7 @@ public sealed class HostInstall
     public bool CanUpdate { get; }
 
     public InstallPaths RequirePaths() => Paths ?? throw new InvalidOperationException(
-        $"Terminal host install is incomplete - reinstall the JobPilot agent. ({PathsError})");
+        $"Terminal host install is incomplete - reinstall the OpenApply agent. ({PathsError})");
 }
 
 public sealed record InstallPaths
@@ -51,13 +51,13 @@ public sealed record InstallPaths
 
     public required string PluginDir { get; init; }
 
-    /// <summary>JOBPILOT_SKILLS_ROOT; shared docs live under its _shared/.</summary>
+    /// <summary>OPENAPPLY_SKILLS_ROOT; shared docs live under its _shared/.</summary>
     public string SkillsDir => Path.Combine(PluginDir, "skills");
 
-    /// <summary>Plugin commands such as jobpilot-api, first on the session's PATH.</summary>
+    /// <summary>Plugin commands such as openapply-api, first on the session's PATH.</summary>
     public string BinDir => Path.Combine(PluginDir, "bin");
 
-    /// <summary>JOBPILOT_TEMP: skill scratch files, swept by ScratchCleaner.</summary>
+    /// <summary>OPENAPPLY_TEMP: skill scratch files, swept by ScratchCleaner.</summary>
     public string ScratchDir => Path.Combine(WorkingDir, ".temp");
 
     public string PlaywrightDir => Path.Combine(WorkingDir, ".playwright-mcp");
@@ -69,7 +69,7 @@ public sealed record InstallPaths
     {
         var root = candidateRoots.Distinct(StringComparer.OrdinalIgnoreCase).FirstOrDefault(IsInstallRoot)
             ?? throw new DirectoryNotFoundException(
-                "Could not find JobPilot provider assets: a plugin/ directory with skills/, skills/_shared/, .mcp.json, .claude-plugin/, and .codex-plugin/.");
+                "Could not find OpenApply provider assets: a plugin/ directory with skills/, skills/_shared/, .mcp.json, .claude-plugin/, and .codex-plugin/.");
         return new InstallPaths { WorkingDir = root, PluginDir = Path.Combine(root, "plugin") };
     }
 

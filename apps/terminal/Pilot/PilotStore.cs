@@ -1,10 +1,10 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using JobPilot.Terminal.Hosting;
-using JobPilot.Terminal.Providers;
+using OpenApply.Terminal.Hosting;
+using OpenApply.Terminal.Providers;
 
-namespace JobPilot.Terminal.Pilot;
+namespace OpenApply.Terminal.Pilot;
 
 public sealed record PilotSettings
 {

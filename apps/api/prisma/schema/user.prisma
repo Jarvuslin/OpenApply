@@ -15,7 +15,39 @@ enum UserRole {
 }
 
 model User {
+  legacyTelegramSettings LegacyTelegramSettings?
+  legacyTelegramDeliveries LegacyTelegramDelivery[]
+  telegramLinks TelegramLink[]
+  telegramSettings TelegramSettings?
+  telegramSettingRequests TelegramSettingRequest[]
+  telegramPairings TelegramPairing[]
+  telegramUpdates TelegramUpdate[]
+  telegramActions TelegramAction[]
+  telegramDeliveries TelegramDelivery[]
+  jobIntakes JobIntake[]
+  applicationRules ApplicationRule[]
+  applicationRuleChanges ApplicationRuleChange[]
+  runtimePresence RuntimePresence[]
+    queuePolicy QueuePolicy?
+    workExecutions WorkExecution[]
+    workDomainGates WorkDomainGate[]
+  scoringEvaluationRuns ScoringEvaluationRun[]
+  documentSelections ApplicationDocumentSelection[]
+  preparationResults ApplicationPreparationResult[]
+
+  answerBankEntries AnswerBankEntry[]
+  answerBankRevisions AnswerBankRevision[]
+  questionCollections JobQuestionCollection[]
+  applicationQuestions ApplicationQuestion[]
+  applicationQuestionAnswers ApplicationQuestionAnswer[]
+  workItems WorkItem[]
+  workRequests WorkRequest[]
+  submissionAttempts SubmissionAttempt[]
   id            String   @id @default(uuid())
+  jobSourceConnections JobSourceConnection[]
+  linkedinDiscoverySettings LinkedinDiscoverySettings?
+  linkedinDiscoveryRuns LinkedinDiscoveryRun[]
+  personalJobListings PersonalJobListing[]
   email         String   @unique
   // Null for OAuth-only accounts; the security page lets them set one later.
   passwordHash  String?  @map("password_hash")
@@ -37,12 +69,18 @@ model User {
   // Applicant profile (merged from the former Profile model): populated at onboarding.
   firstName    String  @default("") @map("first_name")
   lastName     String  @default("") @map("last_name")
+  preferredName String? @map("preferred_name")
+  namePronunciation String? @map("name_pronunciation")
+  pronouns String?
+  currentCompany String? @map("current_company")
   // Distinct from `email` (login); the contact address shown on applications.
   contactEmail String  @default("") @map("contact_email")
   phone        String?
   website      String?
   linkedin     String?
   github       String?
+  portfolio    String?
+  additionalLinks Json? @map("additional_links")
 
   street  String?
   aptUnit String? @map("apt_unit")
@@ -50,6 +88,18 @@ model User {
   state   String?
   zipCode String? @map("zip_code")
   country String?
+  countryCode String? @map("country_code")
+
+  gpa      Float?
+  gpaScale Float   @default(4) @map("gpa_scale")
+  applicationAnswers Json @default("{}") @map("application_answers")
+  educationHistory Json @default("[]") @map("education_history")
+  workHistory Json @default("[]") @map("work_history")
+  // Stored file name under STORAGE_ROOT/transcripts; the original name is shown in the profile.
+  transcriptFilename     String? @map("transcript_filename")
+  transcriptOriginalName String? @map("transcript_original_name")
+  jobPreferences Json @default("{\"roles\":[],\"levels\":[],\"yearsExperience\":null,\"workModes\":[],\"employmentTypes\":[]}") @map("job_preferences")
+  workAuthorization Json @default("[]") @map("work_authorization")
 
   usAuthorized        Boolean @default(false) @map("us_authorized")
   requiresSponsorship Boolean @default(false) @map("requires_sponsorship")
@@ -81,8 +131,12 @@ model User {
   applications       Application[]
   campaigns          Campaign[]
   credentials        Credential[]
+  employerAccountAttempts EmployerAccountAttempt[]
   jobBoards          UserJobBoard[]
-  emailAccount       EmailAccount?
+  savedJobListings   SavedJobListing[]
+  emailAccounts      EmailAccount[] @relation("UserMailboxes")
+  activeEmailAccountId String? @unique @map("active_email_account_id")
+  activeEmailAccount EmailAccount? @relation("ActiveMailbox", fields: [activeEmailAccountId], references: [id], onDelete: SetNull)
   emailOAuthClient   EmailOAuthClient?
   upworkProposals    UpworkProposal[]
   upworkProfile      UpworkProfile?
@@ -95,7 +149,7 @@ model User {
   coverLetters       CoverLetter[]
   pilotState         PilotState?
   pilotSearches      PilotSearch[]
-  pilotClaims        PilotClaim[]
+  pilots             Pilot[]
   pilotQuestions     PilotQuestion[]
   pilotJournal       PilotJournalEntry[]
   pushSubscriptions  PushSubscription[]

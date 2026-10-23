@@ -1,4 +1,4 @@
-import { resumeDataSchema } from "@jobpilot/contracts/resume";
+import { resumeDataSchema } from "@openapply/contracts/resume";
 import { z } from "zod/v4";
 
 export const createResumeSchema = z.object({

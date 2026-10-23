@@ -1,5 +1,5 @@
 name: Bug Report
-description: Report a bug or unexpected behavior in JobPilot
+description: Report a bug or unexpected behavior in OpenApply
 title: "[Bug]: "
 labels: ["bug"]
 body:
@@ -39,7 +39,7 @@ body:
     id: area
     attributes:
       label: Area
-      description: Which part of JobPilot is affected?
+      description: Which part of OpenApply is affected?
       options:
         - Web dashboard
         - Agent terminal

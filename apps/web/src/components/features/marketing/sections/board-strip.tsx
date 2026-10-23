@@ -1,69 +1,45 @@
 import type { ReactElement } from "react";
-import { Box, Container, Stack, Typography } from "@mui/material";
-import { accent } from "@/theme";
+import { Container, Stack, Typography } from "@mui/material";
 
 const BOARDS = [
+  "Greenhouse",
+  "Lever",
+  "Ashby",
+  "Workday",
   "LinkedIn",
-  "Indeed",
-  "Hiring Cafe",
-  "We Work Remotely",
-  "Wellfound",
-  "Y Combinator",
-  "Welcome to the Jungle",
-  "HN Who's Hiring",
+  "Hacker News",
   "Remote OK",
-  "4 Day Week",
-  "Upwork",
+  "We Work Remotely",
+  "+ your board",
 ];
 
-const chipSx = { fontSize: { xs: "0.75rem", md: "0.8125rem" } } as const;
-
-/**
- * The seeded boards as mono chips - the agent's territory, machine voice - with an
- * explicit "add your own" affordance: the agent drives a real browser, so the list
- * is a starting point, not a limit.
- */
 export function BoardStrip(): ReactElement {
   return (
-    <Box sx={{ borderBlock: 1, borderColor: "line.divider", backgroundColor: "surfaces.card" }}>
-      <Container maxWidth="lg" sx={{ paddingBlock: { xs: 3, md: 4 } }}>
-        <Stack spacing={2} sx={{ alignItems: "center" }}>
-          <Typography variant="overlineMuted" sx={{ textAlign: "center" }}>
-            Works where the jobs are ·{" "}
-            <Box component="span" sx={{ color: "accent.primary" }}>
-              {BOARDS.length} boards built in
-            </Box>{" "}
-            · any board you add
-          </Typography>
-          <Box
-            sx={{
-              display: "flex",
-              flexWrap: "wrap",
-              justifyContent: "center",
-              gap: { xs: 0.75, md: 1 },
-            }}
-          >
-            {BOARDS.map((board) => (
-              <Typography key={board} variant="monoChip" sx={chipSx}>
-                {board}
-              </Typography>
-            ))}
-            <Typography
-              variant="monoChip"
-              sx={[
-                chipSx,
-                {
-                  color: "accent.primary",
-                  border: `1px dashed ${accent.primary}66`,
-                  backgroundColor: "transparent",
-                },
-              ]}
-            >
-              + your board
+    <Container maxWidth="lg" sx={{ pb: { xs: 6, md: 8 } }}>
+      <Stack spacing={2.5} sx={{ alignItems: "center" }}>
+        <Typography variant="captionMuted">
+          Finds jobs on the boards companies actually post to
+        </Typography>
+        <Stack
+          direction="row"
+          component="ul"
+          sx={{
+            m: 0,
+            p: 0,
+            listStyle: "none",
+            flexWrap: "wrap",
+            justifyContent: "center",
+            columnGap: 5,
+            rowGap: 1.5,
+          }}
+        >
+          {BOARDS.map((board) => (
+            <Typography key={board} component="li" variant="h4" sx={{ color: "text.disabled" }}>
+              {board}
             </Typography>
-          </Box>
+          ))}
         </Stack>
-      </Container>
-    </Box>
+      </Stack>
+    </Container>
   );
 }

@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { PAGE_SIZE_OPTIONS, type Pagination as PageMeta } from "@jobpilot/contracts/pagination";
 import { MenuItem, Pagination, Stack, TextField, Typography } from "@mui/material";
+import { PAGE_SIZE_OPTIONS, type Pagination as PageMeta } from "@openapply/contracts/pagination";
 
 interface PaginationFooterProps {
   /** The `pagination` block of a paginated API response. */

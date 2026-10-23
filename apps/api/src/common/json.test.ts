@@ -1,4 +1,4 @@
-import { agendaClaimFieldsSchema, agendaResponseSchema } from "@jobpilot/contracts/pilot";
+import { agendaClaimFieldsSchema, agendaResponseSchema } from "@openapply/contracts/pilot";
 import { DATE_KEYS, reviveJsonDates, toInputJson } from "./json";
 import { describe, expect, it } from "bun:test";
 

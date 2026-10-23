@@ -1,10 +1,11 @@
-import { statusSchema } from "@jobpilot/contracts/application";
+import { statusSchema } from "@openapply/contracts/application";
 import {
   campaignJobReasonSchema,
   campaignJobStatusSchema,
   campaignSummarySchema,
-} from "@jobpilot/contracts/campaign";
-import { paginatedSchema, paginationQuerySchema } from "@jobpilot/contracts/pagination";
+} from "@openapply/contracts/campaign";
+import { paginatedSchema, paginationQuerySchema } from "@openapply/contracts/pagination";
+import { fitAssessmentSchema } from "@openapply/contracts/scoring";
 import { z } from "zod/v4";
 
 export const campaignJobParams = z.object({ id: z.uuid(), key: z.string() });
@@ -28,6 +29,7 @@ export const campaignJobSchema = z.object({
   board: z.string().nullable(),
   matchScore: z.number().int().nullable(),
   matchReason: z.string().nullable(),
+  fitAssessment: fitAssessmentSchema.nullable(),
   status: campaignJobStatusSchema,
   appliedAt: z.date().nullable(),
   failReason: z.string().nullable(),

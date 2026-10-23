@@ -11,7 +11,7 @@ const configured: VapidConfigHolder = {
   vapid: {
     publicKey: VAPID.publicKey,
     privateKey: VAPID.privateKey,
-    subject: "mailto:test@jobpilot.dev",
+    subject: "mailto:test@openapply.dev",
   },
 };
 
@@ -150,7 +150,7 @@ describe("PushService sendToUser", () => {
     }) as unknown as typeof webpush.sendNotification;
 
     const { push, rec } = svc({ findMany: subs });
-    await push.sendToUser("p1", { title: "t", body: "b", url: "/pilot" });
+    await push.sendToUser("p1", { title: "t", body: "b", url: "/queue" });
 
     expect(rec.deletedIds).toEqual(["dead"]);
   });

@@ -1,11 +1,5 @@
 "use client";
 
-import {
-  SALARY_CURRENCIES,
-  type SalaryCurrency,
-  type SalaryPreferenceInput,
-  USER_DEFAULT_VALUES,
-} from "@jobpilot/contracts/user";
 import { Add, Delete } from "@mui/icons-material";
 import {
   Box,
@@ -17,6 +11,12 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import {
+  SALARY_CURRENCIES,
+  type SalaryCurrency,
+  type SalaryPreferenceInput,
+  USER_DEFAULT_VALUES,
+} from "@openapply/contracts/user";
 import { useSelector } from "@tanstack/react-form";
 import { FormSection } from "@/components/ui/form";
 import { withForm } from "@/components/ui/form/tanstack";

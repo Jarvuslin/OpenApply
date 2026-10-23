@@ -39,3 +39,14 @@ export function canonicalizeJobUrl(url: string): string {
   }
   return parsed.toString();
 }
+
+/** Known ATS form paths share the posting identity for link intake and its decision fence. */
+export function canonicalizeIntakeUrl(value: string): string {
+  const canonical = canonicalizeJobUrl(value);
+  const url = URL.parse(canonical);
+  if (!url) return canonical;
+  if (url.hostname === "jobs.ashbyhq.com")
+    url.pathname = url.pathname.replace(/\/application$/, "");
+  if (url.hostname === "jobs.lever.co") url.pathname = url.pathname.replace(/\/apply$/, "");
+  return canonicalizeJobUrl(url.toString());
+}

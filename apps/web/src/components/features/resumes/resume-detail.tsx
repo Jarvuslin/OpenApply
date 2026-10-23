@@ -1,15 +1,16 @@
 "use client";
 
 import { type ReactElement, useState } from "react";
-import { EMPTY_RESUME_DATA, type ResumeData } from "@jobpilot/contracts/resume";
-import { resumeChannel } from "@jobpilot/contracts/sse";
 import { Box, LinearProgress, Stack } from "@mui/material";
+import { EMPTY_RESUME_DATA, type ResumeData } from "@openapply/contracts/resume";
+import { resumeChannel } from "@openapply/contracts/sse";
 import { useQueryClient } from "@tanstack/react-query";
 import { useApiQuery } from "@/api/hooks";
 import { resumeQueries } from "@/api/queries";
 import { queryKeys } from "@/api/query-keys";
 import { type SectionAnchor, SectionLayout } from "@/components/ui/layout";
 import { useSseChannel } from "@/lib/sse/client";
+import { EvidencePanel } from "./detail/evidence-panel";
 import { ExtractionCard } from "./detail/extraction-card";
 import { ResumeHeaderBar } from "./detail/header-bar";
 import { ResumePdfPreview } from "./detail/pdf-preview";
@@ -32,6 +33,7 @@ function anchorsFor(data: ResumeData): SectionAnchor[] {
       empty: section.summary(data) === "empty",
     })),
     { id: "source", label: "Source PDF" },
+    { id: "evidence", label: "Evidence" },
     { id: "variants", label: "Variants" },
   ];
 }
@@ -89,6 +91,9 @@ export function ResumeDetail(props: ResumeDetailProps): ReactElement {
               <Box data-section-id="source">
                 <SourceUploadCard resume={resume} />
               </Box>
+              <Box data-section-id="evidence">
+                <EvidencePanel resumeId={resumeId} />
+              </Box>
               <Box data-section-id="variants">
                 <VariantsPanel resumeId={resumeId} resumeLabel={resume.label} />
               </Box>
@@ -105,7 +110,7 @@ export function ResumeDetail(props: ResumeDetailProps): ReactElement {
           top: { lg: 16 },
         }}
       >
-        <ResumePdfPreview resumeId={resumeId} updatedAt={resume.updatedAt} />
+        <ResumePdfPreview key={resumeId} resume={resume} />
       </Box>
     </Stack>
   );

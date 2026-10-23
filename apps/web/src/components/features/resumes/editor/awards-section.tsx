@@ -1,9 +1,9 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { ResumeAward } from "@jobpilot/contracts/resume";
 import { Stack, TextField } from "@mui/material";
 import Grid from "@mui/material/Grid";
+import type { ResumeAward } from "@openapply/contracts/resume";
 import { EntryList } from "./entry-list";
 
 interface AwardsSectionProps {

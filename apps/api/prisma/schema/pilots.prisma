@@ -1,0 +1,108 @@
+enum PilotMatchMode {
+  review
+  queue
+
+  @@map("pilot_match_mode")
+}
+
+enum PilotRunTrigger {
+  manual
+  schedule
+
+  @@map("pilot_run_trigger")
+}
+
+enum PilotRunState {
+  scoring
+  done
+  stopped
+  failed
+
+  @@map("pilot_run_state")
+}
+
+enum PilotResultStatus {
+  scoring
+  review
+  added
+  removed
+  below_fit
+  unscored
+
+  @@map("pilot_result_status")
+}
+
+// A saved set of rules that finds new jobs in the shared listing index, has the agent score
+// them, then holds them for review or adds them to the queue. Results are ordinary jobs in the
+// pilot's own campaign, so scoring and queue admission reuse the campaign paths.
+model Pilot {
+  id             String         @id @default(uuid())
+  userId         String         @map("user_id")
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaignId     String         @unique @map("campaign_id")
+  campaign       Campaign       @relation(fields: [campaignId], references: [campaignId], onDelete: Cascade)
+  name           String
+  rules          Json
+  resumeId       String         @map("resume_id")
+  minScore       Int            @map("min_score")
+  autoRun        Boolean        @default(false) @map("auto_run")
+  intervalMinutes Int           @default(10) @map("interval_minutes")
+  mode           PilotMatchMode @default(review)
+  maxJobsPerRun  Int            @default(15) @map("max_jobs_per_run")
+  provider       AgentProvider
+  nextRunAt      DateTime?      @map("next_run_at")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  runs    PilotRun[]
+  results PilotResult[]
+
+  @@index([userId, createdAt])
+  @@index([autoRun, nextRunAt])
+  @@map("pilots")
+}
+
+model PilotRun {
+  id         String          @id @default(uuid())
+  pilotId    String          @map("pilot_id")
+  pilot      Pilot           @relation(fields: [pilotId], references: [id], onDelete: Cascade)
+  trigger    PilotRunTrigger
+  state      PilotRunState   @default(scoring)
+  // Listings posted in the pilot's widest window, before its rules.
+  scanned    Int             @default(0)
+  // Listings that passed the rules and were new to this pilot.
+  matched    Int             @default(0)
+  workItemId String?         @map("work_item_id")
+  reason     String?
+  startedAt  DateTime        @default(now()) @map("started_at")
+  finishedAt DateTime?       @map("finished_at")
+
+  results PilotResult[]
+
+  @@index([pilotId, startedAt])
+  @@index([state])
+  @@map("pilot_runs")
+}
+
+model PilotResult {
+  id        String            @id @default(uuid())
+  pilotId   String            @map("pilot_id")
+  pilot     Pilot             @relation(fields: [pilotId], references: [id], onDelete: Cascade)
+  runId     String            @map("run_id")
+  run       PilotRun          @relation(fields: [runId], references: [id], onDelete: Cascade)
+  listingId String            @map("listing_id")
+  listing   JobListing        @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  jobId     String            @unique @map("job_id")
+  job       Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  // The narrowest posted-within window the job fit when found, in minutes; null for "any time".
+  windowMinutes Int?          @map("window_minutes")
+  postedAt  DateTime?         @map("posted_at")
+  status    PilotResultStatus @default(scoring)
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+
+  @@unique([pilotId, listingId])
+  @@index([pilotId, status])
+  @@index([runId])
+  @@map("pilot_results")
+}

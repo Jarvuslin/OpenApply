@@ -1,9 +1,9 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { ResumeCertification } from "@jobpilot/contracts/resume";
 import { Stack, TextField } from "@mui/material";
 import Grid from "@mui/material/Grid";
+import type { ResumeCertification } from "@openapply/contracts/resume";
 import { EntryList } from "./entry-list";
 
 interface CertificationsSectionProps {

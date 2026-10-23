@@ -18,18 +18,15 @@ interface ChecklistItem {
   action: string;
 }
 
-/**
- * Post-onboarding nudges for everything the 3-step wizard skipped. Rendered on
- * the pipeline until every item is done, then disappears.
- */
+/** Optional setup tasks; account verification is handled by the shared banner. */
 export function ProfileChecklistCard(): ReactNode {
   const { user } = useSession();
   const profileQuery = useApiQuery(userQueries.detail());
   const emailQuery = useApiQuery(emailQueries.account());
-  const credentialsQuery = useApiQuery(credentialQueries.list());
+  const loginQuery = useApiQuery(credentialQueries.login());
 
   // Don't flash an incomplete checklist while the queries load.
-  if (!user || !profileQuery.data || !emailQuery.data || !credentialsQuery.data) {
+  if (!user || !profileQuery.data || !emailQuery.data || !loginQuery.data) {
     return null;
   }
 
@@ -38,33 +35,26 @@ export function ProfileChecklistCard(): ReactNode {
   const needsReauth = mailbox.connected && mailbox.needsReauth;
   const items: ChecklistItem[] = [
     {
-      key: "verify-email",
-      label: "Verify your email so you can apply and send messages.",
-      done: user.emailVerified,
-      href: "/verify-email" as Route,
-      action: "Resend link",
-    },
-    {
       key: "address",
       label: "Add your address and work authorization. Application forms ask for both.",
       done: Boolean(profile?.street && profile.city),
-      href: "/settings/profile" as Route,
+      href: "/profile" as Route,
       action: "Fill in",
     },
     {
       key: "mailbox",
       label: needsReauth
         ? "Reconnect your mailbox - Google rejected its access grant, so mail sync has stopped."
-        : "Connect your mailbox so the agent can read verification codes and recruiter replies.",
+        : "Check your Gmail so the agent can read verification codes and recruiter replies.",
       done: mailbox.connected && !needsReauth,
-      href: "/settings/email" as Route,
+      href: "/queue#login" as Route,
       action: needsReauth ? "Reconnect" : "Connect",
     },
     {
-      key: "credentials",
-      label: "Save your job-board logins so the agent can sign in before it applies.",
-      done: credentialsQuery.data.length > 0,
-      href: "/settings/credentials" as Route,
+      key: "login",
+      label: "Save your job login so the agent can sign in or create accounts on career sites.",
+      done: !!loginQuery.data.email && loginQuery.data.hasPassword,
+      href: "/queue#login" as Route,
       action: "Add",
     },
   ];

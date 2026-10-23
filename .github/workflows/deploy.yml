@@ -10,7 +10,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  APP_DIR: ~/deploy/jobpilot
+  APP_DIR: ~/deploy/openapply
 
 jobs:
   build:
@@ -87,7 +87,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: "deploy/docker-compose.yml,deploy/.env,deploy/jobpilot.conf"
+          source: "deploy/docker-compose.yml,deploy/.env,deploy/openapply.conf"
           target: ${{ env.APP_DIR }}
           strip_components: 1
 

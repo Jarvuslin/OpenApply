@@ -1,74 +1,84 @@
 import type { ReactElement } from "react";
-import { Box, Grid, Stack, Typography } from "@mui/material";
-import { fontFamilies, line, radii } from "@/theme";
-import { Section } from "../section";
+import { Box, Card, Container, Stack, Typography } from "@mui/material";
+import { LandingImage } from "../landing-image";
+import { SectionHeading } from "../section-heading";
 
 const STEPS = [
   {
-    title: "Install the plugin",
-    body: "Add OpenApply to the Claude Code or Codex subscription you already have; it needs no API keys of its own. The setup skill installs and starts the local agent.",
-    snippet: "/plugin install jobpilot  ·  /jobpilot:setup",
+    image: "/landing/step-rules.png",
+    alt: "Pick-chips for roles, levels, company type, location and posted-within windows.",
+    title: "Make a pilot",
+    body: "Pick roles, levels, locations and how fresh the jobs must be. Turn on auto run if you want it to keep looking.",
   },
   {
-    title: "Create your account",
-    body: "Sign up and upload your resume. The agent parses it into the profile it scores and applies with.",
-    snippet: "localhost:4100/register",
+    image: "/landing/step-score.png",
+    alt: "Four jobs with match scores from 92% down to 61%; the weakest is greyed out.",
+    title: "It finds and scores",
+    body: "Every new posting is read in full and scored against your original resume. Weak matches are dropped.",
   },
   {
-    title: "Run a campaign",
-    body: "Everything after setup is a button in the dashboard. Start with a search, graduate to auto-apply.",
-    snippet: "New campaign  ·  Search → Auto-apply",
+    image: "/landing/step-apply.png",
+    alt: "Queue rows marked Applying now, Submitted, Needs you and Queued.",
+    title: "It applies while you watch",
+    body: "Good matches go to your queue. The agent fills each form in a real browser on your computer.",
   },
 ];
 
 export function HowItWorks(): ReactElement {
   return (
-    <Box
-      id="how-it-works"
-      sx={{ borderBlock: 1, borderColor: "line.divider", backgroundColor: "surfaces.card" }}
-    >
-      <Section>
-        <Typography variant="h2" sx={{ mb: 4 }}>
-          From install to your first application.
-        </Typography>
-        <Grid container spacing={4}>
-          {STEPS.map((step, i) => (
-            <Grid key={step.title} size={{ xs: 12, md: 4 }}>
-              <Stack spacing={1.5} sx={{ alignItems: "flex-start" }}>
-                <Typography
+    <Box id="how-it-works" sx={{ bgcolor: "surfaces.elevated", py: { xs: 7, md: 12 } }}>
+      <Container maxWidth="lg">
+        <SectionHeading
+          eyebrow="How it works"
+          title="Three steps, then it runs on its own"
+          description="You set the rules once. OpenApply does the searching, scoring and form filling, and asks you only what it can't answer."
+        />
+        <Box
+          sx={{
+            mt: 6,
+            display: "grid",
+            gap: 3,
+            gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "repeat(3, minmax(0, 1fr))" },
+          }}
+        >
+          {STEPS.map((step, index) => (
+            <Card key={step.title} sx={{ display: "flex", flexDirection: "column" }}>
+              <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+                <LandingImage
+                  src={step.image}
+                  alt={step.alt}
+                  width={764}
+                  height={400}
+                  radius={0}
+                  sizes="(max-width: 900px) 100vw, 380px"
+                />
+              </Box>
+              <Stack spacing={1} sx={{ p: 3 }}>
+                <Box
                   sx={{
-                    fontFamily: fontFamilies.mono,
-                    fontSize: "1.5rem",
-                    fontWeight: 700,
-                    color: "accent.primary",
+                    width: 26,
+                    height: 26,
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    bgcolor: "statusTints.info",
+                    color: "primary.main",
                   }}
                 >
-                  {String(i + 1).padStart(2, "0")}
-                </Typography>
-                <Typography variant="h3" sx={{ fontSize: "1.2rem" }}>
+                  <Typography variant="body2Strong" sx={{ color: "inherit" }}>
+                    {index + 1}
+                  </Typography>
+                </Box>
+                <Typography variant="h4" component="h3">
                   {step.title}
                 </Typography>
                 <Typography variant="body2Muted">{step.body}</Typography>
-                <Box
-                  component="code"
-                  sx={{
-                    fontFamily: fontFamilies.mono,
-                    fontSize: "0.75rem",
-                    color: "text.secondary",
-                    backgroundColor: "surfaces.elevated",
-                    border: `1px solid ${line.divider}`,
-                    borderRadius: radii.sm,
-                    paddingInline: 1,
-                    paddingBlock: 0.5,
-                  }}
-                >
-                  {step.snippet}
-                </Box>
               </Stack>
-            </Grid>
+            </Card>
           ))}
-        </Grid>
-      </Section>
+        </Box>
+      </Container>
     </Box>
   );
 }

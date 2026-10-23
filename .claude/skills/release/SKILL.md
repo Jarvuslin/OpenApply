@@ -1,12 +1,12 @@
 ---
 name: release
-description: Bump the unified JobPilot version (host + plugin), update the changelog, commit, and tag a new release
+description: Bump the unified OpenApply version (host + plugin), update the changelog, commit, and tag a new release
 user-invocable: true
 ---
 
 # Release Skill
 
-Cut a new JobPilot release. Host and plugin share **one version** and ship from
+Cut a new OpenApply release. Host and plugin share **one version** and ship from
 **one tag** (`vX.Y.Z`), which triggers `.github/workflows/release.yml` - it builds
 the terminal binaries for all RIDs, publishes the GitHub Release (the terminal
 archives, which bundle the plugin tree), and syncs the plugin tree into the
@@ -20,7 +20,7 @@ The user provides a version (e.g. `2.1.0`) or a bump type (`major`, `minor`,
 ## Context
 
 - **Version source of truth (must stay in lockstep):**
-  - `apps/terminal/JobPilot.Terminal.csproj` - the `<Version>` element
+  - `apps/terminal/OpenApply.Terminal.csproj` - the `<Version>` element
   - `plugin/.claude-plugin/plugin.json` - `"version"`
   - `plugin/.codex-plugin/plugin.json` - `"version"`
   - `package.json` - `"version"`
@@ -56,7 +56,7 @@ The user provides a version (e.g. `2.1.0`) or a bump type (`major`, `minor`,
 5. **Commit:** stage the four version files + `CHANGELOG.md`, commit
    `chore: release vX.Y.Z`.
 
-6. **Tag:** `git tag -a vX.Y.Z -m "JobPilot vX.Y.Z"`.
+6. **Tag:** `git tag -a vX.Y.Z -m "OpenApply vX.Y.Z"`.
 
 7. **Report:** show the new version and tag, and remind the user to run
    `git push && git push origin vX.Y.Z` to trigger `release.yml`.

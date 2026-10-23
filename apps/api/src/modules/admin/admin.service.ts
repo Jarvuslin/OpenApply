@@ -1,6 +1,6 @@
-import type { AdminPilotQuery, AdminUserQuery } from "@jobpilot/contracts/admin";
-import { pageSlice, paginate } from "@jobpilot/contracts/pagination";
-import { type AssignableRole, hasRole } from "@jobpilot/contracts/role";
+import type { AdminPilotQuery, AdminUserQuery } from "@openapply/contracts/admin";
+import { pageSlice, paginate } from "@openapply/contracts/pagination";
+import { type AssignableRole, hasRole } from "@openapply/contracts/role";
 import { singleton } from "tsyringe";
 import type { AuthUser } from "@/common/auth";
 import { bucketPerDay, startOfTimeline, startOfWeek } from "@/common/date/buckets";
@@ -176,7 +176,7 @@ export class AdminService {
         where: { userId: { in: userIds } },
         _max: { updatedAt: true },
       }),
-      // The agent PAT's last use is the truest "this account actually runs JobPilot" signal.
+      // The agent PAT's last use is the truest "this account actually runs OpenApply" signal.
       this.prisma.apiToken.groupBy({
         by: ["userId"],
         where: { userId: { in: userIds } },

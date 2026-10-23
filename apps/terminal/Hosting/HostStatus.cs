@@ -1,8 +1,8 @@
-using JobPilot.Terminal.Pilot;
-using JobPilot.Terminal.Providers;
-using JobPilot.Terminal.Sessions;
+using OpenApply.Terminal.Pilot;
+using OpenApply.Terminal.Providers;
+using OpenApply.Terminal.Sessions;
 
-namespace JobPilot.Terminal.Hosting;
+namespace OpenApply.Terminal.Hosting;
 
 /// <summary>What /healthz and every control endpoint return.</summary>
 public sealed record StatusResponse
@@ -23,7 +23,7 @@ public sealed record StatusResponse
     /// <summary>Why the host is degraded.</summary>
     public string? Detail { get; init; }
 
-    /// <summary>Whether the browser can relaunch the host through the jobpilot:// scheme.</summary>
+    /// <summary>Whether the browser can relaunch the host through the openapply:// scheme.</summary>
     public bool CanRelaunch { get; init; }
 
     public bool CanUpdate { get; init; }

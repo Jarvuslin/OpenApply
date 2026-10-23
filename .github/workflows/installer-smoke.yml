@@ -1,0 +1,178 @@
+name: Installer smoke test
+# Runs each installer on a runner made to look new (preinstalled Git, Node and .NET hidden),
+# from a checkout and as the README one-liner from an empty folder, then the doctor and the
+# companion's /setup/checks. Runners cannot nest virtualization, so WSL2 and Lima are skipped.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - scripts/install.ps1
+      - scripts/install.sh
+      - scripts/doctor*.mjs
+      - scripts/dotnet*.mjs
+      - scripts/openapply.mjs
+      - .github/scripts/**
+      - .github/workflows/installer-smoke.yml
+  pull_request:
+    paths:
+      - scripts/install.ps1
+      - scripts/install.sh
+      - scripts/doctor*.mjs
+      - scripts/dotnet*.mjs
+      - scripts/openapply.mjs
+      - .github/scripts/**
+      - .github/workflows/installer-smoke.yml
+
+env:
+  # Required checks that cannot pass on a runner: no VM, so no database, and no Claude sign-in.
+  ALLOWED_FAILURES: vm,database,claude-auth
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Hide preinstalled Git, Node and .NET
+        shell: powershell
+        run: .\.github\scripts\hide-tools.ps1
+      - name: Tools before install
+        shell: powershell
+        run: .\.github\scripts\report-tools.ps1 -Title 'Before install'
+      - name: Install
+        shell: powershell
+        run: .\.github\scripts\run-logged.ps1 -Command '.\scripts\install.ps1 -SkipVm -NoStart'
+      - name: Tools after install
+        shell: powershell
+        run: .\.github\scripts\report-tools.ps1 -Title 'After install' -ExpectWinget
+      - name: Doctor
+        shell: powershell
+        run: |
+          $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User') + ";$env:USERPROFILE\.local\bin"
+          node scripts/openapply.mjs doctor --json | Out-File -Encoding ascii doctor.json
+          node scripts/doctor-assert.mjs doctor.json
+      - name: Connection check (companion /healthz and /setup/checks)
+        shell: powershell
+        run: |
+          $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User') + ";$env:USERPROFILE\.local\bin"
+          $companion = Start-Process node -ArgumentList 'scripts/dotnet.mjs','run','--project','apps/terminal','--no-build' -RedirectStandardOutput terminal.out.log -RedirectStandardError terminal.err.log -PassThru
+          $ready = $false
+          foreach ($i in 1..60) {
+            try { Invoke-RestMethod http://127.0.0.1:4102/healthz | ConvertTo-Json -Depth 5; $ready = $true; break } catch { Start-Sleep 2 }
+          }
+          if (!$ready) { Get-Content terminal.out.log, terminal.err.log; throw 'The companion did not answer /healthz.' }
+          Invoke-WebRequest http://127.0.0.1:4102/setup/checks -UseBasicParsing -OutFile setup-checks.json
+          bun -e "import { setupChecksSchema } from './packages/contracts/src/setup-checks.ts'; const d = setupChecksSchema.parse(await Bun.file('setup-checks.json').json()); console.log(d.checks.length + ' checks match the contract')"
+          Stop-Process -Id $companion.Id -Force
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: installer-smoke-windows
+          path: |
+            doctor.json
+            setup-checks.json
+            terminal.*.log
+          if-no-files-found: ignore
+
+  windows-one-liner:
+    runs-on: windows-latest
+    env:
+      OPENAPPLY_REPO: https://github.com/${{ github.repository }}.git
+      OPENAPPLY_BRANCH: ${{ github.head_ref || github.ref_name }}
+      OPENAPPLY_SKIP_VM: "1"
+      OPENAPPLY_NO_START: "1"
+    steps:
+      # Only for the helper scripts; the install below clones on its own.
+      - uses: actions/checkout@v7
+        with:
+          path: harness
+      - name: Hide preinstalled Git, Node and .NET
+        shell: powershell
+        run: .\harness\.github\scripts\hide-tools.ps1
+      - name: Run the README one-liner from an empty folder
+        shell: powershell
+        env:
+          OPENAPPLY_DIR: ${{ runner.temp }}\OpenApply
+        run: |
+          Set-Location (New-Item -ItemType Directory (Join-Path $env:RUNNER_TEMP 'empty'))
+          $logger = Join-Path $env:GITHUB_WORKSPACE 'harness\.github\scripts\run-logged.ps1'
+          & $logger -Command 'irm https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/scripts/install.ps1 | iex'
+      - name: Tools after install
+        shell: powershell
+        run: .\harness\.github\scripts\report-tools.ps1 -Title 'After one-liner' -Repo (Join-Path $env:RUNNER_TEMP 'OpenApply') -ExpectWinget
+      - name: Doctor
+        shell: powershell
+        working-directory: ${{ runner.temp }}\OpenApply
+        run: |
+          $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User') + ";$env:USERPROFILE\.local\bin"
+          node scripts/openapply.mjs doctor --json | Out-File -Encoding ascii doctor.json
+          node scripts/doctor-assert.mjs doctor.json
+
+  macos:
+    runs-on: macos-latest
+    env:
+      DOTNET_EnableWriteXorExecute: "0"
+    steps:
+      - uses: actions/checkout@v7
+      - name: Hide preinstalled Node and .NET
+        run: bash .github/scripts/hide-tools.sh
+      - name: Tools before install
+        run: bash .github/scripts/report-tools.sh 'Before install'
+      - name: Install
+        run: bash scripts/install.sh --no-start --skip-vm
+      - name: Tools after install
+        run: bash .github/scripts/report-tools.sh 'After install' . --expect-brew
+      - name: Doctor
+        run: |
+          eval "$(/opt/homebrew/bin/brew shellenv)"
+          export PATH="$HOME/.local/bin:$PATH"
+          node scripts/openapply.mjs doctor --json > doctor.json || true
+          node scripts/doctor-assert.mjs doctor.json
+      - name: Connection check (companion /healthz and /setup/checks)
+        run: |
+          eval "$(/opt/homebrew/bin/brew shellenv)"
+          export PATH="$HOME/.local/bin:$PATH"
+          node scripts/dotnet.mjs run --project apps/terminal --no-build > terminal.out.log 2> terminal.err.log &
+          companion=$!
+          for _ in $(seq 60); do curl -fsS http://127.0.0.1:4102/healthz && break; sleep 2; done
+          curl -fsS http://127.0.0.1:4102/healthz > /dev/null || { cat terminal.*.log; exit 1; }
+          curl -fsS http://127.0.0.1:4102/setup/checks -o setup-checks.json
+          bun -e "import { setupChecksSchema } from './packages/contracts/src/setup-checks.ts'; const d = setupChecksSchema.parse(await Bun.file('setup-checks.json').json()); console.log(d.checks.length + ' checks match the contract')"
+          kill "$companion"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: installer-smoke-macos
+          path: |
+            doctor.json
+            setup-checks.json
+            terminal.*.log
+          if-no-files-found: ignore
+
+  macos-one-liner:
+    runs-on: macos-latest
+    env:
+      DOTNET_EnableWriteXorExecute: "0"
+      OPENAPPLY_REPO: https://github.com/${{ github.repository }}.git
+      OPENAPPLY_BRANCH: ${{ github.head_ref || github.ref_name }}
+    steps:
+      # Only for the helper scripts; the install below clones on its own.
+      - uses: actions/checkout@v7
+        with:
+          path: harness
+      - name: Hide preinstalled Node and .NET
+        run: bash harness/.github/scripts/hide-tools.sh
+      - name: Run the README one-liner from an empty folder
+        env:
+          OPENAPPLY_DIR: ${{ runner.temp }}/OpenApply
+        run: |
+          mkdir -p "$RUNNER_TEMP/empty" && cd "$RUNNER_TEMP/empty"
+          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/scripts/install.sh | bash -s -- --no-start --skip-vm
+      - name: Tools after install
+        run: bash harness/.github/scripts/report-tools.sh 'After one-liner' "$RUNNER_TEMP/OpenApply" --expect-brew
+      - name: Doctor
+        working-directory: ${{ runner.temp }}/OpenApply
+        run: |
+          eval "$(/opt/homebrew/bin/brew shellenv)"
+          export PATH="$HOME/.local/bin:$PATH"
+          node scripts/openapply.mjs doctor --json > doctor.json || true
+          node scripts/doctor-assert.mjs doctor.json

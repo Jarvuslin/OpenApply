@@ -1,34 +1,5 @@
 import { z } from "zod/v4";
-import {
-  NETWORKING_AUTONOMY,
-  type NetworkingAutonomy,
-  type NetworkingChannel,
-  type NetworkingMode,
-} from "../networking";
-
-/** The campaign modes plus "off". LinkedIn drops "auto": nothing auto-sends there. */
-export const PILOT_EMAIL_AUTONOMY = ["off", ...NETWORKING_AUTONOMY] as const;
-export const PILOT_LINKEDIN_AUTONOMY = ["off", "draft", "review"] as const;
-
-// Every channel "off" is how networking is switched off; there is no separate master flag.
-export const pilotNetworkingSchema = z.object({
-  email: z.enum(PILOT_EMAIL_AUTONOMY).default("off"),
-  linkedIn: z.enum(PILOT_LINKEDIN_AUTONOMY).default("off"),
-  dailyCap: z.number().int().min(0).default(5),
-  followupDays: z.number().int().min(0).default(5),
-});
-
-const pilotPromotionPlatformSchema = z.object({
-  platform: z.string().min(1),
-  target: z.string().optional(),
-  postEveryDays: z.number().int().min(1).default(30),
-});
-
-/** Review-only: auto-posting is deliberately not offered. */
-const pilotPromotionConfigSchema = z.object({
-  platforms: z.array(pilotPromotionPlatformSchema).default([]),
-  autonomy: z.literal("review").default("review"),
-});
+import { DEFAULT_MIN_MATCH_SCORE } from "../user";
 
 /** Stored as JSON in `PilotState.instructionsConfig`; `{}` parses to a full config. */
 export const pilotInstructionsConfigSchema = z.object({
@@ -36,10 +7,23 @@ export const pilotInstructionsConfigSchema = z.object({
   minScore: z.number().min(0).max(100).default(60),
   boards: z.array(z.string()).default([]),
   checkIntervalMinutes: z.number().int().min(5).default(30),
-  // `prefault`, not `default`: a missing key is parsed as `{}` so every nested field defaults too.
-  networking: pilotNetworkingSchema.prefault({}),
-  promotion: pilotPromotionConfigSchema.prefault({}),
 });
+
+const pilotInstructionsInputConfigSchema = pilotInstructionsConfigSchema.extend({
+  minScore: z.number().min(0).max(100).optional(),
+});
+
+/** An absent stored minimum inherits the profile; an explicit zero remains an override. */
+export function resolvePilotInstructionsConfig(value: unknown, profileMinimum?: number | null) {
+  const saved = pilotInstructionsInputConfigSchema.parse(value);
+  return {
+    config: pilotInstructionsConfigSchema.parse({
+      ...saved,
+      minScore: saved.minScore ?? profileMinimum ?? DEFAULT_MIN_MATCH_SCORE,
+    }),
+    minScoreInherited: saved.minScore === undefined,
+  };
+}
 
 /** What to retire from the old goals. Nothing by default, so the web asks before sending any. */
 export const pilotInstructionsChangeSchema = z.object({
@@ -49,13 +33,9 @@ export const pilotInstructionsChangeSchema = z.object({
   dropApprovedJobs: z.boolean().default(false),
 });
 
-export const NO_INSTRUCTIONS_CHANGE: PilotInstructionsChange = pilotInstructionsChangeSchema.parse(
-  {},
-);
-
 export const updatePilotInstructionsSchema = z.object({
   goals: z.string().trim().min(1, "Write the pilot's goals before saving."),
-  config: pilotInstructionsConfigSchema,
+  config: pilotInstructionsInputConfigSchema,
   onChange: pilotInstructionsChangeSchema.prefault({}),
 });
 
@@ -73,12 +53,13 @@ export const pilotStateSchema = z.object({
   running: z.boolean(),
   instructionsGoals: z.string(),
   instructionsConfig: pilotInstructionsConfigSchema,
+  minScoreInherited: z.boolean(),
   instructionsUpdatedAt: z.date().nullable(),
   lastCycleAt: z.date().nullable(),
   cycleCount: z.number().int(),
   appliedToday: z.number().int(),
   capReached: z.boolean(),
-  networkingSentToday: z.number().int(),
+
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -90,22 +71,7 @@ export type UpdatePilotInstructionsInput = z.infer<typeof updatePilotInstruction
 export type PilotState = z.infer<typeof pilotStateSchema>;
 
 /** How one channel runs, or null when it is off. */
-export function channelAutonomy(
-  config: PilotInstructionsConfig,
-  channel: NetworkingChannel,
-): NetworkingAutonomy | null {
-  const mode = channel === "email" ? config.networking.email : config.networking.linkedIn;
-  return mode === "off" ? null : mode;
-}
 
 // A warm intro prefers email when both channels are on.
-const CHANNEL_PREFERENCE = ["email", "linkedin"] as const satisfies readonly NetworkingChannel[];
 
 /** How a new outreach message goes out, or null when every channel is off. */
-export function networkingMode(config: PilotInstructionsConfig): NetworkingMode | null {
-  for (const channel of CHANNEL_PREFERENCE) {
-    const autonomy = channelAutonomy(config, channel);
-    if (autonomy) return { channel, autonomy };
-  }
-  return null;
-}

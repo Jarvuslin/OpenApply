@@ -1,4 +1,4 @@
-import { workspaceChannel } from "@jobpilot/contracts/sse";
+import { workspaceChannel } from "@openapply/contracts/sse";
 import { Elysia } from "elysia";
 import { authGuard } from "@/common/middleware";
 import { sseStream } from "@/common/sse";

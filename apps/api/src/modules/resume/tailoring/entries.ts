@@ -1,6 +1,6 @@
 // Merge and promote: the two plan steps that synthesize an experience entry. Every refusal reason
 // lands in `report.violations`, so one response lists them all.
-import type { ResumeExperience, ResumeProject } from "@jobpilot/contracts/resume";
+import type { ResumeExperience, ResumeProject } from "@openapply/contracts/resume";
 import type { StructureAudit, StructurePlan } from "../variants/variant.schema";
 import { parseResumeDate, spanOf } from "./dates";
 

@@ -13,12 +13,6 @@ describe("the phrasings eligibility.md prescribes", () => {
   const prescribed: [phrase: string, reason: string, bucket: SkipBucket][] = [
     ["already applied (", "Already applied (url)", "alreadyApplied"],
     ["below minimum match score (", "Below minimum match score (52 < 60)", "belowMinScore"],
-    [
-      "captcha - apply manually via the apply skill",
-      "CAPTCHA - apply manually via the apply skill",
-      "captcha",
-    ],
-    ["payment required", "Payment required", "payment"],
     ["us citizenship required", "US citizenship required", "citizenship"],
     ["active security clearance required", "Active security clearance required", "clearance"],
     [
@@ -37,6 +31,10 @@ describe("the phrasings eligibility.md prescribes", () => {
 });
 
 describe("classifySkipReason", () => {
+  it("still classifies historical challenge and payment skips", () => {
+    expect(classifySkipReason("CAPTCHA - apply manually via the apply skill")).toBe("captcha");
+    expect(classifySkipReason("Payment required")).toBe("payment");
+  });
   it("buckets closed postings, and anything unrecognized as other", () => {
     expect(classifySkipReason("Posting is no longer accepting applications")).toBe("postingClosed");
     expect(classifySkipReason("Recruiter asked for a portfolio we don't have")).toBe("other");

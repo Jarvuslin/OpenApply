@@ -18,6 +18,13 @@ export function startOfWeek(): Date {
   return d;
 }
 
+/** UTC midnight on the first of this month, and how many days the month has. */
+export function currentMonth(now = new Date()): { start: Date; days: number } {
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const days = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0)).getUTCDate();
+  return { start, days };
+}
+
 export function startOfTimeline(): Date {
   const d = startOfDay(new Date());
   d.setUTCDate(d.getUTCDate() - (DAYS_IN_TIMELINE - 1));

@@ -1,6 +1,6 @@
 ---
 name: cover-letter
-description: Write a short cover letter (150-250 words) for a job from the user's resume, in a plain human voice that doesn't repeat the user's recent letters.
+description: Write a factual cover letter or application prose answer from the original resume and confirmed user facts, respecting the exact form question and limit.
 argument-hint: "<job_description>"
 ---
 
@@ -10,13 +10,15 @@ Write the letter a good candidate would write in fifteen minutes: short, specifi
 
 ## Setup
 
-Follow `../_shared/setup.md`, then load the structured resume (the caller's `resumeId`, else `user.primaryResumeId`):
+Follow `../_shared/setup.md`, then load the selected resume (the caller's `resumeId`, else `user.primaryResumeId`):
 
 ```bash
-jobpilot-api GET "/api/resumes/$RESUME_ID"
+openapply-api GET "/api/resumes/$RESUME_ID"
 ```
 
-Write from its `content`. Don't `Read` the source PDF: it's the same content at several times the size, and inside an apply loop that cost is paid per job.
+Use the original resume text already returned by the application worker's scoring context, plus explicit confirmed profile/user facts, for factual claims. Structured `content` and tailored wording may help organization, but are not proof that a claim appeared in the original. If original evidence was not passed, download `GET /api/resumes/<id>/source` to a job-prefixed scratch file and read that source with available document tools; report an unreadable source instead of treating edited content as identical. Preserve employer names, role titles, dates, education and metrics. Keep projects, internships and employment distinct.
+
+When called for an application field, accept its exact question, confirmed character/word limit and relevant original evidence. A field answer may be much shorter than a letter and normally omits header and sign-off. Do not claim personal history, passion, referrals or preferences merely because the job description suggests them.
 
 ## Step 1: Read the job
 
@@ -27,7 +29,7 @@ From the argument, note the company and what it does, the role and level, the tw
 Letters that are each fine but all the same shape are what reads as AI. Don't skip this.
 
 ```bash
-jobpilot-api GET /api/cover-letters --query page=1 --query limit=5
+openapply-api GET /api/cover-letters --query page=1 --query limit=5
 ```
 
 The list is metadata only, so `GET /api/cover-letters/<id>` for each `.items[].id`. From each, keep four things and drop the rest: what it led with, its first sentence, its last sentence, and how it phrased its numbers. No history → skip to Step 3.
@@ -54,13 +56,13 @@ Then pick one or two proof points that fit this job, not your two best overall: 
 [LinkedIn] | [GitHub] | [Website]
 ```
 
-**Body.** 150-250 words in three or four paragraphs of different lengths:
+**Body.** For a standalone letter, use 150-250 words in three or four paragraphs. An application field's question and confirmed limit override that default:
 
 - **Open** with your lead in one to three sentences. Name the role somewhere in the letter, not necessarily first: "I'm applying for the X role at Y" is the opening every letter uses.
 - **Proof** in one or two short paragraphs. Say what you did and what happened. Don't explain why it's relevant; if you picked well, the reader sees it.
 - **Close** in one or two sentences: you'd like to talk. A thank-you is fine. No recap of fit.
 
-Quote at most one short phrase from the JD. Write in first person as the candidate, only from resume facts, in the company's tone.
+Quote at most one short phrase from the JD. Write in first person using original-resume facts and explicit user information. Explain the connection between an actual project/skill and the role; do not invent an anecdote, employer, responsibility, result or number to improve the answer.
 
 **Sign-off:**
 
@@ -73,7 +75,7 @@ Best regards,
 
 Invoke the `humanizer` skill on the full letter in embedded mode.
 
-Then compare against the Step 2 notes; the humanizer sees one letter and can't do this. Fix anything that matches:
+Then verify every factual claim against the original evidence again; humanizing must not add or strengthen a claim. Count the final text against the exact field limit, including spaces and punctuation; unknown limits stay unknown. The application worker must read back the pasted value and detect truncation. Compare against the Step 2 notes; the humanizer sees one letter and cannot do this. Fix avoidable repetition:
 
 - no sentence reused, including how a metric is phrased (reuse the number, not the sentence)
 - a different first and last sentence
@@ -82,14 +84,14 @@ Then compare against the Step 2 notes; the humanizer sees one letter and can't d
 
 ## Step 6: Save to history
 
-Best effort; continue if it fails. Write `{"content":"<final letter>","jobUrl":"<job url>","jobTitle":"<title>","company":"<company>","source":"<source>"}` to `$JOBPILOT_TEMP/cover-letter.json`, omitting empty `jobUrl`/`jobTitle`/`company`:
+Best effort; continue if it fails. Write `{"content":"<final letter>","jobUrl":"<job url>","jobTitle":"<title>","company":"<company>","source":"<source>"}` to `$OPENAPPLY_TEMP/cover-letter.json`, omitting empty `jobUrl`/`jobTitle`/`company`:
 
 ```bash
-jobpilot-api POST /api/cover-letters --data @"$JOBPILOT_TEMP/cover-letter.json"
+openapply-api POST /api/cover-letters --data @"$OPENAPPLY_TEMP/cover-letter.json"
 ```
 
 Take `jobUrl`/`jobTitle`/`company` from the JD argument (`$DIGEST` fields when present). `source` is the caller: `apply`, `auto_apply`, or `manual` (the default).
 
 ## Output
 
-Plain text with the header and sign-off, ready to paste or render to PDF.
+Plain text ready for the requested use: header/sign-off for a letter, direct prompt-specific prose for an application field. Report an unresolved required factual claim instead of filling it with a plausible story.

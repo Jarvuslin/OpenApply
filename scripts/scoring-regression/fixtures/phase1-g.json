@@ -1,0 +1,1973 @@
+{
+  "version": 1,
+  "provenance": {
+    "origin": "preserved_synthetic",
+    "sourceRunId": "phase1-20261008-g",
+    "sourceReportSha256": "92e44b827dcaf90192302b457d95927d28ef29138d431e0c2b06a6419d1ff0aa",
+    "originalTextSha256": "513de93c83f21183a5e581d3580dfb4de3a1d6cc6c0703034eadef93a4fe195d",
+    "validation": "exact_source_hashes_quotes_and_arithmetic",
+    "limitation": "Four positive fixtures, all score 100; not representative model-comparison evidence. Actual model and usage are not attested by this report."
+  },
+  "cases": [
+    {
+      "caseId": "8f065347-9042-47d2-ba35-4433400cd351",
+      "fixture": "greenhouse",
+      "context": {
+        "basis": {
+          "version": 2,
+          "resumeId": "ecdafcf0-781d-4026-9274-2f1ba72fd218",
+          "sourceSha256": "513de93c83f21183a5e581d3580dfb4de3a1d6cc6c0703034eadef93a4fe195d",
+          "sourceTextSha256": "513de93c83f21183a5e581d3580dfb4de3a1d6cc6c0703034eadef93a4fe195d",
+          "jobSha256": "ec6fd75917beb6ac78922bbd412344c872131d4c20a6a7f2352bd2a1fb75dced",
+          "preferencesSha256": "d3d41d520dddc9aae632077b632a13f52560557944ddd8cfbc8e90bac801a5be"
+        },
+        "job": {
+          "title": "Full Stack Software Engineer",
+          "company": "Harbor Accessibility Labs phase1-20261008-g",
+          "url": "http://127.0.0.1:14110/runs/phase1-20261008-g/greenhouse",
+          "location": "Remote, Canada",
+          "type": "Full time",
+          "description": "Full Stack Software Engineer\n\nHarbor Accessibility Labs phase1-20261008-g · Remote, Canada · Full time\n\nAbout the role\n\nHarbor Accessibility Labs phase1-20261008-g is a synthetic employer whose mission is to make public services accessible. We are hiring a software engineer to build accessible web application dashboards and reliable APIs. Required skills: TypeScript, React, Node.js, PostgreSQL, automated testing, and accessible user interfaces. You will improve application workflows, test frontend and backend behavior, and collaborate on maintainable product software. An Accessible application dashboard project is relevant experience. This Canada remote role is full time, welcomes candidates with current Canadian work authorization, and offers future employer sponsorship when required. No degree, minimum years, clearance, relocation, or demographic answers are required. Salary: CAD 100,000–130,000 annually. This is a local test job, not a real employment offer.",
+          "criteria": [
+            {
+              "id": "c1-debe5acc0634",
+              "start": 0,
+              "end": 28,
+              "text": "Full Stack Software Engineer",
+              "section": "other",
+              "isHeading": true
+            },
+            {
+              "id": "c2-85dae6e6fe2a",
+              "start": 30,
+              "end": 102,
+              "text": "Harbor Accessibility Labs phase1-20261008-g · Remote, Canada · Full time",
+              "section": "other",
+              "isHeading": false
+            },
+            {
+              "id": "c3-b5dad898f85e",
+              "start": 104,
+              "end": 118,
+              "text": "About the role",
+              "section": "responsibilities",
+              "isHeading": true
+            },
+            {
+              "id": "c4-b8d55c00f087",
+              "start": 120,
+              "end": 240,
+              "text": "Harbor Accessibility Labs phase1-20261008-g is a synthetic employer whose mission is to make public services accessible.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c5-ab0ff3b92b7b",
+              "start": 241,
+              "end": 340,
+              "text": "We are hiring a software engineer to build accessible web application dashboards and reliable APIs.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c6-29a4f57fd898",
+              "start": 341,
+              "end": 448,
+              "text": "Required skills: TypeScript, React, Node.js, PostgreSQL, automated testing, and accessible user interfaces.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c7-805bb899579d",
+              "start": 449,
+              "end": 574,
+              "text": "You will improve application workflows, test frontend and backend behavior, and collaborate on maintainable product software.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c8-b881defcb9c5",
+              "start": 575,
+              "end": 642,
+              "text": "An Accessible application dashboard project is relevant experience.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c9-f177cf29510f",
+              "start": 643,
+              "end": 796,
+              "text": "This Canada remote role is full time, welcomes candidates with current Canadian work authorization, and offers future employer sponsorship when required.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c10-54ebd5550624",
+              "start": 797,
+              "end": 882,
+              "text": "No degree, minimum years, clearance, relocation, or demographic answers are required.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c11-094c619ea141",
+              "start": 883,
+              "end": 920,
+              "text": "Salary: CAD 100,000–130,000 annually.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c12-63cf087e8ac6",
+              "start": 921,
+              "end": 975,
+              "text": "This is a local test job, not a real employment offer.",
+              "section": "responsibilities",
+              "isHeading": false
+            }
+          ]
+        },
+        "resume": {
+          "text": "SYNTHETIC APPLICANT — LOCAL FIXTURE TEST ONLY\nMorgan Fixture\nFull stack software engineer\nmorgan.fixture@example.test\n+14165550198\nToronto, Ontario, Canada\nSoftware engineer building accessible web applications with TypeScript, React, Node.js, and PostgreSQL.\nSynthetic Software Cooperative\nSoftware Engineer\nJanuary 2023 - September 2026\nToronto, Ontario, Canada\nBuilt an accessible application dashboard with TypeScript, React, Node.js, and PostgreSQL.\nImplemented REST APIs, PostgreSQL queries, and automated unit and integration tests for application records.\nImproved keyboard navigation and screen reader labels after accessibility testing.\nCollaborated with designers and engineers, reviewed pull requests, and documented application workflows.\nAccessible application dashboard\nA synthetic portfolio project for tracking job applications.\nBuilt a dashboard using React and TypeScript with accessible forms, a Node.js API, PostgreSQL storage, and automated tests.\nEngineering\nTypeScript, JavaScript, React, Node.js, PostgreSQL, REST APIs, Git, Automated testing, Accessibility\nSynthetic Institute of Technology\nBachelor of Science in Computer Science\n2018 - 2022"
+        },
+        "preferences": {
+          "jobPreferences": {
+            "roles": ["Full stack", "Software engineering"],
+            "levels": ["Intermediate / Mid"],
+            "yearsExperience": 3,
+            "workModes": ["Hybrid", "Onsite", "Remote"],
+            "employmentTypes": ["Full-time"]
+          },
+          "preferredLocations": ["Canada", "Remote"],
+          "workAuthorization": [
+            {
+              "country": "Canada",
+              "authorized": true,
+              "sponsorship": true
+            }
+          ]
+        },
+        "minMatchScore": 60,
+        "cachedAssessment": null
+      },
+      "historical": {
+        "origin": "historical",
+        "actualModel": null,
+        "usage": null,
+        "assessment": {
+          "basis": {
+            "version": 2,
+            "resumeId": "ecdafcf0-781d-4026-9274-2f1ba72fd218",
+            "sourceSha256": "513de93c83f21183a5e581d3580dfb4de3a1d6cc6c0703034eadef93a4fe195d",
+            "sourceTextSha256": "513de93c83f21183a5e581d3580dfb4de3a1d6cc6c0703034eadef93a4fe195d",
+            "jobSha256": "ec6fd75917beb6ac78922bbd412344c872131d4c20a6a7f2352bd2a1fb75dced",
+            "preferencesSha256": "d3d41d520dddc9aae632077b632a13f52560557944ddd8cfbc8e90bac801a5be"
+          },
+          "score": 100,
+          "confidence": 1,
+          "confidenceMeaning": "Fraction of scored criteria without an uncertain rating; not a probability of hiring.",
+          "judgment": "Semantic ratings are agent judgments; source quotations and score arithmetic are validated by the server.",
+          "verdict": "assessed",
+          "components": {
+            "requirements": {
+              "score": 100,
+              "count": 2,
+              "weight": 0.6
+            },
+            "responsibilities": {
+              "score": 100,
+              "count": 2,
+              "weight": 0.4
+            }
+          },
+          "assessments": [
+            {
+              "criterionId": "c1-debe5acc0634",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Posting title heading.",
+              "criterion": {
+                "id": "c1-debe5acc0634",
+                "start": 0,
+                "end": 28,
+                "text": "Full Stack Software Engineer",
+                "section": "other",
+                "isHeading": true
+              }
+            },
+            {
+              "criterionId": "c2-85dae6e6fe2a",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Company, location and employment-type header line; handled in preference checks.",
+              "criterion": {
+                "id": "c2-85dae6e6fe2a",
+                "start": 30,
+                "end": 102,
+                "text": "Harbor Accessibility Labs phase1-20261008-g · Remote, Canada · Full time",
+                "section": "other",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c3-b5dad898f85e",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Section heading.",
+              "criterion": {
+                "id": "c3-b5dad898f85e",
+                "start": 104,
+                "end": 118,
+                "text": "About the role",
+                "section": "responsibilities",
+                "isHeading": true
+              }
+            },
+            {
+              "criterionId": "c4-b8d55c00f087",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Employer mission statement; company description, not a candidate capability.",
+              "criterion": {
+                "id": "c4-b8d55c00f087",
+                "start": 120,
+                "end": 240,
+                "text": "Harbor Accessibility Labs phase1-20261008-g is a synthetic employer whose mission is to make public services accessible.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c5-ab0ff3b92b7b",
+              "category": "responsibility",
+              "rating": "strong",
+              "evidence": [
+                {
+                  "start": 364,
+                  "end": 454,
+                  "quote": "Built an accessible application dashboard with TypeScript, React, Node.js, and PostgreSQL."
+                },
+                {
+                  "start": 455,
+                  "end": 563,
+                  "quote": "Implemented REST APIs, PostgreSQL queries, and automated unit and integration tests for application records."
+                }
+              ],
+              "explanation": "Resume shows building an accessible application dashboard and implementing REST APIs on PostgreSQL, matching both the dashboard and API halves.",
+              "criterion": {
+                "id": "c5-ab0ff3b92b7b",
+                "start": 241,
+                "end": 340,
+                "text": "We are hiring a software engineer to build accessible web application dashboards and reliable APIs.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c6-29a4f57fd898",
+              "category": "requirement",
+              "rating": "strong",
+              "evidence": [
+                {
+                  "start": 364,
+                  "end": 454,
+                  "quote": "Built an accessible application dashboard with TypeScript, React, Node.js, and PostgreSQL."
+                },
+                {
+                  "start": 982,
+                  "end": 1082,
+                  "quote": "TypeScript, JavaScript, React, Node.js, PostgreSQL, REST APIs, Git, Automated testing, Accessibility"
+                },
+                {
+                  "start": 564,
+                  "end": 646,
+                  "quote": "Improved keyboard navigation and screen reader labels after accessibility testing."
+                }
+              ],
+              "explanation": "Every listed skill (TypeScript, React, Node.js, PostgreSQL, automated testing, accessible UIs) appears in dated work and the skills list.",
+              "criterion": {
+                "id": "c6-29a4f57fd898",
+                "start": 341,
+                "end": 448,
+                "text": "Required skills: TypeScript, React, Node.js, PostgreSQL, automated testing, and accessible user interfaces.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c7-805bb899579d",
+              "category": "responsibility",
+              "rating": "strong",
+              "evidence": [
+                {
+                  "start": 455,
+                  "end": 563,
+                  "quote": "Implemented REST APIs, PostgreSQL queries, and automated unit and integration tests for application records."
+                },
+                {
+                  "start": 647,
+                  "end": 751,
+                  "quote": "Collaborated with designers and engineers, reviewed pull requests, and documented application workflows."
+                },
+                {
+                  "start": 846,
+                  "end": 969,
+                  "quote": "Built a dashboard using React and TypeScript with accessible forms, a Node.js API, PostgreSQL storage, and automated tests."
+                }
+              ],
+              "explanation": "Resume shows tests across API and UI, collaboration with designers/engineers, PR review and workflow documentation, covering each clause.",
+              "criterion": {
+                "id": "c7-805bb899579d",
+                "start": 449,
+                "end": 574,
+                "text": "You will improve application workflows, test frontend and backend behavior, and collaborate on maintainable product software.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c8-b881defcb9c5",
+              "category": "requirement",
+              "rating": "strong",
+              "evidence": [
+                {
+                  "start": 752,
+                  "end": 784,
+                  "quote": "Accessible application dashboard"
+                },
+                {
+                  "start": 846,
+                  "end": 969,
+                  "quote": "Built a dashboard using React and TypeScript with accessible forms, a Node.js API, PostgreSQL storage, and automated tests."
+                }
+              ],
+              "explanation": "The resume lists an Accessible application dashboard project and the same dashboard built at work.",
+              "criterion": {
+                "id": "c8-b881defcb9c5",
+                "start": 575,
+                "end": 642,
+                "text": "An Accessible application dashboard project is relevant experience.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c9-f177cf29510f",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Location, work-authorization welcome and sponsorship offer are eligibility/preference context, assessed in preferenceChecks, not capabilities.",
+              "criterion": {
+                "id": "c9-f177cf29510f",
+                "start": 643,
+                "end": 796,
+                "text": "This Canada remote role is full time, welcomes candidates with current Canadian work authorization, and offers future employer sponsorship when required.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c10-54ebd5550624",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "States that no degree, minimum years, clearance, relocation or demographic answers are required; no requirement to assess.",
+              "criterion": {
+                "id": "c10-54ebd5550624",
+                "start": 797,
+                "end": 882,
+                "text": "No degree, minimum years, clearance, relocation, or demographic answers are required.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c11-094c619ea141",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Compensation information.",
+              "criterion": {
+                "id": "c11-094c619ea141",
+                "start": 883,
+                "end": 920,
+                "text": "Salary: CAD 100,000–130,000 annually.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c12-63cf087e8ac6",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Disclaimer that this is a local test job.",
+              "criterion": {
+                "id": "c12-63cf087e8ac6",
+                "start": 921,
+                "end": 975,
+                "text": "This is a local test job, not a real employment offer.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            }
+          ],
+          "roleMatch": {
+            "family": "Full stack",
+            "evidence": [
+              {
+                "start": 0,
+                "end": 28,
+                "quote": "Full Stack Software Engineer",
+                "source": "title"
+              }
+            ],
+            "explanation": "Title and responsibilities (accessible web dashboards plus APIs) describe application software engineering.",
+            "relevance": "matched"
+          },
+          "preferenceChecks": {
+            "level": {
+              "status": "unknown",
+              "explanation": "The posting states no seniority level; saved preference is Intermediate / Mid, so this is uncertain, not matched.",
+              "evidence": []
+            },
+            "workMode": {
+              "status": "matched",
+              "explanation": "Posting describes a remote role; Remote is a selected work mode.",
+              "evidence": [
+                {
+                  "start": 643,
+                  "end": 666,
+                  "quote": "This Canada remote role",
+                  "source": "description"
+                }
+              ]
+            },
+            "employmentType": {
+              "status": "matched",
+              "explanation": "Full time matches the saved Full-time preference.",
+              "evidence": [
+                {
+                  "start": 0,
+                  "end": 9,
+                  "quote": "Full time",
+                  "source": "type"
+                }
+              ]
+            },
+            "location": {
+              "status": "matched",
+              "explanation": "Remote, Canada matches preferred locations Canada and Remote.",
+              "evidence": [
+                {
+                  "start": 0,
+                  "end": 14,
+                  "quote": "Remote, Canada",
+                  "source": "location"
+                }
+              ]
+            },
+            "eligibility": [
+              {
+                "requirement": "Current Canadian work authorization; employer offers future sponsorship when required",
+                "status": "met",
+                "explanation": "Applicant is authorized to work in Canada and may need future sponsorship, which the posting states it offers.",
+                "evidence": [
+                  {
+                    "start": 681,
+                    "end": 795,
+                    "quote": "welcomes candidates with current Canadian work authorization, and offers future employer sponsorship when required",
+                    "source": "description"
+                  }
+                ]
+              }
+            ]
+          },
+          "strongMatches": [
+            "We are hiring a software engineer to build accessible web application dashboards and reliable APIs.",
+            "Required skills: TypeScript, React, Node.js, PostgreSQL, automated testing, and accessible user interfaces.",
+            "You will improve application workflows, test frontend and backend behavior, and collaborate on maintainable product software.",
+            "An Accessible application dashboard project is relevant experience."
+          ],
+          "partialMatches": [],
+          "gaps": [],
+          "matchReason": "100/100 against the original resume: 2 requirements and 2 responsibilities assessed; role relevance matched."
+        }
+      }
+    },
+    {
+      "caseId": "f7ca7e55-1dca-4add-8384-8e81fd686b3b",
+      "fixture": "lever",
+      "context": {
+        "basis": {
+          "version": 2,
+          "resumeId": "ecdafcf0-781d-4026-9274-2f1ba72fd218",
+          "sourceSha256": "513de93c83f21183a5e581d3580dfb4de3a1d6cc6c0703034eadef93a4fe195d",
+          "sourceTextSha256": "513de93c83f21183a5e581d3580dfb4de3a1d6cc6c0703034eadef93a4fe195d",
+          "jobSha256": "a3bac9ca2f0b1b51b4476c2cc1d8f87336ffbb2e8f1d7dc305aa21e8354a7f44",
+          "preferencesSha256": "d3d41d520dddc9aae632077b632a13f52560557944ddd8cfbc8e90bac801a5be"
+        },
+        "job": {
+          "title": "Software Engineer, Developer Tools",
+          "company": "Maple Developer Tools phase1-20261008-g",
+          "url": "http://127.0.0.1:14110/runs/phase1-20261008-g/lever",
+          "location": "Remote, Canada",
+          "type": "Full time",
+          "description": "Software Engineer, Developer Tools\n\nMaple Developer Tools phase1-20261008-g · Remote, Canada · Full time\n\nAbout the role\n\nMaple Developer Tools phase1-20261008-g is a synthetic employer whose mission is to make developer tools reliable. We are hiring a software engineer to build accessible web application dashboards and reliable APIs. Required skills: TypeScript, React, Node.js, PostgreSQL, automated testing, and accessible user interfaces. You will improve application workflows, test frontend and backend behavior, and collaborate on maintainable product software. An Accessible application dashboard project is relevant experience. This Canada remote role is full time, welcomes candidates with current Canadian work authorization, and offers future employer sponsorship when required. No degree, minimum years, clearance, relocation, or demographic answers are required. Salary: CAD 100,000–130,000 annually. This is a local test job, not a real employment offer.",
+          "criteria": [
+            {
+              "id": "c1-1c77a0128d25",
+              "start": 0,
+              "end": 34,
+              "text": "Software Engineer, Developer Tools",
+              "section": "other",
+              "isHeading": true
+            },
+            {
+              "id": "c2-f3d6aa72ebdc",
+              "start": 36,
+              "end": 104,
+              "text": "Maple Developer Tools phase1-20261008-g · Remote, Canada · Full time",
+              "section": "other",
+              "isHeading": false
+            },
+            {
+              "id": "c3-924688f7a83d",
+              "start": 106,
+              "end": 120,
+              "text": "About the role",
+              "section": "responsibilities",
+              "isHeading": true
+            },
+            {
+              "id": "c4-067d9a54761b",
+              "start": 122,
+              "end": 236,
+              "text": "Maple Developer Tools phase1-20261008-g is a synthetic employer whose mission is to make developer tools reliable.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c5-896f98514a1f",
+              "start": 237,
+              "end": 336,
+              "text": "We are hiring a software engineer to build accessible web application dashboards and reliable APIs.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c6-019d4e2a13bf",
+              "start": 337,
+              "end": 444,
+              "text": "Required skills: TypeScript, React, Node.js, PostgreSQL, automated testing, and accessible user interfaces.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c7-d9ad0c741301",
+              "start": 445,
+              "end": 570,
+              "text": "You will improve application workflows, test frontend and backend behavior, and collaborate on maintainable product software.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c8-8ff5f6e77988",
+              "start": 571,
+              "end": 638,
+              "text": "An Accessible application dashboard project is relevant experience.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c9-ecd5aadd8ed7",
+              "start": 639,
+              "end": 792,
+              "text": "This Canada remote role is full time, welcomes candidates with current Canadian work authorization, and offers future employer sponsorship when required.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c10-71b0fedca55a",
+              "start": 793,
+              "end": 878,
+              "text": "No degree, minimum years, clearance, relocation, or demographic answers are required.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c11-a058dcad2a64",
+              "start": 879,
+              "end": 916,
+              "text": "Salary: CAD 100,000–130,000 annually.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c12-c4a0f4da9ed1",
+              "start": 917,
+              "end": 971,
+              "text": "This is a local test job, not a real employment offer.",
+              "section": "responsibilities",
+              "isHeading": false
+            }
+          ]
+        },
+        "resume": {
+          "text": "SYNTHETIC APPLICANT — LOCAL FIXTURE TEST ONLY\nMorgan Fixture\nFull stack software engineer\nmorgan.fixture@example.test\n+14165550198\nToronto, Ontario, Canada\nSoftware engineer building accessible web applications with TypeScript, React, Node.js, and PostgreSQL.\nSynthetic Software Cooperative\nSoftware Engineer\nJanuary 2023 - September 2026\nToronto, Ontario, Canada\nBuilt an accessible application dashboard with TypeScript, React, Node.js, and PostgreSQL.\nImplemented REST APIs, PostgreSQL queries, and automated unit and integration tests for application records.\nImproved keyboard navigation and screen reader labels after accessibility testing.\nCollaborated with designers and engineers, reviewed pull requests, and documented application workflows.\nAccessible application dashboard\nA synthetic portfolio project for tracking job applications.\nBuilt a dashboard using React and TypeScript with accessible forms, a Node.js API, PostgreSQL storage, and automated tests.\nEngineering\nTypeScript, JavaScript, React, Node.js, PostgreSQL, REST APIs, Git, Automated testing, Accessibility\nSynthetic Institute of Technology\nBachelor of Science in Computer Science\n2018 - 2022"
+        },
+        "preferences": {
+          "jobPreferences": {
+            "roles": ["Full stack", "Software engineering"],
+            "levels": ["Intermediate / Mid"],
+            "yearsExperience": 3,
+            "workModes": ["Hybrid", "Onsite", "Remote"],
+            "employmentTypes": ["Full-time"]
+          },
+          "preferredLocations": ["Canada", "Remote"],
+          "workAuthorization": [
+            {
+              "country": "Canada",
+              "authorized": true,
+              "sponsorship": true
+            }
+          ]
+        },
+        "minMatchScore": 60,
+        "cachedAssessment": null
+      },
+      "historical": {
+        "origin": "historical",
+        "actualModel": null,
+        "usage": null,
+        "assessment": {
+          "basis": {
+            "version": 2,
+            "resumeId": "ecdafcf0-781d-4026-9274-2f1ba72fd218",
+            "sourceSha256": "513de93c83f21183a5e581d3580dfb4de3a1d6cc6c0703034eadef93a4fe195d",
+            "sourceTextSha256": "513de93c83f21183a5e581d3580dfb4de3a1d6cc6c0703034eadef93a4fe195d",
+            "jobSha256": "a3bac9ca2f0b1b51b4476c2cc1d8f87336ffbb2e8f1d7dc305aa21e8354a7f44",
+            "preferencesSha256": "d3d41d520dddc9aae632077b632a13f52560557944ddd8cfbc8e90bac801a5be"
+          },
+          "score": 100,
+          "confidence": 1,
+          "confidenceMeaning": "Fraction of scored criteria without an uncertain rating; not a probability of hiring.",
+          "judgment": "Semantic ratings are agent judgments; source quotations and score arithmetic are validated by the server.",
+          "verdict": "assessed",
+          "components": {
+            "requirements": {
+              "score": 100,
+              "count": 2,
+              "weight": 0.6
+            },
+            "responsibilities": {
+              "score": 100,
+              "count": 2,
+              "weight": 0.4
+            }
+          },
+          "assessments": [
+            {
+              "criterionId": "c1-1c77a0128d25",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Posting title heading.",
+              "criterion": {
+                "id": "c1-1c77a0128d25",
+                "start": 0,
+                "end": 34,
+                "text": "Software Engineer, Developer Tools",
+                "section": "other",
+                "isHeading": true
+              }
+            },
+            {
+              "criterionId": "c2-f3d6aa72ebdc",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Company, location and employment-type header line; handled in preference checks.",
+              "criterion": {
+                "id": "c2-f3d6aa72ebdc",
+                "start": 36,
+                "end": 104,
+                "text": "Maple Developer Tools phase1-20261008-g · Remote, Canada · Full time",
+                "section": "other",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c3-924688f7a83d",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Section heading.",
+              "criterion": {
+                "id": "c3-924688f7a83d",
+                "start": 106,
+                "end": 120,
+                "text": "About the role",
+                "section": "responsibilities",
+                "isHeading": true
+              }
+            },
+            {
+              "criterionId": "c4-067d9a54761b",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Employer mission statement; company description, not a candidate capability.",
+              "criterion": {
+                "id": "c4-067d9a54761b",
+                "start": 122,
+                "end": 236,
+                "text": "Maple Developer Tools phase1-20261008-g is a synthetic employer whose mission is to make developer tools reliable.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c5-896f98514a1f",
+              "category": "responsibility",
+              "rating": "strong",
+              "evidence": [
+                {
+                  "start": 364,
+                  "end": 454,
+                  "quote": "Built an accessible application dashboard with TypeScript, React, Node.js, and PostgreSQL."
+                },
+                {
+                  "start": 455,
+                  "end": 563,
+                  "quote": "Implemented REST APIs, PostgreSQL queries, and automated unit and integration tests for application records."
+                }
+              ],
+              "explanation": "Resume shows building an accessible application dashboard and implementing REST APIs on PostgreSQL, matching both the dashboard and API halves.",
+              "criterion": {
+                "id": "c5-896f98514a1f",
+                "start": 237,
+                "end": 336,
+                "text": "We are hiring a software engineer to build accessible web application dashboards and reliable APIs.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c6-019d4e2a13bf",
+              "category": "requirement",
+              "rating": "strong",
+              "evidence": [
+                {
+                  "start": 364,
+                  "end": 454,
+                  "quote": "Built an accessible application dashboard with TypeScript, React, Node.js, and PostgreSQL."
+                },
+                {
+                  "start": 982,
+                  "end": 1082,
+                  "quote": "TypeScript, JavaScript, React, Node.js, PostgreSQL, REST APIs, Git, Automated testing, Accessibility"
+                },
+                {
+                  "start": 564,
+                  "end": 646,
+                  "quote": "Improved keyboard navigation and screen reader labels after accessibility testing."
+                }
+              ],
+              "explanation": "Every listed skill (TypeScript, React, Node.js, PostgreSQL, automated testing, accessible UIs) appears in dated work and the skills list.",
+              "criterion": {
+                "id": "c6-019d4e2a13bf",
+                "start": 337,
+                "end": 444,
+                "text": "Required skills: TypeScript, React, Node.js, PostgreSQL, automated testing, and accessible user interfaces.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c7-d9ad0c741301",
+              "category": "responsibility",
+              "rating": "strong",
+              "evidence": [
+                {
+                  "start": 455,
+                  "end": 563,
+                  "quote": "Implemented REST APIs, PostgreSQL queries, and automated unit and integration tests for application records."
+                },
+                {
+                  "start": 647,
+                  "end": 751,
+                  "quote": "Collaborated with designers and engineers, reviewed pull requests, and documented application workflows."
+                },
+                {
+                  "start": 846,
+                  "end": 969,
+                  "quote": "Built a dashboard using React and TypeScript with accessible forms, a Node.js API, PostgreSQL storage, and automated tests."
+                }
+              ],
+              "explanation": "Resume shows tests across API and UI, collaboration with designers/engineers, PR review and workflow documentation, covering each clause.",
+              "criterion": {
+                "id": "c7-d9ad0c741301",
+                "start": 445,
+                "end": 570,
+                "text": "You will improve application workflows, test frontend and backend behavior, and collaborate on maintainable product software.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c8-8ff5f6e77988",
+              "category": "requirement",
+              "rating": "strong",
+              "evidence": [
+                {
+                  "start": 752,
+                  "end": 784,
+                  "quote": "Accessible application dashboard"
+                },
+                {
+                  "start": 846,
+                  "end": 969,
+                  "quote": "Built a dashboard using React and TypeScript with accessible forms, a Node.js API, PostgreSQL storage, and automated tests."
+                }
+              ],
+              "explanation": "The resume lists an Accessible application dashboard project and the same dashboard built at work.",
+              "criterion": {
+                "id": "c8-8ff5f6e77988",
+                "start": 571,
+                "end": 638,
+                "text": "An Accessible application dashboard project is relevant experience.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c9-ecd5aadd8ed7",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Location, work-authorization welcome and sponsorship offer are eligibility/preference context, assessed in preferenceChecks, not capabilities.",
+              "criterion": {
+                "id": "c9-ecd5aadd8ed7",
+                "start": 639,
+                "end": 792,
+                "text": "This Canada remote role is full time, welcomes candidates with current Canadian work authorization, and offers future employer sponsorship when required.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c10-71b0fedca55a",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "States that no degree, minimum years, clearance, relocation or demographic answers are required; no requirement to assess.",
+              "criterion": {
+                "id": "c10-71b0fedca55a",
+                "start": 793,
+                "end": 878,
+                "text": "No degree, minimum years, clearance, relocation, or demographic answers are required.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c11-a058dcad2a64",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Compensation information.",
+              "criterion": {
+                "id": "c11-a058dcad2a64",
+                "start": 879,
+                "end": 916,
+                "text": "Salary: CAD 100,000–130,000 annually.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c12-c4a0f4da9ed1",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Disclaimer that this is a local test job.",
+              "criterion": {
+                "id": "c12-c4a0f4da9ed1",
+                "start": 917,
+                "end": 971,
+                "text": "This is a local test job, not a real employment offer.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            }
+          ],
+          "roleMatch": {
+            "family": "Software engineering",
+            "evidence": [
+              {
+                "start": 0,
+                "end": 17,
+                "quote": "Software Engineer",
+                "source": "title"
+              }
+            ],
+            "explanation": "Title and responsibilities (accessible web dashboards plus APIs) describe application software engineering.",
+            "relevance": "matched"
+          },
+          "preferenceChecks": {
+            "level": {
+              "status": "unknown",
+              "explanation": "The posting states no seniority level; saved preference is Intermediate / Mid, so this is uncertain, not matched.",
+              "evidence": []
+            },
+            "workMode": {
+              "status": "matched",
+              "explanation": "Posting describes a remote role; Remote is a selected work mode.",
+              "evidence": [
+                {
+                  "start": 639,
+                  "end": 662,
+                  "quote": "This Canada remote role",
+                  "source": "description"
+                }
+              ]
+            },
+            "employmentType": {
+              "status": "matched",
+              "explanation": "Full time matches the saved Full-time preference.",
+              "evidence": [
+                {
+                  "start": 0,
+                  "end": 9,
+                  "quote": "Full time",
+                  "source": "type"
+                }
+              ]
+            },
+            "location": {
+              "status": "matched",
+              "explanation": "Remote, Canada matches preferred locations Canada and Remote.",
+              "evidence": [
+                {
+                  "start": 0,
+                  "end": 14,
+                  "quote": "Remote, Canada",
+                  "source": "location"
+                }
+              ]
+            },
+            "eligibility": [
+              {
+                "requirement": "Current Canadian work authorization; employer offers future sponsorship when required",
+                "status": "met",
+                "explanation": "Applicant is authorized to work in Canada and may need future sponsorship, which the posting states it offers.",
+                "evidence": [
+                  {
+                    "start": 677,
+                    "end": 791,
+                    "quote": "welcomes candidates with current Canadian work authorization, and offers future employer sponsorship when required",
+                    "source": "description"
+                  }
+                ]
+              }
+            ]
+          },
+          "strongMatches": [
+            "We are hiring a software engineer to build accessible web application dashboards and reliable APIs.",
+            "Required skills: TypeScript, React, Node.js, PostgreSQL, automated testing, and accessible user interfaces.",
+            "You will improve application workflows, test frontend and backend behavior, and collaborate on maintainable product software.",
+            "An Accessible application dashboard project is relevant experience."
+          ],
+          "partialMatches": [],
+          "gaps": [],
+          "matchReason": "100/100 against the original resume: 2 requirements and 2 responsibilities assessed; role relevance matched."
+        }
+      }
+    },
+    {
+      "caseId": "124baeb4-0663-43d7-816e-81c488450572",
+      "fixture": "ashby",
+      "context": {
+        "basis": {
+          "version": 2,
+          "resumeId": "ecdafcf0-781d-4026-9274-2f1ba72fd218",
+          "sourceSha256": "513de93c83f21183a5e581d3580dfb4de3a1d6cc6c0703034eadef93a4fe195d",
+          "sourceTextSha256": "513de93c83f21183a5e581d3580dfb4de3a1d6cc6c0703034eadef93a4fe195d",
+          "jobSha256": "17c99300860286fd512c7f2263f6951c08ec7848163fcbfa2aab5a954f4b5bd2",
+          "preferencesSha256": "d3d41d520dddc9aae632077b632a13f52560557944ddd8cfbc8e90bac801a5be"
+        },
+        "job": {
+          "title": "Software Engineer, Product Platform",
+          "company": "Cedar Product Systems phase1-20261008-g",
+          "url": "http://127.0.0.1:14110/runs/phase1-20261008-g/ashby",
+          "location": "Remote, Canada",
+          "type": "Full time",
+          "description": "Software Engineer, Product Platform\n\nCedar Product Systems phase1-20261008-g · Remote, Canada · Full time\n\nAbout the role\n\nCedar Product Systems phase1-20261008-g is a synthetic employer whose mission is to make application workflows accessible. We are hiring a software engineer to build accessible web application dashboards and reliable APIs. Required skills: TypeScript, React, Node.js, PostgreSQL, automated testing, and accessible user interfaces. You will improve application workflows, test frontend and backend behavior, and collaborate on maintainable product software. An Accessible application dashboard project is relevant experience. This Canada remote role is full time, welcomes candidates with current Canadian work authorization, and offers future employer sponsorship when required. No degree, minimum years, clearance, relocation, or demographic answers are required. Salary: CAD 100,000–130,000 annually. This is a local test job, not a real employment offer.",
+          "criteria": [
+            {
+              "id": "c1-2c3ae5a2dccd",
+              "start": 0,
+              "end": 35,
+              "text": "Software Engineer, Product Platform",
+              "section": "other",
+              "isHeading": true
+            },
+            {
+              "id": "c2-18685cce6d06",
+              "start": 37,
+              "end": 105,
+              "text": "Cedar Product Systems phase1-20261008-g · Remote, Canada · Full time",
+              "section": "other",
+              "isHeading": false
+            },
+            {
+              "id": "c3-5cc7d9951ea6",
+              "start": 107,
+              "end": 121,
+              "text": "About the role",
+              "section": "responsibilities",
+              "isHeading": true
+            },
+            {
+              "id": "c4-4afd7bb08003",
+              "start": 123,
+              "end": 245,
+              "text": "Cedar Product Systems phase1-20261008-g is a synthetic employer whose mission is to make application workflows accessible.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c5-5b85191f6e50",
+              "start": 246,
+              "end": 345,
+              "text": "We are hiring a software engineer to build accessible web application dashboards and reliable APIs.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c6-f424b3a376e9",
+              "start": 346,
+              "end": 453,
+              "text": "Required skills: TypeScript, React, Node.js, PostgreSQL, automated testing, and accessible user interfaces.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c7-35e23d8270af",
+              "start": 454,
+              "end": 579,
+              "text": "You will improve application workflows, test frontend and backend behavior, and collaborate on maintainable product software.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c8-82f0c386d771",
+              "start": 580,
+              "end": 647,
+              "text": "An Accessible application dashboard project is relevant experience.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c9-aa5220311399",
+              "start": 648,
+              "end": 801,
+              "text": "This Canada remote role is full time, welcomes candidates with current Canadian work authorization, and offers future employer sponsorship when required.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c10-1cb487349814",
+              "start": 802,
+              "end": 887,
+              "text": "No degree, minimum years, clearance, relocation, or demographic answers are required.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c11-a85a694fa969",
+              "start": 888,
+              "end": 925,
+              "text": "Salary: CAD 100,000–130,000 annually.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c12-2c5b542661f6",
+              "start": 926,
+              "end": 980,
+              "text": "This is a local test job, not a real employment offer.",
+              "section": "responsibilities",
+              "isHeading": false
+            }
+          ]
+        },
+        "resume": {
+          "text": "SYNTHETIC APPLICANT — LOCAL FIXTURE TEST ONLY\nMorgan Fixture\nFull stack software engineer\nmorgan.fixture@example.test\n+14165550198\nToronto, Ontario, Canada\nSoftware engineer building accessible web applications with TypeScript, React, Node.js, and PostgreSQL.\nSynthetic Software Cooperative\nSoftware Engineer\nJanuary 2023 - September 2026\nToronto, Ontario, Canada\nBuilt an accessible application dashboard with TypeScript, React, Node.js, and PostgreSQL.\nImplemented REST APIs, PostgreSQL queries, and automated unit and integration tests for application records.\nImproved keyboard navigation and screen reader labels after accessibility testing.\nCollaborated with designers and engineers, reviewed pull requests, and documented application workflows.\nAccessible application dashboard\nA synthetic portfolio project for tracking job applications.\nBuilt a dashboard using React and TypeScript with accessible forms, a Node.js API, PostgreSQL storage, and automated tests.\nEngineering\nTypeScript, JavaScript, React, Node.js, PostgreSQL, REST APIs, Git, Automated testing, Accessibility\nSynthetic Institute of Technology\nBachelor of Science in Computer Science\n2018 - 2022"
+        },
+        "preferences": {
+          "jobPreferences": {
+            "roles": ["Full stack", "Software engineering"],
+            "levels": ["Intermediate / Mid"],
+            "yearsExperience": 3,
+            "workModes": ["Hybrid", "Onsite", "Remote"],
+            "employmentTypes": ["Full-time"]
+          },
+          "preferredLocations": ["Canada", "Remote"],
+          "workAuthorization": [
+            {
+              "country": "Canada",
+              "authorized": true,
+              "sponsorship": true
+            }
+          ]
+        },
+        "minMatchScore": 60,
+        "cachedAssessment": null
+      },
+      "historical": {
+        "origin": "historical",
+        "actualModel": null,
+        "usage": null,
+        "assessment": {
+          "basis": {
+            "version": 2,
+            "resumeId": "ecdafcf0-781d-4026-9274-2f1ba72fd218",
+            "sourceSha256": "513de93c83f21183a5e581d3580dfb4de3a1d6cc6c0703034eadef93a4fe195d",
+            "sourceTextSha256": "513de93c83f21183a5e581d3580dfb4de3a1d6cc6c0703034eadef93a4fe195d",
+            "jobSha256": "17c99300860286fd512c7f2263f6951c08ec7848163fcbfa2aab5a954f4b5bd2",
+            "preferencesSha256": "d3d41d520dddc9aae632077b632a13f52560557944ddd8cfbc8e90bac801a5be"
+          },
+          "score": 100,
+          "confidence": 1,
+          "confidenceMeaning": "Fraction of scored criteria without an uncertain rating; not a probability of hiring.",
+          "judgment": "Semantic ratings are agent judgments; source quotations and score arithmetic are validated by the server.",
+          "verdict": "assessed",
+          "components": {
+            "requirements": {
+              "score": 100,
+              "count": 2,
+              "weight": 0.6
+            },
+            "responsibilities": {
+              "score": 100,
+              "count": 2,
+              "weight": 0.4
+            }
+          },
+          "assessments": [
+            {
+              "criterionId": "c1-2c3ae5a2dccd",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Posting title heading.",
+              "criterion": {
+                "id": "c1-2c3ae5a2dccd",
+                "start": 0,
+                "end": 35,
+                "text": "Software Engineer, Product Platform",
+                "section": "other",
+                "isHeading": true
+              }
+            },
+            {
+              "criterionId": "c2-18685cce6d06",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Company, location and employment-type header line; handled in preference checks.",
+              "criterion": {
+                "id": "c2-18685cce6d06",
+                "start": 37,
+                "end": 105,
+                "text": "Cedar Product Systems phase1-20261008-g · Remote, Canada · Full time",
+                "section": "other",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c3-5cc7d9951ea6",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Section heading.",
+              "criterion": {
+                "id": "c3-5cc7d9951ea6",
+                "start": 107,
+                "end": 121,
+                "text": "About the role",
+                "section": "responsibilities",
+                "isHeading": true
+              }
+            },
+            {
+              "criterionId": "c4-4afd7bb08003",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Employer mission statement; company description, not a candidate capability.",
+              "criterion": {
+                "id": "c4-4afd7bb08003",
+                "start": 123,
+                "end": 245,
+                "text": "Cedar Product Systems phase1-20261008-g is a synthetic employer whose mission is to make application workflows accessible.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c5-5b85191f6e50",
+              "category": "responsibility",
+              "rating": "strong",
+              "evidence": [
+                {
+                  "start": 364,
+                  "end": 454,
+                  "quote": "Built an accessible application dashboard with TypeScript, React, Node.js, and PostgreSQL."
+                },
+                {
+                  "start": 455,
+                  "end": 563,
+                  "quote": "Implemented REST APIs, PostgreSQL queries, and automated unit and integration tests for application records."
+                }
+              ],
+              "explanation": "Resume shows building an accessible application dashboard and implementing REST APIs on PostgreSQL, matching both the dashboard and API halves.",
+              "criterion": {
+                "id": "c5-5b85191f6e50",
+                "start": 246,
+                "end": 345,
+                "text": "We are hiring a software engineer to build accessible web application dashboards and reliable APIs.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c6-f424b3a376e9",
+              "category": "requirement",
+              "rating": "strong",
+              "evidence": [
+                {
+                  "start": 364,
+                  "end": 454,
+                  "quote": "Built an accessible application dashboard with TypeScript, React, Node.js, and PostgreSQL."
+                },
+                {
+                  "start": 982,
+                  "end": 1082,
+                  "quote": "TypeScript, JavaScript, React, Node.js, PostgreSQL, REST APIs, Git, Automated testing, Accessibility"
+                },
+                {
+                  "start": 564,
+                  "end": 646,
+                  "quote": "Improved keyboard navigation and screen reader labels after accessibility testing."
+                }
+              ],
+              "explanation": "Every listed skill (TypeScript, React, Node.js, PostgreSQL, automated testing, accessible UIs) appears in dated work and the skills list.",
+              "criterion": {
+                "id": "c6-f424b3a376e9",
+                "start": 346,
+                "end": 453,
+                "text": "Required skills: TypeScript, React, Node.js, PostgreSQL, automated testing, and accessible user interfaces.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c7-35e23d8270af",
+              "category": "responsibility",
+              "rating": "strong",
+              "evidence": [
+                {
+                  "start": 455,
+                  "end": 563,
+                  "quote": "Implemented REST APIs, PostgreSQL queries, and automated unit and integration tests for application records."
+                },
+                {
+                  "start": 647,
+                  "end": 751,
+                  "quote": "Collaborated with designers and engineers, reviewed pull requests, and documented application workflows."
+                },
+                {
+                  "start": 846,
+                  "end": 969,
+                  "quote": "Built a dashboard using React and TypeScript with accessible forms, a Node.js API, PostgreSQL storage, and automated tests."
+                }
+              ],
+              "explanation": "Resume shows tests across API and UI, collaboration with designers/engineers, PR review and workflow documentation, covering each clause.",
+              "criterion": {
+                "id": "c7-35e23d8270af",
+                "start": 454,
+                "end": 579,
+                "text": "You will improve application workflows, test frontend and backend behavior, and collaborate on maintainable product software.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c8-82f0c386d771",
+              "category": "requirement",
+              "rating": "strong",
+              "evidence": [
+                {
+                  "start": 752,
+                  "end": 784,
+                  "quote": "Accessible application dashboard"
+                },
+                {
+                  "start": 846,
+                  "end": 969,
+                  "quote": "Built a dashboard using React and TypeScript with accessible forms, a Node.js API, PostgreSQL storage, and automated tests."
+                }
+              ],
+              "explanation": "The resume lists an Accessible application dashboard project and the same dashboard built at work.",
+              "criterion": {
+                "id": "c8-82f0c386d771",
+                "start": 580,
+                "end": 647,
+                "text": "An Accessible application dashboard project is relevant experience.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c9-aa5220311399",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Location, work-authorization welcome and sponsorship offer are eligibility/preference context, assessed in preferenceChecks, not capabilities.",
+              "criterion": {
+                "id": "c9-aa5220311399",
+                "start": 648,
+                "end": 801,
+                "text": "This Canada remote role is full time, welcomes candidates with current Canadian work authorization, and offers future employer sponsorship when required.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c10-1cb487349814",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "States that no degree, minimum years, clearance, relocation or demographic answers are required; no requirement to assess.",
+              "criterion": {
+                "id": "c10-1cb487349814",
+                "start": 802,
+                "end": 887,
+                "text": "No degree, minimum years, clearance, relocation, or demographic answers are required.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c11-a85a694fa969",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Compensation information.",
+              "criterion": {
+                "id": "c11-a85a694fa969",
+                "start": 888,
+                "end": 925,
+                "text": "Salary: CAD 100,000–130,000 annually.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c12-2c5b542661f6",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Disclaimer that this is a local test job.",
+              "criterion": {
+                "id": "c12-2c5b542661f6",
+                "start": 926,
+                "end": 980,
+                "text": "This is a local test job, not a real employment offer.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            }
+          ],
+          "roleMatch": {
+            "family": "Software engineering",
+            "evidence": [
+              {
+                "start": 0,
+                "end": 17,
+                "quote": "Software Engineer",
+                "source": "title"
+              }
+            ],
+            "explanation": "Title and responsibilities (accessible web dashboards plus APIs) describe application software engineering.",
+            "relevance": "matched"
+          },
+          "preferenceChecks": {
+            "level": {
+              "status": "unknown",
+              "explanation": "The posting states no seniority level; saved preference is Intermediate / Mid, so this is uncertain, not matched.",
+              "evidence": []
+            },
+            "workMode": {
+              "status": "matched",
+              "explanation": "Posting describes a remote role; Remote is a selected work mode.",
+              "evidence": [
+                {
+                  "start": 648,
+                  "end": 671,
+                  "quote": "This Canada remote role",
+                  "source": "description"
+                }
+              ]
+            },
+            "employmentType": {
+              "status": "matched",
+              "explanation": "Full time matches the saved Full-time preference.",
+              "evidence": [
+                {
+                  "start": 0,
+                  "end": 9,
+                  "quote": "Full time",
+                  "source": "type"
+                }
+              ]
+            },
+            "location": {
+              "status": "matched",
+              "explanation": "Remote, Canada matches preferred locations Canada and Remote.",
+              "evidence": [
+                {
+                  "start": 0,
+                  "end": 14,
+                  "quote": "Remote, Canada",
+                  "source": "location"
+                }
+              ]
+            },
+            "eligibility": [
+              {
+                "requirement": "Current Canadian work authorization; employer offers future sponsorship when required",
+                "status": "met",
+                "explanation": "Applicant is authorized to work in Canada and may need future sponsorship, which the posting states it offers.",
+                "evidence": [
+                  {
+                    "start": 686,
+                    "end": 800,
+                    "quote": "welcomes candidates with current Canadian work authorization, and offers future employer sponsorship when required",
+                    "source": "description"
+                  }
+                ]
+              }
+            ]
+          },
+          "strongMatches": [
+            "We are hiring a software engineer to build accessible web application dashboards and reliable APIs.",
+            "Required skills: TypeScript, React, Node.js, PostgreSQL, automated testing, and accessible user interfaces.",
+            "You will improve application workflows, test frontend and backend behavior, and collaborate on maintainable product software.",
+            "An Accessible application dashboard project is relevant experience."
+          ],
+          "partialMatches": [],
+          "gaps": [],
+          "matchReason": "100/100 against the original resume: 2 requirements and 2 responsibilities assessed; role relevance matched."
+        }
+      }
+    },
+    {
+      "caseId": "046a9966-31e6-49fd-82b1-853380096986",
+      "fixture": "unfamiliar",
+      "context": {
+        "basis": {
+          "version": 2,
+          "resumeId": "ecdafcf0-781d-4026-9274-2f1ba72fd218",
+          "sourceSha256": "513de93c83f21183a5e581d3580dfb4de3a1d6cc6c0703034eadef93a4fe195d",
+          "sourceTextSha256": "513de93c83f21183a5e581d3580dfb4de3a1d6cc6c0703034eadef93a4fe195d",
+          "jobSha256": "1865ffcc3beda4a6f053325fd0df45cb031e6b76435ab5aa2de7b68e1931026b",
+          "preferencesSha256": "d3d41d520dddc9aae632077b632a13f52560557944ddd8cfbc8e90bac801a5be"
+        },
+        "job": {
+          "title": "Software Engineer, Workflow Tools",
+          "company": "Juniper Workflow Studio phase1-20261008-g",
+          "url": "http://127.0.0.1:14110/runs/phase1-20261008-g/unfamiliar",
+          "location": "Remote, Canada",
+          "type": "Full time",
+          "description": "Software Engineer, Workflow Tools\n\nJuniper Workflow Studio phase1-20261008-g · Remote, Canada · Full time\n\nAbout the role\n\nJuniper Workflow Studio phase1-20261008-g is a synthetic employer whose mission is to make everyday application workflows accessible. We are hiring a software engineer to build accessible web application dashboards and reliable APIs. Required skills: TypeScript, React, Node.js, PostgreSQL, automated testing, and accessible user interfaces. You will improve application workflows, test frontend and backend behavior, and collaborate on maintainable product software. An Accessible application dashboard project is relevant experience. This Canada remote role is full time, welcomes candidates with current Canadian work authorization, and offers future employer sponsorship when required. No degree, minimum years, clearance, relocation, or demographic answers are required. Salary: CAD 100,000–130,000 annually. This is a local test job, not a real employment offer.",
+          "criteria": [
+            {
+              "id": "c1-8db84e79b844",
+              "start": 0,
+              "end": 33,
+              "text": "Software Engineer, Workflow Tools",
+              "section": "other",
+              "isHeading": true
+            },
+            {
+              "id": "c2-61b794e61f93",
+              "start": 35,
+              "end": 105,
+              "text": "Juniper Workflow Studio phase1-20261008-g · Remote, Canada · Full time",
+              "section": "other",
+              "isHeading": false
+            },
+            {
+              "id": "c3-5cc7d9951ea6",
+              "start": 107,
+              "end": 121,
+              "text": "About the role",
+              "section": "responsibilities",
+              "isHeading": true
+            },
+            {
+              "id": "c4-fc85ad17634b",
+              "start": 123,
+              "end": 256,
+              "text": "Juniper Workflow Studio phase1-20261008-g is a synthetic employer whose mission is to make everyday application workflows accessible.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c5-b708b3315b5b",
+              "start": 257,
+              "end": 356,
+              "text": "We are hiring a software engineer to build accessible web application dashboards and reliable APIs.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c6-19a15f4decd1",
+              "start": 357,
+              "end": 464,
+              "text": "Required skills: TypeScript, React, Node.js, PostgreSQL, automated testing, and accessible user interfaces.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c7-d26496254dbe",
+              "start": 465,
+              "end": 590,
+              "text": "You will improve application workflows, test frontend and backend behavior, and collaborate on maintainable product software.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c8-ea3ea7e30b60",
+              "start": 591,
+              "end": 658,
+              "text": "An Accessible application dashboard project is relevant experience.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c9-cff167150102",
+              "start": 659,
+              "end": 812,
+              "text": "This Canada remote role is full time, welcomes candidates with current Canadian work authorization, and offers future employer sponsorship when required.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c10-90450bea9492",
+              "start": 813,
+              "end": 898,
+              "text": "No degree, minimum years, clearance, relocation, or demographic answers are required.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c11-9c788ddc7eb7",
+              "start": 899,
+              "end": 936,
+              "text": "Salary: CAD 100,000–130,000 annually.",
+              "section": "responsibilities",
+              "isHeading": false
+            },
+            {
+              "id": "c12-f84c7bce9254",
+              "start": 937,
+              "end": 991,
+              "text": "This is a local test job, not a real employment offer.",
+              "section": "responsibilities",
+              "isHeading": false
+            }
+          ]
+        },
+        "resume": {
+          "text": "SYNTHETIC APPLICANT — LOCAL FIXTURE TEST ONLY\nMorgan Fixture\nFull stack software engineer\nmorgan.fixture@example.test\n+14165550198\nToronto, Ontario, Canada\nSoftware engineer building accessible web applications with TypeScript, React, Node.js, and PostgreSQL.\nSynthetic Software Cooperative\nSoftware Engineer\nJanuary 2023 - September 2026\nToronto, Ontario, Canada\nBuilt an accessible application dashboard with TypeScript, React, Node.js, and PostgreSQL.\nImplemented REST APIs, PostgreSQL queries, and automated unit and integration tests for application records.\nImproved keyboard navigation and screen reader labels after accessibility testing.\nCollaborated with designers and engineers, reviewed pull requests, and documented application workflows.\nAccessible application dashboard\nA synthetic portfolio project for tracking job applications.\nBuilt a dashboard using React and TypeScript with accessible forms, a Node.js API, PostgreSQL storage, and automated tests.\nEngineering\nTypeScript, JavaScript, React, Node.js, PostgreSQL, REST APIs, Git, Automated testing, Accessibility\nSynthetic Institute of Technology\nBachelor of Science in Computer Science\n2018 - 2022"
+        },
+        "preferences": {
+          "jobPreferences": {
+            "roles": ["Full stack", "Software engineering"],
+            "levels": ["Intermediate / Mid"],
+            "yearsExperience": 3,
+            "workModes": ["Hybrid", "Onsite", "Remote"],
+            "employmentTypes": ["Full-time"]
+          },
+          "preferredLocations": ["Canada", "Remote"],
+          "workAuthorization": [
+            {
+              "country": "Canada",
+              "authorized": true,
+              "sponsorship": true
+            }
+          ]
+        },
+        "minMatchScore": 60,
+        "cachedAssessment": null
+      },
+      "historical": {
+        "origin": "historical",
+        "actualModel": null,
+        "usage": null,
+        "assessment": {
+          "basis": {
+            "version": 2,
+            "resumeId": "ecdafcf0-781d-4026-9274-2f1ba72fd218",
+            "sourceSha256": "513de93c83f21183a5e581d3580dfb4de3a1d6cc6c0703034eadef93a4fe195d",
+            "sourceTextSha256": "513de93c83f21183a5e581d3580dfb4de3a1d6cc6c0703034eadef93a4fe195d",
+            "jobSha256": "1865ffcc3beda4a6f053325fd0df45cb031e6b76435ab5aa2de7b68e1931026b",
+            "preferencesSha256": "d3d41d520dddc9aae632077b632a13f52560557944ddd8cfbc8e90bac801a5be"
+          },
+          "score": 100,
+          "confidence": 1,
+          "confidenceMeaning": "Fraction of scored criteria without an uncertain rating; not a probability of hiring.",
+          "judgment": "Semantic ratings are agent judgments; source quotations and score arithmetic are validated by the server.",
+          "verdict": "assessed",
+          "components": {
+            "requirements": {
+              "score": 100,
+              "count": 2,
+              "weight": 0.6
+            },
+            "responsibilities": {
+              "score": 100,
+              "count": 2,
+              "weight": 0.4
+            }
+          },
+          "assessments": [
+            {
+              "criterionId": "c1-8db84e79b844",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Posting title heading.",
+              "criterion": {
+                "id": "c1-8db84e79b844",
+                "start": 0,
+                "end": 33,
+                "text": "Software Engineer, Workflow Tools",
+                "section": "other",
+                "isHeading": true
+              }
+            },
+            {
+              "criterionId": "c2-61b794e61f93",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Company, location and employment-type header line; handled in preference checks.",
+              "criterion": {
+                "id": "c2-61b794e61f93",
+                "start": 35,
+                "end": 105,
+                "text": "Juniper Workflow Studio phase1-20261008-g · Remote, Canada · Full time",
+                "section": "other",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c3-5cc7d9951ea6",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Section heading.",
+              "criterion": {
+                "id": "c3-5cc7d9951ea6",
+                "start": 107,
+                "end": 121,
+                "text": "About the role",
+                "section": "responsibilities",
+                "isHeading": true
+              }
+            },
+            {
+              "criterionId": "c4-fc85ad17634b",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Employer mission statement; company description, not a candidate capability.",
+              "criterion": {
+                "id": "c4-fc85ad17634b",
+                "start": 123,
+                "end": 256,
+                "text": "Juniper Workflow Studio phase1-20261008-g is a synthetic employer whose mission is to make everyday application workflows accessible.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c5-b708b3315b5b",
+              "category": "responsibility",
+              "rating": "strong",
+              "evidence": [
+                {
+                  "start": 364,
+                  "end": 454,
+                  "quote": "Built an accessible application dashboard with TypeScript, React, Node.js, and PostgreSQL."
+                },
+                {
+                  "start": 455,
+                  "end": 563,
+                  "quote": "Implemented REST APIs, PostgreSQL queries, and automated unit and integration tests for application records."
+                }
+              ],
+              "explanation": "Resume shows building an accessible application dashboard and implementing REST APIs on PostgreSQL, matching both the dashboard and API halves.",
+              "criterion": {
+                "id": "c5-b708b3315b5b",
+                "start": 257,
+                "end": 356,
+                "text": "We are hiring a software engineer to build accessible web application dashboards and reliable APIs.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c6-19a15f4decd1",
+              "category": "requirement",
+              "rating": "strong",
+              "evidence": [
+                {
+                  "start": 364,
+                  "end": 454,
+                  "quote": "Built an accessible application dashboard with TypeScript, React, Node.js, and PostgreSQL."
+                },
+                {
+                  "start": 982,
+                  "end": 1082,
+                  "quote": "TypeScript, JavaScript, React, Node.js, PostgreSQL, REST APIs, Git, Automated testing, Accessibility"
+                },
+                {
+                  "start": 564,
+                  "end": 646,
+                  "quote": "Improved keyboard navigation and screen reader labels after accessibility testing."
+                }
+              ],
+              "explanation": "Every listed skill (TypeScript, React, Node.js, PostgreSQL, automated testing, accessible UIs) appears in dated work and the skills list.",
+              "criterion": {
+                "id": "c6-19a15f4decd1",
+                "start": 357,
+                "end": 464,
+                "text": "Required skills: TypeScript, React, Node.js, PostgreSQL, automated testing, and accessible user interfaces.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c7-d26496254dbe",
+              "category": "responsibility",
+              "rating": "strong",
+              "evidence": [
+                {
+                  "start": 455,
+                  "end": 563,
+                  "quote": "Implemented REST APIs, PostgreSQL queries, and automated unit and integration tests for application records."
+                },
+                {
+                  "start": 647,
+                  "end": 751,
+                  "quote": "Collaborated with designers and engineers, reviewed pull requests, and documented application workflows."
+                },
+                {
+                  "start": 846,
+                  "end": 969,
+                  "quote": "Built a dashboard using React and TypeScript with accessible forms, a Node.js API, PostgreSQL storage, and automated tests."
+                }
+              ],
+              "explanation": "Resume shows tests across API and UI, collaboration with designers/engineers, PR review and workflow documentation, covering each clause.",
+              "criterion": {
+                "id": "c7-d26496254dbe",
+                "start": 465,
+                "end": 590,
+                "text": "You will improve application workflows, test frontend and backend behavior, and collaborate on maintainable product software.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c8-ea3ea7e30b60",
+              "category": "requirement",
+              "rating": "strong",
+              "evidence": [
+                {
+                  "start": 752,
+                  "end": 784,
+                  "quote": "Accessible application dashboard"
+                },
+                {
+                  "start": 846,
+                  "end": 969,
+                  "quote": "Built a dashboard using React and TypeScript with accessible forms, a Node.js API, PostgreSQL storage, and automated tests."
+                }
+              ],
+              "explanation": "The resume lists an Accessible application dashboard project and the same dashboard built at work.",
+              "criterion": {
+                "id": "c8-ea3ea7e30b60",
+                "start": 591,
+                "end": 658,
+                "text": "An Accessible application dashboard project is relevant experience.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c9-cff167150102",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Location, work-authorization welcome and sponsorship offer are eligibility/preference context, assessed in preferenceChecks, not capabilities.",
+              "criterion": {
+                "id": "c9-cff167150102",
+                "start": 659,
+                "end": 812,
+                "text": "This Canada remote role is full time, welcomes candidates with current Canadian work authorization, and offers future employer sponsorship when required.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c10-90450bea9492",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "States that no degree, minimum years, clearance, relocation or demographic answers are required; no requirement to assess.",
+              "criterion": {
+                "id": "c10-90450bea9492",
+                "start": 813,
+                "end": 898,
+                "text": "No degree, minimum years, clearance, relocation, or demographic answers are required.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c11-9c788ddc7eb7",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Compensation information.",
+              "criterion": {
+                "id": "c11-9c788ddc7eb7",
+                "start": 899,
+                "end": 936,
+                "text": "Salary: CAD 100,000–130,000 annually.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            },
+            {
+              "criterionId": "c12-f84c7bce9254",
+              "category": "context",
+              "rating": "not_applicable",
+              "evidence": [],
+              "explanation": "Disclaimer that this is a local test job.",
+              "criterion": {
+                "id": "c12-f84c7bce9254",
+                "start": 937,
+                "end": 991,
+                "text": "This is a local test job, not a real employment offer.",
+                "section": "responsibilities",
+                "isHeading": false
+              }
+            }
+          ],
+          "roleMatch": {
+            "family": "Software engineering",
+            "evidence": [
+              {
+                "start": 0,
+                "end": 17,
+                "quote": "Software Engineer",
+                "source": "title"
+              }
+            ],
+            "explanation": "Title and responsibilities (accessible web dashboards plus APIs) describe application software engineering.",
+            "relevance": "matched"
+          },
+          "preferenceChecks": {
+            "level": {
+              "status": "unknown",
+              "explanation": "The posting states no seniority level; saved preference is Intermediate / Mid, so this is uncertain, not matched.",
+              "evidence": []
+            },
+            "workMode": {
+              "status": "matched",
+              "explanation": "Posting describes a remote role; Remote is a selected work mode.",
+              "evidence": [
+                {
+                  "start": 659,
+                  "end": 682,
+                  "quote": "This Canada remote role",
+                  "source": "description"
+                }
+              ]
+            },
+            "employmentType": {
+              "status": "matched",
+              "explanation": "Full time matches the saved Full-time preference.",
+              "evidence": [
+                {
+                  "start": 0,
+                  "end": 9,
+                  "quote": "Full time",
+                  "source": "type"
+                }
+              ]
+            },
+            "location": {
+              "status": "matched",
+              "explanation": "Remote, Canada matches preferred locations Canada and Remote.",
+              "evidence": [
+                {
+                  "start": 0,
+                  "end": 14,
+                  "quote": "Remote, Canada",
+                  "source": "location"
+                }
+              ]
+            },
+            "eligibility": [
+              {
+                "requirement": "Current Canadian work authorization; employer offers future sponsorship when required",
+                "status": "met",
+                "explanation": "Applicant is authorized to work in Canada and may need future sponsorship, which the posting states it offers.",
+                "evidence": [
+                  {
+                    "start": 697,
+                    "end": 811,
+                    "quote": "welcomes candidates with current Canadian work authorization, and offers future employer sponsorship when required",
+                    "source": "description"
+                  }
+                ]
+              }
+            ]
+          },
+          "strongMatches": [
+            "We are hiring a software engineer to build accessible web application dashboards and reliable APIs.",
+            "Required skills: TypeScript, React, Node.js, PostgreSQL, automated testing, and accessible user interfaces.",
+            "You will improve application workflows, test frontend and backend behavior, and collaborate on maintainable product software.",
+            "An Accessible application dashboard project is relevant experience."
+          ],
+          "partialMatches": [],
+          "gaps": [],
+          "matchReason": "100/100 against the original resume: 2 requirements and 2 responsibilities assessed; role relevance matched."
+        }
+      }
+    }
+  ]
+}

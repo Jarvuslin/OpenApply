@@ -38,5 +38,5 @@ export const deletedResponseSchema = z.object({ deleted: z.uuid() });
 /** `{ ok: true }` - generic acknowledgement (failures throw the error envelope). */
 export const okResponseSchema = z.object({ ok: z.literal(true) });
 
-// Pagination lives in `@jobpilot/contracts/pagination` - the web and the agent's skills need the
+// Pagination lives in `@openapply/contracts/pagination` - the web and the agent's skills need the
 // same envelope, and neither can import from `apps/api`.

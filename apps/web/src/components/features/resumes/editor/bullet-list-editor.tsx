@@ -1,9 +1,9 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { RESUME_BULLET_CHARS_PER_LINE } from "@jobpilot/contracts/resume";
 import { Add, ArrowDownward, ArrowUpward, Delete } from "@mui/icons-material";
 import { Button, IconButton, Stack, TextField } from "@mui/material";
+import { RESUME_BULLET_CHARS_PER_LINE } from "@openapply/contracts/resume";
 import { useKeyedList } from "@/hooks/use-keyed-list";
 import { moveAt, removeAt, replaceAt } from "@/utils/array";
 

@@ -1,4 +1,4 @@
-import type { Data } from "@jobpilot/api-client";
+import type { Data } from "@openapply/api-client";
 import type { api } from "@/api/client";
 
 /** A listing as the lists render it, from `GET /api/public/jobs`. Carries `sourceCount`, not links. */

@@ -4,9 +4,9 @@ import {
   campaignConfigSchema,
   campaignConfigSupportsSource,
   type UpdateCampaignConfigInput,
-} from "@jobpilot/contracts/campaign";
-import { pageSlice, paginate } from "@jobpilot/contracts/pagination";
-import { workspaceChannel } from "@jobpilot/contracts/sse";
+} from "@openapply/contracts/campaign";
+import { pageSlice, paginate } from "@openapply/contracts/pagination";
+import { workQueueChannel, workspaceChannel } from "@openapply/contracts/sse";
 import { singleton } from "tsyringe";
 import type { z } from "zod/v4";
 import { conflict, findOwned, unprocessable } from "@/common/errors";
@@ -17,14 +17,16 @@ import {
   type Prisma,
   PrismaClient,
 } from "@/generated/prisma/client";
-import type { campaignsQuery } from "./campaign.schema";
+import { assertAutomationAllowed } from "@/modules/job-board/blocked-sites";
+import { lockWorkUser } from "@/modules/work-queue/work-queue.admission";
 import {
-  deriveCampaignSummary,
-  emptySummary,
-  jobSummary,
-  summarizeCampaigns,
-  type WithSummary,
-} from "./campaign.summary";
+  controlState,
+  LIVE_WORK_STATES,
+  TERMINAL_WORK_STATES,
+  workHash,
+} from "@/modules/work-queue/work-queue.policy";
+import type { campaignsQuery } from "./campaign.schema";
+import { deriveCampaignSummary, summarizeCampaigns, type WithSummary } from "./campaign.summary";
 import { ensureCampaignOwned, publishCampaignStatus } from "./campaign.utils";
 
 const STATUS_TRANSITIONS: Record<CampaignStatus, readonly CampaignStatus[]> = {
@@ -46,8 +48,10 @@ export class CampaignService {
     const where: Prisma.CampaignWhereInput = {
       userId,
       status: query.status?.length ? { in: query.status } : undefined,
-      source: query.source,
+      source: query.source ?? { in: ["search", "auto_apply"] },
       jobs: query.jobStatus ? { some: { status: query.jobStatus } } : undefined,
+      // A pilot keeps its results in its own campaign; pilots have their own page.
+      pilot: { is: null },
     };
     const [campaigns, total] = await Promise.all([
       this.prisma.campaign.findMany({ where, orderBy: { startedAt: "desc" }, ...pageSlice(query) }),
@@ -58,6 +62,8 @@ export class CampaignService {
   }
 
   async create(userId: string, body: CreateCampaignInput) {
+    if (body.config?.board) assertAutomationAllowed(body.config.board);
+    for (const url of body.urls ?? []) assertAutomationAllowed(url);
     const data: Prisma.CampaignUncheckedCreateInput = {
       userId,
       query: body.query,
@@ -66,37 +72,53 @@ export class CampaignService {
       createdBy: body.createdBy,
       pilotSearchId: body.pilotSearchId ?? null,
     };
-    if (body.urls) {
-      return this.createWithQueuedJobs(data, body.urls);
-    }
-
-    const campaign = await this.prisma.campaign.create({ data });
-    // A just-created campaign provably has no jobs or messages; skip the aggregate round trip.
-    return toRow({ ...campaign, summary: emptySummary(campaign.source) });
-  }
-
-  /** Seeds pasted links as `queued` jobs with the campaign, so a half-written batch can't strand them. */
-  private async createWithQueuedJobs(data: Prisma.CampaignUncheckedCreateInput, urls: string[]) {
-    const unique = [...new Set(urls)];
     const campaign = await this.prisma.$transaction(async (tx) => {
-      const created = await tx.campaign.create({ data });
-      await tx.job.createMany({
-        data: unique.map((url) => ({
-          campaignId: created.campaignId,
-          key: crypto.randomUUID(),
-          // Nothing is known about a pasted link until a worker opens it; the host stands in.
-          title: new URL(url).hostname,
-          company: "",
-          url,
-          status: "queued" as const,
-        })),
+      await lockWorkUser(tx, userId);
+      const unique = [...new Set(body.urls ?? [])];
+      if (body.clientCampaignId) {
+        const prior = await tx.campaign.findUnique({
+          where: { campaignId: body.clientCampaignId },
+          include: { jobs: { select: { url: true } } },
+        });
+        if (prior) {
+          const expected = {
+            query: body.query,
+            source: body.source,
+            config: body.config ?? {},
+            createdBy: body.createdBy,
+            pilotSearchId: body.pilotSearchId ?? null,
+            urls: unique.sort(),
+          };
+          const actual = {
+            query: prior.query,
+            source: prior.source,
+            config: prior.config,
+            createdBy: prior.createdBy,
+            pilotSearchId: prior.pilotSearchId,
+            urls: prior.jobs.map((job) => job.url).sort(),
+          };
+          if (prior.userId !== userId || workHash(actual) !== workHash(expected))
+            throw conflict("Campaign creation request was already used with different details.");
+          return prior;
+        }
+      }
+      const created = await tx.campaign.create({
+        data: { ...data, ...(body.clientCampaignId ? { campaignId: body.clientCampaignId } : {}) },
       });
+      if (unique.length)
+        await tx.job.createMany({
+          data: unique.map((url) => ({
+            campaignId: created.campaignId,
+            key: crypto.randomUUID(),
+            title: new URL(url).hostname,
+            company: "",
+            url,
+            status: "queued" as const,
+          })),
+        });
       return created;
     });
-    return toRow({
-      ...campaign,
-      summary: jobSummary([{ status: "queued", count: unique.length }]),
-    });
+    return this.withSummary(campaign);
   }
 
   async get(userId: string, id: string) {
@@ -104,11 +126,15 @@ export class CampaignService {
   }
 
   async updateConfig(userId: string, id: string, body: UpdateCampaignConfigInput) {
+    if (body.config.board) assertAutomationAllowed(body.config.board);
     const existing = await this.findCampaign(userId, id);
-    if (!campaignConfigSupportsSource(existing.source, body.config)) {
-      throw unprocessable(
-        "config.resumeId is required for search, auto-apply, and networking campaigns.",
+    const savedConfig = campaignConfigSchema.parse(existing.config);
+    if (JSON.stringify(savedConfig.discovery) !== JSON.stringify(body.config.discovery))
+      throw conflict(
+        "Use the candidate-list commands to change discovery progress or application intent.",
       );
+    if (!campaignConfigSupportsSource(existing.source, body.config)) {
+      throw unprocessable("config.resumeId is required for search and auto-apply campaigns.");
     }
     // Guarded in the write: comparing against `existing` leaves a window for the pilot's strategy
     // review and a user edit to clobber each other.
@@ -137,41 +163,53 @@ export class CampaignService {
       throw conflict(`Campaign cannot transition from ${existing.status} to ${body.status}.`);
     }
     const finished = body.status === "completed" || body.status === "failed";
-    const updated = await this.prisma.campaign.updateMany({
-      where: { campaignId: id, userId, status: existing.status },
-      data: {
-        status: body.status,
-        statusActor: body.actor,
-        statusReason: body.reason ?? null,
-        completedAt: finished ? new Date() : null,
-      },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      await lockWorkUser(tx, userId);
+      const updated = await tx.campaign.updateMany({
+        where: { campaignId: id, userId, status: existing.status },
+        data: {
+          status: body.status,
+          statusActor: body.actor,
+          statusReason: body.reason ?? null,
+          completedAt: finished ? new Date() : null,
+        },
+      });
+      if (updated.count && body.status !== "in_progress") {
+        const work = await tx.workItem.findMany({
+          where: { userId, campaignId: id, state: { notIn: TERMINAL_WORK_STATES } },
+        });
+        for (const item of work) {
+          const action = body.status === "paused" ? "pause" : "stop";
+          const state = controlState(item, action);
+          await tx.workItem.update({
+            where: { id: item.id },
+            data: {
+              state,
+              ...(action === "pause"
+                ? { pauseRequestedAt: new Date() }
+                : { cancellationRequestedAt: new Date() }),
+              ...(!LIVE_WORK_STATES.includes(state) ? { finishedAt: new Date() } : {}),
+            },
+          });
+        }
+      }
+      return updated;
     });
     if (updated.count === 0) {
       throw conflict("Campaign status changed concurrently.");
     }
     publishCampaignStatus(userId, existing, body.status);
+    publish(workQueueChannel, { userId }, { type: "work-queue.changed" });
     return this.withSummary(
       await this.prisma.campaign.findUniqueOrThrow({ where: { campaignId: id } }),
     );
   }
 
   async remove(userId: string, id: string) {
-    await ensureCampaignOwned(this.prisma, userId, id);
     await this.prisma.$transaction(async (tx) => {
-      const messages = await tx.networkingMessage.findMany({
-        where: { campaignId: id, userId },
-        select: { contactId: true },
-      });
+      await lockWorkUser(tx, userId);
+      await ensureCampaignOwned(tx, userId, id);
       await tx.application.deleteMany({ where: { campaignId: id, userId } });
-      await tx.networkingMessage.deleteMany({ where: { campaignId: id, userId } });
-      await tx.contact.deleteMany({
-        where: {
-          id: { in: messages.map((message) => message.contactId) },
-          userId,
-          messages: { none: {} },
-          relatedAppId: null,
-        },
-      });
       await tx.campaign.delete({ where: { campaignId: id } });
     });
     publish(workspaceChannel, { userId }, { type: "campaign.deleted", campaignId: id });

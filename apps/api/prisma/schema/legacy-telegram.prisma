@@ -1,0 +1,35 @@
+enum LegacyTelegramDeliveryStatus {
+  sent
+  unavailable
+  failed
+  unknown
+
+  @@map("telegram_delivery_status")
+}
+
+model LegacyTelegramSettings {
+  userId     String    @id @map("user_id")
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enabled    Boolean   @default(false)
+  chatId     String    @map("chat_id")
+  botToken   String    @map("bot_token")
+  verifiedAt DateTime? @map("verified_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@map("legacy_telegram_settings")
+}
+
+model LegacyTelegramDelivery {
+  id         String                       @id @default(uuid())
+  userId     String                       @map("user_id")
+  user       User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId String                       @map("question_id")
+  status     LegacyTelegramDeliveryStatus
+  messageId  String?                      @map("message_id")
+  reason     String?
+  createdAt  DateTime                     @default(now()) @map("created_at")
+  updatedAt  DateTime                     @updatedAt @map("updated_at")
+
+  @@unique([userId, questionId])
+  @@map("legacy_telegram_deliveries")
+}

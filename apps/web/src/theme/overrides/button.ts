@@ -10,16 +10,30 @@ export const buttonOverrides: Components<Theme>["MuiButton"] = {
       color: (theme.vars ?? theme).palette.primary.contrastText,
       boxShadow: "none",
       "&:hover": { backgroundColor: theme.palette.accent.dark, boxShadow: "none" },
-    }),
-    outlined: ({ theme }) => ({
-      ...outlinedControl(theme),
-      color: (theme.vars ?? theme).palette.text.primary,
-    }),
-    text: ({ theme }) => ({
-      color: (theme.vars ?? theme).palette.text.secondary,
-      "&:hover": {
-        color: theme.palette.text.primary,
+      "&.Mui-disabled": {
+        color: theme.palette.text.disabled,
         backgroundColor: theme.palette.surfaces.elevated,
+      },
+    }),
+    outlined: ({ theme, ownerState }) => ({
+      ...outlinedControl(theme),
+      color: ownerState.color === "error" ? theme.palette.error.main : theme.palette.text.primary,
+      ...(ownerState.color === "error" && {
+        borderColor: theme.palette.error.main,
+        "&:hover": {
+          borderColor: theme.palette.error.main,
+          backgroundColor: theme.palette.statusTints.error,
+        },
+      }),
+    }),
+    text: ({ theme, ownerState }) => ({
+      color: ownerState.color === "error" ? theme.palette.error.main : theme.palette.text.secondary,
+      "&:hover": {
+        color: ownerState.color === "error" ? theme.palette.error.main : theme.palette.text.primary,
+        backgroundColor:
+          ownerState.color === "error"
+            ? theme.palette.statusTints.error
+            : theme.palette.surfaces.elevated,
       },
     }),
   },

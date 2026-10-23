@@ -10,6 +10,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { normalizePhone } from "@openapply/contracts/phone";
 import {
   AsYouType,
   type CountryCode,
@@ -47,7 +48,9 @@ function nationalDigits(value: string, country: CountryCode): string {
   }
   const digits = value.replace(/\D/g, "");
   const cc = getCountryCallingCode(country);
-  return digits.startsWith(cc) ? digits.slice(cc.length) : digits;
+  const parsed = parsePhoneNumberFromString(value, country);
+  if (parsed) return parsed.nationalNumber;
+  return value.trim().startsWith("+") && digits.startsWith(cc) ? digits.slice(cc.length) : digits;
 }
 
 function formatNational(digits: string, country: CountryCode): string {
@@ -111,6 +114,16 @@ export function PhoneField(props: PhoneFieldProps): ReactElement {
   };
 
   const handleNumberChange = (raw: string): void => {
+    if (raw.trim().startsWith("+")) {
+      setSelectedCountry(null);
+      onChange(normalizePhone(raw));
+      return;
+    }
+    const parsed = parsePhoneNumberFromString(raw, country);
+    if (parsed?.isValid()) {
+      onChange(parsed.number);
+      return;
+    }
     emit(raw, country);
   };
 
@@ -122,7 +135,10 @@ export function PhoneField(props: PhoneFieldProps): ReactElement {
       placeholder={placeholder}
       value={display}
       onChange={(e) => handleNumberChange(e.target.value)}
-      onBlur={onBlur}
+      onBlur={() => {
+        onChange(normalizePhone(value, country));
+        onBlur?.();
+      }}
       error={error}
       helperText={helperText}
       disabled={disabled}

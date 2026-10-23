@@ -18,7 +18,9 @@ import {
   dialogTitleOverrides,
 } from "./dialog";
 import {
+  formControlOverrides,
   formHelperTextOverrides,
+  inputLabelOverrides,
   outlinedInputOverrides,
   selectOverrides,
   textFieldOverrides,
@@ -26,6 +28,8 @@ import {
 import { buttonBaseOverrides, linkOverrides } from "./link";
 import { menuItemOverrides, menuOverrides } from "./menu";
 import {
+  alertOverrides,
+  alertTitleOverrides,
   chipOverrides,
   containerOverrides,
   cssBaselineOverrides,
@@ -48,6 +52,8 @@ import { toggleButtonOverrides } from "./toggle-button";
 export const componentOverrides: Components<Theme> = {
   MuiAccordion: accordionOverrides,
   MuiAccordionSummary: accordionSummaryOverrides,
+  MuiAlert: alertOverrides,
+  MuiAlertTitle: alertTitleOverrides,
   MuiAutocomplete: autocompleteOverrides,
   MuiBackdrop: backdropOverrides,
   MuiBadge: badgeOverrides,
@@ -66,6 +72,8 @@ export const componentOverrides: Components<Theme> = {
   MuiDialogContent: dialogContentOverrides,
   MuiDialogTitle: dialogTitleOverrides,
   MuiFormHelperText: formHelperTextOverrides,
+  MuiFormControl: formControlOverrides,
+  MuiInputLabel: inputLabelOverrides,
   MuiLink: linkOverrides,
   MuiMenu: menuOverrides,
   MuiMenuItem: menuItemOverrides,

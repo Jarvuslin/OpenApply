@@ -1,8 +1,28 @@
-using JobPilot.Terminal.Hosting;
-using JobPilot.Terminal.Pilot;
-using JobPilot.Terminal.Sessions;
-using JobPilot.Terminal.Updates;
+using OpenApply.Terminal.Hosting;
+using OpenApply.Terminal.Agent;
+using OpenApply.Terminal.Queue;
+using OpenApply.Terminal.Questions;
+using OpenApply.Terminal.Preparation;
+using OpenApply.Terminal.Connectors;
+using OpenApply.Terminal.Inference;
+using OpenApply.Terminal.Pilot;
+using OpenApply.Terminal.Sessions;
+using OpenApply.Terminal.Updates;
 using Microsoft.Extensions.Logging.Abstractions;
+
+if (args.Length > 0 && args[0] == GmailToolGate.Flag)
+{
+    Environment.ExitCode = args.Length == 3
+        ? await GmailToolGate.RunAsync(args[1], args[2], Console.In, Console.Out) : 2;
+    return;
+}
+
+if (args.Length > 0 && args[0] == AccountToolGate.Flag)
+{
+    Environment.ExitCode = args.Length == 3
+        ? await AccountToolGate.RunAsync(args[1], args[2], Console.In, Console.Out) : 2;
+    return;
+}
 
 // Pty.Net's macOS forkpty path requires CoreCLR's W^X remapping to be off; harmless under NativeAOT.
 if (OperatingSystem.IsMacOS())
@@ -12,14 +32,20 @@ if (OperatingSystem.IsMacOS())
 
 if (args.Contains("--version", StringComparer.OrdinalIgnoreCase))
 {
-    Console.WriteLine($"jobpilot {HostInstall.HostVersion}");
+    Console.WriteLine($"openapply {HostInstall.HostVersion}");
     return;
 }
 
 if (args.Contains("--unregister", StringComparer.OrdinalIgnoreCase))
 {
+    if (BudgetedHost.Enabled)
+    {
+        Console.Error.WriteLine("OpenApply: URL scheme changes are disabled in an isolated budgeted host.");
+        Environment.ExitCode = 2;
+        return;
+    }
     UrlScheme.Unregister(NullLogger.Instance);
-    Console.WriteLine("JobPilot: removed the jobpilot:// URL scheme.");
+    Console.WriteLine("OpenApply: removed the openapply:// URL scheme.");
     return;
 }
 
@@ -32,19 +58,22 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 builder.Services.AddTerminalHost(builder.Configuration);
 var app = builder.Build();
 
-app.Services.GetRequiredService<UrlScheme>().Register();
-
-// A successful startup update launches its replacement before this process binds.
-if (await app.Services.GetRequiredService<HostUpdater>().UpdateAtStartupAsync())
+if (!BudgetedHost.Enabled)
 {
-    return;
+    app.Services.GetRequiredService<UrlScheme>().Register();
+    // A successful startup update launches its replacement before this process binds.
+    if (await app.Services.GetRequiredService<HostUpdater>().UpdateAtStartupAsync()) return;
+    await HostHandoff.WaitForPreviousHostAsync(app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Handoff"));
 }
-
-await HostHandoff.WaitForPreviousHostAsync(app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Handoff"));
 
 app.UseTerminalPipeline();
 app.MapHostEndpoints();
 app.MapSessionEndpoints();
+app.MapInferenceEndpoints();
+app.MapQueueEndpoints();
+app.MapQuestionEndpoints();
+app.MapPreparationEndpoints();
+app.MapGmailCheckEndpoints();
 app.MapPilotEndpoints();
 app.MapUpdateEndpoints();
 app.RunWithPortDiagnostics();

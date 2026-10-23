@@ -1,6 +1,17 @@
 import type { CSSProperties } from "react";
-import type { accent, line, stages, surfaces } from "./palette";
+import type {
+  accent,
+  feedback,
+  line,
+  stages,
+  statusBorders,
+  statusDots,
+  statusTints,
+  surfaces,
+} from "./palette";
 import type { controlHeights, gradients, iconSizes, motion, radii, shadows } from "./tokens";
+
+type PaletteColors<T> = { [Key in keyof T]: string };
 
 /** Single list of custom variants; the three MUI interfaces below all derive from it. */
 interface CustomTypographyVariants {
@@ -9,7 +20,8 @@ interface CustomTypographyVariants {
   captionMuted: CSSProperties;
   overline: CSSProperties;
   overlineMuted: CSSProperties;
-  monoChip: CSSProperties;
+  monoData: CSSProperties;
+  authTitle: CSSProperties;
   statValue: CSSProperties;
   statLabel: CSSProperties;
   body1Strong: CSSProperties;
@@ -25,16 +37,26 @@ interface CustomTypographyVariants {
 
 declare module "@mui/material/styles" {
   interface Palette {
-    surfaces: typeof surfaces;
-    accent: typeof accent;
-    line: typeof line;
-    stages: typeof stages;
+    surfaces: PaletteColors<typeof surfaces>;
+    accent: PaletteColors<typeof accent>;
+    line: PaletteColors<typeof line>;
+    stages: PaletteColors<typeof stages>;
+    status: PaletteColors<typeof feedback>;
+    statusTints: PaletteColors<typeof statusTints>;
+    statusBorders: PaletteColors<typeof statusBorders>;
+    statusDots: PaletteColors<typeof statusDots>;
+    attention: Palette["primary"];
   }
   interface PaletteOptions {
-    surfaces?: typeof surfaces;
-    accent?: typeof accent;
-    line?: typeof line;
-    stages?: typeof stages;
+    surfaces?: PaletteColors<typeof surfaces>;
+    accent?: PaletteColors<typeof accent>;
+    line?: PaletteColors<typeof line>;
+    stages?: PaletteColors<typeof stages>;
+    status?: PaletteColors<typeof feedback>;
+    statusTints?: PaletteColors<typeof statusTints>;
+    statusBorders?: PaletteColors<typeof statusBorders>;
+    statusDots?: PaletteColors<typeof statusDots>;
+    attention?: PaletteOptions["primary"];
   }
 
   interface Theme {
@@ -62,6 +84,24 @@ declare module "@mui/material/styles" {
   }
 }
 
+declare module "@mui/material/Chip" {
+  interface ChipPropsColorOverrides {
+    attention: true;
+  }
+}
+
+declare module "@mui/material/Alert" {
+  interface AlertPropsColorOverrides {
+    attention: true;
+  }
+}
+
+declare module "@mui/material/Badge" {
+  interface BadgePropsColorOverrides {
+    attention: true;
+  }
+}
+
 declare module "@mui/material/Typography" {
   interface TypographyPropsVariantOverrides extends Record<keyof CustomTypographyVariants, true> {}
 }
@@ -81,14 +121,11 @@ declare module "@mui/material/SvgIcon" {
 declare module "@mui/material/Paper" {
   interface PaperPropsVariantOverrides {
     interactive: true;
-    live: true;
     /** Hover-lift + accent glow, for a whole card that is a link. */
     lift: true;
     /** Flame-accent border, for inline CTA cards. */
     accent: true;
     /** Bordered, radius-md surface for inline panels and framed blocks. */
     panel: true;
-    /** Raised radius-lg frame for the landing page's showcase surfaces. */
-    showcase: true;
   }
 }

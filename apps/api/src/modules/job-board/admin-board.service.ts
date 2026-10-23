@@ -1,5 +1,5 @@
-import type { AdminBoardInput, AdminBoardPatch } from "@jobpilot/contracts/job-board";
-import { type PaginationQuery, pageSlice, paginate } from "@jobpilot/contracts/pagination";
+import type { AdminBoardInput, AdminBoardPatch } from "@openapply/contracts/job-board";
+import { type PaginationQuery, pageSlice, paginate } from "@openapply/contracts/pagination";
 import { singleton } from "tsyringe";
 import { type Prisma, PrismaClient } from "@/generated/prisma/client";
 

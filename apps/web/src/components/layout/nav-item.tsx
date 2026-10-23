@@ -4,7 +4,7 @@ import { Box, Typography } from "@mui/material";
 import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NavBadge } from "./nav-badge";
+import { NavCount } from "./nav-badge";
 import { isNavEntryActive, type NavItem as NavItemType } from "./shell-config";
 
 interface NavItemProps {
@@ -23,25 +23,26 @@ export function NavItem({ item }: NavItemProps): ReactElement {
         alignItems: "center",
         gap: 1.25,
         px: 1.25,
-        py: 1,
+        height: 34,
         width: "100%",
-        borderRadius: theme.radii.sm,
-        color: active ? "text.primary" : "text.secondary",
-        backgroundColor: active ? "surfaces.hover" : "transparent",
+        borderRadius: theme.radii.md,
+        color: active ? "primary.contrastText" : "text.prose",
+        backgroundColor: active ? "primary.main" : "transparent",
         textDecoration: "none",
         transition: theme.motion.fast,
-        "&:hover": { backgroundColor: "surfaces.elevated", color: "text.primary" },
+        "&:hover": { backgroundColor: active ? "primary.main" : "surfaces.hover" },
         "&:focus-visible": {
           outline: "2px solid",
-          outlineColor: "secondary.main",
+          outlineColor: "primary.main",
           outlineOffset: 2,
         },
       })}
     >
-      <NavBadge badge={item.badge}>
-        <Icon fontSize="sm" />
-      </NavBadge>
-      <Typography variant={active ? "body1Strong" : "body1"}>{item.label}</Typography>
+      <Icon size={18} strokeWidth={1.75} aria-hidden />
+      <Typography variant="body2" sx={{ flex: 1, fontWeight: active ? 500 : 400 }}>
+        {item.label}
+      </Typography>
+      <NavCount badge={item.badge} active={active} />
     </Box>
   );
 }

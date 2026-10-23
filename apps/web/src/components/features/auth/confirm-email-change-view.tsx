@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { ConfirmEmailChangeInput } from "@jobpilot/contracts/auth";
+import type { ConfirmEmailChangeInput } from "@openapply/contracts/auth";
 import { api } from "@/api/client";
 import { useApiMutation } from "@/api/hooks";
 import type { ConfirmEmailChangeResponse } from "@/api/types";

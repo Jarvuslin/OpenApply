@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { EMPTY_RESUME_DATA } from "@jobpilot/contracts/resume";
 import { ExpandMore, OpenInNew } from "@mui/icons-material";
 import {
   Accordion,
@@ -13,9 +12,11 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { resumePdfUrl, variantPdfUrl } from "@/api/resume-urls";
+import { EMPTY_RESUME_DATA } from "@openapply/contracts/resume";
+import { resumeSourceUrl } from "@/api/resume-urls";
 import type { ResumeDto, ResumeVariantDto } from "@/api/types";
 import { FormDialogShell } from "@/components/ui/form";
+import { ArtifactPreview } from "./artifact-preview";
 import { diffRewrite } from "./rewrite-diff";
 
 interface RewriteReviewDialogProps {
@@ -48,32 +49,38 @@ export function RewriteReviewDialog(props: RewriteReviewDialogProps): ReactEleme
     >
       <Stack spacing={2}>
         <Typography variant="body2Muted">
-          Your uploaded PDF is untouched either way, so you can always re-extract from it.
+          Your original upload stays unchanged. Rewrites use the shared LaTeX resume layout, with
+          fixed fonts and a one-page check. Review the wording changes and the actual PDF below.
         </Typography>
-        <Stack direction="row" spacing={1}>
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<OpenInNew fontSize="sm" />}
-            component="a"
-            href={resumePdfUrl(resume.id, resume.updatedAt)}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Current PDF
-          </Button>
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<OpenInNew fontSize="sm" />}
-            component="a"
-            href={variantPdfUrl(suggestion.id, suggestion.updatedAt)}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Rewritten PDF
-          </Button>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+          {resume.sourceFilename && (
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<OpenInNew fontSize="sm" />}
+              component="a"
+              href={resumeSourceUrl(resume.id, resume.updatedAt)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Original upload
+            </Button>
+          )}
         </Stack>
+        <Typography variant="body2Strong">Current base PDF</Typography>
+        <ArtifactPreview
+          key={`base:${resume.updatedAt}`}
+          resumeId={resume.id}
+          updatedAt={resume.updatedAt}
+          preview={false}
+        />
+        <Typography variant="body2Strong">Rewritten PDF</Typography>
+        <ArtifactPreview
+          key={`${suggestion.id}:${suggestion.updatedAt}`}
+          resumeId={resume.id}
+          variantId={suggestion.id}
+          updatedAt={suggestion.updatedAt}
+        />
 
         {notes && (
           <Accordion>

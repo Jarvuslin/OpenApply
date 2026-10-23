@@ -1,5 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
-import { Description, Mail, Person, PictureAsPdf } from "@mui/icons-material";
+import { Description, Mail, PictureAsPdf } from "@mui/icons-material";
 import {
   Accordion,
   AccordionDetails,
@@ -13,6 +13,7 @@ import type { ApplicationDetailDto } from "@/api/types";
 import { EmptyState } from "@/components/ui/data";
 import { ExternalLink, ItemList, ItemRow, RelativeTime } from "@/components/ui/display";
 import { SectionCard } from "@/components/ui/layout";
+import { SubmissionRecord } from "./submission-record";
 
 interface SubmissionDetailsProps {
   application: ApplicationDetailDto;
@@ -24,6 +25,7 @@ export function SubmissionDetails(props: SubmissionDetailsProps): ReactElement {
 
   return (
     <>
+      <SubmissionRecord application={app} />
       <DocumentsCard application={app} />
       <JobDescriptionCard application={app} />
       <CorrespondenceCard application={app} />
@@ -37,6 +39,7 @@ export function SubmissionDetails(props: SubmissionDetailsProps): ReactElement {
  * is to show.
  */
 function submittedResumeRow(app: ApplicationDetailDto): ReactNode {
+  if (app.submission) return null;
   const used = app.resumeVariantUsed;
   const base = app.resume;
 
@@ -93,7 +96,10 @@ function DocumentsCard(props: SubmissionDetailsProps): ReactElement {
   ].filter(Boolean);
 
   return (
-    <SectionCard title="Documents" description="The resume and letter sent with this application.">
+    <SectionCard
+      title="Related documents"
+      description="Resume sources, drafts and cover letters. The exact submitted PDF is retained in the submission record above when available."
+    >
       {rows.length > 0 ? (
         <ItemList>{rows}</ItemList>
       ) : (
@@ -146,24 +152,17 @@ function CorrespondenceCard(props: SubmissionDetailsProps): ReactElement {
         action={<RelativeTime value={m.receivedAt} />}
       />
     )),
-    ...app.contacts.map((c) => (
-      <ItemRow
-        key={c.id}
-        icon={<Person fontSize="sm" />}
-        primary={
-          c.linkedinUrl ? <ExternalLink href={c.linkedinUrl}>{c.name}</ExternalLink> : c.name
-        }
-        secondary={[c.title, c.email].filter(Boolean).join(" · ")}
-      />
-    )),
   ];
 
   return (
-    <SectionCard title="Correspondence" description="Matched mail and contacts at this company.">
+    <SectionCard title="Correspondence" description="Matched mail at this company.">
       {rows.length > 0 ? (
         <ItemList>{rows}</ItemList>
       ) : (
-        <EmptyState variant="inline" title="Nothing has come back yet." />
+        <EmptyState
+          variant="inline"
+          title="No correspondence is recorded. Mailbox sync may be unavailable or may not have run yet."
+        />
       )}
     </SectionCard>
   );

@@ -1,5 +1,6 @@
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { jwtVerify, SignJWT } from "jose";
+import { sha256 } from "@/common/crypto/hash";
 import { env } from "@/env";
 import type { AuthUser } from "./types";
 
@@ -39,7 +40,7 @@ export function generateOpaqueToken(): string {
 }
 
 export function hashToken(raw: string): string {
-  return createHash("sha256").update(raw).digest("hex");
+  return sha256(raw);
 }
 
 /** Parse a duration like "15m" / "30d" / "3600s" into milliseconds. */

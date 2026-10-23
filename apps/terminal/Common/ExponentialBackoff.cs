@@ -1,4 +1,4 @@
-namespace JobPilot.Terminal.Common;
+namespace OpenApply.Terminal.Common;
 
 /// <summary>A retry delay that doubles from <paramref name="initial"/> up to <paramref name="max"/> until <see cref="Reset"/>.</summary>
 internal struct ExponentialBackoff(TimeSpan initial, TimeSpan max)

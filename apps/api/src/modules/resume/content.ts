@@ -1,4 +1,4 @@
-import type { ResumeData } from "@jobpilot/contracts/resume";
+import type { ResumeData } from "@openapply/contracts/resume";
 import { toInputJson } from "@/common/json";
 import type { Prisma } from "@/generated/prisma/client";
 

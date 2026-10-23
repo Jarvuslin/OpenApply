@@ -1,5 +1,6 @@
 import { type ReactElement, Suspense } from "react";
 import { Grid, Skeleton, Stack } from "@mui/material";
+import { LayoutList } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { api } from "@/api/client";
@@ -96,7 +97,7 @@ async function AdminOverview(): Promise<ReactElement> {
         <Grid size={{ xs: 12, md: 6 }}>
           <TopBoardsList
             title="Top boards"
-            eyebrow="Platform"
+            icon={<LayoutList size={18} strokeWidth={1.75} aria-hidden />}
             entries={topBoards.map((row) => ({ label: row.board, count: row.count }))}
             emptyMessage="No applications yet."
           />

@@ -1,4 +1,4 @@
-import type { OAuthErrorReason, OAuthProviderInput } from "@jobpilot/contracts/auth";
+import type { OAuthErrorReason, OAuthProviderInput } from "@openapply/contracts/auth";
 import { API_BASE_URL } from "@/api/base-url";
 
 /** The sign-in providers the API supports, in display order. */

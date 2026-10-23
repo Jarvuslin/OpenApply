@@ -7,6 +7,7 @@ import type { CSSObject, Theme } from "@mui/material/styles";
  */
 export function controlBox(theme: Theme): CSSObject {
   return {
+    ...theme.typography.button,
     borderRadius: theme.radii.sm,
     paddingInline: 16,
     paddingBlock: 0,
@@ -23,13 +24,13 @@ export function controlBoxSmall(theme: Theme): CSSObject {
   return { paddingInline: 12, minHeight: theme.controlHeights.sm };
 }
 
-/** The outlined shell: a neutral border that warms to the accent on hover. */
+/** Neutral outlined controls share the input border and hover surface. */
 export function outlinedControl(theme: Theme): CSSObject {
   return {
-    borderColor: theme.palette.line.borderHi,
+    borderColor: theme.palette.line.border,
     "&:hover": {
       backgroundColor: theme.palette.surfaces.hover,
-      borderColor: theme.palette.accent.primary,
+      borderColor: theme.palette.line.borderHi,
     },
   };
 }

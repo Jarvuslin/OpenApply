@@ -13,6 +13,8 @@ interface SseBrokerOptions {
   heartbeatMs?: number;
   /** Max events retained per topic for reconnect replay. Default 64. Set 0 to disable replay. */
   historyLimit?: number;
+  /** Max undelivered frames per subscriber before closing its slow stream. Default 256. */
+  pendingLimit?: number;
   /** How long a topic's history outlives its last subscriber, so reconnects can replay. Default 60s. */
   retentionMs?: number;
 }
@@ -29,6 +31,7 @@ interface Subscriber<TEvent> {
   /** Resolves the current wakeup promise; null while the generator is draining. */
   wake: (() => void) | null;
   closed: boolean;
+  close(): void;
 }
 
 /** Live subscribers plus the replay buffer and pending eviction for one topic. */
@@ -54,7 +57,11 @@ export function createSseBroker<TEvent = unknown>(
   const topics = new Map<string, Topic<TEvent>>();
   const heartbeatMs = options.heartbeatMs ?? 15_000;
   const historyLimit = options.historyLimit ?? 64;
+  const pendingLimit = options.pendingLimit ?? 256;
   const retentionMs = options.retentionMs ?? 60_000;
+  if (!Number.isSafeInteger(pendingLimit) || pendingLimit < 1) {
+    throw new RangeError("SSE pendingLimit must be a positive integer");
+  }
 
   // Process-wide (not per-topic) so ids never repeat - a stale Last-Event-ID can't match a recycled topic.
   let seq = 0;
@@ -64,6 +71,11 @@ export function createSseBroker<TEvent = unknown>(
 
   // Hand a frame to a subscriber and wake its generator if it's parked.
   const enqueue = (sub: Subscriber<TEvent>, frame: TEvent): void => {
+    if (sub.closed) return;
+    if (sub.queue.length >= pendingLimit) {
+      sub.close();
+      return;
+    }
     sub.queue.push(frame);
     sub.wake?.();
   };
@@ -114,7 +126,22 @@ export function createSseBroker<TEvent = unknown>(
     async *subscribe(topic, lastEventId) {
       // Register synchronously, before the first await - no events are missed
       // between subscribe-time and the first suspension.
-      const sub: Subscriber<TEvent> = { queue: [], wake: null, closed: false };
+      let heartbeat: ReturnType<typeof setInterval> | null = null;
+      const sub: Subscriber<TEvent> = {
+        queue: [],
+        wake: null,
+        closed: false,
+        close() {
+          if (sub.closed) return;
+          sub.closed = true;
+          sub.queue = [];
+          const wake = sub.wake;
+          sub.wake = null;
+          if (heartbeat) clearInterval(heartbeat);
+          detach(topic, sub);
+          wake?.();
+        },
+      };
       let t = topics.get(topic);
 
       if (!t) {
@@ -134,7 +161,7 @@ export function createSseBroker<TEvent = unknown>(
         lastEventId != null ? t.history.filter((h) => h.id > lastEventId && h.id <= cutoff) : [];
 
       // Heartbeat as a queue sentinel (not a raced timer) so the single `finally` clears it with no leak.
-      const heartbeat =
+      heartbeat =
         heartbeatMs > 0
           ? setInterval(() => enqueue(sub, PING as unknown as TEvent), heartbeatMs)
           : null;
@@ -142,17 +169,13 @@ export function createSseBroker<TEvent = unknown>(
       try {
         yield CONNECTED as unknown as TEvent; // open the stream immediately
         for (const entry of replay) {
+          if (sub.closed) return;
           yield entry.frame;
         }
 
         while (!sub.closed) {
           if (sub.queue.length > 0) {
-            // Drain the current batch before awaiting again.
-            const batch = sub.queue;
-            sub.queue = [];
-            for (const frame of batch) {
-              yield frame;
-            }
+            yield sub.queue.shift()!;
             continue;
           }
 
@@ -164,12 +187,7 @@ export function createSseBroker<TEvent = unknown>(
         }
       } finally {
         // Runs on iterator.return() from request abort, stream cancel, or completion.
-        sub.closed = true;
-        sub.wake = null;
-        if (heartbeat) {
-          clearInterval(heartbeat);
-        }
-        detach(topic, sub);
+        sub.close();
       }
     },
   };

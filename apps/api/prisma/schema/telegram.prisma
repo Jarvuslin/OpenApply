@@ -1,0 +1,190 @@
+enum TelegramUpdateState {
+  pending
+  processing
+  completed
+  failed
+  cancelled
+  @@map("telegram_update_state")
+}
+enum TelegramActionKind {
+  answer
+  apply_now
+  queue
+  skip
+  approve
+  decline
+  exclude_company
+  undo
+  @@map("telegram_action_kind")
+}
+enum TelegramActionState {
+  pending
+  processing
+  completed
+  revoked
+  expired
+  @@map("telegram_action_state")
+}
+enum TelegramDeliveryState {
+  pending
+  sending
+  sent
+  failed
+  unknown
+  cancelled
+  @@map("telegram_delivery_state")
+}
+enum TelegramTemplateKind {
+  help
+  paired
+  status
+  intake
+  question
+  approval
+  rule
+  digest
+  action_done
+  web_required
+  @@map("telegram_template_kind")
+}
+enum TelegramDeliveryFailure {
+  disabled
+  rejected
+  rate_limited
+  transport_unknown
+  dispatch_interrupted
+  revoked
+  invalid_template
+  @@map("telegram_delivery_failure")
+}
+model TelegramLink {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  generation Int @default(1)
+  active Boolean @default(false)
+  senderId String? @unique @map("sender_id")
+  chatId String? @unique @map("chat_id")
+  username String?
+  linkedAt DateTime? @map("linked_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  actions TelegramAction[]
+  updates TelegramUpdate[]
+  deliveries TelegramDelivery[]
+  @@index([userId,active])
+  @@map("telegram_links")
+}
+model TelegramSettings {
+  userId String @id @map("user_id")
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  revision Int @default(1)
+  digestEnabled Boolean @default(false) @map("digest_enabled")
+  digestHour Int @default(17) @map("digest_hour")
+  timeZone String @default("UTC") @map("time_zone")
+  quietHours Json? @map("quiet_hours")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@map("telegram_settings")
+}
+model TelegramSettingRequest {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  requestId String @map("request_id")
+  payloadHash String @map("payload_hash")
+  response Json
+  createdAt DateTime @default(now()) @map("created_at")
+  @@unique([userId,requestId])
+  @@map("telegram_setting_requests")
+}
+enum TelegramSenderEventKind {
+  failed_code
+  reply
+  @@map("telegram_sender_event_kind")
+}
+// Counts for pairing rate limits; keyed by an HMAC of the Telegram user ID.
+model TelegramSenderEvent {
+  id String @id @default(uuid())
+  senderHash String @map("sender_hash")
+  kind TelegramSenderEventKind
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([senderHash,kind,createdAt])
+  @@index([kind,createdAt])
+  @@map("telegram_sender_events")
+}
+model TelegramPairing {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  requestId String @map("request_id")
+  codeHash String @unique @map("code_hash")
+  expiresAt DateTime @map("expires_at")
+  consumedAt DateTime? @map("consumed_at")
+  cancelledAt DateTime? @map("cancelled_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@unique([userId,requestId])
+  @@index([userId,expiresAt])
+  @@map("telegram_pairings")
+}
+model TelegramUpdate {
+  id String @id @default(uuid())
+  updateId String @unique @map("update_id")
+  callbackHash String? @unique @map("callback_hash")
+  userId String? @map("user_id")
+  user User? @relation(fields:[userId],references:[id],onDelete:Cascade)
+  linkId String? @map("link_id")
+  link TelegramLink? @relation(fields:[linkId],references:[id],onDelete:SetNull)
+  generation Int?
+  requestId String @unique @map("request_id")
+  intent Json
+  state TelegramUpdateState @default(pending)
+  attempts Int @default(0)
+  processingAt DateTime? @map("processing_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([state,createdAt])
+  @@map("telegram_updates")
+}
+model TelegramAction {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  linkId String @map("link_id")
+  link TelegramLink @relation(fields:[linkId],references:[id],onDelete:Cascade)
+  generation Int
+  eventKey String @map("event_key")
+  kind TelegramActionKind
+  targetId String @map("target_id")
+  expectedRevision Int? @map("expected_revision")
+  expectedHash String? @map("expected_hash")
+  payload Json @default("{}")
+  requestId String @unique @map("request_id")
+  state TelegramActionState @default(pending)
+  expiresAt DateTime @map("expires_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@unique([linkId,generation,eventKey])
+  @@index([userId,state])
+  @@map("telegram_actions")
+}
+model TelegramDelivery {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  linkId String @map("link_id")
+  link TelegramLink @relation(fields:[linkId],references:[id],onDelete:Cascade)
+  generation Int
+  eventKey String @map("event_key")
+  template TelegramTemplateKind
+  payload Json @default("{}")
+  state TelegramDeliveryState @default(pending)
+  attempts Int @default(0)
+  availableAt DateTime @default(now()) @map("available_at")
+  sendingAt DateTime? @map("sending_at")
+  sentAt DateTime? @map("sent_at")
+  messageId String? @map("message_id")
+  failureCode TelegramDeliveryFailure? @map("failure_code")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@unique([linkId,generation,eventKey])
+  @@index([state,availableAt])
+  @@map("telegram_deliveries")
+}

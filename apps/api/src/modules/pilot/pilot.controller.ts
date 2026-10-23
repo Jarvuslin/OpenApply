@@ -2,18 +2,14 @@ import {
   pilotInstructionsImpactSchema,
   pilotStateSchema,
   updatePilotInstructionsSchema,
-} from "@jobpilot/contracts/pilot";
-import { pilotChannel } from "@jobpilot/contracts/sse";
+} from "@openapply/contracts/pilot";
+import { pilotChannel } from "@openapply/contracts/sse";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { authGuard } from "@/common/middleware";
 import { RATE_LIMITS, rateLimit } from "@/common/rate-limit";
 import { sseStream } from "@/common/sse";
-import {
-  pilotActivityResponseSchema,
-  pilotCostSchema,
-  pilotTodayOutcomesSchema,
-} from "./pilot.schema";
+import { pilotActivityResponseSchema, pilotTodayOutcomesSchema } from "./pilot.schema";
 import { PilotService } from "./pilot.service";
 
 const pilot = container.resolve(PilotService);
@@ -85,22 +81,13 @@ export const pilotController = new Elysia({
         "How many of the profile's jobs were skipped or failed today, with the skip reasons bucketed by frequency. Applied counts come from the pilot state.",
     },
   })
-  .get("/stats/cost", ({ user }) => pilot.getCost(user.id), {
-    beforeHandle: limitAgenda,
-    response: pilotCostSchema,
-    detail: {
-      summary: "Where the last week of cycles went",
-      description:
-        "Per agenda kind: runs, median and total wall clock, failures, and abandoned claims over the last 7 days, heaviest first. Derived from claim timings - no separate telemetry write.",
-    },
-  })
   .get("/activity", ({ user }) => pilot.getActivity(user.id), {
     beforeHandle: limitAgenda,
     response: pilotActivityResponseSchema,
     detail: {
       summary: "Pilot liveness activity",
       description:
-        "Newest server-side agent activity (claims, journal, campaign/job writes) plus the active-claim count, so the terminal orchestrator can tell a live long run from a genuinely stuck one.",
+        "Newest server-side agent activity (journal, campaign/job writes), so the terminal orchestrator can tell a live long run from a genuinely stuck one.",
     },
   })
   .get("/events", ({ user, headers }) => sseStream(pilotChannel, { userId: user.id }, headers), {

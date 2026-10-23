@@ -2,7 +2,7 @@ import { buildDocsMetadata } from "@/components/features/docs";
 
 export const metadata = buildDocsMetadata("faq", {
   description:
-    "Common questions about OpenApply: the agent, the Pilot, boards, email, and your data.",
+    "Common questions about OpenApply: the agent, pilots, boards, email, and your data.",
 });
 
 # FAQ
@@ -19,7 +19,7 @@ A mid-tier one: **Claude Sonnet 5.5** or **GPT 6 Luna**.
 **Avoid top-tier models like Claude Opus 5.5.** Applying to jobs is reading
 postings and filling forms, not hard reasoning, so the top tier thinks longer
 at every step and eats your weekly usage limits far faster without applying to
-more jobs. On a Pilot running cycles all day you can burn a week's allowance in
+more jobs. On a queue running all day you can burn a week's allowance in
 a day or two. Mid-tier is also faster, so more of your backlog gets done.
 
 OpenApply starts Claude Code sessions on the latest Sonnet and Codex sessions on
@@ -36,56 +36,37 @@ watch every action in the agent dock.
 
 On Windows, press **Start agent** in the dock. Everywhere else, use one of the
 two commands the dock offers: run `setup` again in Claude Code or Codex, or
-type `jobpilot` in any shell. Those work on Windows too.
+type `openapply` in any shell. Those work on Windows too.
 
 The button exists only on Windows, and only after the agent has run at least
 once. [Getting started](/docs/getting-started) explains why.
 
 ## Which job boards are supported?
 
-Any board. Every new account starts with LinkedIn, Indeed, Hiring Cafe, and
-We Work Remotely, and the board picker offers Wellfound, Y Combinator (Work
-at a Startup), Welcome to the Jungle, Hacker News "Who's Hiring", Remote OK,
-4 Day Week, and Upwork. Add any other board from the boards page. The agent
-drives a real browser, so it isn't limited to a fixed list.
+Use an employer careers page or ATS. Discovery sources are listed in the job picker.
 
-## How many jobs does the Pilot apply to per day?
+## How many jobs does OpenApply apply to?
 
-Up to your daily apply cap, one application per cycle. The cap is enforced by
-the server, not just by the AI's instructions, so it holds even if a cycle
-goes off-script. The same is true of the networking cap.
+As many as your queue settings allow. Set **Runs left** on the Queue page to cap
+how many more applications run, or leave it empty for no limit. Each pilot also
+has a **Max jobs per run**. The server enforces these limits, not just the
+agent's instructions.
 
-## How does the Pilot decide what to do first?
+## Does OpenApply ever send messages or post publicly without me?
 
-The server ranks the agenda every cycle: your answered questions come first,
-then interview replies, then applications ordered by match score, then
-networking, then discovery of new postings. You steer it with your goals text
-and limits. See [the Pilot](/docs/pilot).
+It submits applications within your queue limits. Anything else that goes out,
+such as an email reply, waits for your approval.
 
-## Does the Pilot ever send messages or post publicly without me?
+## What happens if my computer sleeps or crashes mid-application?
 
-Only what you explicitly set to auto: applications within your cap, and
-networking emails if you chose the "auto" autonomy level. LinkedIn messages
-and public self-promotion posts always wait for your approval, and interview
-replies are always drafted for review. Those rules are enforced server-side.
+Nothing is lost. Each application saves its progress as it goes. Work held by a
+computer that went away times out and returns to the queue, and the agent picks
+the queue back up when it restarts.
 
-## What happens if my computer sleeps or crashes mid-cycle?
+## Can I use OpenApply manually while the queue is running?
 
-Nothing is lost. Each cycle does one unit of work and saves the result before
-moving on; work claimed by a crashed cycle times out and returns to the
-agenda. The host restarts cycles on its own after a reboot or wake.
-
-## Can I use OpenApply manually while the Pilot is running?
-
-Yes. Campaigns and dashboard actions work as usual. If you launch a session
-with the other provider yourself, the Pilot pauses instead of fighting for the
-terminal and resumes when you're done.
-
-## Why does the journal show "cycles"?
-
-A cycle is one unit of autonomous work: one application, one inbox review,
-one search. The Activity tab's "By cycle" view groups the journal so you can
-see what each cycle did, its outcome, and how long it took.
+Yes. Searches, pilots and dashboard actions work as usual, and anything you
+start joins the same queue.
 
 ## How long do I have to answer a question?
 
@@ -93,21 +74,16 @@ Most questions wait indefinitely; the related job is parked until you answer.
 The exception is a login code, which expires after about five minutes; missing
 one just skips that job cleanly. You only see those for codes the agent can't
 read itself, meaning SMS and authenticator apps. Codes that arrive by email are
-pulled from your connected mailbox without asking you. Turn on notifications
-under **Settings → Notifications** to get questions as a push on your phone.
+pulled from your connected mailbox without asking you. Turn on the
+notifications switch in the sidebar to get questions as a push on your phone.
 
 ## Can OpenApply read and send email?
 
-Yes, through your own Google OAuth client. See
-[Email setup](/docs/email-setup). Reading powers the inbox and verification
-codes; sending powers networking. It can never delete mail, and it works
-without email too; you just lose those features.
+Yes, through the Gmail connector in your local agent. See [Email setup](/docs/email-setup). The agent uploads messages for classification and verification. Approved replies use its send tool. Connector authentication and worker access must be checked in the embedded runtime.
 
 ## What about captchas?
 
-The agent solves checkbox and text captchas itself. For image challenges it
-uses a 2Captcha or CapSolver key if you've added one under
-[credentials](/docs/credentials); otherwise it skips the job and says why.
+Solving is disabled by default. The worker checks the API entitlement before invoking a solver. A disabled or failed solver parks the job with a verification question and leaves the browser tab open while the queue continues.
 
 ## How do I update the agent?
 
@@ -158,7 +134,6 @@ number more than another resume edit:
   that say so outright; most enforce it silently.
 - Apply to fewer employers that fit you better. Fifty applications to employers
   that filter you out produce fifty rejections.
-- Use `networking`. A referral routes around the automated screen entirely.
 - Connect your mailbox so rejections land on your pipeline and your response
   rate becomes a number you can watch.
 
@@ -170,4 +145,4 @@ data.
 
 ## Is OpenApply open source?
 
-Yes, MIT-licensed: [github.com/suxrobGM/jobpilot](https://github.com/Jarvuslin/OpenApply).
+Yes, MIT-licensed: [github.com/Jarvuslin/OpenApply](https://github.com/Jarvuslin/OpenApply).

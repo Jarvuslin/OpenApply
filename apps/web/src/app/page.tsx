@@ -3,19 +3,17 @@ import { Box } from "@mui/material";
 import type { Metadata } from "next";
 import {
   BoardStrip,
-  CampaignTypes,
+  BuiltIn,
   CtaBand,
   FAQ_ITEMS,
   Faq,
+  Features,
   Hero,
   HowItWorks,
-  LiveJobsStrip,
   MarketingFooter,
   MarketingNav,
-  Pilot,
   PrivacyGrid,
-  ProductTour,
-  Teaser,
+  Setup,
 } from "@/components/features/marketing";
 import { JsonLd } from "@/components/seo/json-ld";
 import { faqPageLd, organizationLd, softwareApplicationLd, websiteLd } from "@/lib/structured-data";
@@ -25,7 +23,7 @@ export const metadata: Metadata = {
 };
 
 const SOFTWARE_DESCRIPTION =
-  "A free, open-source AI agent that finds jobs, tailors your resume, and applies for you. It runs locally on your own Claude Code or Codex subscription.";
+  "A free, open-source AI agent that finds new jobs minutes after they are posted, scores them against your resume, and applies for you. It runs on your own Claude Code or Codex subscription.";
 
 export default function LandingPage(): ReactElement {
   return (
@@ -42,14 +40,12 @@ export default function LandingPage(): ReactElement {
       <MarketingNav />
       <Box component="main">
         <Hero />
-        <Teaser />
-        <Pilot />
         <BoardStrip />
-        <CampaignTypes />
-        <ProductTour />
-        <PrivacyGrid />
-        <LiveJobsStrip />
         <HowItWorks />
+        <Features />
+        <BuiltIn />
+        <PrivacyGrid />
+        <Setup />
         <Faq />
         <CtaBand />
       </Box>

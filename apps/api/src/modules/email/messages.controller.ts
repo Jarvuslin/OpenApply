@@ -1,17 +1,16 @@
-import { approveSchema, scanMessageSchema } from "@jobpilot/contracts/email";
-import { idParam } from "@jobpilot/contracts/shared";
-import { inboxChannel } from "@jobpilot/contracts/sse";
+import { approveSchema, ingestMessagesSchema, scanMessageSchema } from "@openapply/contracts/email";
+import { idParam } from "@openapply/contracts/shared";
+import { inboxChannel } from "@openapply/contracts/sse";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { authGuard } from "@/common/middleware";
+import { RATE_LIMITS, rateLimit } from "@/common/rate-limit";
 import { sseStream } from "@/common/sse";
 import {
   emailMessageListSchema,
   emailMessageSchema,
   messageApprovedSchema,
-  messageCountSchema,
   messageDeniedSchema,
-  messageFilters,
   messagesQuery,
   syncResultSchema,
 } from "./email.schema";
@@ -27,6 +26,12 @@ export const emailMessagesController = new Elysia({
   detail: { tags: ["Email"] },
 })
   .use(authGuard)
+  .post("/messages/ingest", ({ user, body }) => sync.ingest(user.id, body), {
+    body: ingestMessagesSchema,
+    beforeHandle: rateLimit(RATE_LIMITS.mailboxIngest),
+    response: syncResultSchema,
+    detail: { summary: "Store mail read through the user's agent connector" },
+  })
   .get("/messages", ({ user, query }) => svc.listMessages(user.id, query), {
     query: messagesQuery,
     response: emailMessageListSchema,
@@ -34,15 +39,6 @@ export const emailMessagesController = new Elysia({
       summary: "List inbox messages",
       description:
         "Returns one page of the profile's email messages as `{ items, pagination }`, ordered newest first, filtered by the optional review status, classification, since date, domain hint, and verification domain query parameters.",
-    },
-  })
-  .get("/messages/count", ({ user, query }) => svc.countMessages(user.id, query), {
-    query: messageFilters,
-    response: messageCountSchema,
-    detail: {
-      summary: "Count inbox messages",
-      description:
-        "Returns `{ count }` for the same filters the list route accepts. For callers that render a number and would otherwise page a full message to read the pagination total.",
     },
   })
   .get("/messages/:id", ({ user, params }) => svc.getMessage(user.id, params.id), {
@@ -92,7 +88,7 @@ export const emailMessagesController = new Elysia({
     detail: {
       summary: "Sync inbox messages",
       description:
-        "Fetches new messages from the connected mailbox, persists them, links any networking replies, emits inbox sync events, and returns the fetched and newly inserted counts.",
+        "Fetches new messages from the connected mailbox, persists them, emits inbox sync events, and returns the fetched and newly inserted counts.",
     },
   })
   .get("/events", ({ headers, user }) => sseStream(inboxChannel, { userId: user.id }, headers), {

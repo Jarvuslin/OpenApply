@@ -11,13 +11,14 @@ import {
   Typography,
 } from "@mui/material";
 import { Section } from "../section";
+import { SectionHeading } from "../section-heading";
 import { FAQ_ITEMS } from "./faq-items";
 
 export function Faq(): ReactElement {
   return (
-    <Section maxWidth="md">
-      <Stack spacing={1} sx={{ mb: 4 }}>
-        <Typography variant="h2">Common questions</Typography>
+    <Section maxWidth="md" id="faq">
+      <Stack spacing={1.5} sx={{ mb: 5, alignItems: "center" }}>
+        <SectionHeading eyebrow="Questions" title="Common questions" />
         <Typography variant="body2Muted">
           More in the <Link href="/docs/faq">full FAQ</Link>.
         </Typography>

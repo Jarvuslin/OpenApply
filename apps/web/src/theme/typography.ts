@@ -1,14 +1,13 @@
 import type { TypographyVariantsOptions } from "@mui/material/styles";
-import { line, surfaces, textColors } from "./palette";
-import { radii } from "./tokens";
+import { textColors } from "./palette";
 
 export const fontFamilies = {
-  body: 'var(--font-archivo), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
-  display: "var(--font-archivo), ui-sans-serif, system-ui, sans-serif",
+  body: 'var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+  display: "var(--font-inter), ui-sans-serif, system-ui, sans-serif",
+  wordmark: 'var(--font-wordmark), "Libre Caslon Text", Georgia, serif',
   mono: "var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace",
 } as const;
 
-// The display role is Archivo widened to its expanded width axis (athletic headers).
 const displayStretch = "100%";
 
 /** /docs prose metrics; `docsH4` reuses the size so an h4 sits flush with the prose around it. */
@@ -19,149 +18,126 @@ const docsBody = {
   color: textColors.prose,
 } as const;
 
-/** Skips the expanded display width: that marketing voice at every /docs section break shouts. */
 const docsHeading = {
   fontFamily: fontFamilies.body,
   fontWeight: 600,
 } as const;
 
+// Design scale: body large 14/20, body 13/18, small 12/16, tiny 11/14.
+const body = { fontFamily: fontFamilies.body, fontSize: "0.875rem", lineHeight: "20px" };
+const small = {
+  fontFamily: fontFamilies.body,
+  fontSize: "0.8125rem",
+  lineHeight: "18px",
+  letterSpacing: "-0.003em",
+};
+const caption = { fontFamily: fontFamilies.body, fontSize: "0.75rem", lineHeight: "16px" };
+// An eyebrow line, as the design sets them: small and medium, not shouted in capitals.
+const overline = {
+  fontFamily: fontFamilies.body,
+  fontSize: "0.75rem",
+  lineHeight: "16px",
+  fontWeight: 500,
+  letterSpacing: 0,
+  textTransform: "none",
+} as const;
+const monoData = {
+  fontFamily: fontFamilies.mono,
+  fontSize: "0.75rem",
+  lineHeight: "16px",
+  fontWeight: 400,
+  fontVariantNumeric: "tabular-nums",
+} as const;
+
 export const typography: TypographyVariantsOptions = {
   fontFamily: fontFamilies.body,
+  fontSize: 14,
+  fontWeightRegular: 400,
+  fontWeightMedium: 500,
+  fontWeightBold: 600,
   h1: {
     fontFamily: fontFamilies.display,
-    fontStretch: displayStretch,
     fontWeight: 600,
-    fontSize: "2.25rem",
-    lineHeight: 1.05,
-    letterSpacing: "-0.025em",
+    fontSize: "1.625rem",
+    lineHeight: "32px",
+    letterSpacing: "-0.02em",
   },
   h2: {
     fontFamily: fontFamilies.display,
-    fontStretch: displayStretch,
     fontWeight: 600,
-    fontSize: "1.75rem",
-    lineHeight: 1.15,
+    fontSize: "1.625rem",
+    lineHeight: "32px",
     letterSpacing: "-0.02em",
   },
   h3: {
     fontFamily: fontFamilies.display,
-    fontStretch: displayStretch,
     fontWeight: 600,
-    fontSize: "1.25rem",
-    lineHeight: 1.25,
+    fontSize: "1.125rem",
+    lineHeight: "24px",
     letterSpacing: "-0.01em",
   },
   h4: {
     fontFamily: fontFamilies.display,
-    fontStretch: displayStretch,
     fontWeight: 600,
-    fontSize: "1.0625rem",
-    lineHeight: 1.3,
-    letterSpacing: "-0.005em",
+    fontSize: "1rem",
+    lineHeight: "22px",
+    letterSpacing: "-0.01em",
   },
   h5: {
     fontFamily: fontFamilies.body,
-    fontWeight: 500,
-    fontSize: "0.9375rem",
-    lineHeight: 1.35,
+    fontWeight: 600,
+    fontSize: "1rem",
+    lineHeight: "22px",
+    letterSpacing: "-0.01em",
   },
   h6: {
     fontFamily: fontFamilies.body,
-    fontWeight: 500,
-    fontSize: "0.8125rem",
-    lineHeight: 1.4,
+    fontWeight: 600,
+    fontSize: "0.9375rem",
+    lineHeight: "20px",
+    letterSpacing: "-0.005em",
   },
-  body1: { fontFamily: fontFamilies.body, fontSize: "0.8125rem", lineHeight: 1.55 },
-  body2: { fontFamily: fontFamilies.body, fontSize: "0.75rem", lineHeight: 1.5 },
+  body1: body,
+  body2: small,
   button: {
     fontFamily: fontFamilies.body,
     textTransform: "none",
     fontWeight: 500,
     fontSize: "0.8125rem",
+    lineHeight: "18px",
     letterSpacing: 0,
   },
-  caption: {
+  caption,
+  overline,
+  overlineMuted: { ...overline, color: textColors.secondary },
+  body1Muted: { ...body, color: textColors.secondary },
+  body2Muted: { ...small, color: textColors.secondary },
+  captionMuted: { ...caption, color: textColors.secondary },
+  monoData,
+  authTitle: {
     fontFamily: fontFamilies.body,
-    fontSize: "0.6875rem",
-    letterSpacing: "0",
-  },
-  overline: {
-    fontFamily: fontFamilies.body,
-    fontSize: "0.6875rem",
-    letterSpacing: "0.12em",
-    textTransform: "uppercase",
-    lineHeight: 1,
+    fontSize: "1.5rem",
+    lineHeight: "30px",
     fontWeight: 600,
-  },
-  overlineMuted: {
-    fontFamily: fontFamilies.body,
-    fontSize: "0.6875rem",
-    letterSpacing: "0.12em",
-    textTransform: "uppercase",
-    lineHeight: 1,
-    fontWeight: 600,
-    color: textColors.secondary,
-  },
-  body1Muted: {
-    fontFamily: fontFamilies.body,
-    fontSize: "0.8125rem",
-    lineHeight: 1.55,
-    color: textColors.secondary,
-  },
-  body2Muted: {
-    fontFamily: fontFamilies.body,
-    fontSize: "0.75rem",
-    lineHeight: 1.5,
-    color: textColors.secondary,
-  },
-  captionMuted: {
-    fontFamily: fontFamilies.body,
-    fontSize: "0.6875rem",
-    letterSpacing: "0",
-    color: textColors.secondary,
-  },
-  // Outlined mono pill. Callers set `fontSize` - ring labels run smaller than board chips.
-  monoChip: {
-    fontFamily: fontFamilies.mono,
-    fontSize: "0.75rem",
-    lineHeight: 1.55,
-    display: "inline-block",
-    whiteSpace: "nowrap",
-    padding: "4px 10px",
-    borderRadius: radii.pill,
-    color: textColors.secondary,
-    border: `1px solid ${line.border}`,
-    backgroundColor: surfaces.elevated,
+    letterSpacing: "-0.02em",
   },
   statValue: {
-    fontFamily: fontFamilies.mono,
+    fontFamily: fontFamilies.body,
     fontWeight: 600,
     fontSize: "1.5rem",
-    lineHeight: 1.1,
-    letterSpacing: "-0.02em",
+    lineHeight: "30px",
+    letterSpacing: "-0.015em",
     fontVariantNumeric: "tabular-nums",
   },
   statLabel: {
     fontFamily: fontFamilies.body,
-    fontSize: "0.625rem",
-    letterSpacing: "0.08em",
-    textTransform: "uppercase",
-    lineHeight: 1,
-    fontWeight: 600,
+    fontSize: "0.75rem",
+    lineHeight: "16px",
+    fontWeight: 500,
     color: textColors.secondary,
   },
-  body1Strong: {
-    fontFamily: fontFamilies.body,
-    fontSize: "0.8125rem",
-    lineHeight: 1.55,
-    fontWeight: 600,
-  },
-  body2Strong: {
-    fontFamily: fontFamilies.body,
-    fontSize: "0.75rem",
-    lineHeight: 1.5,
-    fontWeight: 600,
-  },
+  body1Strong: { ...body, fontWeight: 500 },
+  body2Strong: { ...small, fontWeight: 500 },
   displayLg: {
     fontFamily: fontFamilies.display,
     fontStretch: displayStretch,

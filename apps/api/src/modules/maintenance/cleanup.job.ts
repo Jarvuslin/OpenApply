@@ -4,7 +4,7 @@ import { logger } from "@/common/logger";
 import { env } from "@/env";
 import { runRetentionCleanup } from "./cleanup";
 
-/** Daily job (03:30 server time, offset from prune-pdf-cache) that sweeps expired pilot/auth rows. */
+/** Daily job (03:30 server time) that sweeps expired pilot/auth rows. */
 export const cleanupJob = cron({
   name: "retention-cleanup",
   pattern: Patterns.everyDayAt("03:30"),

@@ -13,6 +13,7 @@ model Resume {
   version Int   @default(1)
 
   variants     ResumeVariant[]
+  evidence     ResumeEvidence[]
   primaryFor   User?           @relation("PrimaryResume")
   applications Application[]
 

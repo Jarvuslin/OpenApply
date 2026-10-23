@@ -1,6 +1,6 @@
 // Retention windows + where-clause builders. No runtime env/db imports: CI runs `bun test` with neither.
 
-import { UNUSED_VARIANT_DAYS } from "@jobpilot/contracts/resume";
+import { UNUSED_VARIANT_DAYS } from "@openapply/contracts/resume";
 import { DAY_MS } from "@/common/date/buckets";
 import type { Prisma } from "@/generated/prisma/client";
 import { notProtectedVariant } from "@/modules/resume/variants/variant.schema";
@@ -8,11 +8,6 @@ import { notProtectedVariant } from "@/modules/resume/variants/variant.schema";
 export const RETENTION_DAYS = {
   journal: 30,
   journalDigest: 90,
-  // Never shorter than `question`: the released claim is the only record an answered question was consumed.
-  claim: 30,
-  // search.discover claims damp on a user-configurable cadence with no upper bound, so a 14d
-  // delete could re-fire a long-cadence saved search early - keep those 90d instead.
-  claimDiscover: 90,
   question: 30,
   /** Grace past expiry/consumption before a token row is swept. */
   token: 3,
@@ -42,15 +37,6 @@ export function journalDigestOldWhere(c: RetentionCutoffs): Prisma.PilotJournalE
   return { kind: "digest", createdAt: { lt: c.journalDigest } };
 }
 
-export function claimReleasedWhere(c: RetentionCutoffs): Prisma.PilotClaimWhereInput {
-  // releasedAt: not null excludes open claims explicitly - never sweep in-flight work.
-  return { releasedAt: { not: null, lt: c.claim }, kind: { not: "search.discover" } };
-}
-
-export function claimDiscoverWhere(c: RetentionCutoffs): Prisma.PilotClaimWhereInput {
-  return { kind: "search.discover", releasedAt: { not: null, lt: c.claimDiscover } };
-}
-
 /** Subjects that stay live indefinitely and whose only re-offer suppressor is the answered question itself. */
 const QUESTION_TOMBSTONE_SUBJECTS = ["email", "campaign"];
 
@@ -73,13 +59,6 @@ export function verificationTokenWhere(c: RetentionCutoffs): Prisma.Verification
 
 export function refreshTokenWhere(c: RetentionCutoffs): Prisma.RefreshTokenWhereInput {
   return { OR: [{ expiresAt: { lt: c.token } }, { revokedAt: { lt: c.token } }] };
-}
-
-export function promotionPostWhere(c: RetentionCutoffs): Prisma.PromotionPostWhereInput {
-  return {
-    status: { in: ["declined", "skipped", "expired", "failed"] },
-    updatedAt: { lt: c.promotion },
-  };
 }
 
 export function emailBodyWhere(c: RetentionCutoffs): Prisma.EmailMessageWhereInput {

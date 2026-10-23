@@ -1,11 +1,16 @@
-using JobPilot.Terminal.Pilot;
-using JobPilot.Terminal.Sessions;
-using JobPilot.Terminal.Updates;
+using OpenApply.Terminal.Pilot;
+using OpenApply.Terminal.Agent;
+using OpenApply.Terminal.Queue;
+using OpenApply.Terminal.Presence;
+using OpenApply.Terminal.Questions;
+using OpenApply.Terminal.Preparation;
+using OpenApply.Terminal.Sessions;
+using OpenApply.Terminal.Updates;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
-namespace JobPilot.Terminal.Hosting;
+namespace OpenApply.Terminal.Hosting;
 
 public static class HostingExtensions
 {
@@ -24,25 +29,44 @@ public static class HostingExtensions
 
         services.AddSingleton<HostInstall>();
         services.AddSingleton<HostStatus>();
+        services.AddSingleton<SetupChecks>();
         services.AddSingleton<UrlScheme>();
 
         services.AddSingleton<ScratchCleaner>();
-        services.AddHostedService(sp => sp.GetRequiredService<ScratchCleaner>());
+        if (!BudgetedHost.Enabled) services.AddHostedService(sp => sp.GetRequiredService<ScratchCleaner>());
         services.AddSingleton<TerminalSession>();
         services.AddSingleton<TerminalRelay>();
+        services.AddSingleton<AgentRuntimeGate>();
+        services.AddSingleton<IQueueApi>(_ => new QueueApi(new HttpClient(new SocketsHttpHandler { AllowAutoRedirect = false, PooledConnectionLifetime = TimeSpan.FromMinutes(15) }) { Timeout = Timeout.InfiniteTimeSpan }));
+        services.AddSingleton<IAgentProcess, AgentProcess>();
+        services.AddSingleton<IQueueBrowser, QueueBrowser>();
+        services.AddSingleton<QueueRuntime>();
+        services.AddHostedService(sp => sp.GetRequiredService<QueueRuntime>());
+        services.AddSingleton<IRuntimePresenceSource>(sp => sp.GetRequiredService<QueueRuntime>());
+        services.AddSingleton(sp => new RuntimePresence(new HttpClient(new SocketsHttpHandler { AllowAutoRedirect = false, PooledConnectionLifetime = TimeSpan.FromMinutes(15) }) { Timeout = Timeout.InfiniteTimeSpan }, sp.GetRequiredService<IRuntimePresenceSource>()));
+        services.AddHostedService(sp => sp.GetRequiredService<RuntimePresence>());
+        services.AddSingleton<IQuestionApi, QuestionApi>();
+        services.AddSingleton<IQuestionBrowser, QuestionBrowser>();
+        services.AddSingleton<QuestionRuntime>();
+        services.AddSingleton<IPreparationApi>(_ => new PreparationApi(new HttpClient(new SocketsHttpHandler { AllowAutoRedirect = false, PooledConnectionLifetime = TimeSpan.FromMinutes(15) }) { Timeout = Timeout.InfiniteTimeSpan }));
+        services.AddSingleton<IPreparationBrowser, PreparationBrowser>();
+        services.AddSingleton<PreparationRuntime>();
 
         services.AddSingleton(sp => new PilotStore(
             PilotStore.ResolvePath(sp.GetRequiredService<HostInstall>()),
             sp.GetRequiredService<ILogger<PilotStore>>()));
         services.AddSingleton<PilotApi>();
-        services.AddSingleton<IPilotSession, PilotSession>();
+        services.AddSingleton<IPilotScheduler>(sp => sp.GetRequiredService<PilotApi>());
         services.AddSingleton<PilotLoop>();
-        services.AddHostedService(sp => sp.GetRequiredService<PilotLoop>());
-        services.AddHostedService(sp => new PilotEventListener(
-            sp.GetRequiredService<PilotStore>(),
-            sp.GetRequiredService<PilotApi>(),
-            sp.GetRequiredService<PilotLoop>().Wake,
-            sp.GetRequiredService<ILogger<PilotEventListener>>()));
+        if (!BudgetedHost.Enabled)
+        {
+            services.AddHostedService(sp => sp.GetRequiredService<PilotLoop>());
+            services.AddHostedService(sp => new PilotEventListener(
+                sp.GetRequiredService<PilotStore>(),
+                sp.GetRequiredService<PilotApi>(),
+                sp.GetRequiredService<PilotLoop>().Wake,
+                sp.GetRequiredService<ILogger<PilotEventListener>>()));
+        }
 
         services.AddSingleton<HostUpdater>();
 
@@ -81,6 +105,7 @@ public static class HostingExtensions
         }));
 
         app.Use(next => OriginPolicy.RejectOtherOrigins(app.Configuration, next));
+        app.Use(next => BudgetedHost.RejectOtherEntrypoints(next, BudgetedHost.Enabled));
         app.UseCors(OriginPolicy.CorsPolicy);
         app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(30) });
 
@@ -106,8 +131,8 @@ public static class HostingExtensions
         {
             var url = app.Configuration["Kestrel:Endpoints:Http:Url"] ?? "http://localhost:4102";
             Console.Error.WriteLine(
-                $"JobPilot terminal: {url} is already in use - another jobpilot instance is probably running.\n"
-                + "Stop it and retry: 'Get-Process jobpilot | Stop-Process' (Windows) or 'pkill -x jobpilot' (macOS/Linux).");
+                $"OpenApply terminal: {url} is already in use - another openapply instance is probably running.\n"
+                + "Stop it and retry: 'Get-Process openapply | Stop-Process' (Windows) or 'pkill -x openapply' (macOS/Linux).");
             Environment.Exit(1);
         }
     }

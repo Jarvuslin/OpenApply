@@ -1,4 +1,4 @@
-import { hasRole, type Role } from "@jobpilot/contracts/role";
+import { hasRole, type Role } from "@openapply/contracts/role";
 import { Elysia } from "elysia";
 import type { AuthUser } from "@/common/auth";
 import { db } from "@/common/database/prisma.client";

@@ -1,0 +1,113 @@
+enum QuestionSource {
+  greenhouse_public
+  public_probe
+  browser_dom
+  legacy
+  @@map("question_source")
+}
+enum QuestionCoverage {
+  complete
+  partial
+  requires_browser
+  blocked
+  @@map("question_coverage")
+}
+enum QuestionCategory {
+  authorization
+  sponsorship
+  demographic
+  disability
+  veteran
+  contact
+  document
+  other
+  @@map("question_category")
+}
+enum QuestionRequirement {
+  required
+  optional
+  unknown
+  @@map("question_requirement")
+}
+enum QuestionVisibility {
+  visible
+  hidden
+  unknown
+  @@map("question_visibility")
+}
+enum QuestionAuthorship {
+  telegram_user
+  session_user
+  agent
+  migration
+  @@map("question_authorship")
+}
+model JobQuestionCollection {
+  id String @id @default(uuid())
+  jobId String @map("job_id")
+  job Job @relation(fields:[jobId], references:[id], onDelete:Cascade)
+  userId String @map("user_id")
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  requestId String @map("request_id")
+  payloadHash String @map("payload_hash")
+  version Int
+  source QuestionSource
+  sourceUrl String @map("source_url")
+  coverage QuestionCoverage
+  collectorVersion String @map("collector_version")
+  authorship QuestionAuthorship
+  reason String?
+  definitionIds Json @map("definition_ids")
+  observedAt DateTime @default(now()) @map("observed_at")
+  questions ApplicationQuestion[]
+  @@unique([userId,requestId])
+  @@unique([jobId,version])
+  @@index([userId,jobId])
+  @@map("job_question_collections")
+}
+model ApplicationQuestion {
+  documentSelections ApplicationDocumentSelection[]
+
+  id String @id @default(uuid())
+  jobId String @map("job_id")
+  job Job @relation(fields:[jobId], references:[id], onDelete:Cascade)
+  userId String @map("user_id")
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  collectionId String @map("collection_id")
+  collection JobQuestionCollection @relation(fields:[collectionId], references:[id], onDelete:Cascade)
+  stableKey String @map("stable_key")
+  revision Int
+  definitionHash String @map("definition_hash")
+  definition Json
+  category QuestionCategory
+  required QuestionRequirement
+  visibility QuestionVisibility
+  current Boolean @default(true)
+  blocking Boolean @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  answers ApplicationQuestionAnswer[]
+  operationalQuestions PilotQuestion[]
+  @@unique([jobId,stableKey,revision])
+  @@index([userId,current,blocking,createdAt])
+  @@map("application_questions")
+}
+model ApplicationQuestionAnswer {
+  sourceBankRevisions AnswerBankRevision[] @relation("BankSourceAnswer")
+  usedBankRevisionId String? @map("used_bank_revision_id")
+  usedBankRevision AnswerBankRevision? @relation("BankUsedAnswer",fields:[usedBankRevisionId],references:[id],onDelete:SetNull)
+  reuseContext Json? @map("reuse_context")
+  id String @id @default(uuid())
+  questionId String @map("question_id")
+  question ApplicationQuestion @relation(fields:[questionId], references:[id], onDelete:Cascade)
+  userId String @map("user_id")
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  requestId String @map("request_id")
+  payloadHash String @map("payload_hash")
+  values Json
+  authorship QuestionAuthorship
+  confirmedAt DateTime? @map("confirmed_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@unique([userId,requestId])
+  @@index([questionId,createdAt])
+  @@map("application_question_answers")
+}

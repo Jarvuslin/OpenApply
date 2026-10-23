@@ -7,7 +7,7 @@ access only; it does not let the agent read email.
 
 ## Local configuration
 
-Edit the ignored `apps/api/.env` on the machine running the API. Do not put
+Edit the ignored `apps/api/.env` on the machine running the API. For this checkout, that is `D:\Dev\OpenApply\apps\api\.env`. There is no `/app/.env` file. The setup command keeps the four empty provider fields visible. Fill in both fields for each provider you want to enable. Do not put
 secrets in chat, browser code, `NEXT_PUBLIC_*` variables, or Git. Keep both
 provider fields empty until you have both values.
 
@@ -94,7 +94,7 @@ For shared accounts, deploy one web/API stack with:
   Reverse proxy `/api/*` to the API and everything else to Next.js. This
   preserves the host-only session cookie used by Next's route guard.
 - PostgreSQL with TLS, restricted access, backups and restore testing.
-- A persistent private volume for the current filesystem résumé storage,
+- A persistent private volume for the current filesystem resume storage,
   backed up alongside the database. An object-storage adapter is future work;
   do not scale to independent API replicas with separate disks.
 - A stable encryption master key in server secrets. Preserve it when moving
@@ -110,7 +110,7 @@ deployment. Never reuse placeholder secrets.
 Claude/Codex subscriptions and browser VMs remain on users' machines. A hosted
 login test does not validate the hosted-to-local companion connection; that
 needs a separate acceptance test, including browser local-network permissions.
-Keep `MVP_LOCAL_RUNNER=false` on a shared server; the development résumé reader
+Keep `MVP_LOCAL_RUNNER=false` on a shared server; the development resume reader
 runs a host CLI and is not a hosted multi-user worker.
 
 See [deployment preparation](../deploy/README.md). Required operator inputs:

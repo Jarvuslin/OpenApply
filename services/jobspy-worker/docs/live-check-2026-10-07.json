@@ -1,0 +1,23 @@
+{
+  "checkedOn": "2026-10-07",
+  "pythonJobspyVersion": "1.2.0",
+  "query": "software engineer",
+  "location": "Canada",
+  "hoursOld": 24,
+  "fetchDescription": false,
+  "totalRequests": 3,
+  "uniqueJobs": 10,
+  "imported": 0,
+  "checks": [
+    { "experience": null, "httpStatus": 200, "pages": 1, "results": 10 },
+    { "experience": "1", "httpStatus": 200, "pages": 1, "results": 10 },
+    { "experience": "2", "httpStatus": 200, "pages": 1, "results": 10 }
+  ],
+  "identicalJobIdsAcrossChecks": true,
+  "seniorTitlesPresentInEveryCheck": true,
+  "productionExperienceParameterEnabled": false,
+  "authenticated": false,
+  "proxies": false,
+  "redirects": false,
+  "retries": 0
+}

@@ -1,95 +1,83 @@
 "use client";
 
-import type { ReactElement } from "react";
-import { Grid, Stack, Typography } from "@mui/material";
+import type { ReactElement, ReactNode } from "react";
+import { Alert, Box, Button, Stack, Typography } from "@mui/material";
+import { workspaceChannel } from "@openapply/contracts/sse";
+import { useQueryClient } from "@tanstack/react-query";
 import { useApiQuery } from "@/api/hooks";
 import { analyticsQueries } from "@/api/queries";
-import { AnalyticsStatTiles } from "./analytics-stat-tiles";
-import { ApplicationsTimelineChart } from "./applications-timeline-chart";
-import { NetworkingStatTiles } from "./networking-stat-tiles";
-import { PortfolioRankChip } from "./portfolio-rank-chip";
-import { StatusBreakdownChart } from "./status-breakdown-chart";
-import { TopBoardsList } from "./top-boards-list";
+import { queryKeys } from "@/api/query-keys";
+import { useSseChannel } from "@/lib/sse/client";
+import { AgentCard } from "./agent-card";
+import { ApplicationOutcomesChart } from "./application-outcomes-chart";
+import { DashboardMetrics } from "./core-metrics";
+import { MatchScoreCard } from "./match-score-card";
+import { MonthApplicationsChart } from "./month-applications-chart";
 
-function toEntries<T extends { count: number }>(
-  items: T[],
-  label: (item: T) => string,
-): { label: string; count: number }[] {
-  return items.map((item) => ({ label: label(item), count: item.count }));
+// Wide left column, narrow right one, the same split on every row so card edges line up.
+const COLUMNS = { xs: "minmax(0, 1fr)", md: "minmax(0, 5fr) minmax(0, 3fr)" };
+const PAIR = { xs: "minmax(0, 1fr)", sm: "minmax(0, 1fr) minmax(0, 1fr)" };
+
+interface AnalyticsViewProps {
+  /** The running searches, shown beside the agent card. */
+  searches: ReactNode;
 }
 
-export function AnalyticsView(): ReactElement {
-  const query = useApiQuery(analyticsQueries.stats(), {
-    errorMessage: "Failed to load analytics stats",
+export function AnalyticsView({ searches }: AnalyticsViewProps): ReactElement {
+  const queryClient = useQueryClient();
+  useSseChannel(workspaceChannel, null, {
+    onMessage: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.analytics.all });
+    },
   });
+  const query = useApiQuery(analyticsQueries.stats());
+  const retryAction = (
+    <Button color="inherit" disabled={query.isFetching} onClick={() => query.refetch()}>
+      {query.isFetching ? "Retrying" : "Retry"}
+    </Button>
+  );
 
   if (query.isPending) {
-    return <Typography variant="body2Muted">Loading analytics</Typography>;
+    return (
+      <Stack spacing={2}>
+        <Typography variant="body2Muted">Loading analytics</Typography>
+        {searches}
+      </Stack>
+    );
   }
 
   if (!query.data) {
-    return <Typography variant="body2Muted">No data available.</Typography>;
+    return (
+      <Stack spacing={2}>
+        <Alert severity="error" action={retryAction}>
+          Could not load analytics.
+        </Alert>
+        {searches}
+      </Stack>
+    );
   }
 
   const stats = query.data;
 
   return (
-    <Stack spacing={3}>
-      <PortfolioRankChip />
-      <Typography variant="overlineMuted">Applications</Typography>
-      <AnalyticsStatTiles stats={stats} />
-
-      <Grid container spacing={2} sx={{ alignItems: "stretch" }}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <ApplicationsTimelineChart data={stats.perDay} />
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <StatusBreakdownChart data={stats.statusBreakdown} />
-        </Grid>
-      </Grid>
-
-      <Grid container spacing={2} sx={{ alignItems: "stretch" }}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <TopBoardsList
-            eyebrow="Distribution"
-            title="Top boards"
-            entries={toEntries(stats.topBoards, (b) => b.board)}
-            emptyMessage="No applications have been linked to a job board yet."
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <TopBoardsList
-            eyebrow="Diagnostics"
-            title="Top failure reasons"
-            entries={toEntries(stats.topRejectReasons, (r) => r.reason)}
-            emptyMessage="No failed campaign jobs recorded."
-          />
-        </Grid>
-      </Grid>
-
-      <Typography variant="overlineMuted" sx={{ mt: 1 }}>
-        Networking
-      </Typography>
-      <NetworkingStatTiles networking={stats.networking} />
-
-      <Grid container spacing={2} sx={{ alignItems: "stretch" }}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <ApplicationsTimelineChart
-            data={stats.networking.perDaySent}
-            title="Messages over time"
-            metricLabel="sent"
-            emptyMessage="No networking messages sent yet."
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <TopBoardsList
-            eyebrow="Distribution"
-            title="Contact sources"
-            entries={toEntries(stats.networking.topContactSources, (s) => s.source)}
-            emptyMessage="No contacts discovered yet."
-          />
-        </Grid>
-      </Grid>
+    <Stack spacing={2}>
+      {query.isError && (
+        <Alert severity="warning" action={retryAction}>
+          Analytics refresh failed. Showing the last loaded data.
+        </Alert>
+      )}
+      <DashboardMetrics stats={stats} />
+      <Box sx={{ display: "grid", gridTemplateColumns: COLUMNS, gap: 2 }}>
+        {searches}
+        <AgentCard stats={stats} />
+      </Box>
+      <Box sx={{ display: "grid", gridTemplateColumns: COLUMNS, gap: 2 }}>
+        <Box sx={{ display: "grid", gridTemplateColumns: PAIR, gap: 2 }}>
+          <MonthApplicationsChart data={stats.perDay} />
+          <ApplicationOutcomesChart data={stats.outcomes} />
+        </Box>
+        <MatchScoreCard data={stats.matchScore} />
+      </Box>
     </Stack>
   );
 }

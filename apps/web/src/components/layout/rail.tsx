@@ -1,13 +1,14 @@
 "use client";
 import { type ReactElement, Suspense } from "react";
-import { NorthEast } from "@mui/icons-material";
-import { Box, Button, Divider, Stack, Typography } from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
 import NextLink from "next/link";
-import { JobPilotMark } from "@/components/brand/jobpilot-mark";
 import { AccountMenu } from "@/components/features/profile/account-menu";
 import { useSession } from "@/hooks/use-auth";
+import { fontFamilies } from "@/theme/typography";
+import { CompanionStatus } from "./companion-status";
 import { FeedbackMenu } from "./feedback-menu";
 import { NavGroup } from "./nav-group";
+import { NotificationSwitch } from "./notification-switch";
 import { APP_TITLE, footerNavGroups, RAIL_WIDTH, visibleNavGroups } from "./shell-config";
 export function Rail(): ReactElement {
   const { user } = useSession();
@@ -21,51 +22,49 @@ export function Rail(): ReactElement {
         height: "100%",
         borderRight: 1,
         borderColor: "divider",
-        bgcolor: "surfaces.base",
+        bgcolor: "background.paper",
       }}
     >
       <Stack
         component={NextLink}
-        href="/mvp"
+        href="/dashboard"
+        aria-label="OpenApply dashboard"
         direction="row"
-        spacing={1.25}
-        sx={{ alignItems: "center", px: 2.5, py: 3, textDecoration: "none", color: "text.primary" }}
+        sx={{
+          alignItems: "center",
+          px: 3,
+          py: 2.75,
+          textDecoration: "none",
+          color: "text.primary",
+        }}
       >
-        <JobPilotMark size={28} />
-        <Typography variant="h4">OpenApply</Typography>
-        <Typography variant="captionMuted">personal</Typography>
+        <Typography
+          sx={{
+            fontFamily: fontFamilies.wordmark,
+            fontWeight: 700,
+            fontSize: "1.375rem",
+            lineHeight: "28px",
+            letterSpacing: "-0.01em",
+          }}
+        >
+          OpenApply
+        </Typography>
       </Stack>
       <Box sx={{ flex: 1, overflowY: "auto" }}>
         <Suspense>
           {visibleNavGroups(user?.role).map((group) => (
-            <NavGroup key={group.label} group={group} />
+            <NavGroup key={group.items[0]?.href} group={group} />
           ))}
         </Suspense>
       </Box>
-      <Stack
-        spacing={1}
-        sx={{
-          m: 1.5,
-          p: 1.5,
-          border: 1,
-          borderColor: "divider",
-          borderRadius: 10,
-          bgcolor: "background.paper",
-        }}
-      >
-        <Typography variant="body2Strong">Your next chapter</Typography>
-        <Typography variant="captionMuted">A little less admin. A lot more possibility.</Typography>
-        <Button component={NextLink} href="/mvp" size="small" endIcon={<NorthEast fontSize="xs" />}>
-          Open workspace
-        </Button>
-      </Stack>
       <Suspense>
         {visibleNavGroups(user?.role, footerNavGroups).map((group) => (
-          <NavGroup key={group.label ?? "settings"} group={group} />
+          <NavGroup key={group.items[0]?.href} group={group} />
         ))}
       </Suspense>
-      <Divider sx={{ mt: 1.5 }} />
-      <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", p: 1.5 }}>
+      <NotificationSwitch />
+      <CompanionStatus />
+      <Stack direction="row" sx={{ alignItems: "center", px: 1.5, pb: 2, pt: 0.5 }}>
         <AccountMenu />
         <FeedbackMenu />
       </Stack>

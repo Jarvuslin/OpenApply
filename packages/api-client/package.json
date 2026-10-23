@@ -1,5 +1,5 @@
 {
-  "name": "@jobpilot/api-client",
+  "name": "@openapply/api-client",
   "version": "2.0.0",
   "private": true,
   "type": "module",
@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@elysiajs/eden": "^1.4.9",
-    "@jobpilot/api": "workspace:*",
+    "@openapply/api": "workspace:*",
     "elysia": "^1.4.30"
   },
   "devDependencies": {

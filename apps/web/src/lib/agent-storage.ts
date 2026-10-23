@@ -3,16 +3,18 @@
 import type { TerminalProviderId } from "@/lib/terminal";
 import { readLocalStorage, writeLocalStorage } from "@/utils/local-storage";
 
-const STORAGE_KEY = "jobpilot:agent";
+const STORAGE_KEY = "openapply:agent";
 
 interface AgentStorage {
   provider: TerminalProviderId;
   dockWidth: number;
-  dockExpanded: boolean;
+  advancedTools: boolean;
   /** True once a local terminal host has ever answered /healthz from this browser. */
   everReachable: boolean;
-  /** Last-reported host capability: the jobpilot:// scheme is registered, so it can be relaunched from the browser. */
+  /** Last-reported host capability: the openapply:// scheme is registered, so it can be relaunched from the browser. */
   canRelaunch: boolean;
+  /** True between Connect and Disconnect, so a restarted host reconnects by itself. */
+  queueConnected: boolean;
 }
 
 const storageListeners = new Set<() => void>();
@@ -60,9 +62,10 @@ export function getStoredProvider(): TerminalProviderId {
   return p === "codex" || p === "claude" ? p : "claude";
 }
 
-export function getStoredExpanded(): boolean {
-  const stored = readAgentStorage();
-  // Default expanded until a host has ever connected, so new users see the install card;
-  // an explicit collapse (stored dockExpanded) always wins.
-  return stored?.dockExpanded ?? !stored?.everReachable;
+export function getAdvancedToolsEnabled(): boolean {
+  return readAgentStorage()?.advancedTools ?? false;
+}
+
+export function getQueueConnectedPreference(): boolean {
+  return readAgentStorage()?.queueConnected ?? false;
 }

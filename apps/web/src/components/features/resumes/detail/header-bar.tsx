@@ -10,7 +10,6 @@ import { invalidations } from "@/api/query-keys";
 import { resumePdfUrl } from "@/api/resume-urls";
 import type { ResumeDto } from "@/api/types";
 import { useConfirm } from "@/providers/confirm-provider";
-import { TailorForJobButton } from "../tailor/tailor-for-job-button";
 
 interface ResumeHeaderBarProps {
   resume: ResumeDto;
@@ -43,7 +42,7 @@ export function ResumeHeaderBar(props: ResumeHeaderBarProps): ReactElement {
     {
       successMessage: "Resume deleted",
       invalidate: invalidations.resume,
-      onSuccess: () => router.push("/documents/resumes"),
+      onSuccess: () => router.push("/profile"),
     },
   );
 
@@ -93,7 +92,6 @@ export function ResumeHeaderBar(props: ResumeHeaderBarProps): ReactElement {
               Set primary
             </Button>
           )}
-          <TailorForJobButton />
           <IconButton
             component="a"
             href={resumePdfUrl(resume.id, resume.updatedAt)}

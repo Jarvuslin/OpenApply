@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Run the full JobPilot CI gate locally - Biome, knip, API + web typechecks, API and contracts tests, and the terminal .NET tests when terminal files changed. Use before committing, or when asked to "verify", "run checks", or "run the gate".
+description: Run the full OpenApply CI gate locally - Biome, knip, API + web typechecks, API and contracts tests, and the terminal .NET tests when terminal files changed. Use before committing, or when asked to "verify", "run checks", or "run the gate".
 ---
 
 # Verify

@@ -1,4 +1,4 @@
-# JobPilot web - Next.js standalone. Needs the API source at build time (@jobpilot/api-client imports the App type).
+# OpenApply web - Next.js standalone. Needs the API source at build time (@openapply/api-client imports the App type).
 FROM oven/bun:1-slim AS base
 WORKDIR /app
 
@@ -21,7 +21,7 @@ COPY packages ./packages
 COPY apps/api ./apps/api
 COPY apps/web ./apps/web
 
-# Generate the Prisma client so @jobpilot/api types resolve for the web build.
+# Generate the Prisma client so @openapply/api types resolve for the web build.
 WORKDIR /app/apps/api
 RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" bun run db:generate
 

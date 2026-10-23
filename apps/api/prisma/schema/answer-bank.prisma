@@ -1,0 +1,52 @@
+enum AnswerBankScope {
+  account
+  employer
+  @@map("answer_bank_scope")
+}
+enum AnswerBankAction {
+  save
+  revoke
+  @@map("answer_bank_action")
+}
+model AnswerBankEntry {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  identityHash String @map("identity_hash")
+  currentRevision Int @map("current_revision")
+  active Boolean @default(true)
+  revisions AnswerBankRevision[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@unique([userId,identityHash])
+  @@index([userId,active,updatedAt])
+  @@map("answer_bank_entries")
+}
+model AnswerBankRevision {
+  id String @id @default(uuid())
+  entryId String @map("entry_id")
+  entry AnswerBankEntry @relation(fields:[entryId], references:[id], onDelete:Cascade)
+  userId String @map("user_id")
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  revision Int
+  action AnswerBankAction
+  requestId String @map("request_id")
+  payloadHash String @map("payload_hash")
+  sourceAnswerId String? @map("source_answer_id")
+  sourceAnswer ApplicationQuestionAnswer? @relation("BankSourceAnswer",fields:[sourceAnswerId],references:[id],onDelete:SetNull)
+  sourceSnapshot Json @map("source_snapshot")
+  fingerprint String
+  normalizerVersion String @map("normalizer_version")
+  scope AnswerBankScope
+  category QuestionCategory
+  countryCode String? @map("country_code")
+  employerKey String? @map("employer_key")
+  roleKey String? @map("role_key")
+  consentedAt DateTime @map("consented_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  usedAnswers ApplicationQuestionAnswer[] @relation("BankUsedAnswer")
+  @@unique([entryId,revision])
+  @@unique([userId,requestId])
+  @@index([userId,fingerprint])
+  @@map("answer_bank_revisions")
+}

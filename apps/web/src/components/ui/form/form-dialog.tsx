@@ -1,15 +1,8 @@
 "use client";
 
 import type { ComponentType, PropsWithChildren, ReactElement, ReactNode } from "react";
-import {
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  type DialogProps,
-  DialogTitle,
-  Stack,
-} from "@mui/material";
+import { Button, DialogActions, DialogContent, type DialogProps, Stack } from "@mui/material";
+import { Dialog, DialogTitle } from "@/components/ui/feedback";
 
 interface FormDialogShellProps {
   open: boolean;

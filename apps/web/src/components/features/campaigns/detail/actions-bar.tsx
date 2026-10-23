@@ -1,7 +1,6 @@
 "use client";
 
 import { type ReactElement, useState } from "react";
-import type { CampaignStatus } from "@jobpilot/contracts/campaign";
 import {
   Autorenew,
   Delete,
@@ -12,16 +11,18 @@ import {
   Replay,
 } from "@mui/icons-material";
 import { Button, IconButton, Stack } from "@mui/material";
+import type { CampaignStatus } from "@openapply/contracts/campaign";
+import { DEFAULT_MIN_MATCH_SCORE } from "@openapply/contracts/user";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { api } from "@/api/client";
-import { useApiMutation } from "@/api/hooks";
+import { useApiMutation, useApiQuery } from "@/api/hooks";
+import { userQueries } from "@/api/queries";
 import { invalidations } from "@/api/query-keys";
 import { type CampaignDetailDto, jobSummary } from "@/api/types";
 import { DropdownMenu, type DropdownMenuItem } from "@/components/ui/feedback";
-import { useAgent, useAgentAvailable } from "@/providers/agent-provider";
+import { useQueueActions } from "@/hooks/use-queue-actions";
 import { useConfirm } from "@/providers/confirm-provider";
-import { COMPOSER_DEFAULT_VALUES } from "../composer/form-config";
 import { RescanDialog } from "./rescan-dialog";
 
 interface CampaignActionsBarProps {
@@ -41,15 +42,22 @@ function useStatusMutation(
 
 export function CampaignActionsBar(props: CampaignActionsBarProps): ReactElement {
   const { campaign } = props;
-  const agent = useAgent();
-  const agentAvailable = useAgentAvailable();
+  const queue = useQueueActions();
   const confirm = useConfirm();
   const router = useRouter();
+  const profileQuery = useApiQuery(userQueries.detail(), {
+    enabled: campaign.config.minScore === undefined,
+    errorMessage: "Failed to load your minimum application score",
+  });
+  const profileMinimum = profileQuery.data
+    ? (profileQuery.data.autoApply?.minMatchScore ?? DEFAULT_MIN_MATCH_SCORE)
+    : undefined;
+  const minimum = campaign.config.minScore ?? profileMinimum;
 
   const campaignResource = api.campaigns({ id: campaign.campaignId });
 
-  const stop = useStatusMutation(campaign.campaignId, "paused", "Campaign paused");
-  const complete = useStatusMutation(campaign.campaignId, "completed", "Campaign marked as done");
+  const pause = useStatusMutation(campaign.campaignId, "paused", "Search paused");
+  const complete = useStatusMutation(campaign.campaignId, "completed", "Search marked as done");
 
   const [rescanOpen, setRescanOpen] = useState(false);
 
@@ -59,9 +67,9 @@ export function CampaignActionsBar(props: CampaignActionsBarProps): ReactElement
   );
 
   const remove = useApiMutation<unknown, void>(() => campaignResource.delete(), {
-    successMessage: "Campaign deleted",
+    successMessage: "Search deleted",
     invalidate: invalidations.campaign,
-    onSuccess: () => router.replace("/" as Route),
+    onSuccess: () => router.replace("/applications/searches" as Route),
   });
 
   const summary = jobSummary(campaign);
@@ -71,8 +79,7 @@ export function CampaignActionsBar(props: CampaignActionsBarProps): ReactElement
   const isAutoApply = campaign.source === "auto_apply";
   const isStopped = campaign.status === "paused";
   const hasActionItems =
-    isStopped ||
-    (agentAvailable && ((isAutoApply && failedCount > 0) || (!isInProgress && skippedCount > 0)));
+    isStopped || (isAutoApply && failedCount > 0) || (!isInProgress && skippedCount > 0);
 
   const handleMarkDone = async (): Promise<void> => {
     const confirmed = await confirm({
@@ -88,10 +95,10 @@ export function CampaignActionsBar(props: CampaignActionsBarProps): ReactElement
 
   const handleDelete = async (): Promise<void> => {
     const confirmed = await confirm({
-      title: "Delete campaign?",
+      title: "Delete search?",
       description:
-        "Permanently deletes this campaign and all of its data - jobs, history, applications it produced, and networking activity. This cannot be undone.",
-      confirmLabel: "Delete campaign",
+        "Permanently deletes this search and all of its data - jobs, history, applications it produced. This cannot be undone.",
+      confirmLabel: "Delete search",
       destructive: true,
       confirmationText: "delete",
     });
@@ -102,20 +109,21 @@ export function CampaignActionsBar(props: CampaignActionsBarProps): ReactElement
 
   const handleRescanConfirm = async (minScore: number): Promise<void> => {
     try {
-      await rescan.mutateAsync(minScore);
+      if (minScore !== minimum) await rescan.mutateAsync(minScore);
     } catch {
       // onError already toasted; keep the dialog open so the threshold isn't lost.
       return;
     }
-    void agent.injectSkill("rescan-skipped", campaign.campaignId);
+    try {
+      await queue.campaign.mutateAsync({ campaignId: campaign.campaignId, action: "rescan" });
+    } catch {
+      return;
+    }
     setRescanOpen(false);
   };
 
-  // Networking campaigns have no jobs to replay - re-run the networking skill instead of `resume-campaign`.
   const handleResume = (): void => {
-    void (campaign.source === "networking"
-      ? agent.injectSkill("networking", `--campaign ${campaign.campaignId}`)
-      : agent.injectSkill("resume-campaign", campaign.campaignId));
+    queue.campaign.mutate({ campaignId: campaign.campaignId, action: "resume" });
   };
 
   const menuItems: DropdownMenuItem[] = [
@@ -133,22 +141,25 @@ export function CampaignActionsBar(props: CampaignActionsBarProps): ReactElement
       key: "retry",
       label: `Retry failed (${failedCount})`,
       icon: <Replay fontSize="sm" />,
-      show: isAutoApply && failedCount > 0 && agentAvailable,
-      onClick: () => void agent.injectSkill("auto-apply", `retry-failed ${campaign.campaignId}`),
+      show: isAutoApply && failedCount > 0,
+      disabled: queue.campaign.isPending,
+      onClick: () =>
+        queue.campaign.mutate({ campaignId: campaign.campaignId, action: "retry_failed" }),
     },
     {
       kind: "item",
       key: "rescan",
       label: `Rescan skipped (${skippedCount})…`,
       icon: <Autorenew fontSize="sm" />,
-      show: !isInProgress && skippedCount > 0 && agentAvailable,
+      show: !isInProgress && skippedCount > 0,
+      disabled: minimum === undefined,
       onClick: () => setRescanOpen(true),
     },
     { kind: "divider", key: "del-divider", show: hasActionItems },
     {
       kind: "item",
       key: "delete",
-      label: "Delete campaign",
+      label: "Delete search",
       icon: <Delete fontSize="sm" />,
       danger: true,
       show: true,
@@ -166,14 +177,19 @@ export function CampaignActionsBar(props: CampaignActionsBarProps): ReactElement
           variant="outlined"
           color="warning"
           startIcon={<Pause fontSize="sm" />}
-          onClick={() => stop.mutate()}
-          disabled={stop.isPending}
+          onClick={() => pause.mutate()}
+          disabled={pause.isPending}
         >
-          Stop
+          Pause
         </Button>
       )}
-      {isStopped && agentAvailable && (
-        <Button variant="contained" startIcon={<PlayArrow fontSize="sm" />} onClick={handleResume}>
+      {isStopped && (
+        <Button
+          variant="contained"
+          startIcon={<PlayArrow fontSize="sm" />}
+          onClick={handleResume}
+          disabled={queue.campaign.isPending}
+        >
           Resume
         </Button>
       )}
@@ -181,21 +197,23 @@ export function CampaignActionsBar(props: CampaignActionsBarProps): ReactElement
         <DropdownMenu
           items={menuItems}
           trigger={({ onOpen }) => (
-            <IconButton onClick={onOpen} aria-label="More campaign actions">
+            <IconButton onClick={onOpen} aria-label="More search actions">
               <MoreVert fontSize="sm" />
             </IconButton>
           )}
         />
       )}
 
-      <RescanDialog
-        open={rescanOpen}
-        onClose={() => setRescanOpen(false)}
-        skippedCount={skippedCount}
-        defaultMinScore={campaign.config.minScore ?? COMPOSER_DEFAULT_VALUES.minScore}
-        pending={rescan.isPending}
-        onConfirm={(minScore) => void handleRescanConfirm(minScore)}
-      />
+      {rescanOpen && minimum !== undefined && (
+        <RescanDialog
+          open
+          onClose={() => setRescanOpen(false)}
+          skippedCount={skippedCount}
+          defaultMinScore={minimum}
+          pending={rescan.isPending || queue.campaign.isPending}
+          onConfirm={(minScore) => void handleRescanConfirm(minScore)}
+        />
+      )}
     </Stack>
   );
 }

@@ -1,71 +1,71 @@
 import {
-  AdminPanelSettings,
-  BugReport,
-  BusinessCenter,
-  Dashboard,
-  Description,
-  Forum,
-  Handshake,
-  Inbox,
-  Insights,
+  Bell,
+  Briefcase,
+  Bug,
+  LayoutGrid,
   Lightbulb,
-  Public,
+  ListChecks,
+  type LucideIcon,
+  Send,
   Settings,
-  SmartToy,
-  type SvgIconComponent,
-} from "@mui/icons-material";
+  Shield,
+  User,
+  Zap,
+} from "lucide-react";
 import { BUG_REPORT_URL, FEATURE_REQUEST_URL } from "@/lib/constants";
 import { isAdminRole } from "@/lib/roles";
 
 export interface NavItem {
   label: string;
   href: string;
-  icon: SvgIconComponent;
+  icon: LucideIcon;
   /** Shown only to ADMIN/SUPER_ADMIN. Cosmetic - the API's requireRole is the real gate. */
   adminOnly?: boolean;
-  /** Live attention badge on the icon: open pilot questions. */
-  badge?: "questions";
-  /** Gets its own tab on the mobile bottom nav; the rest fall into its "More" sheet. */
-  primary?: boolean;
+  /** Live count at the end of the item: what needs you, or work in the queue. */
+  badge?: "needs-you" | "queue";
   /** Extra pathname prefixes that keep this item highlighted (e.g. detail routes living outside its href). */
   matchHrefs?: string[];
 }
 
 export interface NavGroup {
-  label?: string;
   items: NavItem[];
 }
 
 const navGroups: NavGroup[] = [
   {
-    label: "Workspace",
-    items: [
-      { label: "Assistant", href: "/mvp", icon: BusinessCenter },
-      { label: "Applications", href: "/workspace", icon: Dashboard, primary: true },
-      { label: "Pilot", href: "/pilot", icon: SmartToy, badge: "questions", primary: true },
-      { label: "Inbox", href: "/inbox", icon: Inbox, primary: true },
-      { label: "Analytics", href: "/analytics", icon: Insights, primary: true },
-    ],
-  },
-  {
-    label: "Channels",
-    items: [
-      { label: "Upwork", href: "/upwork", icon: Handshake },
-      { label: "Networking", href: "/networking", icon: Forum },
-    ],
-  },
-  {
-    label: "Library",
     items: [
       {
-        label: "Documents",
-        href: "/documents",
-        icon: Description,
-        // Detail routes stayed at their old prefixes; keep Documents lit while viewing them.
-        matchHrefs: ["/resumes", "/cover-letters"],
+        label: "Dashboard",
+        href: "/dashboard",
+        icon: LayoutGrid,
+        matchHrefs: ["/analytics"],
       },
-      { label: "Boards", href: "/boards", icon: BusinessCenter },
-      { label: "Portfolio", href: "/portfolio", icon: Public },
+      {
+        label: "Queue",
+        href: "/queue",
+        icon: ListChecks,
+        badge: "queue",
+        matchHrefs: ["/account-setup"],
+      },
+      { label: "Needs you", href: "/needs-you", icon: Bell, badge: "needs-you" },
+      {
+        label: "Jobs",
+        href: "/discover",
+        icon: Briefcase,
+      },
+      { label: "Pilots", href: "/pilots", icon: Zap },
+      {
+        label: "Applications",
+        href: "/applications",
+        icon: Send,
+        matchHrefs: ["/campaigns"],
+      },
+      {
+        label: "Profile",
+        href: "/profile",
+        icon: User,
+        matchHrefs: ["/documents", "/resumes"],
+      },
     ],
   },
 ];
@@ -74,13 +74,18 @@ const navGroups: NavGroup[] = [
 export const footerNavGroups: NavGroup[] = [
   {
     items: [
-      { label: "Settings", href: "/settings", icon: Settings },
-      { label: "Admin", href: "/admin", icon: AdminPanelSettings, adminOnly: true },
+      {
+        label: "Settings",
+        href: "/settings",
+        icon: Settings,
+        matchHrefs: ["/boards", "/inbox"],
+      },
+      { label: "Admin", href: "/admin", icon: Shield, adminOnly: true },
     ],
   },
 ];
 
-/** The nav a given role may see. The rail and the mobile nav render from this, never from the raw groups. */
+/** The navigation available to the current account. */
 export function visibleNavGroups(role: string | undefined, groups = navGroups): NavGroup[] {
   return groups
     .map((group) => ({
@@ -92,24 +97,23 @@ export function visibleNavGroups(role: string | undefined, groups = navGroups): 
 
 /** External GitHub issue links - rendered as plain anchors, never through navGroups/next-link. */
 export const feedbackLinks: NavItem[] = [
-  { label: "Report a Bug", href: BUG_REPORT_URL, icon: BugReport },
+  { label: "Report a Bug", href: BUG_REPORT_URL, icon: Bug },
   { label: "Feature Request", href: FEATURE_REQUEST_URL, icon: Lightbulb },
 ];
 
 export const APP_TITLE = "OpenApply";
-export const RAIL_WIDTH = 208;
+export const RAIL_WIDTH = 240;
 export const DOCK_COLLAPSED = 56;
-export const DOCK_EXPANDED = 380;
+export const DOCK_EXPANDED = 400;
 export const DOCK_MIN_EXPANDED = 320;
 export const DOCK_MAX_EXPANDED = 640;
-export const MOBILE_NAV_HEIGHT = 56;
 
 function isHrefActive(pathname: string, href: string): boolean {
   const target = href.split("?")[0];
-  return target === "/" ? pathname === "/" : pathname.startsWith(target);
+  return pathname === target || (target !== "/" && pathname.startsWith(`${target}/`));
 }
 
-/** Active-route test shared by the desktop rail and the mobile bottom nav: the item's own href plus any matchHrefs prefixes. */
+/** Match the destination and any detail routes it owns. */
 export function isNavEntryActive(pathname: string, item: NavItem): boolean {
   return (
     isHrefActive(pathname, item.href) ||

@@ -1,4 +1,4 @@
 [test]
 # tsyringe throws at import without the reflect polyfill; tests have no entry point to load it from.
-# test-env.ts backfills ci.yml's dummy env so the suite also runs with no .env (fresh clone).
+# test-env.ts replaces inherited settings and rejects database calls before any connection.
 preload = ["reflect-metadata", "./scripts/test-env.ts"]

@@ -1,9 +1,9 @@
 "use client";
 
 import { type ReactNode, useState } from "react";
-import { EMPTY_RESUME_DATA, SUGGESTED_REWRITE_LABEL } from "@jobpilot/contracts/resume";
 import { AutoFixHigh } from "@mui/icons-material";
 import { Alert, AlertTitle, Button, Skeleton, Stack, Typography } from "@mui/material";
+import { EMPTY_RESUME_DATA, SUGGESTED_REWRITE_LABEL } from "@openapply/contracts/resume";
 import { api } from "@/api/client";
 import { useApiMutation, useApiQuery } from "@/api/hooks";
 import { resumeQueries } from "@/api/queries";

@@ -1,4 +1,3 @@
-import type { ResumeData } from "@jobpilot/contracts/resume";
 import {
   AccountCircleOutlined,
   Build,
@@ -12,6 +11,7 @@ import {
   WorkOutlined,
 } from "@mui/icons-material";
 import type { SvgIconProps } from "@mui/material";
+import type { ResumeData } from "@openapply/contracts/resume";
 import type { ComponentType } from "react";
 import { plural } from "@/utils/format";
 

@@ -9,23 +9,27 @@ export const FAQ_ITEMS = [
     a: "No. The agent runs inside Claude Code or Codex, so the AI work comes out of the subscription you already pay for. There's nothing to top up and no per-token bill from us.",
   },
   {
+    q: "Does my computer need to stay on?",
+    a: "While it's applying, yes. Your dashboard lives on the web, but the agent and the browser filling the forms run on your computer. Jobs wait in your queue while it's off and start again when it reconnects.",
+  },
+  {
+    q: "Which job boards does it search?",
+    a: "Company job boards on Greenhouse, Lever, Ashby, SmartRecruiters and Workable, plus public feeds such as Hacker News, Remote OK and We Work Remotely. The shared index refreshes every 10 to 30 minutes. Applications always run on the employer's own careers page.",
+  },
+  {
+    q: "Will it apply to a job twice?",
+    a: "No. Every job is checked against what you already applied to, by link and by title and company. If an earlier attempt might have gone through, the job waits in Needs you instead of being sent again.",
+  },
+  {
+    q: "What happens with captchas and verification codes?",
+    a: "Verification codes are read from the Gmail connected to your Claude or Codex plugin. Simple captchas it handles itself; image puzzles use your 2Captcha or CapSolver key if you've added one, otherwise the job waits for you.",
+  },
+  {
+    q: "Can I review jobs before it applies?",
+    a: "Yes. Each pilot can hold its matches for your review, and Run now always does. Add the ones you want to your queue, one at a time or all at once.",
+  },
+  {
     q: "Which AI model should I use?",
-    a: "A mid-tier one: Claude Sonnet 5.5 or GPT 6 Luna. Avoid top-tier models like Claude Opus 5.5. Applying to jobs is reading postings and filling forms, not hard reasoning, so the top tier eats your weekly usage limits far faster without applying to more jobs. OpenApply starts Claude Code on the latest Sonnet and Codex on GPT 6 Luna for you.",
-  },
-  {
-    q: "Where does the agent run?",
-    a: "On your computer. Your dashboard lives on the web, but the AI session and the browser doing the actual applying run locally, so you can watch it work and stop it at any point.",
-  },
-  {
-    q: "Which job boards are supported?",
-    a: "Eleven are built in, among them LinkedIn, Indeed, HN Who's Hiring, and Upwork. And since the agent drives a real browser, you can add any other board from the boards page. It isn't limited to a fixed list.",
-  },
-  {
-    q: "Can it read and send email?",
-    a: "Yes, if you connect Gmail through your own Google OAuth client, so no shared app ever touches your mail. That's how it sorts recruiter replies, fetches verification codes, and sends networking messages.",
-  },
-  {
-    q: "What about captchas?",
-    a: "Checkbox and text captchas it solves on its own. For image puzzles it uses your 2Captcha or CapSolver key if you've added one; if you haven't, it skips that job and tells you why.",
+    a: "A mid-tier one: Claude Sonnet 5.5 or GPT 6 Luna. Applying to jobs is reading postings and filling forms, not hard reasoning, so top-tier models use up your limits faster without applying to more jobs.",
   },
 ] as const;

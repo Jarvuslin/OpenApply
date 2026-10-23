@@ -23,7 +23,6 @@ export function TabStrip(props: TabStripProps): ReactElement {
       component="nav"
       aria-label={ariaLabel}
       sx={{
-        mb: 3,
         overflowX: "auto",
         // overflow-x:auto computes overflow-y to auto too; sub-pixel rounding then adds a scrollbar.
         overflowY: "hidden",

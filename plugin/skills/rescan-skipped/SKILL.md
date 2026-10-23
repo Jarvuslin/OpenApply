@@ -6,11 +6,11 @@ argument-hint: "<campaign-id> [--jobs key1,key2,…]"
 
 # Rescan Skipped - Recover Wrongly-Dropped Jobs
 
-Re-score a campaign's `skipped` jobs and set eligible ones to `approved`. **Never apply and never change the campaign's status** - apply the promoted jobs afterward via the `apply` skill (`apply campaign <campaign-id>`) or the campaign page.
+Re-score a campaign's `skipped` jobs and set eligible ones to `approved`. **Never apply and never change the campaign's status**. Applying promoted jobs requires explicit selection through the common queue. Follow `../_shared/queue-workspace.md`; a rescan task never delegates an apply-mode worker.
 
 ## Setup
 
-Follow `../_shared/setup.md`. Fetch the campaign: `jobpilot-api GET /api/campaigns/<campaign-id>`. Threshold = `config.minScore` (fallback `autoApply.minMatchScore`, else 60).
+Follow `../_shared/setup.md`. Fetch the campaign: `openapply-api GET /api/campaigns/<campaign-id>`. Threshold = `config.minScore` (fallback `autoApply.minMatchScore`, else 60).
 
 ## Step 1: Select Targets
 
@@ -24,22 +24,22 @@ Count the full target list up front and process every one. **Below-threshold, ze
 
 ## Step 2: Per Job
 
-1. **Digest** - parse the cached `digest`. Rich = non-empty `skills` **and** `requirements`/`responsibilities`.
-2. **Re-read only when needed** - if the digest is thin/empty, or the original `skipReason` was invalid (location/onsite, sparse JD, 1099, seniority), open the posting (`browser_navigate` + narrowed `browser_snapshot`; log in via `../_shared/auth.md` if walled) and rebuild the digest. Send that digest and posting text with the rescan command below; terminal rows cannot be PATCHed.
-
-3. **Re-score** - every target gets a fresh `POST /api/score-fit` with `{digest, minScore:<threshold>}`; never reuse the stored `matchScore`. Take the returned `score` as-is when `verdict` is `trust`; on `deliberate`, reason from `strongMatches`/`partialMatches`/`gaps`. A zero/low score with no `skipReason` (common at defense/federal employers) is not a disqualifier; eligibility follows `../_shared/eligibility.md`.
+1. **Read the full posting** with narrowed snapshots; authenticate per `../_shared/auth.md` if needed. A cached digest or old numeric score is insufficient. Inspect role, all nonempty preferences and explicit eligibility requirements.
+2. **Refresh source first** - terminal rows cannot be PATCHed. Write `{action:"refresh",description:<complete posting text>,digest:<display/tailoring JSON text>,title,company,location,type}` with only known metadata to a job-prefixed JSON file and POST `/api/campaigns/<id>/jobs/<key>/rescan`. It stays skipped; changed source invalidates the prior assessment. Never include score fields.
+3. **Assess original evidence** using `../_shared/original-fit.md`: request context for this saved skipped job, assess every criterion and submit the basis hashes. Reuse a current cached assessment unchanged; never rerate identical material to raise the score. An unavailable full posting remains unresolved, not approved.
 4. **Decide:**
-   - Eligible and `score >= threshold` → promote (no apply). Write `{"decision":"approved","matchScore":<0-100>,"matchReason":"<one line>","digest":"<digest JSON string>","description":"<posting text or empty>"}` to `$JOBPILOT_TEMP/rescan-<key>.json`, then:
+   - A current assessment meets the threshold and preference/eligibility checks → promote without applying. Write `{"decision":"approved"}` to `$OPENAPPLY_TEMP/rescan-<key>.json`, then:
 
 ```bash
-jobpilot-api POST /api/campaigns/<campaign-id>/jobs/<key>/rescan --data @"$JOBPILOT_TEMP/rescan-<key>.json"
+openapply-api POST /api/campaigns/<campaign-id>/jobs/<key>/rescan --data @"$OPENAPPLY_TEMP/rescan-<key>.json"
 ```
 
-- Below threshold after a fair read → POST `/rescan` with `decision:"skipped"`, the new score/reason, and `skipReason:"Below minimum match score (X < Y)"`.
-- JD-stated citizenship/clearance or no-sponsorship language found on re-read → POST `/rescan` with `decision:"skipped"` and that eligibility reason.
+- Below threshold → POST `/rescan` with `{decision:"skipped",skipReason:"Below minimum match score (X < Y)"}`. Never send a client score or reason field.
+- A known preference mismatch or confirmed JD eligibility conflict → POST `/rescan` with `{decision:"skipped",skipReason:<exact reason>}`.
+- Unclear scope or unresolved required facts → leave skipped, report unresolved and do not promote. Assessment uncertainty first requires agent inspection; it does not automatically request user approval.
 
 ## Step 3: Finish
 
 Process every target before finishing - `promoted + left-skipped + permanent` must equal the target count. If any are unprocessed, keep going; don't report a partial pass as complete.
 
-Print a short table (promoted vs left `skipped`, with reasons) plus the reconciliation (e.g. "228 skipped → 226 targets; 19 promoted, 207 left skipped"). Then point the user to `apply campaign <campaign-id>` (or the campaign page's Apply selected). Don't apply; don't change campaign status.
+Print a short table (promoted vs left `skipped`, with reasons) plus the reconciliation (e.g. "228 skipped → 226 targets; 19 promoted, 207 left skipped"). Then point the user to the campaign page's Apply selected action. Don't apply; don't change campaign status.

@@ -1,14 +1,16 @@
-import { statusSchema } from "@jobpilot/contracts/application";
+import { statusSchema } from "@openapply/contracts/application";
 import {
   classificationSchema,
   emailProviderSchema,
+  emailRuntimeProviderSchema,
   reviewStatusSchema,
-} from "@jobpilot/contracts/email";
-import { paginatedSchema, paginationQuerySchema } from "@jobpilot/contracts/pagination";
+} from "@openapply/contracts/email";
+import { paginatedSchema, paginationQuerySchema } from "@openapply/contracts/pagination";
 import { z } from "zod/v4";
 
 /** What narrows a set of inbox messages, whether the caller wants the rows or just how many. */
 export const messageFilters = z.object({
+  accountId: z.uuid().optional(),
   reviewStatus: reviewStatusSchema.optional(),
   // The literal "null" asks for messages the scan has not classified yet.
   classification: z.union([classificationSchema, z.literal("null")]).optional(),
@@ -19,47 +21,34 @@ export const messageFilters = z.object({
 
 export const messagesQuery = paginationQuerySchema.extend(messageFilters.shape);
 
-export const messageCountSchema = z.object({ count: z.number().int().min(0) });
-
-export const startQuery = z.object({ provider: emailProviderSchema.optional() });
-
-export const callbackQuery = z.object({
-  code: z.string().optional(),
-  state: z.string().optional(),
-  error: z.string().optional(),
+export const emailAccountSchema = z.object({
+  id: z.uuid(),
+  provider: emailProviderSchema,
+  email: z.string(),
+  runtimeProvider: emailRuntimeProviderSchema.nullable(),
+  identityVerified: z.boolean(),
+  lastCheckedAt: z.date().nullable(),
+  lastSyncAt: z.date().nullable(),
+  canSend: z.boolean(),
+  needsReauth: z.boolean(),
+  selected: z.boolean(),
 });
 
-/** Connection status of the profile's linked mailbox (`account.accountStatus`). */
+export const emailAccountsSchema = z.array(emailAccountSchema);
+
+/** Selected mailbox status; a saved row does not guarantee current connector access. */
 export const accountStatusSchema = z.union([
   z.object({
     connected: z.literal(false),
     canSend: z.boolean(),
   }),
-  z.object({
+  emailAccountSchema.extend({
     connected: z.literal(true),
-    provider: z.string(),
-    email: z.string(),
-    lastSyncAt: z.date().nullable(),
-    canSend: z.boolean(),
-    // True once a token refresh was rejected (invalid_grant): the mailbox must be reconnected.
-    needsReauth: z.boolean(),
   }),
 ]);
 
 /** Confirmation returned by disconnecting the mailbox (`account.disconnectAccount`). */
 export const accountDisconnectedSchema = z.object({ disconnected: z.boolean() });
-
-/** OAuth client config status (`account.getOAuthClient`) - never includes the secret. */
-export const oauthClientStatusSchema = z.object({
-  configured: z.boolean(),
-  provider: z.string(),
-  clientId: z.string().nullable(),
-  redirectUri: z.string(),
-  scopes: z.array(z.string()),
-});
-
-/** Confirmation returned by removing the OAuth client (`account.deleteOAuthClient`). */
-export const oauthClientDeletedSchema = z.object({ deleted: z.boolean() });
 
 /** Matched-application summary embedded on a message (`matchedApp` relation). */
 const matchedAppSchema = z
@@ -115,12 +104,6 @@ export const messageApprovedSchema = z.object({
   id: z.uuid(),
   applicationId: z.uuid(),
   status: statusSchema,
-});
-
-/** Provider message + thread ids returned after sending (`account.send`). */
-export const sentMessageSchema = z.object({
-  providerId: z.string(),
-  threadId: z.string(),
 });
 
 /** Fetched and newly-inserted counts from a sync run (`sync.syncInbox`). */

@@ -16,14 +16,14 @@ interface PageProps {
 const getCampaign = cache(async (id: string) =>
   dataOrThrow(
     await api.campaigns({ id }).get(await getFetchOptions()),
-    "Couldn't load this campaign",
+    "Couldn't load this search",
   ),
 );
 
 export async function generateMetadata(props: PageProps): Promise<Metadata> {
   const { id } = await props.params;
   const campaign = await getCampaign(id);
-  return { title: campaign?.query ?? "Campaign" };
+  return { title: campaign?.query ?? "Search" };
 }
 
 export default function CampaignDetailPage(props: PageProps): ReactElement {
@@ -47,12 +47,7 @@ async function Campaign(props: PageProps): Promise<ReactElement> {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Campaign"
-        title={campaign.query}
-        backHref="/workspace"
-        backLabel="Workspace"
-      />
+      <PageHeader title={campaign.query} backHref="/applications/searches" backLabel="Searches" />
       <CampaignDetail campaignId={id} />
     </>
   );

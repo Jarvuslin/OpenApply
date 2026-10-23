@@ -1,9 +1,9 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { ResumeExperience } from "@jobpilot/contracts/resume";
 import { Stack, TextField } from "@mui/material";
 import Grid from "@mui/material/Grid";
+import type { ResumeExperience } from "@openapply/contracts/resume";
 import { BulletListEditor } from "./bullet-list-editor";
 import { EntryList } from "./entry-list";
 
@@ -75,6 +75,15 @@ export function ExperienceSection(props: ExperienceSectionProps): ReactElement {
                 placeholder="Present"
                 value={entry.end ?? ""}
                 onChange={(e) => onUpdate({ ...entry, end: e.target.value })}
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                fullWidth
+                label="Date note"
+                placeholder="Multiple engagements"
+                value={entry.dateNote ?? ""}
+                onChange={(e) => onUpdate({ ...entry, dateNote: e.target.value })}
               />
             </Grid>
           </Grid>

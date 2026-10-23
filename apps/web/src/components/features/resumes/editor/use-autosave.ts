@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createAutosaveWriter } from "./autosave-writer";
 
 /** Long enough to swallow a burst of typing, short enough that leaving the page feels safe. */
 const DEBOUNCE_MS = 1500;
@@ -21,23 +22,14 @@ interface Autosave<T> {
 export function useAutosave<T>(options: AutosaveOptions<T>): Autosave<T> {
   const { save } = options;
   const [state, setState] = useState<SaveState>("clean");
-  const pending = useRef<T | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveRef = useRef(save);
   saveRef.current = save;
-
-  const write = (): void => {
-    const value = pending.current;
-    if (value === null) {
-      return;
-    }
-    pending.current = null;
-    setState("saving");
-    saveRef.current(value).then(
-      () => setState((current) => (current === "saving" ? "saved" : current)),
-      () => setState("error"),
-    );
-  };
+  const writerRef = useRef<ReturnType<typeof createAutosaveWriter<T>> | null>(null);
+  if (!writerRef.current) {
+    writerRef.current = createAutosaveWriter<T>((value) => saveRef.current(value), setState);
+  }
+  const writer = writerRef.current;
 
   const clearTimer = (): void => {
     if (timer.current) {
@@ -48,12 +40,11 @@ export function useAutosave<T>(options: AutosaveOptions<T>): Autosave<T> {
 
   const flush = (): void => {
     clearTimer();
-    write();
+    void writer.flush();
   };
 
   const change = (value: T): void => {
-    pending.current = value;
-    setState("dirty");
+    writer.change(value);
     clearTimer();
     timer.current = setTimeout(flush, DEBOUNCE_MS);
   };
@@ -63,12 +54,10 @@ export function useAutosave<T>(options: AutosaveOptions<T>): Autosave<T> {
     return () => {
       if (timer.current) {
         clearTimeout(timer.current);
-        if (pending.current !== null) {
-          void saveRef.current(pending.current);
-        }
       }
+      void writer.flush();
     };
-  }, []);
+  }, [writer]);
 
   return { state, change, flush };
 }

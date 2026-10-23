@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Pty.Net;
 
-namespace JobPilot.Terminal.Sessions;
+namespace OpenApply.Terminal.Sessions;
 
 public sealed class PtyStartException(string command, Exception innerException)
     : Exception($"Failed to start '{command}': {innerException.Message}", innerException);
@@ -123,8 +123,11 @@ public sealed class PtyProcess : IDisposable
         BestEffort(active.Dispose);
     }
 
-    public static IPtyConnection SpawnWithPtyNet(PtyOptions options) =>
-        Task.Run(() => PtyProvider.SpawnAsync(options, CancellationToken.None)).GetAwaiter().GetResult();
+    public static IPtyConnection SpawnWithPtyNet(PtyOptions options)
+    {
+        PtyLaunch.Prepare(options);
+        return Task.Run(() => PtyProvider.SpawnAsync(options, CancellationToken.None)).GetAwaiter().GetResult();
+    }
 
     public static PtyOptions BuildOptions(
         string command,

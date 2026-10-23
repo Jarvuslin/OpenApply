@@ -1,23 +1,17 @@
+import { randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { mkdir, readdir, stat, unlink, utimes, writeFile } from "node:fs/promises";
+import { mkdir, readdir, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { slugify } from "@/common/utils/slug";
 import { env } from "@/env";
 
 const STORAGE_ROOT = path.resolve(env.STORAGE_ROOT);
 const RESUMES_DIR = path.join(STORAGE_ROOT, "resumes");
-const GENERATED_DIR = path.join(STORAGE_ROOT, "resumes-generated");
+const SCREENSHOTS_DIR = path.join(STORAGE_ROOT, "submission-screenshots");
+const TRANSCRIPTS_DIR = path.join(STORAGE_ROOT, "transcripts");
 
 export function resumePath(filename: string): string {
   return path.join(RESUMES_DIR, filename);
-}
-
-export function generatedResumePath(id: string, updatedAtMs: number): string {
-  return path.join(GENERATED_DIR, `master-${id}-${updatedAtMs}.pdf`);
-}
-
-export function generatedVariantPath(variantId: string, createdAtMs: number): string {
-  return path.join(GENERATED_DIR, `variant-${variantId}-${createdAtMs}.pdf`);
 }
 
 /** Unlinks a file, treating an already-missing file as success. Returns whether it removed anything. */
@@ -37,60 +31,13 @@ export async function deleteResumeFile(filename: string): Promise<void> {
   await tryUnlink(resumePath(filename));
 }
 
-/** Unlinks files in a directory matching any of the prefixes plus the suffix, in one scan. */
-async function unlinkMatching(dir: string, prefixes: string[], suffix: string): Promise<void> {
-  let entries: string[];
-  try {
-    entries = await readdir(dir);
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") {
-      return;
-    }
-    throw e;
-  }
-
-  await Promise.all(
-    entries
-      .filter((name) => name.endsWith(suffix) && prefixes.some((p) => name.startsWith(p)))
-      .map((name) => tryUnlink(path.join(dir, name))),
-  );
-}
-
-function deleteGeneratedResumeFiles(resumeId: string): Promise<void> {
-  return unlinkMatching(GENERATED_DIR, [`master-${resumeId}-`], ".pdf");
-}
-
-/** Takes every id at once: one call per variant would re-scan the shared cache dir each time. */
-export function deleteGeneratedVariantFiles(...variantIds: string[]): Promise<void> {
-  return unlinkMatching(
-    GENERATED_DIR,
-    variantIds.map((id) => `variant-${id}-`),
-    ".pdf",
-  );
-}
-
-interface ResumeArtifactRefs {
-  resumeId: string;
-  sourceFilename: string | null;
-  variantIds: string[];
-}
-
-export async function deleteAllResumeArtifacts(refs: ResumeArtifactRefs): Promise<void> {
-  const { resumeId, sourceFilename, variantIds } = refs;
-  await Promise.all([
-    sourceFilename ? deleteResumeFile(sourceFilename) : Promise.resolve(),
-    deleteGeneratedResumeFiles(resumeId),
-    deleteGeneratedVariantFiles(...variantIds),
-  ]);
-}
-
 /** Writes an uploaded resume under a fresh name and returns that name. */
 export async function saveResumeSource(file: File): Promise<string> {
   const ext = path.extname(file.name) || ".pdf";
   const slug = slugify(path.basename(file.name, ext), { fallback: "resume" });
-  const filename = `${slug}-${Date.now()}${ext}`;
+  const filename = `${slug}-${randomUUID()}${ext}`;
   await mkdir(RESUMES_DIR, { recursive: true });
-  await writeFile(resumePath(filename), Buffer.from(await file.arrayBuffer()));
+  await writeFile(resumePath(filename), Buffer.from(await file.arrayBuffer()), { flag: "wx" });
   return filename;
 }
 
@@ -114,25 +61,6 @@ export function slugifyForDownload(label: string): string {
   return slugify(label, { fallback: "resume" });
 }
 
-/**
- * Serves the PDF cached at `cachePath`, rendering it on a miss. A hit bumps the mtime, so the prune
- * sweep measures idleness from the last download rather than the last render.
- */
-export async function serveCachedPdf(
-  cachePath: string,
-  render: () => Promise<Buffer>,
-  label: string,
-): Promise<Response> {
-  try {
-    const now = new Date();
-    await utimes(cachePath, now, now);
-  } catch {
-    await mkdir(GENERATED_DIR, { recursive: true });
-    await writeFile(cachePath, await render());
-  }
-  return streamFile(cachePath, "application/pdf", `${slugifyForDownload(label)}.pdf`);
-}
-
 export interface CachePruneResult {
   scanned: number;
   removed: number;
@@ -141,20 +69,22 @@ export interface CachePruneResult {
 }
 
 /**
- * Prunes the generated-PDF cache so it can't fill the disk: first evicts files idle
- * longer than `ttlMs`, then, if the survivors still exceed `maxBytes`, evicts coldest
- * (oldest mtime) first until under the cap. A `ttlMs`/`maxBytes` of 0 disables that
- * stage. Safe to run repeatedly - every evicted file is re-rendered on next download.
+ * Evicts files idle longer than `ttlMs`, then, if the survivors still exceed `maxBytes`, evicts
+ * coldest (oldest mtime) first until under the cap. A `ttlMs`/`maxBytes` of 0 disables that stage.
  */
 interface CachePruneOptions {
   ttlMs: number;
   maxBytes: number;
 }
 
-export async function pruneGeneratedCache(opts: CachePruneOptions): Promise<CachePruneResult> {
+export function pruneSubmissionScreenshots(opts: CachePruneOptions): Promise<CachePruneResult> {
+  return pruneDirectory(SCREENSHOTS_DIR, opts);
+}
+
+async function pruneDirectory(dir: string, opts: CachePruneOptions): Promise<CachePruneResult> {
   let names: string[];
   try {
-    names = await readdir(GENERATED_DIR);
+    names = await readdir(dir);
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === "ENOENT") {
       return { scanned: 0, removed: 0, freedBytes: 0, remainingBytes: 0 };
@@ -165,7 +95,7 @@ export async function pruneGeneratedCache(opts: CachePruneOptions): Promise<Cach
   const files: { path: string; size: number; mtimeMs: number }[] = [];
   await Promise.all(
     names.map(async (name) => {
-      const filePath = path.join(GENERATED_DIR, name);
+      const filePath = path.join(dir, name);
       try {
         const s = await stat(filePath);
         if (s.isFile()) {
@@ -213,4 +143,42 @@ export async function pruneGeneratedCache(opts: CachePruneOptions): Promise<Cach
   }
 
   return { scanned: files.length, removed, freedBytes, remainingBytes };
+}
+
+/** One screenshot per work item, named by its id, so a resend replaces the old one. */
+export function submissionScreenshotPath(workItemId: string): string {
+  return path.join(SCREENSHOTS_DIR, `${workItemId}.png`);
+}
+
+export async function saveSubmissionScreenshot(workItemId: string, bytes: Buffer): Promise<void> {
+  await mkdir(SCREENSHOTS_DIR, { recursive: true });
+  await writeFile(submissionScreenshotPath(workItemId), bytes);
+}
+
+export async function hasSubmissionScreenshot(workItemId: string): Promise<boolean> {
+  try {
+    return (await stat(submissionScreenshotPath(workItemId))).isFile();
+  } catch {
+    return false;
+  }
+}
+
+export async function deleteSubmissionScreenshot(workItemId: string): Promise<void> {
+  await tryUnlink(submissionScreenshotPath(workItemId));
+}
+
+export function transcriptPath(filename: string): string {
+  return path.join(TRANSCRIPTS_DIR, filename);
+}
+
+/** Writes the profile transcript under a fresh name and returns that name. */
+export async function saveTranscript(userId: string, bytes: Buffer): Promise<string> {
+  const filename = `${userId}-${randomUUID()}.pdf`;
+  await mkdir(TRANSCRIPTS_DIR, { recursive: true });
+  await writeFile(transcriptPath(filename), bytes, { flag: "wx" });
+  return filename;
+}
+
+export async function deleteTranscriptFile(filename: string): Promise<void> {
+  await tryUnlink(transcriptPath(filename));
 }

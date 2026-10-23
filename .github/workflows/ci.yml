@@ -20,6 +20,11 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Cache Bun dependencies
         uses: actions/cache@v6
         with:
@@ -36,16 +41,16 @@ jobs:
           fixture="$(mktemp -d)"
           claude="$fixture/claude"
           codex="$fixture/codex"
-          mkdir -p "$claude/plugins/jobpilot" \
-                   "$codex/plugins/jobpilot/.codex-plugin" \
+          mkdir -p "$claude/plugins/openapply" \
+                   "$codex/plugins/openapply/.codex-plugin" \
                    "$codex/.agents/plugins"
           cat > "$codex/.agents/plugins/marketplace.json" <<'JSON'
           {
             "name": "sukhrob-codex-plugins",
             "interface": { "displayName": "Sukhrob Codex Plugins" },
             "plugins": [{
-              "name": "jobpilot",
-              "source": { "source": "local", "path": "./plugins/jobpilot" },
+              "name": "openapply",
+              "source": { "source": "local", "path": "./plugins/openapply" },
               "policy": { "installation": "AVAILABLE", "authentication": "ON_USE" },
               "category": "Productivity"
             }]
@@ -53,12 +58,12 @@ jobs:
           JSON
 
           # Equal size and mtime reproduces the old rsync false-negative.
-          cp -p plugin/.codex-plugin/plugin.json "$codex/plugins/jobpilot/.codex-plugin/plugin.json"
-          sed -i '0,/jobpilot/s//jobpilox/' "$codex/plugins/jobpilot/.codex-plugin/plugin.json"
-          touch -r plugin/.codex-plugin/plugin.json "$codex/plugins/jobpilot/.codex-plugin/plugin.json"
+          cp -p plugin/.codex-plugin/plugin.json "$codex/plugins/openapply/.codex-plugin/plugin.json"
+          sed -i '0,/openapply/s//jobpilox/' "$codex/plugins/openapply/.codex-plugin/plugin.json"
+          touch -r plugin/.codex-plugin/plugin.json "$codex/plugins/openapply/.codex-plugin/plugin.json"
 
           bash .github/scripts/sync-marketplaces.sh . "$claude" "$codex"
-          cmp plugin/.codex-plugin/plugin.json "$codex/plugins/jobpilot/.codex-plugin/plugin.json"
+          cmp plugin/.codex-plugin/plugin.json "$codex/plugins/openapply/.codex-plugin/plugin.json"
 
       - name: Lint & format check
         run: bun run ci
@@ -77,15 +82,21 @@ jobs:
         run: bun run typecheck
         working-directory: apps/api
 
-      # Still no services. The admin guard test imports a real controller, so env.ts has to validate -
-      # these are dummies: pg pools are lazy, and the 401/403 paths it asserts never issue a query.
+      # The unit preload replaces inherited settings and rejects database access before sockets.
       - name: Test API
         run: bun run test
         working-directory: apps/api
-        env:
-          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
-          JWT_SECRET: ci-test-secret
-          SECRET_MASTER_KEY: Y2ktdGVzdC1tYXN0ZXIta2V5LTMyLWJ5dGVzLWxvbmc=
+
+      - name: Test contracts
+        run: bun run test
+        working-directory: packages/contracts
+
+      - name: Test web
+        run: bun run test
+        working-directory: apps/web
+
+      - name: Test classified local Node suites
+        run: bun run test:node
 
       - name: Typegen web
         run: bun run typegen
@@ -130,14 +141,13 @@ jobs:
       - name: Verify publish root ships provider assets
         working-directory: apps/terminal/publish
         run: |
-          for f in jobpilot \
+          for f in openapply \
                    plugin/.claude-plugin/plugin.json \
                    plugin/.codex-plugin/plugin.json \
                    plugin/.mcp.json \
                    plugin/skills/_shared/setup.md \
                    plugin/skills/auto-apply/SKILL.md \
-                   .codex/agents/job-worker.toml \
-                   .codex/agents/networking-worker.toml; do
+                   .codex/agents/job-worker.toml; do
             test -e "$f" || { echo "missing from publish root: $f"; exit 1; }
           done
           test ! -e .agents/plugins/marketplace.json || {

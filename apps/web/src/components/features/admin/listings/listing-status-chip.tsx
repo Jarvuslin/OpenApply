@@ -1,12 +1,13 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { JobListingStatus } from "@jobpilot/contracts/job-listing";
+import type { JobListingStatus } from "@openapply/contracts/job-listing";
 import { ColorChip } from "@/components/ui/display";
 
 const STATUS_COLOR: Record<JobListingStatus, "primary" | "default"> = {
   published: "primary",
   hidden: "default",
+  expired: "default",
 };
 
 interface ListingStatusChipProps {

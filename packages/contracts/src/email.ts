@@ -1,9 +1,19 @@
 import { z } from "zod/v4";
 import { type ApplicationStatus, statusSchema } from "./application";
 
-export const EMAIL_PROVIDERS = ["gmail", "outlook", "imap"] as const;
+export const EMAIL_PROVIDERS = ["gmail", "outlook", "imap", "connector"] as const;
 export const emailProviderSchema = z.enum(EMAIL_PROVIDERS);
-export type EmailProvider = z.infer<typeof emailProviderSchema>;
+
+export const EMAIL_RUNTIME_PROVIDERS = ["claude", "codex"] as const;
+export const emailRuntimeProviderSchema = z.enum(EMAIL_RUNTIME_PROVIDERS);
+const mailboxAddressSchema = z.string().trim().toLowerCase().pipe(z.email());
+
+export const registerConnectorAccountSchema = z.object({
+  mailbox: mailboxAddressSchema,
+  runtimeProvider: emailRuntimeProviderSchema,
+  identityVerified: z.boolean().default(false),
+});
+export type RegisterConnectorAccountInput = z.input<typeof registerConnectorAccountSchema>;
 
 export const CLASSIFICATIONS = [
   "interviewing",
@@ -42,19 +52,35 @@ export const approveSchema = z.object({
   note: z.string().optional().nullable(),
 });
 
-/**
- * Upsert the user's own Google OAuth client. `clientSecret` is optional so an
- * edit can leave it blank to keep the stored one; the service requires it on
- * first create.
- */
-export const oauthClientUpsertSchema = z.object({
-  provider: emailProviderSchema.optional(),
-  clientId: z.string().trim().min(1, "Client ID is required"),
-  clientSecret: z.string().optional(),
-});
-
 export type Classification = z.infer<typeof classificationSchema>;
 export type ReviewStatus = z.infer<typeof reviewStatusSchema>;
 export type ScanMessageInput = z.infer<typeof scanMessageSchema>;
 export type ApproveInput = z.infer<typeof approveSchema>;
-export type OAuthClientUpsertInput = z.infer<typeof oauthClientUpsertSchema>;
+
+export const ingestMessagesSchema = z.object({
+  mailbox: mailboxAddressSchema,
+  accountId: z.uuid().optional(),
+  runtimeProvider: emailRuntimeProviderSchema.optional(),
+  messages: z
+    .array(
+      z
+        .object({
+          providerId: z.string().min(1).max(500),
+          threadId: z.string().max(500).nullable(),
+          subject: z.string().max(2000),
+          fromAddress: z.email().toLowerCase(),
+          toHeader: z.string().max(4000).nullish(),
+          fromName: z.string().max(1000).nullable(),
+          fromDomain: z.string().min(1).max(253).toLowerCase(),
+          snippet: z.string().max(5000),
+          rawBody: z.string().max(100000),
+          receivedAt: z.coerce.date(),
+        })
+        .refine(
+          (m) => m.fromDomain === m.fromAddress.split("@")[1],
+          "Sender domain must match the sender address",
+        ),
+    )
+    .max(100),
+});
+export type IngestMessagesInput = z.infer<typeof ingestMessagesSchema>;

@@ -1,5 +1,5 @@
 /**
- * Keyword normalization for skill matching (`scoring/fit.ts`, `resume/tailor.ts`); duplicate
+ * Keyword normalization for resume tailoring; duplicate
  * detection lives in `scoring/applied-duplicates.ts` instead. Match with `toSearchText` +
  * `matchesTerm` (keeps `+`/`#` so "c++"/"c#"/"c" stay distinct, and tests whole tokens);
  * `normalizePhrase` feeds the persisted dedupe keys in `job-listing/dedupe.ts`, so its output

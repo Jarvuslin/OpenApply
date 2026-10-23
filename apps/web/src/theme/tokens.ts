@@ -21,25 +21,27 @@ export const shadows = {
   sm: "none",
   md: "0 4px 16px rgba(25,30,25,0.06)",
   lg: "0 16px 48px rgba(25,30,25,0.12)",
-  focus: `0 0 0 2px ${alpha(accent.primary, 0.5)}`,
+  focus: `0 0 0 3px ${alpha(accent.secondary, 0.16)}`,
 } as const;
 
 export const radii = {
   xs: 4,
-  sm: 7,
-  md: 12,
-  lg: 16,
+  sm: 6,
+  md: 8,
+  lg: 12,
+  control: 14,
+  card: 20,
   pill: 999,
 } as const;
 
 /**
  * The two heights every input, button and toggle snaps to, so a filter row lines up without
  * per-call-site `sx`. `md` is what MUI's `size="small"` outlined input already measures at our
- * 13px body font - the rest are pinned to it.
+ * 14px body font - the rest are pinned to it.
  */
 export const controlHeights = {
   sm: 32,
-  md: 38,
+  md: 36,
 } as const;
 
 export const iconSizes = {

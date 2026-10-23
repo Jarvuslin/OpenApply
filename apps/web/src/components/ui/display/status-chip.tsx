@@ -1,23 +1,23 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { ApplicationStatus } from "@jobpilot/contracts/application";
 import type { ChipProps } from "@mui/material";
+import type { ApplicationStatus } from "@openapply/contracts/application";
 import { ColorChip } from "./color-chip";
 
 export const STATUS_LABEL: Record<ApplicationStatus, string> = {
-  applied: "Applied",
+  applied: "Submitted",
   screening: "Screening",
   interviewing: "Interviewing",
   offer: "Offer",
-  rejected: "Rejected",
+  rejected: "Not selected",
   withdrawn: "Withdrawn",
 };
 
 const STATUS_COLOR: Record<ApplicationStatus, ChipProps["color"]> = {
-  applied: "default",
+  applied: "success",
   screening: "info",
-  interviewing: "primary",
+  interviewing: "warning",
   offer: "success",
   rejected: "error",
   withdrawn: "default",

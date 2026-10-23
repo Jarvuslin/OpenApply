@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { type JobBoardInput, jobBoardSchema } from "@jobpilot/contracts/job-board";
 import { Stack } from "@mui/material";
+import { type JobBoardInput, jobBoardSchema } from "@openapply/contracts/job-board";
 import { useSelector } from "@tanstack/react-form";
 import { z } from "zod/v4";
 import { useApiQuery } from "@/api/hooks";

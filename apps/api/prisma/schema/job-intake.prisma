@@ -1,0 +1,107 @@
+enum IntakeDecision {
+  pending
+  apply_now
+  queue
+  skip
+  @@map("intake_decision")
+}
+
+model JobIntake {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  jobId String? @unique @map("job_id")
+  job Job? @relation(fields:[jobId],references:[id],onDelete:SetNull)
+  canonicalUrl String @map("canonical_url")
+  originalUrl String @map("original_url")
+  provider AgentProvider?
+  authorship QuestionAuthorship
+  revision Int @default(1)
+  decision IntakeDecision @default(pending)
+  reason String
+  resolved Boolean @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  requests JobIntakeRequest[]
+  @@unique([userId,canonicalUrl])
+  @@index([userId,createdAt])
+  @@map("job_intakes")
+}
+
+model JobIntakeRequest {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  requestId String @map("request_id")
+  payloadHash String @map("payload_hash")
+  intakeId String @map("intake_id")
+  intake JobIntake @relation(fields:[intakeId],references:[id],onDelete:Cascade)
+  response Json
+  createdAt DateTime @default(now()) @map("created_at")
+  @@unique([userId,requestId])
+  @@index([intakeId])
+  @@map("job_intake_requests")
+}
+
+model ApplicationRule {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  companyKey String @map("company_key")
+  company String
+  active Boolean @default(true)
+  revision Int @default(1)
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@unique([userId,companyKey])
+  @@map("application_rules")
+}
+
+model ApplicationRuleChange {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  requestId String @map("request_id")
+  payloadHash String @map("payload_hash")
+  ruleId String @map("rule_id")
+  revision Int
+  previousActive Boolean @map("previous_active")
+  nextActive Boolean @map("next_active")
+  authorship QuestionAuthorship
+  response Json
+  undoneAt DateTime? @map("undone_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@unique([userId,requestId])
+  @@unique([userId,revision])
+  @@index([ruleId])
+  @@map("application_rule_changes")
+}
+
+enum RuntimeState {
+  ready
+  busy
+  blocked
+  stopped
+  @@map("runtime_state")
+}
+
+enum RuntimeBlockingCode {
+  model_approval_required
+  budget_exhausted
+  provider_unavailable
+  browser_unavailable
+  runtime_error
+  @@map("runtime_blocking_code")
+}
+
+model RuntimePresence {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  runtimeId String @map("runtime_id")
+  state RuntimeState
+  executionAvailable Boolean @map("execution_available")
+  blockingCode RuntimeBlockingCode? @map("blocking_code")
+  lastSeenAt DateTime @default(now()) @map("last_seen_at")
+  @@unique([userId,runtimeId])
+  @@index([userId,lastSeenAt])
+  @@map("runtime_presence")
+}

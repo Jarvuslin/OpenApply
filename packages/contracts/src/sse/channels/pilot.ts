@@ -4,9 +4,7 @@ export type PilotEvent =
   | { type: "journal.appended"; entry: unknown }
   | { type: "question.created"; question: unknown }
   | { type: "question.answered"; question: unknown }
-  | { type: "state.changed"; state: unknown }
-  | { type: "promotion.created"; promotion: unknown }
-  | { type: "promotion.updated"; promotion: unknown };
+  | { type: "state.changed"; state: unknown };
 
 /** Parameter-free path: the server resolves the profile from the session. */
 export const pilotChannel = defineChannel<PilotEvent, void, { userId: string }>({

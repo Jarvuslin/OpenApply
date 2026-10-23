@@ -1,7 +1,8 @@
-import { EMPTY_RESUME_DATA, type ResumeData } from "@jobpilot/contracts/resume";
+import { EMPTY_RESUME_DATA, type ResumeData } from "@openapply/contracts/resume";
 import { HttpError } from "@/common/errors";
 import type { TailorVariantBody } from "../variants/variant.schema";
 import { buildTailoredVariant } from "./build-variant";
+import { grounding, workflowReview } from "./fakes";
 import { describe, expect, it } from "bun:test";
 
 function base(): ResumeData {
@@ -46,7 +47,7 @@ function base(): ResumeData {
 }
 
 function body(over: Partial<TailorVariantBody> = {}): TailorVariantBody {
-  return { label: "Acme - Engineer", ...over };
+  return { label: "Acme - Engineer", workflowReview: workflowReview(), ...over };
 }
 
 function violationsOf(fn: () => unknown): string[] {
@@ -89,7 +90,16 @@ describe("buildTailoredVariant", () => {
       base(),
       body({
         bulletRewrites: [
-          { entryIndex: 3, bullets: [{ original: "Shipped D.", tailored: "Delivered D." }] },
+          {
+            entryIndex: 3,
+            bullets: [
+              {
+                original: "Shipped D.",
+                tailored: "Delivered D.",
+                grounding: grounding("/experience/3/bullets/0", "Shipped D."),
+              },
+            ],
+          },
         ],
       }),
     );
@@ -99,16 +109,25 @@ describe("buildTailoredVariant", () => {
     expect(result.audit?.experience).toHaveLength(1);
   });
 
-  it("validates rewrites against the restructured entries, not the base ones", () => {
+  it("keeps evidence indexes tied to the base before explicit structure moves", () => {
     const result = buildTailoredVariant(
       base(),
       body({
         structure: {
           mergeEntries: [{ into: 2, from: [3], company: "Independent / Contract" }],
         },
-        // Only reachable post-merge: "Shipped D." belonged to base entry 3.
+        // The audit retains entry 3 even when its content is later merged into entry 2.
         bulletRewrites: [
-          { entryIndex: 2, bullets: [{ original: "Shipped D.", tailored: "Delivered D." }] },
+          {
+            entryIndex: 3,
+            bullets: [
+              {
+                original: "Shipped D.",
+                tailored: "Delivered D.",
+                grounding: grounding("/experience/3/bullets/0", "Shipped D."),
+              },
+            ],
+          },
         ],
       }),
     );
@@ -117,8 +136,8 @@ describe("buildTailoredVariant", () => {
     expect(result.content.experience[2].bullets).toEqual(["Shipped C.", "Delivered D."]);
     expect(result.audit?.structure?.merged).toHaveLength(1);
     expect(result.audit?.experience[0]).toMatchObject({
-      entryIndex: 2,
-      company: "Independent / Contract",
+      entryIndex: 3,
+      company: "Older Co",
     });
   });
 
@@ -131,16 +150,22 @@ describe("buildTailoredVariant", () => {
   });
 
   it("retargets the headline", () => {
-    const result = buildTailoredVariant(base(), body({ headline: "Backend Engineer" }));
+    const result = buildTailoredVariant(
+      base(),
+      body({
+        headline: "Frontend Developer",
+        headlineGrounding: grounding("/basics/headline", "Frontend Engineer"),
+      }),
+    );
 
-    expect(result.content.basics.headline).toBe("Backend Engineer");
+    expect(result.content.basics.headline).toBe("Frontend Developer");
   });
 
   it("stores no audit when nothing was reworded or restructured", () => {
-    const result = buildTailoredVariant(base(), body({ summary: "Targeted summary." }));
+    const result = buildTailoredVariant(base(), body({ workflowReview: undefined }));
 
     expect(result.audit).toBeNull();
     expect(result.rewordedBullets).toBe(0);
-    expect(result.content.summary).toBe("Targeted summary.");
+    expect(result.content.summary).toBe("Engineer.");
   });
 });

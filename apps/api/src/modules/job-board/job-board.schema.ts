@@ -1,4 +1,4 @@
-import { paginatedSchema, paginationQuerySchema } from "@jobpilot/contracts/pagination";
+import { paginatedSchema, paginationQuerySchema } from "@openapply/contracts/pagination";
 import { z } from "zod/v4";
 
 /** The admin catalog is searchable by name or domain; the filter runs server-side, not per page. */

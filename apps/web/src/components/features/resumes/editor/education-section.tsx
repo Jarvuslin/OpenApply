@@ -1,9 +1,9 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { ResumeEducation } from "@jobpilot/contracts/resume";
-import { Stack, TextField } from "@mui/material";
+import { Stack, TextField, Typography } from "@mui/material";
 import Grid from "@mui/material/Grid";
+import type { ResumeEducation } from "@openapply/contracts/resume";
 import { BulletListEditor } from "./bullet-list-editor";
 import { EntryList } from "./entry-list";
 
@@ -64,12 +64,28 @@ export function EducationSection(props: EducationSectionProps): ReactElement {
                 onChange={(e) => onUpdate({ ...entry, end: e.target.value })}
               />
             </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                label="Location"
+                value={entry.location ?? ""}
+                onChange={(e) => onUpdate({ ...entry, location: e.target.value })}
+              />
+            </Grid>
           </Grid>
+          <Typography variant="body2Strong">Education details</Typography>
           <BulletListEditor
             label="Details"
             placeholder="GPA, honors, coursework, …"
             value={entry.details}
             onChange={(details) => onUpdate({ ...entry, details })}
+          />
+          <Typography variant="body2Strong">Additional achievements</Typography>
+          <BulletListEditor
+            label="Additional achievements"
+            placeholder="An additional academic achievement"
+            value={entry.bullets ?? []}
+            onChange={(bullets) => onUpdate({ ...entry, bullets })}
           />
         </Stack>
       )}

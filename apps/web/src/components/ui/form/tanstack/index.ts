@@ -1,4 +1,5 @@
 import { createFormHook } from "@tanstack/react-form";
+import { Autocomplete } from "./autocomplete-field";
 import { Checkbox } from "./checkbox-field";
 import { Currency } from "./currency-field";
 import { FileUpload } from "./file-upload-field";
@@ -23,6 +24,7 @@ export const { useAppForm, withForm } = createFormHook({
   fieldContext,
   formContext,
   fieldComponents: {
+    Autocomplete,
     TextField,
     Select,
     Multiselect,

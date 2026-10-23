@@ -1,7 +1,7 @@
 "use client";
 
 import { type MouseEvent, type ReactElement, useState } from "react";
-import { Feedback } from "@mui/icons-material";
+import { MoreHoriz } from "@mui/icons-material";
 import { IconButton, ListItemIcon, ListItemText, Menu, MenuItem, Tooltip } from "@mui/material";
 import { feedbackLinks } from "./shell-config";
 
@@ -15,8 +15,13 @@ export function FeedbackMenu(): ReactElement {
   return (
     <>
       <Tooltip title="Feedback" placement="right">
-        <IconButton size="small" onClick={handleOpen} sx={{ color: "text.secondary" }}>
-          <Feedback fontSize="small" />
+        <IconButton
+          aria-label="Feedback"
+          size="small"
+          onClick={handleOpen}
+          sx={{ color: "text.secondary" }}
+        >
+          <MoreHoriz fontSize="small" />
         </IconButton>
       </Tooltip>
       <Menu
@@ -36,7 +41,7 @@ export function FeedbackMenu(): ReactElement {
             onClick={handleClose}
           >
             <ListItemIcon>
-              <link.icon fontSize="small" />
+              <link.icon size={16} strokeWidth={1.75} />
             </ListItemIcon>
             <ListItemText>{link.label}</ListItemText>
           </MenuItem>

@@ -25,15 +25,21 @@ function fakePrisma() {
   };
 
   const db = {
+    $transaction: async (work: (tx: PrismaClient) => Promise<unknown>) =>
+      work(db as unknown as PrismaClient),
+    $queryRaw: async () => [],
+    applicationDocumentSelection: { findMany: async () => [] },
     pilotJournalEntry: model("pilotJournalEntry", 1, 2),
-    pilotClaim: model("pilotClaim", 3, 4),
     pilotQuestion: model("pilotQuestion", 5),
     verificationToken: model("verificationToken", 6),
     refreshToken: model("refreshToken", 7),
-    promotionPost: model("promotionPost", 8),
+
     emailMessage: model("emailMessage", 9),
     applicationEvent: model("applicationEvent", 10),
-    resumeVariant: model("resumeVariant", 11),
+    resumeVariant: {
+      ...model("resumeVariant", 11),
+      findMany: async () => [{ resume: { userId: "retention-owner" } }],
+    },
   };
 
   return { db: db as unknown as PrismaClient, calls };
@@ -49,26 +55,12 @@ describe("runRetentionCleanup", () => {
     expect(calls.pilotJournalEntry?.[0]?.where).toMatchObject({ kind: { not: "digest" } });
     expect(calls.pilotJournalEntry?.[1]?.where).toMatchObject({ kind: "digest" });
 
-    // pilot_claims: released ones excluding search.discover, then search.discover on the longer window.
-    // Never touches open claims - releasedAt.not must be null, not omitted.
-    expect(calls.pilotClaim).toHaveLength(2);
-    const releasedWhere = calls.pilotClaim?.[0]?.where as { releasedAt: { not: unknown } };
-    expect(releasedWhere.releasedAt.not).toBeNull();
-    expect(calls.pilotClaim?.[0]?.where).toMatchObject({ kind: { not: "search.discover" } });
-    expect(calls.pilotClaim?.[1]?.where).toMatchObject({ kind: "search.discover" });
-
     // pilot_questions: terminal statuses only, never open.
     expect(calls.pilotQuestion).toHaveLength(1);
     expect(JSON.stringify(calls.pilotQuestion?.[0]?.where)).not.toContain('"open"');
 
     expect(calls.verificationToken).toHaveLength(1);
     expect(calls.refreshToken).toHaveLength(1);
-
-    expect(calls.promotionPost).toHaveLength(1);
-    const promoWhere = calls.promotionPost?.[0]?.where as { status: { in: string[] } };
-    for (const kept of ["draft", "approved", "posted"]) {
-      expect(promoWhere.status.in).not.toContain(kept);
-    }
 
     // email_messages: blanked via updateMany, never deleted.
     expect(calls.emailMessage).toHaveLength(1);
@@ -89,12 +81,10 @@ describe("runRetentionCleanup", () => {
     expect(counts).toEqual({
       journal: 1,
       journalDigests: 2,
-      claims: 3,
-      claimsDiscover: 4,
       questions: 5,
       verificationTokens: 6,
       refreshTokens: 7,
-      promotions: 8,
+
       emailBodiesBlanked: 9,
       applicationEvents: 10,
       resumeVariants: 11,

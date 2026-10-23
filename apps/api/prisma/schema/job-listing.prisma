@@ -1,6 +1,8 @@
 enum JobListingStatus {
   published
   hidden
+  /// Every public source stopped listing it. Saved and applied jobs stay reachable.
+  expired
 
   @@map("job_listing_status")
 }
@@ -17,20 +19,63 @@ enum JobLevel {
   @@map("job_level")
 }
 
+enum JobWorkMode {
+  remote
+  hybrid
+  onsite
+
+  @@map("job_work_mode")
+}
+
+enum JobEmploymentType {
+  full_time
+  part_time
+  contract
+  internship
+  temporary
+
+  @@map("job_employment_type")
+}
+
+enum JobSalaryPeriod {
+  year
+  hour
+  month
+
+  @@map("job_salary_period")
+}
+
 // The public job index: one row per posting, deduped across every user's campaigns. Digest fields
 // only - it must never carry who discovered or applied. Grows into the fleet-wide shared job index.
 model JobListing {
+  isPublic Boolean @default(true) @map("is_public")
   id        String @id @default(uuid())
   slug      String @unique
-  // sha256(normTitle|normCompany|normLocation). Not to be confused with `Job.digest`, which is the
-  // agent's JSON content summary, not a hash.
-  dedupeKey String @unique @map("dedupe_key")
+  // sha256(normTitle|normCompany|normLocation). Not unique: two openings with one title at one
+  // company and city are separate listings. Not to be confused with `Job.digest`.
+  dedupeKey String @map("dedupe_key")
+  companyId String? @map("company_id")
+  employer  Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  /// sha256(normTitle|normLocation): with the company, finds listings a fuzzy match compares.
+  matchKey  String? @map("match_key")
+  /// The best source's rank (see source-rank.ts); a lower-ranked source never overwrites fields.
+  sourceRank Int @default(0) @map("source_rank")
 
   title              String
   company            String
   location           String?
+  countries          String[] @default([])
   remote             Boolean  @default(false)
   salary             String?
+  salaryMin          Float? @map("salary_min")
+  salaryMax          Float? @map("salary_max")
+  salaryCurrency     String? @map("salary_currency")
+  salaryPeriod       JobSalaryPeriod? @map("salary_period")
+  workMode           JobWorkMode? @map("work_mode")
+  employmentKind     JobEmploymentType? @map("employment_kind")
+  companyLogoUrl     String? @map("company_logo_url")
+  postedAt           DateTime? @map("posted_at")
+  listedAt           DateTime @default(now()) @map("listed_at")
   employmentType     String?  @map("employment_type")
   skills             String[] @map("skills")
   descriptionExcerpt String?  @map("description_excerpt")
@@ -44,13 +89,25 @@ model JobListing {
   status      JobListingStatus @default(published)
   firstSeenAt DateTime         @default(now()) @map("first_seen_at")
   lastSeenAt  DateTime         @default(now()) @map("last_seen_at")
+  expiredAt   DateTime?        @map("expired_at")
   createdAt   DateTime         @default(now()) @map("created_at")
   updatedAt   DateTime         @updatedAt @map("updated_at")
 
   sources JobListingSource[]
+  personalDiscoveries PersonalJobListing[]
+  savedBy SavedJobListing[]
+  applications Application[]
+  pilotResults PilotResult[]
 
   // Serves the default list and the sitemap: `where status ORDER BY last_seen_at DESC`.
+  @@index([dedupeKey])
+  @@index([companyId, matchKey])
   @@index([status, lastSeenAt])
+  @@index([status, listedAt])
+  @@index([salaryCurrency, salaryPeriod, salaryMin])
+  @@index([countries], type: Gin)
+  @@index([status, postedAt])
+  @@index([status, firstSeenAt])
   // `?tech=` is a `skills @> ARRAY[..]` containment test - btree cannot serve it.
   @@index([skills], type: Gin)
   // Trigram indexes serve the `?q=` ILIKE '%term%' search.
@@ -60,20 +117,92 @@ model JobListing {
   @@map("job_listings")
 }
 
+model SavedJobListing {
+  userId String @map("user_id")
+  listingId String @map("listing_id")
+  savedAt DateTime @default(now()) @map("saved_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing JobListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@id([userId, listingId])
+  @@index([userId, savedAt])
+  @@index([listingId])
+  @@map("saved_job_listings")
+}
+
 // Where one posting was seen. A repost across boards collapses into one JobListing with several
 // sources; `url @unique` is what keeps the ingest upsert atomic under concurrent agents.
 model JobListingSource {
+  isPublic Boolean @default(true) @map("is_public")
   id         String   @id @default(uuid())
   listingId  String   @map("listing_id")
   // Stored lowercase, so `?board=` is an equality hit rather than an ILIKE scan.
   board      String?
   // Canonicalized (tracking params stripped) - see canonicalizeUrl in dedupe.ts.
   url        String   @unique
+  applyUrl String? @map("apply_url")
+  attributionUrl String? @map("attribution_url")
+  resolutionConfidence Float? @map("resolution_confidence")
+  postedAt DateTime? @map("posted_at")
   lastSeenAt DateTime @default(now()) @map("last_seen_at")
+  /// Complete refreshes of its board or feed in a row that didn't list it; a sighting resets it.
+  missedRefreshes Int @default(0) @map("missed_refreshes")
+  /// Set after 3 missed refreshes; cleared if the posting comes back.
+  goneAt DateTime? @map("gone_at")
+  /// "provider/slug" in lowercase, for jobs read from an employer board or traced to one.
+  boardKey String? @map("board_key")
+  /// The board's own id for the posting. Two ids on one board are never the same listing.
+  externalId String? @map("external_id")
+  requisitionId String? @map("requisition_id")
+  /// Source priority: 4 employer ATS, 3 employer career site, 2 curated list, 1 aggregator.
+  rank Int @default(0)
 
   listing JobListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
   @@index([listingId])
   @@index([board, listingId])
+  @@unique([boardKey, externalId])
+  @@index([requisitionId])
   @@map("job_listing_sources")
+}
+
+enum AtsProvider {
+ ashby
+ greenhouse
+ icims
+ jibe
+ lever
+ oracle
+ phenom
+ recruitee
+ smartrecruiters
+ successfactors
+ taleo
+ teamtailor
+ workable
+ workday
+ @@map("ats_provider")
+}
+enum DiscoveryProvider {
+ apify
+ serpapi
+ @@map("discovery_provider")
+}
+model CompanyAtsBoard {
+  companyKey String @id @map("company_key")
+  provider AtsProvider
+  slug String
+  checkedAt DateTime @default(now()) @map("checked_at")
+  @@map("company_ats_boards")
+}
+
+model JobSourceConnection {
+  userId String @map("user_id")
+  provider DiscoveryProvider
+  enabled Boolean @default(false)
+  encryptedKey String @map("encrypted_key")
+  config Json @default("{}")
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  @@id([userId,provider])
+  @@map("job_source_connections")
 }

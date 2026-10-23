@@ -14,7 +14,7 @@ interface RescanDialogProps {
   onConfirm: (minScore: number) => void;
 }
 
-/** Re-scores skipped jobs against a new threshold so ones dropped just below the cutoff come back. */
+/** Reconsiders skipped jobs without rerating unchanged evidence to meet a lower minimum. */
 export function RescanDialog(props: RescanDialogProps): ReactElement {
   const { open, onClose, skippedCount, defaultMinScore, pending, onConfirm } = props;
   const [minScore, setMinScore] = useState(defaultMinScore);
@@ -33,16 +33,16 @@ export function RescanDialog(props: RescanDialogProps): ReactElement {
       }
     >
       <Typography variant="body2Muted">
-        Re-scores the {plural(skippedCount, "skipped job")} against a new threshold and sets
-        eligible ones to <strong>approved</strong> - apply them from the jobs list or with Re-apply
-        selected. Lower the threshold to recover jobs dropped just below the cutoff.
+        Reviews the {plural(skippedCount, "skipped job")} using this minimum and sets eligible ones
+        to <strong>approved</strong>. Scores stay unchanged unless the source evidence changes.
+        Apply approved jobs from the jobs list or with Re-apply selected.
       </Typography>
-      <Typography variant="body2">Min match score: {minScore}</Typography>
+      <Typography variant="body2">Your minimum score for applying: {minScore}</Typography>
       <Slider
         value={minScore}
         min={0}
         max={100}
-        step={5}
+        step={1}
         marks
         valueLabelDisplay="auto"
         onChange={(_, v) => setMinScore(v as number)}

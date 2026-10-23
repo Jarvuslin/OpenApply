@@ -10,7 +10,7 @@ export const linkOverrides: Components<Theme>["MuiLink"] = {
   defaultProps: { underline: "hover", component: NextLink },
   styleOverrides: {
     root: ({ theme }) => ({
-      color: theme.palette.accent.primary,
+      color: theme.palette.info.main,
       fontWeight: 500,
     }),
   },
@@ -19,4 +19,9 @@ export const linkOverrides: Components<Theme>["MuiLink"] = {
 /** Same, for everything built on ButtonBase (Button, CardActionArea, IconButton, Tab). */
 export const buttonBaseOverrides: Components<Theme>["MuiButtonBase"] = {
   defaultProps: { LinkComponent: NextLink },
+  styleOverrides: {
+    root: ({ theme }) => ({
+      "&.Mui-focusVisible": { outline: `2px solid ${theme.palette.info.main}`, outlineOffset: 2 },
+    }),
+  },
 };

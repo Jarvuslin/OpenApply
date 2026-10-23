@@ -1,0 +1,27 @@
+/// An employer, so the same company under different names ("RBC", "Royal Bank of Canada") is one.
+model Company {
+  id        String   @id @default(uuid())
+  /// The website domain ("rbc.com"), or "name:<normalized name>" while the domain is unknown.
+  key       String   @unique
+  domain    String?
+  name      String
+  /// Normalized names the company goes by, its own name included.
+  aliases   String[] @default([])
+  createdAt DateTime @default(now()) @map("created_at")
+
+  boards   CompanyBoard[]
+  listings JobListing[]
+
+  @@index([aliases], type: Gin)
+  @@map("companies")
+}
+
+/// Which company a job board belongs to, by board key ("greenhouse/stripe"), stored lowercase.
+model CompanyBoard {
+  boardKey  String  @id @map("board_key")
+  companyId String  @map("company_id")
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("company_boards")
+}

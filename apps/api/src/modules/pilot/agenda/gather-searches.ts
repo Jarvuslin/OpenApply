@@ -1,13 +1,10 @@
-import type { AgendaPayload } from "@jobpilot/contracts/pilot";
-import { DAY_MS, HOUR_MS } from "@/common/date/buckets";
+import type { AgendaPayload } from "@openapply/contracts/pilot";
+import { HOUR_MS } from "@/common/date/buckets";
 import type { PrismaClient } from "@/generated/prisma/client";
-import { claimDamped, GATHER_CAP, latestClaim, latestClaimBySubject } from "./claims";
+import { GATHER_CAP } from "./items";
 
 /** With room left under the apply cap, a search idle this long re-runs before it is due. */
 const HUNGRY_RERUN_MS = 6 * HOUR_MS;
-/** Guards an in-flight or crashed run only; the cadence itself lives in `nextRunAt`. */
-const SEARCH_CLAIM_COOLDOWN_MS = 2 * HOUR_MS;
-const BOOTSTRAP_RETRY_MS = DAY_MS;
 
 export type DueSearch = Pick<
   AgendaPayload<"search.discover">,
@@ -39,26 +36,24 @@ export async function gatherDueSearches(
   });
   if (searches.length === 0) return { dueQueries: [], nextSearchRunAt: null };
 
-  const ids = searches.map((search) => search.id);
-  const [latest, campaigns] = await Promise.all([
-    latestClaimBySubject(prisma, userId, "search.discover", ids),
-    // Keyed by search id, not query, so a rewritten query still reuses its campaign.
-    prisma.campaign.findMany({
-      where: { userId, status: "in_progress", source: "auto_apply", pilotSearchId: { in: ids } },
-      orderBy: { startedAt: "asc" },
-      select: { campaignId: true, pilotSearchId: true },
-    }),
-  ]);
+  // Keyed by search id, not query, so a rewritten query still reuses its campaign.
+  const campaigns = await prisma.campaign.findMany({
+    where: {
+      userId,
+      status: "in_progress",
+      source: "auto_apply",
+      pilotSearchId: { in: searches.map((search) => search.id) },
+    },
+    orderBy: { startedAt: "asc" },
+    select: { campaignId: true, pilotSearchId: true },
+  });
   // Oldest first, so the newest campaign of a search wins the map entry.
   const campaignBySearch = new Map(campaigns.map((c) => [c.pilotSearchId, c.campaignId]));
-  const claimable = searches.filter(
-    (search) => !claimDamped(latest.get(search.id), now, SEARCH_CLAIM_COOLDOWN_MS),
-  );
 
-  let due = claimable.filter((search) => search.nextRunAt <= now);
+  let due = searches.filter((search) => search.nextRunAt <= now);
   if (due.length === 0 && hungry) {
     const idleSince = now.getTime() - HUNGRY_RERUN_MS;
-    due = claimable
+    due = searches
       .filter((search) => !search.lastRunAt || search.lastRunAt.getTime() < idleSince)
       .slice(0, 1);
   }
@@ -72,15 +67,4 @@ export async function gatherDueSearches(
     })),
     nextSearchRunAt: searches[0].nextRunAt,
   };
-}
-
-/** The bootstrap item, unless a recent attempt says to wait: a failing agent would loop on it. */
-export async function gatherBootstrap(
-  prisma: PrismaClient,
-  userId: string,
-  payload: AgendaPayload<"strategy.bootstrap">,
-  now: Date,
-): Promise<AgendaPayload<"strategy.bootstrap"> | null> {
-  const last = await latestClaim(prisma, userId, "strategy.bootstrap");
-  return claimDamped(last, now, BOOTSTRAP_RETRY_MS) ? null : payload;
 }

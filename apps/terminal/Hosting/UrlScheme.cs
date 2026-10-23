@@ -2,18 +2,18 @@ using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using Microsoft.Win32;
 
-namespace JobPilot.Terminal.Hosting;
+namespace OpenApply.Terminal.Hosting;
 
-/// <summary>The Windows <c>jobpilot://</c> URL scheme the dashboard uses to relaunch the host.</summary>
+/// <summary>The Windows <c>openapply://</c> URL scheme the dashboard uses to relaunch the host.</summary>
 public sealed partial class UrlScheme(ILogger<UrlScheme> logger)
 {
-    private const string Scheme = "jobpilot";
+    private const string Scheme = "openapply";
     private const string SchemeKey = $@"Software\Classes\{Scheme}";
     private const string CommandKey = $@"{SchemeKey}\shell\open\command";
 
     public bool IsRegistered { get; private set; }
 
-    /// <summary>Drops the jobpilot:// launch argument, and the console window the shell opens with it.</summary>
+    /// <summary>Drops the openapply:// launch argument, and the console window the shell opens with it.</summary>
     public static string[] StripSchemeArgs(string[] args)
     {
         var hostArgs = args.Where(a => !a.StartsWith($"{Scheme}://", StringComparison.OrdinalIgnoreCase)).ToArray();
@@ -49,7 +49,7 @@ public sealed partial class UrlScheme(ILogger<UrlScheme> logger)
             if (commandKey.GetValue(null) as string != command)
             {
                 using var schemeKey = Registry.CurrentUser.CreateSubKey(SchemeKey);
-                schemeKey.SetValue(null, "URL:JobPilot Protocol");
+                schemeKey.SetValue(null, "URL:OpenApply Protocol");
                 schemeKey.SetValue("URL Protocol", "");
                 commandKey.SetValue(null, command);
                 logger.LogInformation("Registered the {Scheme}:// URL scheme.", Scheme);

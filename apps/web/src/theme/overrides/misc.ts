@@ -7,7 +7,7 @@ import { alpha, type Components, type Theme } from "@mui/material/styles";
 export const cssBaselineOverrides: Components<Theme>["MuiCssBaseline"] = {
   styleOverrides: (theme) => ({
     "::selection": {
-      background: alpha(theme.palette.accent.primary, 0.3),
+      background: alpha(theme.palette.info.main, 0.18),
       color: theme.palette.text.primary,
     },
     // Mice only: a styled scrollbar is a classic one, and it steals layout width off the right edge.
@@ -29,15 +29,61 @@ export const cssBaselineOverrides: Components<Theme>["MuiCssBaseline"] = {
   }),
 };
 
+const chipStatus = {
+  default: "neutral",
+  primary: "neutral",
+  secondary: "info",
+  info: "info",
+  success: "success",
+  warning: "warning",
+  error: "error",
+  attention: "attention",
+} as const;
+
 export const chipOverrides: Components<Theme>["MuiChip"] = {
   styleOverrides: {
-    root: ({ theme }) => ({
-      borderRadius: theme.radii.sm,
-      fontWeight: 500,
-      fontSize: "0.75rem",
-      height: 24,
-    }),
+    root: ({ theme, ownerState }) => {
+      const status = chipStatus[ownerState.color ?? "default"];
+      return {
+        // The design's status pill: pastel fill, a slightly deeper border, dark text.
+        fontFamily: theme.typography.fontFamily,
+        fontSize: "0.6875rem",
+        lineHeight: "14px",
+        borderRadius: theme.radii.pill,
+        fontWeight: 500,
+        height: 20,
+        color: theme.palette.status[status],
+        backgroundColor: theme.palette.statusTints[status],
+        border: `1px solid ${theme.palette.statusBorders[status]}`,
+        ...(ownerState.variant === "outlined" && { backgroundColor: theme.palette.surfaces.card }),
+        "& .MuiChip-icon, & .MuiChip-deleteIcon": { color: "inherit" },
+        "&.MuiChip-clickable:hover": { backgroundColor: theme.palette.surfaces.hover },
+      };
+    },
+    label: { paddingInline: 8 },
   },
+};
+
+export const alertOverrides: Components<Theme>["MuiAlert"] = {
+  defaultProps: { variant: "standard" },
+  styleOverrides: {
+    root: ({ theme, ownerState }) => {
+      const status = ownerState.color ?? ownerState.severity ?? "success";
+      return {
+        ...theme.typography.body2,
+        borderRadius: theme.radii.md,
+        padding: "12px 16px",
+        color: theme.palette.text.primary,
+        backgroundColor: theme.palette.statusTints[status],
+        "& .MuiAlert-icon": { color: theme.palette.status[status] },
+      };
+    },
+    message: { paddingBlock: 2 },
+  },
+};
+
+export const alertTitleOverrides: Components<Theme>["MuiAlertTitle"] = {
+  styleOverrides: { root: ({ theme }) => ({ ...theme.typography.body1Strong, marginBottom: 4 }) },
 };
 
 /**
@@ -49,6 +95,11 @@ export const containerOverrides: Components<Theme>["MuiContainer"] = {
     root: ({ theme }) => ({
       display: "flex",
       flexDirection: "column",
+      [theme.breakpoints.up("sm")]: {
+        paddingLeft: theme.spacing(5),
+        paddingRight: theme.spacing(5),
+      },
+      "&.MuiContainer-maxWidthLg": { maxWidth: 1208 },
       // Tighter than MUI's 16px: the gutter stacks with the padding of the cards nested inside.
       [theme.breakpoints.down("sm")]: {
         paddingLeft: theme.spacing(1.5),
@@ -117,6 +168,8 @@ export const typographyOverrides: Components<Theme>["MuiTypography"] = {
       overlineMuted: "span",
       body1Strong: "p",
       body2Strong: "p",
+      monoData: "span",
+      authTitle: "h1",
       displayLg: "h1",
       displayMd: "h2",
       docsBody: "p",

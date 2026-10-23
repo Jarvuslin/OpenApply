@@ -1,4 +1,4 @@
-import type { LoginInput, RegisterInput } from "@jobpilot/contracts";
+import type { LoginInput, RegisterInput } from "@openapply/contracts";
 import { singleton } from "tsyringe";
 import {
   durationToMs,
@@ -85,6 +85,8 @@ export class AuthService {
           emailVerified: input.emailVerified,
           username: await this.uniqueUsername(),
           contactEmail: email,
+          queuePolicy: { create: {} },
+          telegramSettings: { create: {} },
           jobBoards: {
             createMany: { data: defaults.map((board) => ({ jobBoardId: board.id })) },
           },

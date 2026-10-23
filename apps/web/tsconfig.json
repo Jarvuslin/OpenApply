@@ -3,15 +3,12 @@
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",
-
     "lib": ["dom", "dom.iterable", "esnext"],
     "types": ["bun"],
-
     "jsx": "react-jsx",
     "allowJs": true,
     "incremental": true,
     "strict": true,
-
     // The path aliases below pull in API source (which uses tsyringe parameter
     // decorators), so the web typecheck must accept experimental decorators too.
     "experimentalDecorators": true,
@@ -23,7 +20,6 @@
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
-
     "plugins": [
       {
         "name": "next"
@@ -44,7 +40,9 @@
     "src/**/*.tsx",
     "next.config.ts",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
+    ".next/dev/types/**/*.ts",
+    ".next-preview/types/**/*.ts",
+    ".next-preview/dev/types/**/*.ts"
   ],
   "exclude": ["node_modules"]
 }

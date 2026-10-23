@@ -15,12 +15,28 @@ const row = {
   config: {},
 };
 
-function makeService(current = row) {
+function makeService(
+  current = row,
+  queueRows: { id: string; kind: "application"; state: "queued" | "filling" }[] = [],
+) {
   const updates: Record<string, unknown>[] = [];
   const wheres: Record<string, unknown>[] = [];
   const jobBatches: Record<string, unknown>[][] = [];
   const listWheres: Record<string, unknown>[] = [];
+  let created: Record<string, unknown> | null = null;
+  let locks = 0;
+  const queueUpdates: { where: { id: string }; data: Record<string, unknown> }[] = [];
   const db = {
+    $queryRaw: async () => {
+      locks++;
+    },
+    workItem: {
+      findMany: async () => queueRows,
+      update: async (input: { where: { id: string }; data: Record<string, unknown> }) => {
+        queueUpdates.push(input);
+        return input.data;
+      },
+    },
     campaign: {
       findMany: async ({ where }: { where: Record<string, unknown> }) => {
         listWheres.push(where);
@@ -28,7 +44,12 @@ function makeService(current = row) {
       },
       count: async () => 1,
       findFirst: async () => current,
-      create: async ({ data }: { data: Record<string, unknown> }) => ({ ...current, ...data }),
+      create: async ({ data }: { data: Record<string, unknown> }) => {
+        created = { ...current, ...data };
+        return created;
+      },
+      findUnique: async ({ where }: { where: { campaignId: string } }) =>
+        created?.campaignId === where.campaignId ? { ...created, jobs: jobBatches.flat() } : null,
       updateMany: async ({
         where,
         data,
@@ -49,13 +70,22 @@ function makeService(current = row) {
       findUniqueOrThrow: async () => ({ ...current, ...updates.at(-1) }),
     },
     job: {
-      groupBy: async () => [],
+      groupBy: async () =>
+        jobBatches.length
+          ? [
+              {
+                campaignId: current.campaignId,
+                status: "queued",
+                _count: { _all: jobBatches.flat().length, matchScore: 0 },
+              },
+            ]
+          : [],
       createMany: async ({ data }: { data: Record<string, unknown>[] }) => {
         jobBatches.push(data);
         return { count: data.length };
       },
     },
-    networkingMessage: { groupBy: async () => [], findMany: async () => [] },
+
     $transaction: async (work: (tx: unknown) => Promise<unknown>) => work(db),
   };
   return {
@@ -64,6 +94,8 @@ function makeService(current = row) {
     wheres,
     listWheres,
     jobBatches,
+    queueUpdates,
+    locks: () => locks,
   };
 }
 
@@ -72,7 +104,7 @@ describe("CampaignService", () => {
     const { service } = makeService();
     const result = await service.list("u1", { page: 1, limit: 25 });
     expect(result.pagination).toMatchObject({ page: 1, limit: 25, total: 1, totalPages: 1 });
-    expect(result.items[0]?.summary).toEqual(emptySummary("search"));
+    expect(result.items[0]?.summary).toEqual(emptySummary());
   });
 
   it("filters to campaigns still holding a job of the requested status, in SQL", async () => {
@@ -97,6 +129,22 @@ describe("CampaignService", () => {
       },
     ]);
     expect(result.status).toBe("paused");
+  });
+
+  it("pauses queued work and requests active work to stop under the same owner lock", async () => {
+    const { service, queueUpdates, locks } = makeService(row, [
+      { id: "queued", kind: "application", state: "queued" },
+      { id: "active", kind: "application", state: "filling" },
+    ]);
+    await service.commandStatus("u1", "c1", { status: "paused", actor: "user" });
+    expect(locks()).toBe(1);
+    expect(queueUpdates).toEqual([
+      {
+        where: { id: "queued" },
+        data: { state: "paused", pauseRequestedAt: expect.any(Date), finishedAt: expect.any(Date) },
+      },
+      { where: { id: "active" }, data: { state: "stopping", pauseRequestedAt: expect.any(Date) } },
+    ]);
   });
 
   it("rejects a transition away from a terminal status", async () => {
@@ -158,6 +206,19 @@ describe("CampaignService create with pasted urls", () => {
         status: "queued",
       },
     ]);
+  });
+
+  it("deduplicates client campaign creation and rejects a changed retry", async () => {
+    const { service, jobBatches } = makeService();
+    const input = { ...create(["https://x.test/1"]), clientCampaignId: "c1" };
+    const first = await service.create("u1", input);
+    const replay = await service.create("u1", input);
+    expect(replay.campaignId).toBe(first.campaignId);
+    expect(jobBatches).toHaveLength(1);
+    await expect(service.create("u1", { ...input, urls: ["https://x.test/2"] })).rejects.toThrow(
+      "different details",
+    );
+    expect(jobBatches).toHaveLength(1);
   });
 
   it("counts the queued rows into the returned summary", async () => {

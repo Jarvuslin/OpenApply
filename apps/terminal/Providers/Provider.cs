@@ -1,6 +1,6 @@
-using JobPilot.Terminal.Hosting;
+using OpenApply.Terminal.Hosting;
 
-namespace JobPilot.Terminal.Providers;
+namespace OpenApply.Terminal.Providers;
 
 public sealed record ProviderInfo(string Id, string DisplayName);
 
@@ -51,9 +51,4 @@ public abstract class Provider
     public virtual void PrepareWorkspace(InstallPaths paths)
     {
     }
-
-    /// <summary>Mirrors the web's formatSkillCommand.</summary>
-    public virtual string SkillCommand(string skill) => $"/jobpilot:{skill}";
-
-    public virtual int SubmitKeyPresses(string command) => 1;
 }

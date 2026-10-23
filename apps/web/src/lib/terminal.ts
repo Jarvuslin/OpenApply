@@ -1,23 +1,15 @@
-import type { PilotCycleStatus } from "@jobpilot/contracts/pilot";
+import type { PilotCycleStatus } from "@openapply/contracts/pilot";
+import { parseGmailCheckResult } from "./gmail-check-result";
+import { terminalRequest } from "./terminal-request";
 
 const TERMINAL_HTTP_URL = process.env.NEXT_PUBLIC_TERMINAL_URL ?? "http://localhost:4102";
 
 export const TERMINAL_WS_URL = `${TERMINAL_HTTP_URL.replace(/^http/, "ws")}/ws`;
 
 /** URL scheme the host registers on Windows; opening it relaunches an offline host from the browser. */
-export const TERMINAL_PROTOCOL_URL = "jobpilot://start";
+export const TERMINAL_PROTOCOL_URL = "openapply://start";
 
 export type TerminalProviderId = "claude" | "codex";
-
-/** Shared chip colors for a cycle outcome (status hero, journal cycle cards). */
-export const CYCLE_STATUS_COLOR: Record<
-  PilotCycleStatus,
-  "success" | "warning" | "error" | "default"
-> = {
-  ok: "success",
-  empty: "default",
-  error: "error",
-};
 
 interface TerminalProviderInfo {
   id: TerminalProviderId;
@@ -25,7 +17,7 @@ interface TerminalProviderInfo {
 }
 
 /** Autonomous pilot-mode health from the host's /healthz. Additive; absent on older hosts. */
-export interface PilotHealth {
+interface PilotHealth {
   running: boolean;
   paired: boolean;
   conducting: boolean;
@@ -50,7 +42,7 @@ export interface SessionStatus {
   hostVersion: string;
   /** Human-readable reason when status is "degraded". */
   detail?: string | null;
-  /** True when the host registered the jobpilot:// scheme, so the browser can relaunch it when offline. */
+  /** True when the host registered the openapply:// scheme, so the browser can relaunch it when offline. */
   canRelaunch: boolean;
   /** True when this is a published install, so the dashboard can offer a one-click self-update. */
   canUpdate: boolean;
@@ -78,56 +70,88 @@ export class TerminalApiError extends Error {
   }
 }
 
-async function send<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const response = await fetch(`${TERMINAL_HTTP_URL}${path}`, {
-    method,
-    headers: body != null ? { "content-type": "application/json" } : undefined,
-    body: body != null ? JSON.stringify(body) : undefined,
-  });
-  if (!response.ok) {
-    // The host answers errors as ProblemDetails; surface its detail instead of a bare status.
-    let message = `OpenApply.Terminal ${method} ${path} -> ${response.status}`;
-    try {
-      const problem = (await response.json()) as { detail?: string; title?: string } | null;
-      message = problem?.detail ?? problem?.title ?? message;
-    } catch {
-      // empty or non-JSON body (older host) - keep the fallback
-    }
-    throw new TerminalApiError(response.status, message);
-  }
-  if (response.headers.get("content-length") === "0") {
-    return null as T;
-  }
-  const text = await response.text();
-  return text ? (JSON.parse(text) as T) : (null as T);
+async function send<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+  options?: { signal?: AbortSignal; timeoutMs?: number },
+): Promise<T> {
+  return terminalRequest(
+    `${TERMINAL_HTTP_URL}${path}`,
+    {
+      method,
+      headers: body != null ? { "content-type": "application/json" } : undefined,
+      body: body != null ? JSON.stringify(body) : undefined,
+    },
+    async (response) => {
+      if (!response.ok) {
+        // The host answers errors as ProblemDetails; surface its detail instead of a bare status.
+        let message = `OpenApply.Terminal ${method} ${path} -> ${response.status}`;
+        try {
+          const problem = (await response.json()) as { detail?: string; title?: string } | null;
+          message = problem?.detail ?? problem?.title ?? message;
+        } catch {
+          // empty or non-JSON body (older host) - keep the fallback
+        }
+        throw new TerminalApiError(response.status, message);
+      }
+      if (response.headers.get("content-length") === "0") {
+        return null as T;
+      }
+      const text = await response.text();
+      return text ? (JSON.parse(text) as T) : (null as T);
+    },
+    options,
+  );
 }
 
 export function getStatus(): Promise<SessionStatus> {
-  return send<SessionStatus>("GET", "/healthz");
+  return send<SessionStatus>("GET", "/healthz", undefined, { timeoutMs: 5_000 });
+}
+
+export function runInference(
+  provider: TerminalProviderId,
+  text?: string,
+  model = "haiku",
+  schema?: unknown,
+  signal?: AbortSignal,
+) {
+  return send<{ provider: TerminalProviderId; model: string; output: string }>(
+    "POST",
+    "/inference",
+    { provider, text, model, check: text === undefined, schema },
+    { signal, timeoutMs: 130_000 },
+  );
+}
+
+export async function checkGmail(
+  provider: TerminalProviderId,
+  expectedEmail: string,
+  signal: AbortSignal,
+) {
+  const result = await send<unknown>(
+    "POST",
+    "/connectors/gmail/check",
+    { provider, expectedEmail },
+    { signal, timeoutMs: 130_000 },
+  );
+  return parseGmailCheckResult(result, provider, expectedEmail);
 }
 
 interface StartOptions {
   cols: number;
   rows: number;
   provider: TerminalProviderId;
-  /** Per-user agent PAT, injected into the PTY as JOBPILOT_API_TOKEN. */
+  /** Per-user agent PAT, injected into the PTY as OPENAPPLY_API_TOKEN. */
   apiToken?: string;
-  /** Web app origin (this browser's location), injected into the PTY as JOBPILOT_WEB for user-facing links. */
+  /** Web app origin (this browser's location), injected into the PTY as OPENAPPLY_WEB for user-facing links. */
   webUrl?: string;
-  /** Backend base URL the web talks to, injected into the PTY as JOBPILOT_API so the agent hits the same (possibly remote) API. */
+  /** Backend base URL the web talks to, injected into the PTY as OPENAPPLY_API so the agent hits the same (possibly remote) API. */
   apiUrl?: string;
 }
 
 export function startSession(options: StartOptions): Promise<SessionStatus> {
-  return send<SessionStatus>("POST", "/sessions/start", options);
-}
-
-/**
- * Inject a command into the active session. Pass a bare command line with no
- * trailing newline - the terminal host submits it with a separate Enter keystroke.
- */
-export function injectCommand(command: string, provider?: TerminalProviderId): Promise<void> {
-  return send<void>("POST", "/sessions/inject", { command, provider });
+  return send<SessionStatus>("POST", "/sessions/start", options, { timeoutMs: 45_000 });
 }
 
 export function killSession(): Promise<SessionStatus> {
@@ -139,26 +163,6 @@ export function shutdownHost(): Promise<void> {
   return send<void>("POST", "/shutdown");
 }
 
-interface PilotStartOptions {
-  provider: TerminalProviderId;
-  /** Per-user agent PAT the pilot loop authenticates with. */
-  apiToken: string;
-  /** Backend base URL injected into the pilot PTY as JOBPILOT_API. */
-  apiUrl: string;
-  /** Web origin injected as JOBPILOT_WEB for user-facing links. */
-  webUrl: string;
-}
-
-/** Store the provider pairing and start the local pilot loop. */
-export function pilotStart(options: PilotStartOptions): Promise<SessionStatus> {
-  return send<SessionStatus>("POST", "/pilot/start", options);
-}
-
-/** Stop the local pilot loop; the host keeps the pairing and any mid-cycle session. */
-export function pilotStop(): Promise<SessionStatus> {
-  return send<SessionStatus>("POST", "/pilot/stop");
-}
-
 /** Ask the running host to self-update and relaunch; on `updating: true` poll health to see it return on the new version. */
 export function triggerUpdate(): Promise<UpdateResult> {
   return send<UpdateResult>("POST", "/update");
@@ -166,14 +170,4 @@ export function triggerUpdate(): Promise<UpdateResult> {
 
 export function providerDisplayName(provider: TerminalProviderId): string {
   return provider === "codex" ? "Codex" : "Claude Code";
-}
-
-export function formatSkillCommand(
-  provider: TerminalProviderId,
-  skill: string,
-  args?: string,
-): string {
-  const suffix = args?.trim();
-  const command = provider === "codex" ? `$${skill}` : `/jobpilot:${skill}`;
-  return suffix ? `${command} ${suffix}` : command;
 }

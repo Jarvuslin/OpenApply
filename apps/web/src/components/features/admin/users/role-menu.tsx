@@ -1,9 +1,9 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { AssignableRole } from "@jobpilot/contracts/role";
 import { MoreVert, PersonRemove, Shield } from "@mui/icons-material";
 import { IconButton } from "@mui/material";
+import type { AssignableRole } from "@openapply/contracts/role";
 import { useRouter } from "next/navigation";
 import { api } from "@/api/client";
 import { useApiMutation } from "@/api/hooks";

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { serializeTechParam } from "@jobpilot/contracts/job-listing";
 import { Box, Link } from "@mui/material";
+import { serializeTechParam } from "@openapply/contracts/job-listing";
 import { fontFamilies, motion, radii } from "@/theme";
 import { jobsHref } from "./jobs-href";
 

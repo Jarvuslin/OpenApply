@@ -1,4 +1,4 @@
-import { SERVICE_PROVIDERS } from "@jobpilot/contracts/credential";
+import { SERVICE_PROVIDERS } from "@openapply/contracts/credential";
 import { z } from "zod/v4";
 
 // ── Response schemas ──────────────────────────────────────────────────────────

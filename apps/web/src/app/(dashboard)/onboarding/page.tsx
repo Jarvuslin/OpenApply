@@ -7,11 +7,10 @@ export const metadata: Metadata = { title: "Onboarding" };
 
 export default function OnboardingPage(): ReactElement {
   return (
-    <PageShell maxWidth="md">
+    <PageShell>
       <PageHeader
-        eyebrow="First run"
         title="Welcome to OpenApply"
-        description="Fill in your profile so skills can autofill applications, then optionally connect email and add job-board credentials. You can edit anything later in Settings."
+        description="Connect your agent, import your resume, and review your answers. Prefer to start manually? You can connect later."
       />
       <OnboardingWizard />
     </PageShell>

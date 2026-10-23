@@ -1,4 +1,3 @@
-import { makePush, type SentPush } from "@/common/push/push.fake";
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { CampaignJobService } from "@/modules/campaign/jobs/job.service";
 import type { EmailSyncService } from "@/modules/email/sync/sync.service";
@@ -7,91 +6,45 @@ import { AgendaService } from "./agenda.service";
 
 type Row = Record<string, unknown>;
 
-/** A prior claim of one kind, as the dampers read it back. */
-interface ClaimRow {
-  subjectId: string;
-  grantedAt: Date;
-  releasedAt: Date | null;
-  outcome?: string | null;
-}
-
 interface Recorder {
   promoteScoredJobs: unknown[][];
   campaignUpdates: { where: Row; data: Row }[];
   /** Every campaign.findMany where-clause, so a gather's predicate can be asserted on. */
   campaignQueries: Row[];
   journals: Row[];
-  pushes: SentPush[];
   inboxSyncs: { userId: string; staleMs: number }[];
 }
 
 export interface Over {
+  profileMinimum?: number;
   instructionsConfig?: unknown;
   instructionsGoals?: string;
   appliedToday?: number;
   pilotSearches?: Row[];
   answered?: Row[];
-  questionClaims?: { subjectId: string }[];
   approvedJobs?: Row[];
-  recentAppliedJobs?: Row[];
-  contacts?: Row[];
-  warmIntroClaims?: ClaimRow[];
-  searchClaims?: ClaimRow[];
+
   dueSearchCampaigns?: { campaignId: string; pilotSearchId: string }[];
   scorePendingCampaigns?: Row[];
-  scorePendingClaims?: ClaimRow[];
   scoredPendingJobs?: Row[];
   pausedCampaigns?: Row[];
   campaignQuestions?: { subjectId: string; status: string; answeredAt: Date | null }[];
-  pausedReviewClaims?: ClaimRow[];
   finalizeCampaigns?: Row[];
   queuedCampaigns?: Row[];
-  queueDrainClaims?: ClaimRow[];
   boardHealthJobs?: Row[];
-  platformPosts?: { platform: string; createdAt: Date }[];
+
   interviewReplyApps?: Row[];
-  interviewPrepApps?: Row[];
+
   interviewQuestions?: { subjectId: string }[];
-  upworkAccount?: { lastSyncedAt: Date | null } | null;
-  upworkProfiles?: number;
-  upworkUnread?: number;
-  upworkSyncClaim?: { grantedAt: Date; releasedAt: Date | null; outcome?: string | null } | null;
+
   quietCampaigns?: Row[];
   quietJobCounts?: Row[];
   actionMarkers?: { subjectId: string | null; detail: unknown }[];
   skipReasonRows?: { campaignId: string; skipReason: string | null; _count: { _all: number } }[];
-  bootstrapClaim?: { releasedAt: Date | null } | null;
   existingDigests?: number;
   digestApps?: number;
   jobsFailed?: number;
   jobsSkipped?: number;
-  networkingSent?: number;
-  networkingReplies?: number;
-  promotionsPosted?: number;
-}
-
-function fakePilotClaim(over: Over) {
-  const byKind: Record<string, ClaimRow[] | undefined> = {
-    "campaign.scorePending": over.scorePendingClaims,
-    "queue.drain": over.queueDrainClaims,
-    "networking.warmIntro": over.warmIntroClaims,
-    "campaign.reviewPaused": over.pausedReviewClaims,
-    "search.discover": over.searchClaims,
-  };
-  const latestByKind: Record<string, unknown> = {
-    "strategy.bootstrap": over.bootstrapClaim,
-    "upwork.syncInbox": over.upworkSyncClaim,
-  };
-  return {
-    findMany: async (a: { where: { subjectType?: string; kind?: string } }) => {
-      if (a.where.kind) return byKind[a.where.kind] ?? [];
-      if (a.where.subjectType === "question") return over.questionClaims ?? [];
-      return [];
-    },
-    findFirst: async (a: { where: { kind: string } }) => latestByKind[a.where.kind] ?? null,
-    count: async () => 0,
-    updateMany: async () => ({ count: 0 }),
-  };
 }
 
 function fakePilotQuestion(over: Over) {
@@ -112,7 +65,6 @@ function fakeJob(over: Over) {
     // Routed by the one filter each read sets: applied = warm-intro pool, matchScore = promote
     // sweep, status `in` = board health, and the rest is the approved gather.
     findMany: async (a: { where: { status?: unknown } }) => {
-      if (a.where.status === "applied") return over.recentAppliedJobs ?? [];
       if ("matchScore" in a.where) return over.scoredPendingJobs ?? [];
       if (typeof a.where.status === "object") return over.boardHealthJobs ?? [];
       return over.approvedJobs ?? [];
@@ -138,7 +90,7 @@ function fakeCampaign(over: Over, rec: Recorder) {
       rec.campaignQueries.push(a.where);
       if (a.where.status === "paused") return over.pausedCampaigns ?? [];
       if ("pilotSearchId" in a.where) return over.dueSearchCampaigns ?? [];
-      if ("OR" in a.where) return over.finalizeCampaigns ?? [];
+      if ("NOT" in a.where) return over.finalizeCampaigns ?? [];
       if (a.where.source === "apply") return over.queuedCampaigns ?? [];
       if ("jobs" in a.where) return over.scorePendingCampaigns ?? [];
       return over.quietCampaigns ?? [];
@@ -157,14 +109,16 @@ function makeAgendaDb(over: Over = {}) {
     campaignUpdates: [],
     campaignQueries: [],
     journals: [],
-    pushes: [],
     inboxSyncs: [],
   };
-  // Networking is off by default in prod; these suites exercise it.
-  const config = over.instructionsConfig ?? { networking: { email: "review", linkedIn: "draft" } };
+  const config = over.instructionsConfig ?? {};
 
   let txChain: Promise<unknown> = Promise.resolve();
   const db = {
+    autoApplySettings: {
+      findUnique: async () => ({ minMatchScore: over.profileMinimum ?? 60 }),
+    },
+    submissionAttempt: { findFirst: async () => null, findMany: async () => [] },
     pilotState: {
       findUnique: async () => ({
         running: true,
@@ -178,37 +132,18 @@ function makeAgendaDb(over: Over = {}) {
       findMany: async () => over.pilotSearches ?? [],
       count: async () => (over.pilotSearches ?? []).length,
     },
-    pilotClaim: fakePilotClaim(over),
     pilotQuestion: fakePilotQuestion(over),
     job: fakeJob(over),
     application: {
       count: async (a: { where: Row }) =>
         over.digestApps != null && a.where.appliedAt ? over.digestApps : (over.appliedToday ?? 0),
       // Only the prep gather filters on `events`.
-      findMany: async (a: { where: Row }) =>
-        "events" in a.where ? (over.interviewPrepApps ?? []) : (over.interviewReplyApps ?? []),
+      findMany: async () => over.interviewReplyApps ?? [],
     },
     campaign: fakeCampaign(over, rec),
-    upworkAccount: { findUnique: async () => over.upworkAccount ?? null },
-    upworkProfile: { count: async () => over.upworkProfiles ?? 0 },
-    upworkInboxItem: { count: async () => over.upworkUnread ?? 0 },
-    networkingMessage: {
-      findMany: async () => [],
-      groupBy: async () => [],
-      count: async (a: { where: Row }) =>
-        "repliedAt" in a.where ? (over.networkingReplies ?? 0) : (over.networkingSent ?? 0),
-    },
-    promotionPost: {
-      findMany: async () => [],
-      groupBy: async () =>
-        (over.platformPosts ?? []).map((post) => ({
-          platform: post.platform,
-          _max: { createdAt: post.createdAt },
-        })),
-      count: async () => over.promotionsPosted ?? 0,
-    },
+
     emailMessage: { findMany: async () => [], count: async () => 0 },
-    contact: { findMany: async () => over.contacts ?? [] },
+
     pilotJournalEntry: {
       // Defaults to 1 so the digest stays quiet elsewhere; counting this run's own digest writes
       // is what lets the race test see a concurrent writer.
@@ -246,12 +181,12 @@ export function makeAgendaDeps(over: Over = {}) {
       rec.inboxSyncs.push({ userId, staleMs });
     },
   } as unknown as EmailSyncService;
-  return { prisma, campaignJobs, journal, push: makePush(rec.pushes), emailSync, rec };
+  return { prisma, campaignJobs, journal, emailSync, rec };
 }
 
 export const serviceWithRec = (over: Over = {}) => {
-  const { prisma, campaignJobs, journal, push, emailSync, rec } = makeAgendaDeps(over);
-  return { svc: new AgendaService(prisma, campaignJobs, journal, push, emailSync), rec };
+  const { prisma, campaignJobs, journal, emailSync, rec } = makeAgendaDeps(over);
+  return { svc: new AgendaService(prisma, campaignJobs, journal, emailSync), rec };
 };
 
 export const service = (over: Over = {}) => serviceWithRec(over).svc;

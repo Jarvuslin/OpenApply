@@ -1,6 +1,6 @@
 "use client";
 
-import type { JobBoardInput } from "@jobpilot/contracts/job-board";
+import type { JobBoardInput } from "@openapply/contracts/job-board";
 import { api } from "@/api/client";
 import { type ApiMutationResult, useApiMutation } from "@/api/hooks";
 import { queryKeys } from "@/api/query-keys";

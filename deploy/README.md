@@ -8,8 +8,8 @@ No hosted OpenApply deployment is currently provisioned or verified. Required
 inputs: a domain and DNS access, Linux server with Docker Compose and nginx,
 TLS certificate, PostgreSQL connection string, OAuth clients, and a Resend key
 with a verified sending domain. See [auth setup](../docs/auth-setup.md).
-Keep `MVP_LOCAL_RUNNER=false` on a shared server; the development résumé reader
-runs the server owner's CLI and is not a hosted multi-user worker.
+Keep `MVP_LOCAL_RUNNER=false` on a shared server; `true` binds the API to
+loopback for one local user. The API does not launch an LLM; model execution belongs to the companion.
 
 ## Build this fork from source
 
@@ -34,9 +34,7 @@ The base compose file alone expects published images.
 Rebuild when the public origin changes. Set `APP_URL`, `CORS_ORIGINS` and
 `AUTH_OAUTH_REDIRECT_BASE` to the same HTTPS public origin. Next's route guard
 and the API need the same host-only session cookie. Replace the example domain
-in `jobpilot.conf` and enable TLS before login. That filename is retained
-for compatibility.
-
+in `openapply.conf` and enable TLS before login.
 The production API rejects HTTP auth origins, split web/API callback origins,
 missing mail delivery, test email senders, and obvious JWT placeholder secrets.
 The Google/GitHub callbacks are `https://YOUR_DOMAIN/api/auth/providers/google/callback`
@@ -50,7 +48,7 @@ access. Back up PostgreSQL and the private `api-storage` volume; do not use
 with independent disks are unsupported until a shared storage adapter is added.
 
 Moving an existing local profile requires a tested database dump/restore plus
-résumé-file copy. Preserve `SECRET_MASTER_KEY` to read encrypted credentials.
+resume-file copy. Preserve `SECRET_MASTER_KEY` to read encrypted credentials.
 Audit/reverify development accounts whose email ownership was never checked
 before opening the server to other people. This change does not migrate data.
 
@@ -64,7 +62,7 @@ connection. Complete the auth guide's acceptance checks and a local-agent test
   GHCR (tagged `latest` by the release workflow). The API keeps uploaded files
   in the `api-storage` volume and both services expose health checks, bound to
   localhost only.
-- [jobpilot.conf](jobpilot.conf) is the nginx site config: one origin, web at
+- [openapply.conf](openapply.conf) is the nginx site config: one origin, web at
   `/`, API proxied at `/api` with SSE buffering off. Install steps are in the
   file's header comment; TLS comes from `certbot --nginx`.
 - `.env` (not committed) holds `DATABASE_URL` for the external PostgreSQL,

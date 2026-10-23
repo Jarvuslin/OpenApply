@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { CampaignJobStatus, CampaignStatus } from "@jobpilot/contracts/campaign";
 import type { ChipProps } from "@mui/material";
+import type { CampaignJobStatus, CampaignStatus } from "@openapply/contracts/campaign";
 import { ColorChip } from "@/components/ui/display";
 
 const CAMPAIGN_STATUS_COLOR: Record<CampaignStatus, ChipProps["color"]> = {

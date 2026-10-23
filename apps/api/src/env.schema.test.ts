@@ -17,6 +17,21 @@ const production = {
 };
 
 describe("auth environment validation", () => {
+  it("accepts explicitly disabled Telegram config while rejecting malformed nonempty values", () => {
+    const parsed = EnvSchema.parse({
+      ...local,
+      TELEGRAM_BOT_TOKEN: "",
+      TELEGRAM_BOT_USERNAME: "",
+      TELEGRAM_WEBHOOK_SECRET: "",
+      TELEGRAM_DELIVERY_ENABLED: "false",
+    });
+    expect(parsed.TELEGRAM_BOT_TOKEN).toBeUndefined();
+    expect(parsed.TELEGRAM_BOT_USERNAME).toBeUndefined();
+    expect(parsed.TELEGRAM_WEBHOOK_SECRET).toBeUndefined();
+    expect(parsed.TELEGRAM_DELIVERY_ENABLED).toBe(false);
+    expect(EnvSchema.safeParse({ ...local, TELEGRAM_BOT_USERNAME: "bad!" }).success).toBe(false);
+    expect(EnvSchema.safeParse({ ...local, TELEGRAM_WEBHOOK_SECRET: "short" }).success).toBe(false);
+  });
   it("keeps email/password usable locally without provider keys", () => {
     const parsed = EnvSchema.parse({ ...local, GOOGLE_CLIENT_ID: " ", GOOGLE_CLIENT_SECRET: "" });
     expect(parsed.GOOGLE_CLIENT_ID).toBeUndefined();

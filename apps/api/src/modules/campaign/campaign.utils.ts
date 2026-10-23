@@ -1,4 +1,4 @@
-import { campaignChannel, workspaceChannel } from "@jobpilot/contracts/sse";
+import { campaignChannel, workspaceChannel } from "@openapply/contracts/sse";
 import { findOwned } from "@/common/errors";
 import { publish } from "@/common/sse";
 import type {
@@ -11,9 +11,8 @@ import type {
 /** Campaign kinds whose scored `pending` rows the pilot promotes: auto-apply and pasted links. */
 export const PROMOTABLE_SOURCES: CampaignSource[] = ["auto_apply", "apply"];
 
-/** A function rather than a service method, so the job and networking services need not inject one. */
 export async function ensureCampaignOwned(
-  prisma: PrismaClient,
+  prisma: Pick<PrismaClient, "campaign">,
   userId: string,
   campaignId: string,
 ): Promise<void> {

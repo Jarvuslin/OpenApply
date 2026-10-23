@@ -1,7 +1,6 @@
 "use client";
 
 import { type ReactElement, useState } from "react";
-import { isProtectedVariantLabel, UNUSED_VARIANT_DAYS } from "@jobpilot/contracts/resume";
 import { CleaningServices, Delete, OpenInNew, Search } from "@mui/icons-material";
 import {
   Box,
@@ -9,6 +8,8 @@ import {
   Card,
   CardContent,
   Chip,
+  DialogActions,
+  DialogContent,
   IconButton,
   InputAdornment,
   Skeleton,
@@ -16,18 +17,20 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { isProtectedVariantLabel, UNUSED_VARIANT_DAYS } from "@openapply/contracts/resume";
 import { api } from "@/api/client";
 import { useApiMutation, useApiQuery } from "@/api/hooks";
 import { resumeQueries } from "@/api/queries";
 import { queryKeys } from "@/api/query-keys";
-import { variantPdfUrl } from "@/api/resume-urls";
 import type { ResumeVariantListItem } from "@/api/types";
 import { RelativeTime } from "@/components/ui/display";
+import { Dialog, DialogTitle } from "@/components/ui/feedback";
 import { SectionCard } from "@/components/ui/layout";
 import { useConfirm } from "@/providers/confirm-provider";
 import { plural } from "@/utils/format";
-import { TailorForJobButton } from "../tailor/tailor-for-job-button";
+import { ArtifactPreview } from "./artifact-preview";
 import { groupVariants } from "./group-variants";
+import { VariantWordingReview } from "./variant-wording-review";
 
 interface VariantsPanelProps {
   resumeId: string;
@@ -37,6 +40,7 @@ interface VariantsPanelProps {
 export function VariantsPanel(props: VariantsPanelProps): ReactElement {
   const { resumeId, resumeLabel } = props;
   const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<ResumeVariantListItem | null>(null);
   const confirm = useConfirm();
 
   const query = useApiQuery(resumeQueries.variants(resumeId));
@@ -95,105 +99,130 @@ export function VariantsPanel(props: VariantsPanelProps): ReactElement {
     : variants;
 
   return (
-    <SectionCard
-      title="Tailored variants"
-      description={`AI-generated copies of "${resumeLabel}" tailored to specific jobs. Bases are not modified, and unused variants are removed automatically after ${UNUSED_VARIANT_DAYS} days.`}
-      actions={
-        <Stack direction="row" spacing={1}>
-          {prunable.length > 0 && (
-            <Button
+    <>
+      <SectionCard
+        title="Tailored variants"
+        description={`AI-generated copies of "${resumeLabel}" tailored to specific jobs. Bases are not modified, and unused variants are removed automatically after ${UNUSED_VARIANT_DAYS} days.`}
+        actions={
+          <Stack direction="row" spacing={1}>
+            {prunable.length > 0 && (
+              <Button
+                size="small"
+                variant="outlined"
+                color="inherit"
+                startIcon={<CleaningServices />}
+                disabled={prune.isPending}
+                onClick={() => void handlePrune()}
+              >
+                Prune {prunable.length} unused
+              </Button>
+            )}
+          </Stack>
+        }
+      >
+        {query.isLoading ? (
+          <Skeleton variant="rounded" height={64} />
+        ) : variants.length === 0 ? (
+          <Typography variant="body2Muted">
+            No variants yet. Click &ldquo;Tailor for job&rdquo;, paste a job description or URL, and
+            the AI will either reuse a close match (if you had previous variants) or create a new
+            one.
+          </Typography>
+        ) : (
+          <Stack spacing={1.5}>
+            <TextField
               size="small"
-              variant="outlined"
-              color="inherit"
-              startIcon={<CleaningServices />}
-              disabled={prune.isPending}
-              onClick={() => void handlePrune()}
-            >
-              Prune {prunable.length} unused
-            </Button>
+              placeholder="Search by label or job URL"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search fontSize="sm" />
+                    </InputAdornment>
+                  ),
+                },
+              }}
+            />
+            {filtered.length === 0 ? (
+              <Typography variant="body2Muted">
+                No variants match &ldquo;{search}&rdquo;.
+              </Typography>
+            ) : (
+              <Stack spacing={1.5} sx={{ maxHeight: 480, overflowY: "auto", pr: 0.5 }}>
+                {groupVariants(filtered).map((group) => (
+                  <Stack key={group.company} spacing={1} sx={{ flexShrink: 0 }}>
+                    <Typography variant="overlineMuted">
+                      {group.company} · {plural(group.variants.length, "variant")}
+                      {group.attached > 0 && ` · ${group.attached} applied with`}
+                    </Typography>
+                    {group.variants.map((v) => (
+                      <Card key={v.id} sx={{ flexShrink: 0 }}>
+                        <CardContent>
+                          <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                              <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                                <Typography variant="body2Strong">{v.label}</Typography>
+                                <Chip
+                                  label={v.applicationId ? "Applied with this" : "Unused"}
+                                  size="small"
+                                  variant="outlined"
+                                  color={v.applicationId ? "success" : "default"}
+                                />
+                              </Stack>
+                              <Typography variant="captionMuted">
+                                {v.jobUrl ? `${v.jobUrl} · ` : ""}created{" "}
+                                <RelativeTime value={v.createdAt} />
+                              </Typography>
+                            </Box>
+                            <IconButton
+                              onClick={() => setSelected(v)}
+                              aria-label="Open variant PDF and wording review"
+                            >
+                              <OpenInNew fontSize="md" />
+                            </IconButton>
+                            <IconButton
+                              onClick={() => void handleDelete(v)}
+                              aria-label="Delete variant"
+                            >
+                              <Delete fontSize="md" />
+                            </IconButton>
+                          </Stack>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </Stack>
+                ))}
+              </Stack>
+            )}
+          </Stack>
+        )}
+      </SectionCard>
+      <Dialog open={Boolean(selected)} onClose={() => setSelected(null)} maxWidth="md" fullWidth>
+        <DialogTitle>{selected?.label}</DialogTitle>
+        <DialogContent>
+          {selected && (
+            <ArtifactPreview
+              key={`preview:${selected.id}:${selected.updatedAt}`}
+              resumeId={resumeId}
+              variantId={selected.id}
+              updatedAt={selected.updatedAt}
+            />
           )}
-          <TailorForJobButton />
-        </Stack>
-      }
-    >
-      {query.isLoading ? (
-        <Skeleton variant="rounded" height={64} />
-      ) : variants.length === 0 ? (
-        <Typography variant="body2Muted">
-          No variants yet. Click &ldquo;Tailor for job&rdquo;, paste a job description or URL, and
-          the AI will either reuse a close match (if you had previous variants) or create a new one.
-        </Typography>
-      ) : (
-        <Stack spacing={1.5}>
-          <TextField
-            size="small"
-            placeholder="Search by label or job URL"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search fontSize="sm" />
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
-          {filtered.length === 0 ? (
-            <Typography variant="body2Muted">No variants match &ldquo;{search}&rdquo;.</Typography>
-          ) : (
-            <Stack spacing={1.5} sx={{ maxHeight: 480, overflowY: "auto", pr: 0.5 }}>
-              {groupVariants(filtered).map((group) => (
-                <Stack key={group.company} spacing={1} sx={{ flexShrink: 0 }}>
-                  <Typography variant="overlineMuted">
-                    {group.company} · {plural(group.variants.length, "variant")}
-                    {group.attached > 0 && ` · ${group.attached} applied with`}
-                  </Typography>
-                  {group.variants.map((v) => (
-                    <Card key={v.id} sx={{ flexShrink: 0 }}>
-                      <CardContent>
-                        <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-                          <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                              <Typography variant="body2Strong">{v.label}</Typography>
-                              <Chip
-                                label={v.applicationId ? "Applied with this" : "Unused"}
-                                size="small"
-                                variant="outlined"
-                                color={v.applicationId ? "success" : "default"}
-                              />
-                            </Stack>
-                            <Typography variant="captionMuted">
-                              {v.jobUrl ? `${v.jobUrl} · ` : ""}created{" "}
-                              <RelativeTime value={v.createdAt} />
-                            </Typography>
-                          </Box>
-                          <IconButton
-                            component="a"
-                            href={variantPdfUrl(v.id, v.updatedAt)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            aria-label="Open variant PDF"
-                          >
-                            <OpenInNew fontSize="md" />
-                          </IconButton>
-                          <IconButton
-                            onClick={() => void handleDelete(v)}
-                            aria-label="Delete variant"
-                          >
-                            <Delete fontSize="md" />
-                          </IconButton>
-                        </Stack>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </Stack>
-              ))}
-            </Stack>
+          {selected && (
+            <VariantWordingReview
+              key={`wording:${selected.id}:${selected.updatedAt}`}
+              resumeId={resumeId}
+              variantId={selected.id}
+              updatedAt={selected.updatedAt}
+            />
           )}
-        </Stack>
-      )}
-    </SectionCard>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSelected(null)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }

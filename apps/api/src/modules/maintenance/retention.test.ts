@@ -1,13 +1,10 @@
 import { DAY_MS } from "@/common/date/buckets";
 import {
   applicationEventWhere,
-  claimDiscoverWhere,
-  claimReleasedWhere,
   cutoffs,
   emailBodyWhere,
   journalDigestOldWhere,
   journalOldWhere,
-  promotionPostWhere,
   questionTerminalWhere,
   RETENTION_DAYS,
   refreshTokenWhere,
@@ -27,8 +24,6 @@ describe("cutoffs", () => {
     const c = cutoffs(NOW);
     expect(c.journal).toEqual(daysBefore(RETENTION_DAYS.journal));
     expect(c.journalDigest).toEqual(daysBefore(RETENTION_DAYS.journalDigest));
-    expect(c.claim).toEqual(daysBefore(RETENTION_DAYS.claim));
-    expect(c.claimDiscover).toEqual(daysBefore(RETENTION_DAYS.claimDiscover));
     expect(c.question).toEqual(daysBefore(RETENTION_DAYS.question));
     expect(c.token).toEqual(daysBefore(RETENTION_DAYS.token));
     expect(c.promotion).toEqual(daysBefore(RETENTION_DAYS.promotion));
@@ -52,21 +47,6 @@ describe("where-builders", () => {
     });
   });
 
-  it("claimReleasedWhere never matches an open claim (releasedAt null) and excludes search.discover", () => {
-    const where = claimReleasedWhere(c);
-    expect(where).toEqual({
-      releasedAt: { not: null, lt: c.claim },
-      kind: { not: "search.discover" },
-    });
-  });
-
-  it("claimDiscoverWhere isolates search.discover on the 90d tier", () => {
-    expect(claimDiscoverWhere(c)).toEqual({
-      kind: "search.discover",
-      releasedAt: { not: null, lt: c.claimDiscover },
-    });
-  });
-
   it("questionTerminalWhere never includes open, and keeps answered email/campaign tombstones", () => {
     const where = questionTerminalWhere(c);
     expect(where).toEqual({
@@ -80,10 +60,6 @@ describe("where-builders", () => {
     expect(JSON.stringify(where)).not.toContain('"open"');
   });
 
-  it("keeps claims at least as long as the questions they consume", () => {
-    expect(RETENTION_DAYS.claim).toBeGreaterThanOrEqual(RETENTION_DAYS.question);
-  });
-
   it("verificationTokenWhere matches expiry or consumption past grace", () => {
     expect(verificationTokenWhere(c)).toEqual({
       OR: [{ expiresAt: { lt: c.token } }, { consumedAt: { lt: c.token } }],
@@ -94,17 +70,6 @@ describe("where-builders", () => {
     expect(refreshTokenWhere(c)).toEqual({
       OR: [{ expiresAt: { lt: c.token } }, { revokedAt: { lt: c.token } }],
     });
-  });
-
-  it("promotionPostWhere only targets terminal statuses", () => {
-    const where = promotionPostWhere(c);
-    expect(where).toEqual({
-      status: { in: ["declined", "skipped", "expired", "failed"] },
-      updatedAt: { lt: c.promotion },
-    });
-    for (const kept of ["draft", "approved", "posted"]) {
-      expect((where.status as { in: string[] }).in).not.toContain(kept);
-    }
   });
 
   it("emailBodyWhere skips already-blanked rows and messages still awaiting classification", () => {

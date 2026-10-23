@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { type RegisterInput, RegisterSchema } from "@jobpilot/contracts/auth";
 import { Alert, Link, Stack, Typography } from "@mui/material";
+import { type RegisterInput, RegisterSchema } from "@openapply/contracts/auth";
 import { useAppForm } from "@/components/ui/form/tanstack";
 import { useAuthActions } from "@/hooks/use-auth";
 import { useAuthOptions } from "@/hooks/use-auth-options";
@@ -45,6 +45,8 @@ export function RegisterForm(): ReactElement {
         <form.AppField name="email">
           {(field) => (
             <field.TextField
+              labelPosition="above"
+              size="medium"
               label="Email"
               type="email"
               autoComplete="email"
@@ -57,6 +59,8 @@ export function RegisterForm(): ReactElement {
         <form.AppField name="password">
           {(field) => (
             <field.TextField
+              labelPosition="above"
+              size="medium"
               label="Password"
               type="password"
               autoComplete="new-password"

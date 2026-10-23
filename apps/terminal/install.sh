@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# JobPilot Terminal installer for Linux and macOS.
-# Usage: curl -fsSL https://raw.githubusercontent.com/suxrobGM/jobpilot/main/apps/terminal/install.sh | bash
+# OpenApply Terminal installer for Linux and macOS.
+# Usage: curl -fsSL https://raw.githubusercontent.com/Jarvuslin/OpenApply/main/apps/terminal/install.sh | bash
 
 set -euo pipefail
 
-REPO="suxrobGM/jobpilot"
-INSTALL_DIR="${JOBPILOT_INSTALL_DIR:-$HOME/.jobpilot}"
-BINARY_NAME="jobpilot"
+REPO="Jarvuslin/OpenApply"
+INSTALL_DIR="${OPENAPPLY_INSTALL_DIR:-$HOME/.openapply}"
+BINARY_NAME="openapply"
 
 TMP_DIR=""
 cleanup() { [ -n "$TMP_DIR" ] && rm -rf "$TMP_DIR"; }
@@ -51,11 +51,11 @@ get_latest_version() {
 download_and_install() {
   local rid="$1" version="$2"
   local tag="${version}"
-  local archive="jobpilot-terminal-${rid}.tar.gz"
+  local archive="openapply-terminal-${rid}.tar.gz"
   local url="https://github.com/${REPO}/releases/download/${tag}/${archive}"
 
   TMP_DIR="$(mktemp -d)"
-  info "Downloading JobPilot Terminal ${version} for ${rid}..."
+  info "Downloading OpenApply Terminal ${version} for ${rid}..."
   if ! curl -fsSL -o "${TMP_DIR}/${archive}" "$url"; then
     error "Download failed. Check that the release exists: $url"
   fi
@@ -81,7 +81,7 @@ setup_path() {
   local export_line="export PATH=\"${INSTALL_DIR}:\$PATH\""
   if [ -n "$shell_config" ] && [ -f "$shell_config" ]; then
     if ! grep -q "$INSTALL_DIR" "$shell_config" 2>/dev/null; then
-      printf '\n# JobPilot Terminal\n%s\n' "$export_line" >> "$shell_config"
+      printf '\n# OpenApply Terminal\n%s\n' "$export_line" >> "$shell_config"
       info "Added $INSTALL_DIR to PATH in $shell_config"
       info "Run: source $shell_config"
     fi
@@ -92,7 +92,7 @@ setup_path() {
 }
 
 main() {
-  info "JobPilot Terminal Installer"
+  info "OpenApply Terminal Installer"
   local rid version
   rid=$(detect_platform)
   info "Detected platform: $rid"
@@ -101,7 +101,7 @@ main() {
   download_and_install "$rid" "$version"
   setup_path
   info ""
-  info "JobPilot Terminal installed to ${INSTALL_DIR}"
+  info "OpenApply Terminal installed to ${INSTALL_DIR}"
   info "Run: ${BINARY_NAME}"
 }
 

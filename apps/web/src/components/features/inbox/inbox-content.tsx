@@ -1,8 +1,8 @@
 "use client";
 
 import { type ReactElement, useState } from "react";
-import { inboxChannel } from "@jobpilot/contracts/sse";
-import { LinearProgress, Stack } from "@mui/material";
+import { Alert, Button, LinearProgress, Stack } from "@mui/material";
+import { inboxChannel } from "@openapply/contracts/sse";
 import { useQueryClient } from "@tanstack/react-query";
 import { useApiQuery } from "@/api/hooks";
 import { emailQueries, type InboxFilter } from "@/api/queries";
@@ -12,7 +12,6 @@ import { LinkButton } from "@/components/ui/buttons";
 import { EmptyState } from "@/components/ui/data/empty-state";
 import { gridPagination, usePaginationParams } from "@/hooks/use-pagination";
 import { useSseChannel } from "@/lib/sse/client";
-import { useAgent, useAgentAvailable } from "@/providers/agent-provider";
 import { InboxTable } from "./inbox-table";
 import { InboxToolbar } from "./inbox-toolbar";
 import { MessageReviewDialog } from "./message-review-dialog";
@@ -21,8 +20,6 @@ export function InboxContent(): ReactElement {
   const [filter, setFilter] = useState<InboxFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const queryClient = useQueryClient();
-  const { injectSkill } = useAgent();
-  const agentAvailable = useAgentAvailable();
 
   const account = useApiQuery(emailQueries.account());
 
@@ -45,13 +42,24 @@ export function InboxContent(): ReactElement {
     return <LinearProgress />;
   }
 
-  if (!status?.connected) {
+  if (account.error || !status) {
+    return (
+      <Alert
+        severity="error"
+        action={<Button onClick={() => void account.refetch()}>Retry</Button>}
+      >
+        Could not load your mailbox connection.
+      </Alert>
+    );
+  }
+
+  if (!status.connected) {
     return (
       <EmptyState
         title="No mailbox connected"
         description="OpenApply reads new mail to track recruiter replies and auto-fill verification codes. Connect Gmail to get started."
         action={
-          <LinkButton href="/settings/email" variant="contained">
+          <LinkButton href="/queue#login" variant="contained">
             Connect Gmail
           </LinkButton>
         }
@@ -64,7 +72,7 @@ export function InboxContent(): ReactElement {
       {status.needsReauth && (
         <MailboxReauthAlert
           action={
-            <LinkButton href="/settings/email" color="inherit" size="small">
+            <LinkButton href="/queue#login" color="inherit" size="small">
               Reconnect
             </LinkButton>
           }
@@ -77,21 +85,21 @@ export function InboxContent(): ReactElement {
           pagination.setPage(1);
         }}
       />
-      {messages.isLoading ? (
-        <LinearProgress />
-      ) : (
+      {messages.isLoading && <LinearProgress />}
+      {messages.error && (
+        <Alert
+          severity="error"
+          action={<Button onClick={() => void messages.refetch()}>Retry</Button>}
+        >
+          Could not load your inbox.
+        </Alert>
+      )}
+      {!messages.isLoading && !messages.error && (
         <InboxTable
           rows={messages.data?.items ?? []}
           loading={messages.isFetching}
           {...gridPagination(pagination, messages.data?.pagination)}
           onRowClick={(row) => setSelectedId(row.id)}
-          onScanMessage={
-            agentAvailable
-              ? (row) => {
-                  void injectSkill("scan-inbox", String(row.id));
-                }
-              : undefined
-          }
         />
       )}
       <MessageReviewDialog

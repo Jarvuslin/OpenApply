@@ -1,41 +1,32 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { Link, Stack, Typography } from "@mui/material";
+import { Link, Typography } from "@mui/material";
 import type { Route } from "next";
-import { JobPilotMark } from "@/components/brand/jobpilot-mark";
+import { fontFamilies } from "@/theme";
 
 interface BrandMarkProps {
-  /** Hide the "OpenApply" wordmark and show only the badge. */
-  iconOnly?: boolean;
   /** Where the mark points. Home by default - a logo that goes nowhere reads as broken. */
   href?: Route;
 }
 
-/** The OpenApply badge + wordmark, shared by the marketing nav and footer. */
+/** The serif OpenApply wordmark, the same one the app sidebar shows. */
 export function BrandMark(props: BrandMarkProps): ReactElement {
-  const { iconOnly = false, href = "/" as Route } = props;
+  const { href = "/" as Route } = props;
   return (
-    <Stack
-      component={Link}
-      href={href}
-      aria-label="OpenApply home"
-      underline="none"
-      direction="row"
-      spacing={1}
-      sx={{
-        alignItems: "center",
-        color: "text.primary",
-        transition: (theme) => theme.motion.fast,
-        "&:hover": { opacity: 0.85 },
-      }}
-    >
-      <JobPilotMark size={32} />
-      {!iconOnly && (
-        <Typography variant="h3" sx={{ fontSize: "1.1rem", letterSpacing: "-0.01em" }}>
-          OpenApply
-        </Typography>
-      )}
-    </Stack>
+    <Link href={href} aria-label="OpenApply home" underline="none" color="text.primary">
+      <Typography
+        component="span"
+        sx={{
+          fontFamily: fontFamilies.wordmark,
+          fontWeight: 700,
+          fontSize: "1.375rem",
+          lineHeight: "28px",
+          letterSpacing: "-0.01em",
+        }}
+      >
+        OpenApply
+      </Typography>
+    </Link>
   );
 }

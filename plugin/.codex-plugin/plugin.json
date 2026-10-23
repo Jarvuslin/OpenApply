@@ -1,18 +1,18 @@
 {
-  "name": "jobpilot",
+  "name": "openapply",
   "version": "2.1.38",
-  "description": "Setup bootstrap for the local JobPilot agent.",
+  "description": "Setup bootstrap for the local OpenApply agent.",
   "author": {
-    "name": "JobPilot"
+    "name": "OpenApply"
   },
   "license": "MIT",
-  "keywords": ["jobpilot", "jobs", "applications", "codex", "skills"],
+  "keywords": ["openapply", "jobs", "applications", "codex", "skills"],
   "skills": "./skills/",
   "interface": {
-    "displayName": "JobPilot",
-    "shortDescription": "Install and start the local JobPilot agent.",
-    "longDescription": "Install, update, and start the local JobPilot terminal, which supplies the runtime skills and browser tools used from the dashboard.",
-    "developerName": "JobPilot",
+    "displayName": "OpenApply",
+    "shortDescription": "Install and start the local OpenApply agent.",
+    "longDescription": "Install, update, and start the local OpenApply terminal, which supplies the runtime skills and browser tools used from the dashboard.",
+    "developerName": "OpenApply",
     "category": "Productivity",
     "capabilities": ["Interactive", "Read", "Write"],
     "defaultPrompt": ["$setup"],

@@ -1,55 +1,7 @@
-import { approvedJob, hasKind, service } from "./fakes";
+import type { PrismaClient } from "@/generated/prisma/client";
+import { hasKind, service } from "./fakes";
+import { gatherApprovedJobs } from "./gather-jobs";
 import { describe, expect, it } from "bun:test";
-
-describe("AgendaService warm intros", () => {
-  const insider = {
-    id: "ct1",
-    name: "Insider",
-    title: "Staff Eng",
-    email: "in@acme.test",
-    company: "Acme, Inc.",
-  };
-
-  it("matches contacts by normalized company onto both the apply and the intro", async () => {
-    const agenda = await service({
-      approvedJobs: [approvedJob({ matchScore: 90, company: "Acme" })],
-      contacts: [insider],
-    }).refresh("p1");
-    const apply = agenda.items.find((i) => i.kind === "job.apply");
-    const intro = agenda.items.find((i) => i.kind === "networking.warmIntro");
-    expect(apply?.payload).toMatchObject({ warmContacts: [{ id: "ct1" }] });
-    expect(intro?.payload).toMatchObject({ contacts: [{ id: "ct1" }] });
-  });
-
-  it("leaves a job below the score floor out of the pool", async () => {
-    const agenda = await service({
-      approvedJobs: [approvedJob({ matchScore: 79 })],
-      contacts: [insider],
-    }).refresh("p1");
-    expect(hasKind(agenda, "networking.warmIntro")).toBe(false);
-  });
-
-  it("keeps a recent strong apply in the pool", async () => {
-    const agenda = await service({
-      recentAppliedJobs: [approvedJob({ matchScore: 90, key: "done1" })],
-    }).refresh("p1");
-    const intro = agenda.items.find((i) => i.kind === "networking.warmIntro");
-    expect(intro?.subjectId).toBe("c1:done1");
-  });
-
-  it("drops an introduced job from the pool but keeps its contacts on the apply", async () => {
-    const agenda = await service({
-      approvedJobs: [approvedJob({ matchScore: 90, key: "j1" })],
-      warmIntroClaims: [
-        { subjectId: "c1:j1", grantedAt: new Date(), releasedAt: new Date(), outcome: "done" },
-      ],
-      contacts: [insider],
-    }).refresh("p1");
-    expect(hasKind(agenda, "networking.warmIntro")).toBe(false);
-    const apply = agenda.items.find((i) => i.kind === "job.apply");
-    expect(apply?.payload).toMatchObject({ warmContacts: [{ id: "ct1" }] });
-  });
-});
 
 describe("AgendaService board.health", () => {
   // Newest-first apply outcomes for one board.
@@ -81,5 +33,67 @@ describe("AgendaService board.health", () => {
       boardHealthJobs: [failed("a"), failed("b"), applied("c"), failed("d")],
     }).refresh("p1");
     expect(hasKind(agenda, "board.health")).toBe(false);
+  });
+});
+
+describe("approved submission reservations", () => {
+  it("excludes a canonical duplicate while keeping unstarted preparation on its own job", async () => {
+    const rows = [
+      {
+        id: "duplicate",
+        key: "duplicate",
+        url: "http://www.example.test/job/1/?utm_source=repeat",
+      },
+      { id: "prepared", key: "prepared", url: "https://example.test/job/2" },
+      { id: "fresh", key: "fresh", url: "https://example.test/job/3" },
+    ].map((row) => ({
+      ...row,
+      campaignId: "c1",
+      title: "Engineer",
+      board: null,
+      digest: null,
+      matchScore: 90,
+      company: "Acme",
+      campaign: { config: {} },
+    }));
+    const reservations = [
+      {
+        jobId: null,
+        canonicalUrl: "https://example.test/job/1",
+        startedAt: new Date(),
+        legacyOutcomeUnknown: false,
+        receiptStoredAt: null,
+        recordedAt: null,
+      },
+      {
+        jobId: "prepared",
+        canonicalUrl: "https://example.test/job/2",
+        startedAt: null,
+        legacyOutcomeUnknown: false,
+        receiptStoredAt: null,
+        recordedAt: null,
+      },
+    ];
+    const db = {
+      job: { findMany: async () => rows },
+      submissionAttempt: {
+        findFirst: async ({
+          where,
+        }: {
+          where: { OR: { canonicalUrl?: string; jobId?: string }[] };
+        }) =>
+          reservations.find((attempt) =>
+            where.OR.some(
+              (query) =>
+                query.canonicalUrl === attempt.canonicalUrl || query.jobId === attempt.jobId,
+            ),
+          ) ?? null,
+        findMany: async () => [],
+      },
+    } as unknown as PrismaClient;
+    expect((await gatherApprovedJobs(db, "u1")).map((job) => job.key)).toEqual([
+      "prepared",
+      "fresh",
+    ]);
   });
 });

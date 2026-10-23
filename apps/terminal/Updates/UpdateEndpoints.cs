@@ -1,6 +1,6 @@
-using JobPilot.Terminal.Hosting;
+using OpenApply.Terminal.Hosting;
 
-namespace JobPilot.Terminal.Updates;
+namespace OpenApply.Terminal.Updates;
 
 public sealed record UpdateResult
 {

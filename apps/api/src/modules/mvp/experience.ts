@@ -1,3 +1,6 @@
+const NO_EXPERIENCE =
+  /\b(?:no|without)\s+(?:(?:prior|previous|professional|work|relevant)\s+){0,2}experience\s+(?:is\s+)?(?:required|necessary|needed)\b/i;
+
 // Only explicit experience phrases qualify; company age and graduation years do not.
 export function listedExperience(text: string): number | undefined {
   const pattern =
@@ -12,5 +15,6 @@ export function listedExperience(text: string): number | undefined {
     const value = Number(match[1]);
     if (value <= 50) years.push(value);
   }
-  return years.length ? Math.max(...years) : undefined;
+  if (years.length) return Math.max(...years);
+  return NO_EXPERIENCE.test(text) ? 0 : undefined;
 }

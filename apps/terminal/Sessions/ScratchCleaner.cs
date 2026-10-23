@@ -1,8 +1,8 @@
-using JobPilot.Terminal.Common;
-using JobPilot.Terminal.Hosting;
+using OpenApply.Terminal.Common;
+using OpenApply.Terminal.Hosting;
 using Microsoft.Extensions.Hosting;
 
-namespace JobPilot.Terminal.Sessions;
+namespace OpenApply.Terminal.Sessions;
 
 /// <summary>Cleans .temp and .playwright-mcp scratch at session start and every few hours.</summary>
 public sealed class ScratchCleaner(HostInstall install, ILogger<ScratchCleaner> logger) : BackgroundService
@@ -65,13 +65,18 @@ public sealed class ScratchCleaner(HostInstall install, ILogger<ScratchCleaner> 
 
     private void DeleteFiles(string dir, SearchOption depth, string[]? extensions, DateTime? cutoff)
     {
-        if (!Directory.Exists(dir))
+        if (!Directory.Exists(dir) || (File.GetAttributes(dir) & FileAttributes.ReparsePoint) != 0)
         {
             return;
         }
 
         var removed = 0;
-        foreach (var file in Directory.EnumerateFiles(dir, "*", depth))
+        var options = new EnumerationOptions
+        {
+            RecurseSubdirectories = depth == SearchOption.AllDirectories,
+            AttributesToSkip = FileAttributes.ReparsePoint,
+        };
+        foreach (var file in Directory.EnumerateFiles(dir, "*", options))
         {
             if (extensions is not null
                 && !extensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase))

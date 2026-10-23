@@ -8,7 +8,6 @@ const perDayPointSchema = z.object({
   count: z.number().int(),
 });
 
-/** Dashboard analytics summary aggregating application and networking activity. */
 export const analyticsStatsSchema = z.object({
   totals: z.object({
     applications: z.number().int(),
@@ -43,24 +42,35 @@ export const analyticsStatsSchema = z.object({
       count: z.number().int(),
     }),
   ),
-  networking: z.object({
-    totals: z.object({
-      contacts: z.number().int(),
-      sent: z.number().int(),
-      replied: z.number().int(),
-      bounced: z.number().int(),
-    }),
-    thisWeek: z.object({
-      sent: z.number().int(),
-      replied: z.number().int(),
-    }),
-    replyRatePct: z.number().int(),
-    perDaySent: z.array(perDayPointSchema),
-    topContactSources: z.array(
-      z.object({
-        source: z.string(),
-        count: z.number().int(),
-      }),
-    ),
+  responses: z.number().int(),
+  agent: z.object({
+    attempted: z.number().int(),
+    submitted: z.number().int(),
+    automated: z.number().int(),
+    minutesSaved: z.number().int(),
+    runs: z.number().int(),
+    avgRunSeconds: z.number().int().nullable(),
+    questionsAsked: z.number().int(),
+    questionsOpen: z.number().int(),
+    accountsCreated: z.number().int(),
+    accountsVerified: z.number().int(),
+  }),
+  lastWeek: z.object({ submitted: z.number().int() }),
+  matchScore: z.object({
+    average: z.number().int().nullable(),
+    strong: z.number().int(),
+    medium: z.number().int(),
+    weak: z.number().int(),
+  }),
+  outcomes: z.object({
+    total: z.number().int(),
+    rejected: z.number().int(),
+    noAnswer: z.number().int(),
+    withdrawn: z.number().int(),
+    interviews: z.number().int(),
+    offers: z.number().int(),
+    noOffer: z.number().int(),
+    withdrewAfterInterview: z.number().int(),
+    interviewing: z.number().int(),
   }),
 });

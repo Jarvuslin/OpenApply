@@ -2,7 +2,7 @@ import {
   ChangeEmailSchema,
   ChangePasswordSchema,
   ConfirmEmailChangeSchema,
-} from "@jobpilot/contracts";
+} from "@openapply/contracts";
 import { Elysia } from "elysia";
 import { container } from "@/common/di/container";
 import { authGuard } from "@/common/middleware";

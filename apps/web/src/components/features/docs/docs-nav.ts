@@ -14,12 +14,6 @@ export const DOCS_NAV: DocsNavEntry[] = [
     description: "Install the plugin, run setup, and launch your first campaign.",
   },
   {
-    title: "The Pilot",
-    href: "/docs/pilot",
-    description:
-      "Autonomous mode: write your instructions once and read the journal in the morning.",
-  },
-  {
     title: "Campaigns & skills",
     href: "/docs/campaigns-and-skills",
     description:
@@ -28,7 +22,7 @@ export const DOCS_NAV: DocsNavEntry[] = [
   {
     title: "Email setup",
     href: "/docs/email-setup",
-    description: "Connect Gmail with your own Google OAuth client.",
+    description: "Connect Gmail through Claude Code or Codex.",
   },
   {
     title: "Credentials",

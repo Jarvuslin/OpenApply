@@ -3,17 +3,18 @@ import {
   type PilotInstructionsImpact,
   type PilotState,
   pilotCycleDetailSchema,
-  pilotInstructionsConfigSchema,
+  resolvePilotInstructionsConfig,
   type UpdatePilotInstructionsInput,
-} from "@jobpilot/contracts/pilot";
-import { pilotChannel } from "@jobpilot/contracts/sse";
+} from "@openapply/contracts/pilot";
+import { pilotChannel } from "@openapply/contracts/sse";
 import { singleton } from "tsyringe";
 import { conflict } from "@/common/errors";
 import { publish } from "@/common/sse";
 import { type PilotState as PilotStateModel, PrismaClient } from "@/generated/prisma/client";
 import { publishCampaignStatus } from "@/modules/campaign/campaign.utils";
+import { SUBMISSION_NOT_STARTED } from "@/modules/campaign/jobs/submission-guard";
 import { AGENDA_SNAPSHOT_RESET } from "./agenda/snapshot";
-import { costByKind, countAppliedToday, countSentToday, countTodayOutcomes } from "./pilot.stats";
+import { countAppliedToday, countTodayOutcomes } from "./pilot.stats";
 import { SERVER_SKIP_REASONS } from "./skip-reasons";
 
 const PILOT_CAMPAIGN = { createdBy: "pilot" } as const;
@@ -24,22 +25,26 @@ export class PilotService {
   constructor(private readonly prisma: PrismaClient) {}
 
   private async toState(row: PilotStateModel): Promise<PilotState> {
-    const config = pilotInstructionsConfigSchema.parse(row.instructionsConfig);
+    const defaults = await this.prisma.autoApplySettings.findUnique({
+      where: { userId: row.userId },
+      select: { minMatchScore: true },
+    });
+    const { config, minScoreInherited } = resolvePilotInstructionsConfig(
+      row.instructionsConfig,
+      defaults?.minMatchScore,
+    );
     const now = new Date();
-    const [appliedToday, networkingSentToday] = await Promise.all([
-      countAppliedToday(this.prisma, row.userId, now),
-      countSentToday(this.prisma, row.userId, now),
-    ]);
+    const appliedToday = await countAppliedToday(this.prisma, row.userId, now);
     return {
       userId: row.userId,
       running: row.running,
       instructionsGoals: row.instructionsGoals,
       instructionsConfig: config,
+      minScoreInherited,
       instructionsUpdatedAt: row.instructionsUpdatedAt,
       lastCycleAt: row.lastCycleAt,
       cycleCount: row.cycleCount,
       appliedToday,
-      networkingSentToday,
       // `>=` so a cap of 0 reads as reached, matching the agenda.
       capReached: appliedToday >= config.dailyApplyCap,
       createdAt: row.createdAt,
@@ -113,10 +118,13 @@ export class PilotService {
       instructionsUpdatedAt: new Date(),
       ...AGENDA_SNAPSHOT_RESET,
     };
-    const row = await this.prisma.pilotState.upsert({
-      where: { userId },
-      create: { userId, ...instructions },
-      update: instructions,
+    const row = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
+      return tx.pilotState.upsert({
+        where: { userId },
+        create: { userId, ...instructions },
+        update: instructions,
+      });
     });
     // Searches picked for the old goals all come due now, unless they are about to be deleted.
     if (goalsChanged && !body.onChange.rederiveSearches) {
@@ -133,16 +141,16 @@ export class PilotService {
   private async retire(userId: string, change: PilotInstructionsChange) {
     const writes = [];
     if (change.rederiveSearches) {
-      writes.push(
-        this.prisma.pilotSearch.deleteMany({ where: { userId } }),
-        // Bootstrap's damper would otherwise hold the re-derive back for a day.
-        this.prisma.pilotClaim.deleteMany({ where: { userId, kind: "strategy.bootstrap" } }),
-      );
+      writes.push(this.prisma.pilotSearch.deleteMany({ where: { userId } }));
     }
     if (change.dropApprovedJobs) {
       writes.push(
         this.prisma.job.updateMany({
-          where: { status: "approved", campaign: { userId, ...PILOT_CAMPAIGN } },
+          where: {
+            status: "approved",
+            campaign: { userId, ...PILOT_CAMPAIGN },
+            AND: [SUBMISSION_NOT_STARTED],
+          },
           data: { status: "skipped", skipReason: SERVER_SKIP_REASONS.goalsChanged },
         }),
       );
@@ -186,10 +194,13 @@ export class PilotService {
   }
 
   private async setRunning(userId: string, running: boolean) {
-    const row = await this.prisma.pilotState.upsert({
-      where: { userId },
-      create: { userId, running },
-      update: { running, ...AGENDA_SNAPSHOT_RESET },
+    const row = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
+      return tx.pilotState.upsert({
+        where: { userId },
+        create: { userId, running },
+        update: { running, ...AGENDA_SNAPSHOT_RESET },
+      });
     });
     return this.publishState(row);
   }
@@ -211,18 +222,10 @@ export class PilotService {
     return countTodayOutcomes(this.prisma, userId, new Date());
   }
 
-  async getCost(userId: string) {
-    return { items: await costByKind(this.prisma, userId, new Date()) };
-  }
-
   /** Newest server-side activity, so the terminal can tell a slow live cycle from a stuck one. */
   async getActivity(userId: string) {
     const { prisma } = this;
-    const [claims, journal, campaign, job, lastCycle, state] = await Promise.all([
-      prisma.pilotClaim.findMany({
-        where: { userId, releasedAt: null },
-        select: { grantedAt: true, heartbeatAt: true, expiresAt: true },
-      }),
+    const [journal, campaign, job, lastCycle, state] = await Promise.all([
       prisma.pilotJournalEntry.aggregate({ where: { userId }, _max: { createdAt: true } }),
       prisma.campaign.aggregate({ where: { userId }, _max: { updatedAt: true } }),
       prisma.job.aggregate({ where: { campaign: { userId } }, _max: { updatedAt: true } }),
@@ -234,13 +237,9 @@ export class PilotService {
       prisma.pilotState.findUnique({ where: { userId }, select: { running: true } }),
     ]);
 
-    const times = [
-      ...claims.flatMap((claim) => [claim.grantedAt, claim.heartbeatAt]),
-      journal._max.createdAt,
-      campaign._max.updatedAt,
-      job._max.updatedAt,
-    ].filter((time) => time != null);
-    const now = new Date();
+    const times = [journal._max.createdAt, campaign._max.updatedAt, job._max.updatedAt].filter(
+      (time) => time != null,
+    );
     // Stuck-recovery cycles journal an empty detail, and the host still needs their completedAt.
     const detail = lastCycle ? pilotCycleDetailSchema.safeParse(lastCycle.detail).data : undefined;
 
@@ -249,8 +248,6 @@ export class PilotService {
         (max, time) => (!max || time > max ? time : max),
         null,
       ),
-      // An expired claim nobody has swept yet still counts as activity, but not as active.
-      activeClaims: claims.filter((claim) => claim.expiresAt > now).length,
       running: state?.running ?? false,
       lastCycle: lastCycle && {
         cycleId: lastCycle.cycleId,

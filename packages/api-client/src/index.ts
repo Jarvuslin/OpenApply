@@ -1,7 +1,7 @@
 import { type Treaty, treaty } from "@elysiajs/eden";
-import type { App } from "@jobpilot/api";
+import type { App } from "@openapply/api";
 
-/** Create an Eden Treaty client bound to the JobPilot backend `App` type. */
+/** Create an Eden Treaty client bound to the OpenApply backend `App` type. */
 export function createApiClient(
   baseUrl: string,
   options?: NonNullable<Parameters<typeof treaty<App>>[1]>,

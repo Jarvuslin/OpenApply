@@ -2,11 +2,17 @@
 const FIELD_TO_STEP: Record<string, number> = {
   firstName: 1,
   lastName: 1,
+  preferredName: 1,
+  namePronunciation: 1,
+  pronouns: 1,
+  currentCompany: 1,
   contactEmail: 1,
   phone: 1,
   website: 1,
   linkedin: 1,
   github: 1,
+  portfolio: 1,
+  additionalLinks: 1,
   street: 1,
   city: 1,
   state: 1,
@@ -18,6 +24,8 @@ const FIELD_TO_STEP: Record<string, number> = {
   salaryPreferences: 3,
   references: 3,
   autoApply: 3,
+  jobPreferences: 3,
+  workAuthorization: 2,
 };
 
 export interface ValidationIssue {

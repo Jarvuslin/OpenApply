@@ -40,6 +40,7 @@ enum ApplicationStatus {
 }
 
 model Application {
+  submissionAttempt SubmissionAttempt?
   id        String   @id @default(uuid())
   userId    String   @map("user_id")
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -47,6 +48,10 @@ model Application {
   title     String
   company   String
   location  String?
+  listingId String? @map("listing_id")
+  listing JobListing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  listingKey String? @map("listing_key")
+  listingUrl String? @map("listing_url")
   board     String?
   source    ApplicationSource
   appliedAt DateTime @default(now()) @map("applied_at")
@@ -69,6 +74,9 @@ model Application {
   resumeVariantId   String?        @map("resume_variant_id")
   resumeVariantUsed ResumeVariant? @relation("ApplicationResumeUsed", fields: [resumeVariantId], references: [id], onDelete: SetNull)
 
+  // Immutable answers, employer receipt and exact submitted PDF reference; absent for legacy rows.
+  submission Json?
+
   events         ApplicationEvent[]
   emailMessages  EmailMessage[]
   resumeVariants ResumeVariant[]
@@ -78,6 +86,10 @@ model Application {
   @@unique([userId, url])
   // The duplicate scan filters on both columns; this also serves the bare userId lookups.
   @@index([userId, appliedAt])
+  @@index([userId, listingId])
+  @@index([listingId])
+  @@index([listingKey])
+  @@index([listingUrl])
   @@index([appliedAt])
   @@index([campaignId])
   // Both FKs are SetNull, so deleting a resume or variant scans this table without them.

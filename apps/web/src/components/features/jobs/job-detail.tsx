@@ -1,6 +1,7 @@
 import type { ReactElement, ReactNode } from "react";
 import { Box, Card, CardContent, Chip, Divider, Grid, Stack, Typography } from "@mui/material";
 import type { JobListingDto } from "@/api/types";
+import { jobSourceName } from "@/components/features/discover/job-attribution";
 import { BackLink, LinkButton } from "@/components/ui/buttons";
 import { ExternalLink, LabelValue, RelativeTime } from "@/components/ui/display";
 import { formatDate, formatRelativeTime } from "@/utils/format";
@@ -86,7 +87,9 @@ export function JobDetail(props: JobDetailProps): ReactElement {
                     spacing={1}
                     sx={{ alignItems: "center", flexWrap: "wrap" }}
                   >
-                    {source.board && <Chip label={source.board} size="small" variant="outlined" />}
+                    {source.board && (
+                      <Chip label={jobSourceName(source.board)} size="small" variant="outlined" />
+                    )}
                     <ExternalLink href={source.url} truncateTo={320}>
                       {source.url}
                     </ExternalLink>
@@ -146,7 +149,11 @@ function ApplyCard({ slug }: { slug: string }): ReactElement {
             Your own AI agent tailors your resume and fills the form - on your machine, on your
             Claude or Codex plan.
           </Typography>
-          <LinkButton href={`/mvp?job=${encodeURIComponent(slug)}`} variant="contained" fullWidth>
+          <LinkButton
+            href={`/discover?job=${encodeURIComponent(slug)}`}
+            variant="contained"
+            fullWidth
+          >
             Review and apply
           </LinkButton>
         </Stack>

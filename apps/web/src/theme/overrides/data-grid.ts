@@ -1,10 +1,12 @@
-import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "@jobpilot/contracts/pagination";
 import type { Components, Theme } from "@mui/material/styles";
 import type {} from "@mui/x-data-grid/themeAugmentation";
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "@openapply/contracts/pagination";
 
 export const dataGridOverrides: Components<Theme>["MuiDataGrid"] = {
   defaultProps: {
     autoHeight: true,
+    rowHeight: 56,
+    columnHeaderHeight: 40,
     disableRowSelectionOnClick: true,
     pageSizeOptions: [...PAGE_SIZE_OPTIONS],
     initialState: { pagination: { paginationModel: { pageSize: DEFAULT_PAGE_SIZE } } },
@@ -17,12 +19,17 @@ export const dataGridOverrides: Components<Theme>["MuiDataGrid"] = {
       backgroundColor: theme.palette.surfaces.card,
       "& .MuiDataGrid-columnHeaders": {
         backgroundColor: theme.palette.surfaces.elevated,
-        fontSize: "0.7rem",
-        letterSpacing: "0.06em",
-        textTransform: "uppercase",
+        ...theme.typography.overline,
+        color: theme.palette.text.secondary,
       },
-      "& .MuiDataGrid-cell": { fontSize: "0.875rem" },
-      "& .MuiDataGrid-row": { cursor: "pointer" },
+      "& .MuiDataGrid-cell": { ...theme.typography.body2, alignContent: "center" },
+      "& .MuiDataGrid-row": {
+        cursor: "pointer",
+        "&:hover": { backgroundColor: theme.palette.surfaces.hover },
+      },
+      "& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus": {
+        outlineColor: theme.palette.info.main,
+      },
     }),
   },
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { Pagination as PageMeta } from "@jobpilot/contracts/pagination";
+import type { Pagination as PageMeta } from "@openapply/contracts/pagination";
 import { usePaginationParams } from "@/hooks/use-pagination";
 import { PaginationFooter } from "./pagination-footer";
 

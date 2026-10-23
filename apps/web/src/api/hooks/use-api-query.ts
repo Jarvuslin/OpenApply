@@ -2,7 +2,7 @@
 
 import { type UseQueryOptions, type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { apiErrorMessage, type EdenResult } from "@/api/error";
+import { ApiError, type EdenResult } from "@/api/error";
 import { useToast } from "@/providers/notification-provider";
 
 type ApiQueryKey = readonly unknown[];
@@ -38,7 +38,7 @@ export function useApiQuery<TData, TSelected = TData>(
     queryFn: async (): Promise<TData> => {
       const { data, error } = await queryFn();
       if (error) {
-        throw new Error(apiErrorMessage(error));
+        throw new ApiError(error);
       }
       return data as TData;
     },

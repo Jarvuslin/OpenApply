@@ -1,4 +1,4 @@
-import type { Data } from "@jobpilot/api-client";
+import type { Data } from "@openapply/api-client";
 import type { api } from "@/api/client";
 
 /** A submitted application row, inferred from `GET /api/applied`. */

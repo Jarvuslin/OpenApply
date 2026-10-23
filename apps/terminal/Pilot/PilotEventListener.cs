@@ -1,9 +1,9 @@
 using System.Net.ServerSentEvents;
 using System.Text.Json;
-using JobPilot.Terminal.Common;
+using OpenApply.Terminal.Common;
 using Microsoft.Extensions.Hosting;
 
-namespace JobPilot.Terminal.Pilot;
+namespace OpenApply.Terminal.Pilot;
 
 /// <summary>The event type is in the JSON, not the SSE event name.</summary>
 internal sealed record PilotEvent(string? Type, PilotEventPromotion? Promotion, PilotEventState? State);

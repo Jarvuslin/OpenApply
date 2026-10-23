@@ -1,4 +1,4 @@
-import type { OAuthProviderInput } from "@jobpilot/contracts";
+import type { OAuthProviderInput } from "@openapply/contracts";
 import type { OAuthProvider } from "@/generated/prisma/client";
 import { GithubSignInProvider } from "./github.provider";
 import { GoogleSignInProvider } from "./google.provider";

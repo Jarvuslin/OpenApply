@@ -1,16 +1,12 @@
 "use client";
 
 import { type ReactElement, useRef, useState } from "react";
-import { CAMPAIGN_JOB_STATUSES, type CampaignJobStatus } from "@jobpilot/contracts/campaign";
 import { Autorenew, Clear, Replay } from "@mui/icons-material";
-import { Box, Button, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, Stack, TextField, Typography } from "@mui/material";
 import type { GridRowSelectionModel } from "@mui/x-data-grid";
+import { CAMPAIGN_JOB_STATUSES, type CampaignJobStatus } from "@openapply/contracts/campaign";
 import { useQueryClient } from "@tanstack/react-query";
-import type { Route } from "next";
-import { useRouter } from "next/navigation";
-import { api } from "@/api/client";
-import { apiErrorMessage } from "@/api/error";
-import { useApiMutation, useApiQuery } from "@/api/hooks";
+import { useApiQuery } from "@/api/hooks";
 import { campaignQueries } from "@/api/queries";
 import { invalidations } from "@/api/query-keys";
 import type { CampaignDetailDto, CampaignJobDto } from "@/api/types";
@@ -18,11 +14,9 @@ import { SelectField, type SelectFieldOption } from "@/components/ui/form";
 import { SectionCard } from "@/components/ui/layout";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { gridPagination, usePaginationParams } from "@/hooks/use-pagination";
-import { useAgent, useAgentAvailable } from "@/providers/agent-provider";
-import { useToast } from "@/providers/notification-provider";
+import { useQueueActions } from "@/hooks/use-queue-actions";
 import { plural } from "@/utils/format";
 import { EMPTY_SELECTION, resolveSelectedRows } from "@/utils/grid-selection";
-import { UPWORK_DOMAIN } from "../constants";
 import { CampaignJobsTable, isReapplicable } from "./jobs-table";
 
 const STATUS_OPTIONS: ReadonlyArray<SelectFieldOption<CampaignJobStatus>> =
@@ -40,18 +34,13 @@ interface CampaignJobsPanelProps {
 /** Jobs table with status/search filtering and bulk re-apply / rescan of selected jobs. */
 export function CampaignJobsPanel(props: CampaignJobsPanelProps): ReactElement {
   const { campaign } = props;
-  const agent = useAgent();
-  const agentAvailable = useAgentAvailable();
-  const toast = useToast();
-  const router = useRouter();
+  const queue = useQueueActions();
   const queryClient = useQueryClient();
 
   const [statusFilter, setStatusFilter] = useState<CampaignJobStatus | null>(null);
   const [search, setSearch] = useState("");
   const pagination = usePaginationParams({ prefix: "jobs" });
   const [selection, setSelection] = useState<GridRowSelectionModel>(EMPTY_SELECTION);
-
-  const isUpwork = campaign.config.board === UPWORK_DOMAIN;
 
   // Filters run server-side, so they cover the whole campaign rather than the loaded page.
   const term = useDebouncedValue(search.trim(), SEARCH_DEBOUNCE_MS);
@@ -72,8 +61,7 @@ export function CampaignJobsPanel(props: CampaignJobsPanelProps): ReactElement {
     seenJobs.current.set(job.id, job);
   }
 
-  // Re-apply / rescan drive the agent, so they're desktop-only.
-  const canReapply = campaign.status !== "in_progress" && agentAvailable;
+  const canReapply = campaign.status !== "in_progress" && !campaign.config.discovery;
   const selected = canReapply
     ? resolveSelectedRows(selection, [...seenJobs.current.values()], visible).filter((j) =>
         isReapplicable(j.status),
@@ -90,71 +78,33 @@ export function CampaignJobsPanel(props: CampaignJobsPanelProps): ReactElement {
     for (const key of invalidations.campaign) queryClient.invalidateQueries({ queryKey: key });
   };
 
-  // Per-job requests commit independently, so a rejection can't invalidate the whole
-  // batch - report the split instead of surfacing the first error as a total failure.
-  const reapply = useApiMutation<{ ok: number; failed: number }, void>(
-    async () => {
-      const results = await Promise.allSettled(
-        selectedForReapply.map((job) => {
-          const endpoint = api.campaigns({ id: campaign.campaignId }).jobs({ key: job.key });
-          if (job.status === "failed") return endpoint.retry.post({});
-          if (job.status === "approved") return Promise.resolve({ data: job, error: null });
-          return endpoint.patch({ status: "approved" });
-        }),
-      );
-      const ok = results.filter((r) => r.status === "fulfilled" && !r.value.error).length;
-      return { data: { ok, failed: results.length - ok }, error: null };
-    },
-    {
-      invalidate: invalidations.campaign,
-      successMessage: ({ ok, failed }) =>
-        failed === 0
-          ? `Re-applying ${plural(ok, "job")}`
-          : `Re-applying ${ok} of ${plural(ok + failed, "job")} - ${failed} failed`,
-      onSuccess: ({ ok }) => {
-        if (ok > 0) {
-          void agent.injectSkill("apply", `campaign ${campaign.campaignId}`);
-        }
-        setSelection(EMPTY_SELECTION);
-      },
-    },
-  );
-
-  const rescanSelected = (): void => {
-    const keys = selectedSkipped.map((j) => j.key).join(",");
-    void agent.injectSkill("rescan-skipped", `${campaign.campaignId} --jobs ${keys}`);
-    toast.success(`Rescanning ${plural(selectedSkipped.length, "skipped job")}`);
-    resetSelection();
-  };
-
-  // Auto-apply campaigns apply on their own; on other campaigns (e.g. search results) the
-  // user dispatches a job to the single-job apply flow by its URL.
-  const applyJob = (job: CampaignJobDto): void => {
-    void agent.injectSkill("apply", job.url);
-  };
-
-  // Upwork recommendations are recommend-only: seed a proposal draft from the
-  // recommendation, then hand off to the upwork-proposal skill to write it.
-  const draftProposal = async (job: CampaignJobDto): Promise<void> => {
-    const res = await api.upwork.proposals.post({
-      jobTitle: job.title,
-      clientName: job.company || null,
-      jobUrl: job.url,
-      jobDescription: job.description ?? "",
-      source: "search",
-      campaignId: job.campaignId,
-      jobKey: job.key,
-    });
-    if (res.error || !res.data) {
-      toast.error(apiErrorMessage(res.error, "Could not create the proposal draft"));
-      return;
+  async function reapplySelected(): Promise<void> {
+    try {
+      await queue.jobs.mutateAsync(selectedForReapply.map((job) => job.id));
+      resetSelection();
+    } catch {
+      // Keep the exact selection available for an idempotent retry.
     }
-    void agent.injectSkill("upwork-proposal", String(res.data.id));
-    router.push(`/upwork/${res.data.id}` as Route);
-  };
+  }
 
+  async function rescanSelected(): Promise<void> {
+    try {
+      await queue.campaign.mutateAsync({
+        campaignId: campaign.campaignId,
+        action: "rescan",
+        jobIds: selectedSkipped.map((job) => job.id),
+      });
+      resetSelection();
+    } catch {
+      // Keep the exact selection available for an idempotent retry.
+    }
+  }
+
+  const applyJob = (job: CampaignJobDto): void => {
+    queue.jobs.mutate([job.id]);
+  };
   return (
-    <SectionCard title="Jobs" description="Updated live as the campaign progresses.">
+    <SectionCard title="Jobs" description="Updated live as the search runs.">
       <Stack
         direction={{ xs: "column", md: "row" }}
         spacing={1.5}
@@ -198,7 +148,8 @@ export function CampaignJobsPanel(props: CampaignJobsPanelProps): ReactElement {
           <Button
             variant="outlined"
             startIcon={<Autorenew fontSize="sm" />}
-            onClick={rescanSelected}
+            onClick={() => void rescanSelected()}
+            disabled={queue.campaign.isPending || selectedSkipped.length > 100}
           >
             Rescan selected ({selectedSkipped.length})
           </Button>
@@ -207,20 +158,24 @@ export function CampaignJobsPanel(props: CampaignJobsPanelProps): ReactElement {
           <Button
             variant="contained"
             startIcon={<Replay fontSize="sm" />}
-            disabled={reapply.isPending}
-            onClick={() => reapply.mutate()}
+            disabled={queue.jobs.isPending || selectedForReapply.length > 100}
+            onClick={() => void reapplySelected()}
           >
             Re-apply selected ({selectedForReapply.length})
           </Button>
         )}
         <Typography variant="captionMuted">{plural(total, "job")}</Typography>
       </Stack>
+      {(selectedSkipped.length > 100 || selectedForReapply.length > 100) && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Select up to 100 jobs for each queue action.
+        </Alert>
+      )}
       <CampaignJobsTable
         rows={visible}
+        onViewJob={(job) => window.open(job.url, "_blank", "noopener,noreferrer")}
         loading={jobs.isLoading}
-        onApplyJob={!isUpwork && agentAvailable ? applyJob : undefined}
-        onDraftProposal={isUpwork && agentAvailable ? draftProposal : undefined}
-        showReason={isUpwork}
+        onApplyJob={!campaign.config.discovery ? applyJob : undefined}
         checkboxSelection={canReapply}
         rowSelectionModel={selection}
         onRowSelectionModelChange={setSelection}

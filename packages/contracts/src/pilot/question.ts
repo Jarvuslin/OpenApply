@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { checkpointApprovalDetailSchema } from "../checkpoint-approval";
 import { webLinkSchema } from "./web-link";
 
 export const PILOT_QUESTION_KINDS = ["question", "choice", "two_factor", "approval"] as const;
@@ -24,6 +25,7 @@ export const pilotQuestionsQuerySchema = z.object({
 });
 
 export const pilotQuestionSchema = z.object({
+  approval: checkpointApprovalDetailSchema.nullable(),
   id: z.uuid(),
   userId: z.uuid(),
   kind: pilotQuestionKindSchema,

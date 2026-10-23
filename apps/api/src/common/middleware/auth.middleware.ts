@@ -1,14 +1,17 @@
-import { type Cookie, Elysia } from "elysia";
+import { Elysia } from "elysia";
 import { type AuthUser, verifyAccessToken } from "@/common/auth";
 import { container } from "@/common/di/container";
 import { unauthorized } from "@/common/errors";
 import { ApiTokenService } from "@/modules/auth/api-token.service";
+import { type AuthContext, type AuthKind, resolveRequestAuth } from "./auth-resolution";
 
 const apiTokenService = container.resolve(ApiTokenService);
 
-interface AuthContext {
-  headers: Record<string, string | undefined>;
-  cookie: Record<string, Cookie<unknown> | undefined>;
+function resolveAuth(context: AuthContext) {
+  return resolveRequestAuth(context, {
+    session: verifyAccessToken,
+    agent: (token) => apiTokenService.verify(token),
+  });
 }
 
 /**
@@ -16,29 +19,18 @@ interface AuthContext {
  * or the agent's PAT), then the httpOnly `accessToken` cookie. Returns null when
  * unauthenticated.
  */
-export async function resolveAuthUser({ headers, cookie }: AuthContext): Promise<AuthUser | null> {
-  const authorization = headers.authorization;
-  const bearer = authorization?.startsWith("Bearer ") ? authorization.slice(7) : undefined;
-  const cookieToken = cookie.accessToken?.value;
-  const token = bearer ?? (typeof cookieToken === "string" ? cookieToken : undefined);
-  if (!token) {
-    return null;
-  }
-  const jwtUser = await verifyAccessToken(token);
-  if (jwtUser) {
-    return jwtUser;
-  }
-  return apiTokenService.verify(token);
+export async function resolveAuthUser(context: AuthContext): Promise<AuthUser | null> {
+  return (await resolveAuth(context))?.user ?? null;
 }
 
-/** Derives `user`. Throws 401 when unauthenticated. */
+/** Derives the unchanged principal plus server-authenticated request provenance. */
 export const authGuard = new Elysia({ name: "auth-guard" }).derive(
   { as: "scoped" },
-  async ({ headers, cookie }): Promise<{ user: AuthUser }> => {
-    const user = await resolveAuthUser({ headers, cookie });
-    if (!user) {
+  async ({ headers, cookie }): Promise<{ user: AuthUser; authKind: AuthKind }> => {
+    const auth = await resolveAuth({ headers, cookie });
+    if (!auth) {
       throw unauthorized("Missing authorization");
     }
-    return { user };
+    return auth;
   },
 );

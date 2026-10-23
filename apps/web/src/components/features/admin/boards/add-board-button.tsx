@@ -1,9 +1,9 @@
 "use client";
 
 import { type ReactElement, useState } from "react";
-import type { AdminBoardInput } from "@jobpilot/contracts/job-board";
 import { Add } from "@mui/icons-material";
 import { Button } from "@mui/material";
+import type { AdminBoardInput } from "@openapply/contracts/job-board";
 import { useRouter } from "next/navigation";
 import { api } from "@/api/client";
 import { useApiMutation } from "@/api/hooks";

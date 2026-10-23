@@ -1,9 +1,9 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { CampaignJobStatus } from "@jobpilot/contracts/campaign";
-import { Button, Link } from "@mui/material";
+import { Button } from "@mui/material";
 import type { GridColDef, GridRowSelectionModel } from "@mui/x-data-grid";
+import type { CampaignJobStatus } from "@openapply/contracts/campaign";
 import type { CampaignJobDto } from "@/api/types";
 import { DataTable } from "@/components/ui/data/data-table";
 import type { GridPaginationProps } from "@/hooks/use-pagination";
@@ -21,12 +21,13 @@ export function isReapplicable(status: CampaignJobStatus): boolean {
 
 interface CampaignJobsTableProps extends GridPaginationProps {
   rows: ReadonlyArray<CampaignJobDto>;
+  onViewJob: (job: CampaignJobDto) => void;
   loading?: boolean;
   /** When provided, applicable rows get an "Apply" action that calls this. */
   onApplyJob?: (job: CampaignJobDto) => void;
-  /** When provided, applicable rows get a "Draft proposal" action (Upwork). */
+
   onDraftProposal?: (job: CampaignJobDto) => void;
-  /** Show the match-reason column (recommendation rationale, e.g. Upwork). */
+
   showReason?: boolean;
   /** Enables checkbox selection (reapplicable rows only). */
   checkboxSelection?: boolean;
@@ -37,6 +38,7 @@ interface CampaignJobsTableProps extends GridPaginationProps {
 export function CampaignJobsTable(props: CampaignJobsTableProps): ReactElement {
   const {
     rows,
+    onViewJob,
     loading,
     onApplyJob,
     onDraftProposal,
@@ -60,20 +62,39 @@ export function CampaignJobsTable(props: CampaignJobsTableProps): ReactElement {
       flex: 1.4,
       minWidth: 200,
       renderCell: (p) => (
-        <Link href={p.row.url} target="_blank" rel="noopener noreferrer" color="inherit">
+        <Button
+          color="inherit"
+          onClick={(event) => {
+            event.stopPropagation();
+            onViewJob(p.row);
+          }}
+          sx={{ justifyContent: "flex-start", textAlign: "left" }}
+        >
           {p.row.title}
-        </Link>
+        </Button>
       ),
     },
     { field: "company", headerName: "Company", flex: 1, minWidth: 160 },
     { field: "board", headerName: "Board", width: 130 },
     {
       field: "matchScore",
-      headerName: "Score",
-      width: 80,
+      headerName: "Resume fit",
+      width: 120,
       align: "right",
       headerAlign: "right",
       valueGetter: (_v, row) => row.matchScore ?? "",
+      renderCell: (p) => (
+        <Button
+          size="small"
+          onClick={(event) => {
+            event.stopPropagation();
+            onViewJob(p.row);
+          }}
+          aria-label={`View fit evidence for ${p.row.title}`}
+        >
+          {p.row.matchScore === null ? "View fit" : `${p.row.matchScore}/100`}
+        </Button>
+      ),
     },
     ...(showReason
       ? [
@@ -110,13 +131,27 @@ export function CampaignJobsTable(props: CampaignJobsTableProps): ReactElement {
         }
         if (onApplyJob) {
           return (
-            <Button size="small" variant="outlined" onClick={() => onApplyJob(p.row)}>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={(event) => {
+                event.stopPropagation();
+                onApplyJob(p.row);
+              }}
+            >
               Apply
             </Button>
           );
         }
         return (
-          <Button size="small" variant="outlined" onClick={() => onDraftProposal?.(p.row)}>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={(event) => {
+              event.stopPropagation();
+              onDraftProposal?.(p.row);
+            }}
+          >
             Draft proposal
           </Button>
         );
@@ -130,6 +165,8 @@ export function CampaignJobsTable(props: CampaignJobsTableProps): ReactElement {
       columns={columns}
       loading={loading}
       getRowId={(row) => row.id}
+      onRowClick={onViewJob}
+      disableRowSelectionOnClick
       checkboxSelection={checkboxSelection}
       rowSelectionModel={rowSelectionModel}
       onRowSelectionModelChange={onRowSelectionModelChange}

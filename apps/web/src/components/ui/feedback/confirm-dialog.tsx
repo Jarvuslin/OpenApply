@@ -3,14 +3,13 @@
 import { type ReactElement, type ReactNode, useState } from "react";
 import {
   Button,
-  Dialog,
   DialogActions,
   DialogContent,
   DialogContentText,
-  DialogTitle,
   Stack,
   TextField,
 } from "@mui/material";
+import { Dialog, DialogTitle } from "./app-dialog";
 
 interface ConfirmDialogProps {
   open: boolean;

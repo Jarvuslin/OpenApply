@@ -1,5 +1,5 @@
-import { type CreatePilotJournalInput, type PilotJournalEntry } from "@jobpilot/contracts/pilot";
-import { pilotChannel } from "@jobpilot/contracts/sse";
+import { type CreatePilotJournalInput, type PilotJournalEntry } from "@openapply/contracts/pilot";
+import { pilotChannel } from "@openapply/contracts/sse";
 import { z } from "zod/v4";
 import type {
   PilotJournalEntry as PilotJournalEntryModel,

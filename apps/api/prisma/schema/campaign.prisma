@@ -27,6 +27,7 @@ enum CampaignActor {
 }
 
 model Campaign {
+  workItems WorkItem[]
   campaignId    String         @id @default(uuid()) @map("campaign_id")
   userId        String         @map("user_id")
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -48,6 +49,7 @@ model Campaign {
   applications       Application[]
   networkingMessages NetworkingMessage[]
   pilotSearch        PilotSearch?        @relation(fields: [pilotSearchId], references: [id], onDelete: SetNull)
+  pilot              Pilot?
 
   @@index([userId, startedAt])
   @@index([userId, status, startedAt])

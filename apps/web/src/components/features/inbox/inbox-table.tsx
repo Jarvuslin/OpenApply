@@ -1,9 +1,9 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { Classification } from "@jobpilot/contracts/email";
-import { Button, Chip, Link, Stack, Typography } from "@mui/material";
+import { Chip, Link, Stack, Typography } from "@mui/material";
 import type { GridColDef } from "@mui/x-data-grid";
+import type { Classification } from "@openapply/contracts/email";
 import type { EmailMessageDto } from "@/api/types";
 import { DataTable } from "@/components/ui/data/data-table";
 import { ColorChip, RelativeTime } from "@/components/ui/display";
@@ -13,8 +13,6 @@ interface InboxTableProps extends GridPaginationProps {
   rows: ReadonlyArray<EmailMessageDto>;
   loading?: boolean;
   onRowClick: (row: EmailMessageDto) => void;
-  /** When provided, each row gets a Scan/Rescan action that calls this. */
-  onScanMessage?: (row: EmailMessageDto) => void;
 }
 
 const CLASS_COLORS: Record<
@@ -29,7 +27,7 @@ const CLASS_COLORS: Record<
 };
 
 export function InboxTable(props: InboxTableProps): ReactElement {
-  const { rows, loading, onRowClick, onScanMessage, ...pagination } = props;
+  const { rows, loading, onRowClick, ...pagination } = props;
 
   const columns: GridColDef<EmailMessageDto>[] = [
     {
@@ -122,33 +120,6 @@ export function InboxTable(props: InboxTableProps): ReactElement {
       width: 140,
       renderCell: (p) => <RelativeTime value={p.row.receivedAt} />,
     },
-    // Scan action is agent-driven; omit the whole column when no handler is passed.
-    ...(onScanMessage
-      ? [
-          {
-            field: "scan",
-            headerName: "",
-            width: 100,
-            sortable: false,
-            filterable: false,
-            align: "right",
-            headerAlign: "right",
-            renderCell: (p) => (
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={(e) => {
-                  // Don't open the review dialog (row click) when scanning.
-                  e.stopPropagation();
-                  onScanMessage(p.row);
-                }}
-              >
-                {p.row.classification ? "Rescan" : "Scan"}
-              </Button>
-            ),
-          } satisfies GridColDef<EmailMessageDto>,
-        ]
-      : []),
   ];
 
   return (

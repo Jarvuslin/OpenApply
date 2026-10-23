@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { VerifyEmailInput } from "@jobpilot/contracts/auth";
 import { Alert, Button, Stack, Typography } from "@mui/material";
+import type { VerifyEmailInput } from "@openapply/contracts/auth";
 import { api } from "@/api/client";
 import { useApiMutation } from "@/api/hooks";
 import type { ResendVerificationResponse, VerifyEmailResponse } from "@/api/types";
@@ -38,7 +38,7 @@ function VerifyTokenView(props: { token: string }): ReactElement {
       pendingText="Verifying your email…"
       successText="Your email is verified."
       successLabel="Continue"
-      successHref="/workspace"
+      successHref="/dashboard"
       errorHint="This link may have expired or already been used."
     />
   );

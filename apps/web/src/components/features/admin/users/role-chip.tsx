@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import type { Role } from "@jobpilot/contracts/role";
+import type { Role } from "@openapply/contracts/role";
 import { ColorChip } from "@/components/ui/display";
 
 interface AdminRoleChipProps {

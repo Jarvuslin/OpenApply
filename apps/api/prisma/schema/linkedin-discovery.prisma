@@ -1,0 +1,51 @@
+enum LinkedinDiscoveryRunStatus {
+  claimed
+  processing
+  completed
+
+  @@map("linkedin_discovery_run_status")
+}
+
+model LinkedinDiscoverySettings {
+  userId String @id @map("user_id")
+  enabled Boolean @default(false)
+  searches Json @default("[]")
+  lastRunAt DateTime? @map("last_run_at")
+  nextRunAt DateTime? @map("next_run_at")
+  backoffUntil DateTime? @map("backoff_until")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("linkedin_discovery_settings")
+}
+
+model LinkedinDiscoveryRun {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  status LinkedinDiscoveryRunStatus @default(claimed)
+  searches Json
+  leaseHash String @map("lease_hash")
+  leaseExpiresAt DateTime @map("lease_expires_at")
+  processingUntil DateTime? @map("processing_until")
+  payloadHash String? @map("payload_hash")
+  result Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  completedAt DateTime? @map("completed_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("linkedin_discovery_runs")
+}
+
+model PersonalJobListing {
+  userId String @map("user_id")
+  listingId String @map("listing_id")
+  discoveredAt DateTime @default(now()) @map("discovered_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing JobListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@id([userId, listingId])
+  @@index([listingId])
+  @@map("personal_job_listings")
+}

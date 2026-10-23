@@ -4,10 +4,10 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
-using JobPilot.Terminal.Common;
-using JobPilot.Terminal.Hosting;
+using OpenApply.Terminal.Common;
+using OpenApply.Terminal.Hosting;
 
-namespace JobPilot.Terminal.Updates;
+namespace OpenApply.Terminal.Updates;
 
 public sealed record GitHubRelease(
     [property: JsonPropertyName("tag_name")] string? TagName,
@@ -23,7 +23,7 @@ public sealed record GitHubAsset(
 /// </summary>
 public sealed class HostUpdater(HttpClient http, HostInstall install, ILogger<HostUpdater> logger)
 {
-    private const string ReleasesUrl = "https://api.github.com/repos/suxrobGM/jobpilot/releases?per_page=30";
+    private const string ReleasesUrl = "https://api.github.com/repos/Jarvuslin/OpenApply/releases?per_page=30";
     private const string TagPrefix = "v";
 
     private static readonly TimeSpan StartupTimeout = TimeSpan.FromSeconds(20);
@@ -152,7 +152,7 @@ public sealed class HostUpdater(HttpClient http, HostInstall install, ILogger<Ho
             return NotUpdating(UpdateResult.ReasonUpToDate);
         }
 
-        var assetName = $"jobpilot-terminal-{RuntimeId()}{(OperatingSystem.IsWindows() ? ".zip" : ".tar.gz")}";
+        var assetName = $"openapply-terminal-{RuntimeId()}{(OperatingSystem.IsWindows() ? ".zip" : ".tar.gz")}";
         var asset = newer.Release.Assets?.FirstOrDefault(a => a.Name == assetName);
         if (asset?.DownloadUrl is not { } downloadUrl)
         {
@@ -175,7 +175,7 @@ public sealed class HostUpdater(HttpClient http, HostInstall install, ILogger<Ho
     private async Task<GitHubRelease[]> FetchReleasesAsync(CancellationToken ct)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, ReleasesUrl);
-        request.Headers.UserAgent.Add(new ProductInfoHeaderValue("jobpilot-terminal", HostInstall.HostVersion));
+        request.Headers.UserAgent.Add(new ProductInfoHeaderValue("openapply-terminal", HostInstall.HostVersion));
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
         using var response = await http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();

@@ -1,7 +1,8 @@
-import type { JobBoardInput } from "@jobpilot/contracts/job-board";
+import type { JobBoardInput } from "@openapply/contracts/job-board";
 import { singleton } from "tsyringe";
 import { findOwned } from "@/common/errors";
 import { type Prisma, PrismaClient } from "@/generated/prisma/client";
+import { assertAutomationAllowed } from "@/modules/job-board/blocked-sites";
 
 /** A link is identity plus the catalog fields it exposes; `id` is the link's, for DELETE. */
 const LINK_SELECT = {
@@ -45,6 +46,8 @@ export class JobBoardService {
 
   /** Links by domain. A second link to the same board is a 409 from the unique index. */
   async create(userId: string, input: JobBoardInput) {
+    assertAutomationAllowed(input.domain);
+    if (input.searchUrl) assertAutomationAllowed(input.searchUrl);
     // An unknown domain enters the catalog unlisted: admins see it, other users are not offered it.
     const board = await this.prisma.jobBoard.upsert({
       where: { domain: input.domain },
