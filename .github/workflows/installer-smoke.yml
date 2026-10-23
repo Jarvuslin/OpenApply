@@ -1,0 +1,95 @@
+name: Installer smoke test
+# Runs each installer on a clean runner, then the doctor and the companion's /setup/checks.
+# Runners cannot nest virtualization, so WSL2 and Lima are skipped (-SkipVm / --skip-vm).
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - scripts/install.ps1
+      - scripts/install.sh
+      - scripts/doctor*.mjs
+      - scripts/dotnet*.mjs
+      - scripts/openapply.mjs
+      - .github/workflows/installer-smoke.yml
+  pull_request:
+    paths:
+      - scripts/install.ps1
+      - scripts/install.sh
+      - scripts/doctor*.mjs
+      - scripts/dotnet*.mjs
+      - scripts/openapply.mjs
+      - .github/workflows/installer-smoke.yml
+
+env:
+  # Required checks that cannot pass on a runner: no VM, so no database, and no Claude sign-in.
+  ALLOWED_FAILURES: vm,database,claude-auth
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install
+        shell: powershell
+        run: .\scripts\install.ps1 -SkipVm -NoStart
+      - name: Doctor
+        shell: powershell
+        run: |
+          $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User') + ";$env:USERPROFILE\.local\bin"
+          node scripts/openapply.mjs doctor --json | Out-File -Encoding ascii doctor.json
+          node scripts/doctor-assert.mjs doctor.json
+      - name: Connection check (companion /healthz and /setup/checks)
+        shell: powershell
+        run: |
+          $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User') + ";$env:USERPROFILE\.local\bin"
+          $host_ = Start-Process node -ArgumentList 'scripts/dotnet.mjs','run','--project','apps/terminal','--no-build' -RedirectStandardOutput terminal.out.log -RedirectStandardError terminal.err.log -PassThru
+          $ready = $false
+          foreach ($i in 1..60) {
+            try { Invoke-RestMethod http://127.0.0.1:4102/healthz | ConvertTo-Json -Depth 5; $ready = $true; break } catch { Start-Sleep 2 }
+          }
+          if (!$ready) { Get-Content terminal.out.log, terminal.err.log; throw 'The companion did not answer /healthz.' }
+          Invoke-WebRequest http://127.0.0.1:4102/setup/checks -UseBasicParsing -OutFile setup-checks.json
+          bun -e "import { setupChecksSchema } from './packages/contracts/src/setup-checks.ts'; const d = setupChecksSchema.parse(await Bun.file('setup-checks.json').json()); console.log(d.checks.length + ' checks match the contract')"
+          Stop-Process -Id $host_.Id -Force
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: installer-smoke-windows
+          path: |
+            doctor.json
+            setup-checks.json
+            terminal.*.log
+          if-no-files-found: ignore
+
+  macos:
+    runs-on: macos-latest
+    env:
+      DOTNET_EnableWriteXorExecute: "0"
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install
+        run: bash scripts/install.sh --no-start --skip-vm
+      - name: Doctor
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          node scripts/openapply.mjs doctor --json > doctor.json || true
+          node scripts/doctor-assert.mjs doctor.json
+      - name: Connection check (companion /healthz and /setup/checks)
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          node scripts/dotnet.mjs run --project apps/terminal --no-build > terminal.out.log 2> terminal.err.log &
+          host_pid=$!
+          for _ in $(seq 60); do curl -fsS http://127.0.0.1:4102/healthz && break; sleep 2; done
+          curl -fsS http://127.0.0.1:4102/healthz > /dev/null || { cat terminal.*.log; exit 1; }
+          curl -fsS http://127.0.0.1:4102/setup/checks -o setup-checks.json
+          bun -e "import { setupChecksSchema } from './packages/contracts/src/setup-checks.ts'; const d = setupChecksSchema.parse(await Bun.file('setup-checks.json').json()); console.log(d.checks.length + ' checks match the contract')"
+          kill "$host_pid"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: installer-smoke-macos
+          path: |
+            doctor.json
+            setup-checks.json
+            terminal.*.log
+          if-no-files-found: ignore
