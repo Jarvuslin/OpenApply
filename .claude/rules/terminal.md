@@ -8,7 +8,7 @@ paths:
 
 `OpenApply.Terminal` is a .NET 10 minimal API that hosts one provider PTY on the user's machine.
 Endpoints: `/ws`, `/sessions/start`, `/pilot/start`, `/pilot/stop`,
-`/update`, `/shutdown`, `/healthz`. `/sessions/start` takes the user's `apiToken` and sets it
+`/update`, `/shutdown`, `/healthz`, `/setup/checks`. `/sessions/start` takes the user's `apiToken` and sets it
 in the PTY as `OPENAPPLY_API_TOKEN`. The host env var is a local-dev fallback only.
 
 - A C# change needs a rebuild and restart. Invoke the `restart-terminal` skill.

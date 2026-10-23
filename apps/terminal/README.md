@@ -9,7 +9,7 @@ Each folder is one feature and holds its endpoints, request and response records
 
 | Folder | What it does |
 | --- | --- |
-| `Hosting/` | DI and middleware, `/healthz` and `/shutdown`, the install layout, the origin allowlist, the `openapply://` scheme. |
+| `Hosting/` | DI and middleware, `/healthz`, `/setup/checks` (runs the doctor for the Setup page) and `/shutdown`, the install layout, the origin allowlist, the `openapply://` scheme. |
 | `Providers/` | What to launch. `Provider` is the registry; `ClaudeProvider` and `CodexProvider` hold each CLI's arguments and quirks. |
 | `Sessions/` | The live session. `TerminalSession` owns it, `PtyProcess` wraps one spawned process, `TerminalRelay` bridges WebSockets. |
 | `Agent/` | Agent process launcher used by queue workers: provider protocols, process lifetime and model budgets. |

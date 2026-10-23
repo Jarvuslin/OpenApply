@@ -12,6 +12,15 @@ public static class HostEndpoints
     {
         app.MapGet("/healthz", (HostStatus status) => TypedResults.Ok(status.Get()));
 
+        app.MapGet("/setup/checks", async (SetupChecks checks, HttpContext context, CancellationToken ct) =>
+        {
+            context.Response.Headers.CacheControl = "no-store";
+            var result = await checks.GetAsync(ct);
+            return result.Json is { } json
+                ? Results.Text(json, "application/json")
+                : Results.Problem(title: "Setup checks unavailable", detail: result.Error, statusCode: StatusCodes.Status503ServiceUnavailable);
+        });
+
         app.MapPost("/shutdown", (TerminalSession session, IHostApplicationLifetime lifetime) =>
         {
             // pilot.json keeps Running as-is, so the next start resumes the pilot.

@@ -29,6 +29,7 @@ public static class HostingExtensions
 
         services.AddSingleton<HostInstall>();
         services.AddSingleton<HostStatus>();
+        services.AddSingleton<SetupChecks>();
         services.AddSingleton<UrlScheme>();
 
         services.AddSingleton<ScratchCleaner>();
