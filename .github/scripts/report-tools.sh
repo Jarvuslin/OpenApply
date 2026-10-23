@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Prints which tools a fresh shell would find. With --expect-brew, also fails unless Homebrew
 # installed Node and the .NET 10 SDK and they resolve.
+# Step logs need a GitHub sign-in, so the summary also goes out as a public ::notice:: annotation.
 set -uo pipefail
 title="$1"
 repo="${2:-.}"
@@ -10,25 +11,33 @@ for prefix in /opt/homebrew /usr/local; do
 done
 export PATH="$HOME/.local/bin:$PATH"
 echo "== $title"
+summary=""
 for name in git node bun dotnet limactl claude; do
   if found=$(command -v "$name"); then
-    printf '%-8s %s  (%s)\n' "$name" "$("$name" --version 2>/dev/null | head -1)" "$found"
+    version=$("$name" --version 2>/dev/null | head -1)
+    printf '%-8s %s  (%s)\n' "$name" "$version" "$found"
+    summary="$summary$name $version ($found); "
   else
     printf '%-8s missing\n' "$name"
+    summary="$summary$name missing; "
   fi
 done
+echo "::notice title=$title::$summary"
 [ "$expect" = "--expect-brew" ] || exit 0
 
-failed=0
-brew list --formula node >/dev/null 2>&1 && echo "brew installed node" || { echo "FAIL: node not installed by brew"; failed=1; }
-brew list --cask dotnet-sdk >/dev/null 2>&1 && echo "brew installed dotnet-sdk" || { echo "FAIL: dotnet-sdk not installed by brew"; failed=1; }
-git --version >/dev/null 2>&1 || { echo "FAIL: git does not work"; failed=1; }
+failed=""
+brew list --formula node >/dev/null 2>&1 || failed="${failed}node not installed by brew; "
+brew list --cask dotnet-sdk >/dev/null 2>&1 || failed="${failed}dotnet-sdk not installed by brew; "
+git --version >/dev/null 2>&1 || failed="${failed}git does not work; "
 major=$(node --version 2>/dev/null | sed 's/^v//' | cut -d. -f1)
-[ "${major:-0}" -ge 22 ] || { echo "FAIL: node 22+ does not resolve"; failed=1; }
+[ "${major:-0}" -ge 22 ] || failed="${failed}node 22+ does not resolve; "
 if dotnet=$(node "$repo/scripts/dotnet.mjs" --print-path 2>/dev/null); then
   echo "OpenApply uses $dotnet"
 else
-  echo "FAIL: no dotnet with a 10.x SDK"
-  failed=1
+  failed="${failed}no dotnet with a 10.x SDK; "
 fi
-exit "$failed"
+if [ -n "$failed" ]; then
+  echo "::error title=$title::$failed"
+  exit 1
+fi
+echo "brew installed node and dotnet-sdk."

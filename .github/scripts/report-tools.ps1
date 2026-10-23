@@ -1,17 +1,22 @@
 # Prints which tools a fresh PowerShell would find. With -ExpectWinget, also fails unless
 # winget installed Git, Node and the .NET 10 SDK and they resolve.
+# Step logs need a GitHub sign-in, so the summary also goes out as a public ::notice:: annotation.
 param([string]$Title, [string]$Repo = '.', [switch]$ExpectWinget)
 $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User') + ";$env:USERPROFILE\.local\bin"
 Write-Host "== $Title"
+$summary = @()
 foreach ($name in 'git', 'node', 'bun', 'dotnet', 'claude') {
   $command = Get-Command $name -ErrorAction SilentlyContinue
   if ($command) {
     $version = (& $command.Source --version 2>$null | Select-Object -First 1)
     Write-Host ("{0,-7} {1}  ({2})" -f $name, $version, $command.Source)
+    $summary += "$name $version"
   } else {
     Write-Host ("{0,-7} missing" -f $name)
+    $summary += "$name missing"
   }
 }
+Write-Host "::notice title=$Title::$($summary -join '; ')"
 if (!$ExpectWinget) { exit 0 }
 
 $failed = @()
@@ -25,5 +30,5 @@ if (Get-Command node -ErrorAction SilentlyContinue) { $nodeMajor = [int]((& node
 if ($nodeMajor -lt 22) { $failed += "node 22+ does not resolve (major $nodeMajor)" }
 $dotnet = & node (Join-Path $Repo 'scripts/dotnet.mjs') --print-path 2>$null
 if ($LASTEXITCODE -ne 0) { $failed += 'no dotnet with a 10.x SDK' } else { Write-Host "OpenApply uses $dotnet" }
-if ($failed) { $failed | ForEach-Object { Write-Host "FAIL: $_" }; exit 1 }
+if ($failed) { Write-Host "::error title=$Title::$($failed -join '; ')"; exit 1 }
 Write-Host 'Git, Node 22+ and the .NET 10 SDK were installed by the installer.'
