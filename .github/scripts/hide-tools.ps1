@@ -30,6 +30,21 @@ Remove-Installed '^Git( version [0-9.]+)?$'
 Remove-Installed '^Node\.js'
 Remove-Installed '^Microsoft \.NET SDK 10\.'
 
+# Visual Studio registers the SDK's MSI packages too. While any stay registered, a winget
+# install of the same version is a no-op and leaves no files, so remove each one directly.
+$msiKeys = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*', 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
+function Get-SdkPackages {
+  Get-ItemProperty $msiKeys -ErrorAction SilentlyContinue |
+    Where-Object { $_.WindowsInstaller -eq 1 -and $_.DisplayName -match '\.NET.*SDK.*10\.0' }
+}
+foreach ($package in Get-SdkPackages) {
+  Write-Host "msiexec /x $($package.DisplayName)"
+  $removed += "msi $($package.DisplayName)"
+  Start-Process msiexec.exe -ArgumentList '/x', $package.PSChildName, '/qn', '/norestart', 'IGNOREDEPENDENCIES=ALL' -Wait
+}
+$stuck = @(Get-SdkPackages)
+if ($stuck) { throw "Still registered: $(($stuck | ForEach-Object DisplayName) -join ', ')" }
+
 $folders = @("$env:ProgramFiles\Git", "$env:ProgramFiles\nodejs", "$env:ProgramFiles\dotnet",
   "$env:USERPROFILE\.dotnet", "$env:LOCALAPPDATA\Microsoft\dotnet")
 foreach ($folder in $folders) {
