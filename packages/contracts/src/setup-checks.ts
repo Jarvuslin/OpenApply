@@ -13,5 +13,3 @@ const setupCheckSchema = z.object({
 });
 
 export const setupChecksSchema = z.object({ checks: z.array(setupCheckSchema) });
-
-export type SetupCheck = z.infer<typeof setupCheckSchema>;
