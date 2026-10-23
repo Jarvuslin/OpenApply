@@ -48,7 +48,10 @@ async function answers(url) {
   }
 }
 
-/** Waits for the three apps to answer, says which did not, and optionally opens the Setup page. */
+// Signs a new user in, then sends them to onboarding. Switch to /setup once that page is on main.
+const FIRST_PAGE = "http://localhost:4100/dashboard";
+
+/** Waits for the three apps to answer, says which did not, and optionally opens the app. */
 async function confirmConnection(timeoutMs = 180_000) {
   const deadline = Date.now() + timeoutMs;
   let missing = APP_HEALTH;
@@ -65,12 +68,12 @@ async function confirmConnection(timeoutMs = 180_000) {
     return;
   }
   console.log(
-    "Connected: the website, API and companion all answer. Open http://localhost:4100/setup to check this browser and link this computer.",
+    `Connected: the website, API and companion all answer. Open ${FIRST_PAGE} to sign in and link this computer.`,
   );
   if (!openSetup) return;
   const opener = { win32: ["cmd.exe", "/c", "start", ""], darwin: ["open"] }[runtime.platform];
   if (opener)
-    spawn(opener[0], [...opener.slice(1), "http://localhost:4100/setup"], {
+    spawn(opener[0], [...opener.slice(1), FIRST_PAGE], {
       stdio: "ignore",
       detached: true,
     }).unref();

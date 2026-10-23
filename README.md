@@ -12,7 +12,7 @@ A workspace for finding employer roles, tailoring your resume and applying throu
 
 Paste one line into a terminal. The installer installs whatever is missing (Git, Node.js, Bun,
 the .NET 10 SDK, Claude Code and the browser/database VM), clones OpenApply into a folder in
-your home directory, runs setup and the doctor, then starts the app and opens the Setup page.
+your home directory, runs setup and the doctor, then starts the app and opens it in your browser.
 If it stops for a reboot or a Claude sign-in, run the same line again and it carries on.
 
 Windows x64 (PowerShell):
@@ -31,8 +31,9 @@ The code goes to `%USERPROFILE%\OpenApply` or `~/OpenApply`. Set `OPENAPPLY_DIR`
 another folder. Already cloned? Run `scripts\install.ps1` or `bash scripts/install.sh` from the
 repository root instead.
 
-Open **http://localhost:4100/setup** to see every check live. `bun run doctor` prints the same
-checks in the terminal, with a fix for each one that fails. The manual steps below still work.
+The installer opens **http://localhost:4100/dashboard**: create your account, then onboarding
+walks you through your profile. `bun run doctor` lists every setup check in the terminal, with a
+fix for each one that fails. The manual steps below still work.
 
 ## Current capabilities
 
