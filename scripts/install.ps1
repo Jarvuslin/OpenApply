@@ -25,11 +25,21 @@ function Update-Path {
   if ((Test-Path $localBin) -and ($env:Path -notlike "*$localBin*")) { $env:Path = "$localBin;$env:Path" }
 }
 function Test-Command([string]$Name) { [bool](Get-Command $Name -ErrorAction SilentlyContinue) }
-function Install-Winget([string]$Id, [string]$Label) {
+function Install-Winget([string]$Id, [string]$Label, [scriptblock]$Works) {
   Write-Host "Installing $Label..."
   & winget install --id $Id --exact --source winget --silent --accept-source-agreements --accept-package-agreements
-  if ($LASTEXITCODE -ne 0) { throw "winget could not install $Label ($Id)." }
+  $code = $LASTEXITCODE
   Update-Path
+  if (& $Works) { return }
+  # winget can report success, or "already installed", from a stale install record with no files.
+  Write-Host "$Label is still missing after winget (exit $code); reinstalling with --force."
+  & winget install --id $Id --exact --source winget --silent --force --accept-source-agreements --accept-package-agreements
+  Update-Path
+  if (!(& $Works)) { throw "$Label could not be installed. Install it yourself (winget id $Id), then run this again." }
+}
+function Test-Node22 {
+  if (!(Test-Command node)) { return $false }
+  return [int]((& node --version).TrimStart('v').Split('.')[0]) -ge 22
 }
 function Test-Succeeds([scriptblock]$Command) {
   # Under Stop, 5.1 turns a redirected stderr line from a native command into a terminating error.
@@ -82,7 +92,7 @@ if (!$PSScriptRoot -or !(Test-Path (Join-Path $PSScriptRoot 'openapply.mjs'))) {
   $branch = $env:OPENAPPLY_BRANCH
   if (!$branch) { $branch = 'main' }
   Step 'Getting the OpenApply code'
-  if (Test-Command git) { Write-Host 'Git: installed' } else { Install-Winget 'Git.Git' 'Git' }
+  if (Test-Command git) { Write-Host 'Git: installed' } else { Install-Winget 'Git.Git' 'Git' { Test-Command git } }
   if (Test-Path (Join-Path $InstallDir '.git')) {
     Write-Host "Updating $InstallDir"
     & git -C $InstallDir fetch origin $branch
@@ -106,12 +116,10 @@ $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
 Step 'Developer tools'
-if (Test-Command git) { Write-Host 'Git: installed' } else { Install-Winget 'Git.Git' 'Git' }
-$nodeMajor = 0
-if (Test-Command node) { $nodeMajor = [int]((& node --version).TrimStart('v').Split('.')[0]) }
-if ($nodeMajor -ge 22) { Write-Host "Node.js: v$nodeMajor" } else { Install-Winget 'OpenJS.NodeJS.LTS' 'Node.js LTS' }
-if (Test-Command bun) { Write-Host 'Bun: installed' } else { Install-Winget 'Oven-sh.Bun' 'Bun' }
-if (Test-DotnetSdk) { Write-Host '.NET 10 SDK: installed' } else { Install-Winget 'Microsoft.DotNet.SDK.10' '.NET 10 SDK' }
+if (Test-Command git) { Write-Host 'Git: installed' } else { Install-Winget 'Git.Git' 'Git' { Test-Command git } }
+if (Test-Node22) { Write-Host "Node.js: $(& node --version)" } else { Install-Winget 'OpenJS.NodeJS.LTS' 'Node.js LTS' { Test-Node22 } }
+if (Test-Command bun) { Write-Host 'Bun: installed' } else { Install-Winget 'Oven-sh.Bun' 'Bun' { Test-Command bun } }
+if (Test-DotnetSdk) { Write-Host '.NET 10 SDK: installed' } else { Install-Winget 'Microsoft.DotNet.SDK.10' '.NET 10 SDK' { Test-DotnetSdk } }
 
 Step 'WSL2'
 if ($SkipVm) {

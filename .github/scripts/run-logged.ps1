@@ -9,5 +9,7 @@ $code = $LASTEXITCODE
 if ($code -ne 0) {
   $tail = (Get-Content $Log -Tail 25 | Where-Object { $_.Trim() }) -join '%0A'
   Write-Host "::error title=Installer output (exit $code)::$tail"
+  $steps = (Get-Content $Log | Where-Object { $_ -match '^(==>|Installing |\S.*: installed|.*still missing|Successfully installed|Found an existing)' }) -join '%0A'
+  Write-Host "::error title=Installer steps::$steps"
 }
 exit $code
