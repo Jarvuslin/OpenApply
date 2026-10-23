@@ -40,7 +40,7 @@ jobs:
         run: .\.github\scripts\report-tools.ps1 -Title 'Before install'
       - name: Install
         shell: powershell
-        run: .\scripts\install.ps1 -SkipVm -NoStart
+        run: .\.github\scripts\run-logged.ps1 -Command '.\scripts\install.ps1 -SkipVm -NoStart'
       - name: Tools after install
         shell: powershell
         run: .\.github\scripts\report-tools.ps1 -Title 'After install' -ExpectWinget
@@ -94,8 +94,8 @@ jobs:
           OPENAPPLY_DIR: ${{ runner.temp }}\OpenApply
         run: |
           Set-Location (New-Item -ItemType Directory (Join-Path $env:RUNNER_TEMP 'empty'))
-          irm https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/scripts/install.ps1 | iex
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $logger = Join-Path $env:GITHUB_WORKSPACE 'harness\.github\scripts\run-logged.ps1'
+          & $logger -Command 'irm https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/scripts/install.ps1 | iex'
       - name: Tools after install
         shell: powershell
         run: .\harness\.github\scripts\report-tools.ps1 -Title 'After one-liner' -Repo (Join-Path $env:RUNNER_TEMP 'OpenApply') -ExpectWinget
