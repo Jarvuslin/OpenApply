@@ -10,23 +10,26 @@ A workspace for finding employer roles, tailoring your resume and applying throu
 
 ## Quick start
 
-Clone the repository, then run the installer from its root. It installs missing tools, creates
-the browser/database VM, runs setup and the doctor, then starts OpenApply. Run it again after
-any step where it stops for you (a reboot or a Claude sign-in).
+Paste one line into a terminal. The installer installs whatever is missing (Git, Node.js, Bun,
+the .NET 10 SDK, Claude Code and the browser/database VM), clones OpenApply into a folder in
+your home directory, runs setup and the doctor, then starts the app and opens the Setup page.
+If it stops for a reboot or a Claude sign-in, run the same line again and it carries on.
+
+Windows x64 (PowerShell):
 
 ```powershell
-# Windows x64 (PowerShell)
-git clone https://github.com/Jarvuslin/OpenApply.git
-cd OpenApply
-powershell -ExecutionPolicy Bypass -File scripts\install.ps1
+irm https://raw.githubusercontent.com/Jarvuslin/OpenApply/main/scripts/install.ps1 | iex
 ```
 
+macOS 14+ (Terminal, Mac beta):
+
 ```sh
-# macOS 14+ (Mac beta)
-git clone https://github.com/Jarvuslin/OpenApply.git
-cd OpenApply
-bash scripts/install.sh
+curl -fsSL https://raw.githubusercontent.com/Jarvuslin/OpenApply/main/scripts/install.sh | bash
 ```
+
+The code goes to `%USERPROFILE%\OpenApply` or `~/OpenApply`. Set `OPENAPPLY_DIR` first to use
+another folder. Already cloned? Run `scripts\install.ps1` or `bash scripts/install.sh` from the
+repository root instead.
 
 Open **http://localhost:4100/setup** to see every check live. `bun run doctor` prints the same
 checks in the terminal, with a fix for each one that fails. The manual steps below still work.

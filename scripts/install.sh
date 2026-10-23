@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# OpenApply installer for macOS 14+ (Mac beta). Run from the repository root:
-#   bash scripts/install.sh [--no-start] [--skip-vm]
+# OpenApply installer for macOS 14+ (Mac beta). On a new Mac, in Terminal:
+#   curl -fsSL https://raw.githubusercontent.com/Jarvuslin/OpenApply/main/scripts/install.sh | bash
+# That installs Homebrew and Git, clones into ~/OpenApply (or $OPENAPPLY_DIR) and continues there.
+# In a checkout: bash scripts/install.sh [--no-start] [--skip-vm]
 # Safe to run again: installed tools are skipped, and it stops whenever you need to act.
 # --skip-vm installs only the host tools, for machines that cannot run a VM (such as CI runners).
+# Piped options go after "bash -s --", for example: curl ... | bash -s -- --no-start
 set -euo pipefail
-cd "$(dirname "$0")/.."
 
 no_start=false
 skip_vm=false
@@ -22,6 +24,10 @@ stop_for_user() {
   exit 2
 }
 have() { command -v "$1" >/dev/null 2>&1; }
+# A new Mac has a /usr/bin/git placeholder that only offers to install Apple's developer tools.
+git_works() { git --version >/dev/null 2>&1; }
+# Prompts (sudo, Homebrew) must read the keyboard, not the piped script.
+has_tty() { : </dev/tty 2>/dev/null; }
 
 [ "$(uname -s)" = Darwin ] || { echo "This installer is for macOS. Use scripts/install.ps1 on Windows."; exit 1; }
 major=$(sw_vers -productVersion | cut -d. -f1)
@@ -30,19 +36,51 @@ major=$(sw_vers -productVersion | cut -d. -f1)
 step "Homebrew"
 if ! have brew; then
   # Homebrew's official installer; it asks for your password itself.
-  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  if has_tty; then
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" </dev/tty
+  else
+    NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  fi
 fi
 for prefix in /opt/homebrew /usr/local; do
-  [ -x "$prefix/bin/brew" ] && eval "$("$prefix/bin/brew" shellenv)"
+  if [ -x "$prefix/bin/brew" ]; then eval "$("$prefix/bin/brew" shellenv)"; fi
 done
 have brew || stop_for_user "Homebrew is installed but not on PATH. Open a new terminal."
 
+script_dir=""
+if [ -n "${BASH_SOURCE[0]:-}" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/openapply.mjs" ]; then
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
+if [ -z "$script_dir" ]; then
+  # Piped from curl: get Git and the code, then run the checkout's own copy of this script.
+  install_dir="${OPENAPPLY_DIR:-$HOME/OpenApply}"
+  repo="${OPENAPPLY_REPO:-https://github.com/Jarvuslin/OpenApply.git}"
+  branch="${OPENAPPLY_BRANCH:-main}"
+  step "Getting the OpenApply code"
+  if git_works; then echo "Git: installed"; else brew install git; fi
+  if [ -d "$install_dir/.git" ]; then
+    echo "Updating $install_dir"
+    git -C "$install_dir" fetch origin "$branch"
+    git -C "$install_dir" checkout "$branch"
+    git -C "$install_dir" pull --ff-only origin "$branch" ||
+      echo "Could not fast-forward; continuing with the code already there."
+  elif [ -d "$install_dir" ] && [ -n "$(ls -A "$install_dir")" ]; then
+    echo "$install_dir exists and is not an OpenApply checkout. Set OPENAPPLY_DIR to another folder."
+    exit 1
+  else
+    git clone --branch "$branch" "$repo" "$install_dir"
+  fi
+  if has_tty; then exec bash "$install_dir/scripts/install.sh" "$@" </dev/tty; fi
+  exec bash "$install_dir/scripts/install.sh" "$@" </dev/null
+fi
+cd "$script_dir/.."
+
 step "Developer tools"
-have git && echo "Git: installed" || brew install git
+if git_works; then echo "Git: installed"; else brew install git; fi
 node_major=0
-have node && node_major=$(node --version | sed 's/^v//' | cut -d. -f1)
+if have node; then node_major=$(node --version | sed 's/^v//' | cut -d. -f1); fi
 if [ "$node_major" -ge 22 ]; then echo "Node.js: v$node_major"; else brew install node; fi
-have bun && echo "Bun: installed" || brew install oven-sh/bun/bun
+if have bun; then echo "Bun: installed"; else brew install oven-sh/bun/bun; fi
 if node scripts/dotnet.mjs --print-path >/dev/null 2>&1; then
   echo ".NET 10 SDK: installed"
 else
@@ -50,8 +88,10 @@ else
 fi
 if $skip_vm; then
   echo "Lima: skipped (--skip-vm)"
+elif have limactl; then
+  echo "Lima: installed"
 else
-  have limactl && echo "Lima: installed" || brew install lima
+  brew install lima
 fi
 
 step "Claude Code"

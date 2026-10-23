@@ -1,14 +1,17 @@
-# OpenApply installer for Windows x64. Run from the repository root:
-#   powershell -ExecutionPolicy Bypass -File scripts\install.ps1
+# OpenApply installer for Windows x64. On a new machine, in PowerShell:
+#   irm https://raw.githubusercontent.com/Jarvuslin/OpenApply/main/scripts/install.ps1 | iex
+# That installs Git, clones into %USERPROFILE%\OpenApply (or $env:OPENAPPLY_DIR) and continues there.
+# In a checkout: powershell -ExecutionPolicy Bypass -File scripts\install.ps1
 # Safe to run again: installed tools are skipped, and it stops whenever you need to act.
 # -SkipVm installs only the host tools, for machines that cannot run WSL2 (such as Windows Sandbox).
-param([string]$AlpineVersion = '3.24.3', [switch]$NoStart, [switch]$SkipVm)
+# A piped run takes options from OPENAPPLY_SKIP_VM=1, OPENAPPLY_NO_START=1 and OPENAPPLY_BRANCH.
+param([string]$AlpineVersion = '3.24.3', [switch]$NoStart, [switch]$SkipVm, [string]$InstallDir)
 $ErrorActionPreference = 'Stop'
+if ($env:OPENAPPLY_SKIP_VM -eq '1') { $SkipVm = $true }
+if ($env:OPENAPPLY_NO_START -eq '1') { $NoStart = $true }
 # Windows PowerShell 5.1 redraws a progress bar per chunk, which slows downloads many times over.
 $ProgressPreference = 'SilentlyContinue'
 [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
-$root = Split-Path -Parent $PSScriptRoot
-Set-Location $root
 
 function Step([string]$Text) { Write-Host "`n==> $Text" -ForegroundColor Cyan }
 function Stop-ForUser([string]$Text) {
@@ -59,8 +62,41 @@ function Get-AlpineRootfs([string]$Version, [string]$Directory) {
 if ([Environment]::Is64BitOperatingSystem -eq $false -or $env:PROCESSOR_ARCHITECTURE -eq 'ARM64') {
   throw 'OpenApply supports Windows x64 only.'
 }
-if (!(Test-Command winget)) { Stop-ForUser 'winget is missing. Install "App Installer" from the Microsoft Store.' }
+if (!(Test-Command winget)) { throw 'winget is missing. Install "App Installer" from the Microsoft Store, then run this again.' }
 Update-Path
+
+if (!$PSScriptRoot -or !(Test-Path (Join-Path $PSScriptRoot 'openapply.mjs'))) {
+  # Piped through iex: get Git and the code, then run the checkout's own copy of this script.
+  # Exiting here would close the user's PowerShell window, so this part only returns or throws.
+  if (!$InstallDir) { $InstallDir = $env:OPENAPPLY_DIR }
+  if (!$InstallDir) { $InstallDir = Join-Path $env:USERPROFILE 'OpenApply' }
+  $repo = $env:OPENAPPLY_REPO
+  if (!$repo) { $repo = 'https://github.com/Jarvuslin/OpenApply.git' }
+  $branch = $env:OPENAPPLY_BRANCH
+  if (!$branch) { $branch = 'main' }
+  Step 'Getting the OpenApply code'
+  if (Test-Command git) { Write-Host 'Git: installed' } else { Install-Winget 'Git.Git' 'Git' }
+  if (Test-Path (Join-Path $InstallDir '.git')) {
+    Write-Host "Updating $InstallDir"
+    & git -C $InstallDir fetch origin $branch
+    & git -C $InstallDir checkout $branch
+    & git -C $InstallDir pull --ff-only origin $branch
+    if ($LASTEXITCODE -ne 0) { Write-Host 'Could not fast-forward; continuing with the code already there.' -ForegroundColor Yellow }
+  } elseif ((Test-Path $InstallDir) -and (Get-ChildItem $InstallDir -Force | Select-Object -First 1)) {
+    throw "$InstallDir exists and is not an OpenApply checkout. Set OPENAPPLY_DIR to another folder."
+  } else {
+    & git clone --branch $branch $repo $InstallDir
+    if ($LASTEXITCODE -ne 0) { throw "git clone of $repo failed." }
+  }
+  $forward = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $InstallDir 'scripts\install.ps1'), '-AlpineVersion', $AlpineVersion)
+  if ($SkipVm) { $forward += '-SkipVm' }
+  if ($NoStart) { $forward += '-NoStart' }
+  & powershell.exe @forward
+  if ($LASTEXITCODE -ne 0) { Write-Host "The installer stopped (exit $LASTEXITCODE). Run it again after the step above." -ForegroundColor Yellow }
+  return
+}
+$root = Split-Path -Parent $PSScriptRoot
+Set-Location $root
 
 Step 'Developer tools'
 if (Test-Command git) { Write-Host 'Git: installed' } else { Install-Winget 'Git.Git' 'Git' }
