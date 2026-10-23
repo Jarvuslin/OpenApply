@@ -31,10 +31,17 @@ function Install-Winget([string]$Id, [string]$Label) {
   if ($LASTEXITCODE -ne 0) { throw "winget could not install $Label ($Id)." }
   Update-Path
 }
+function Test-Succeeds([scriptblock]$Command) {
+  # Under Stop, 5.1 turns a redirected stderr line from a native command into a terminating error.
+  $previous = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try { & $Command *> $null } finally { $ErrorActionPreference = $previous }
+  return $LASTEXITCODE -eq 0
+}
 function Test-DotnetSdk {
   # Any dotnet with a 10.x SDK counts, whatever its place on PATH.
-  & node (Join-Path $PSScriptRoot 'dotnet.mjs') --print-path *> $null
-  return $LASTEXITCODE -eq 0
+  $resolver = Join-Path $PSScriptRoot 'dotnet.mjs'
+  return Test-Succeeds { node $resolver --print-path }
 }
 function Get-AlpineRootfs([string]$Version, [string]$Directory) {
   $minor = ($Version.Split('.')[0..1]) -join '.'
@@ -110,8 +117,7 @@ Step 'WSL2'
 if ($SkipVm) {
   Write-Host 'Skipped (-SkipVm).'
 } else {
-  & wsl.exe --status *> $null
-  if ($LASTEXITCODE -ne 0) {
+  if (!(Test-Succeeds { wsl.exe --status })) {
     $admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
     if (!$admin) { Stop-ForUser 'WSL2 is not enabled. Open PowerShell as administrator and run: wsl --install --no-distribution' }
     & wsl.exe --install --no-distribution
@@ -128,7 +134,9 @@ if (!(Test-Command claude)) {
   if (!(Test-Command claude)) { Stop-ForUser 'Claude Code installed but is not on PATH yet. Open a new PowerShell window.' }
 }
 $auth = $null
+$ErrorActionPreference = 'Continue'
 try { $auth = (& claude auth status 2>$null) | Out-String | ConvertFrom-Json } catch { }
+$ErrorActionPreference = 'Stop'
 if ($auth -and -not $auth.loggedIn -and -not $SkipVm) { Stop-ForUser 'Sign in to Claude Code: run claude auth login and finish in the browser.' }
 if (!$auth) { Write-Host 'Could not read sign-in status. Run claude once and sign in if asked.' }
 elseif ($auth.loggedIn) { Write-Host 'Claude Code: signed in' }
