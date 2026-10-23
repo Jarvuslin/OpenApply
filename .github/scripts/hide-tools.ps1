@@ -68,3 +68,5 @@ foreach ($id in 'Git.Git', 'OpenJS.NodeJS.LTS', 'Microsoft.DotNet.SDK.10') {
   if ($LASTEXITCODE -eq 0) { throw "winget still lists $id after uninstalling it." }
 }
 Write-Host "::notice title=Hidden before install::$($removed -join '; ')"
+# winget list sets a nonzero exit code when nothing is found, and the runner would report it.
+exit 0

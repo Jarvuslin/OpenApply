@@ -32,3 +32,4 @@ $dotnet = & node (Join-Path $Repo 'scripts/dotnet.mjs') --print-path 2>$null
 if ($LASTEXITCODE -ne 0) { $failed += 'no dotnet with a 10.x SDK' } else { Write-Host "OpenApply uses $dotnet" }
 if ($failed) { Write-Host "::error title=$Title::$($failed -join '; ')"; exit 1 }
 Write-Host 'Git, Node 22+ and the .NET 10 SDK were installed by the installer.'
+exit 0
